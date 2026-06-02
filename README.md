@@ -19,6 +19,8 @@ This project aims to build a reproducible, extensible, and paper-ready engineeri
 - **No new research code will be added to the legacy project.**
 - Historical experiment results, ACMI files, CSVs, PNGs, and temporary scripts are **not migrated** into this repository.
 
+> ⚠️ **Important**: Smoke-test results (short training runs with 512 steps) and random-policy evaluations **must not be cited as final performance conclusions** in the paper. All quantitative claims require full multi-seed training (≥200k steps) and statistical comparison across scenarios.
+
 ## Directory Structure
 
 ```

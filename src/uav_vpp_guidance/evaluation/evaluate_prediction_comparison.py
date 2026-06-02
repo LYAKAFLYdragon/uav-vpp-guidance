@@ -82,6 +82,15 @@ def evaluate_single_episode(env, agent, config, scenario=None, seed=0, save_traj
     ego_score_sum = 0.0
     target_score_sum = 0.0
 
+    # 离线 prediction error 对齐记录
+    # 每个元素: (step, predicted_target_pos, true_target_pos)
+    prediction_records = []
+
+    # 预测时间窗口（用于离线对齐）
+    lookahead_time_s = env.config.get("trajectory_prediction", {}).get("prediction", {}).get("lookahead_time_s", 1.0)
+    high_level_dt = env.env_config.get("high_level_dt", 0.2)
+    horizon_steps = max(1, int(round(lookahead_time_s / high_level_dt)))
+
     for step in range(env.max_steps):
         obs_vec = obs["observation_vector"]
         action = agent.get_deterministic_action(obs_vec)
@@ -129,6 +138,12 @@ def evaluate_single_episode(env, agent, config, scenario=None, seed=0, save_traj
         pred_target_pos = info.get("predicted_target_position")
         if target_pos is not None and pred_target_pos is not None:
             anchor_shifts.append(float(np.linalg.norm(np.asarray(pred_target_pos) - np.asarray(target_pos))))
+            # 记录用于离线 prediction error 对齐
+            prediction_records.append((
+                step,
+                np.asarray(pred_target_pos, dtype=np.float64),
+                np.asarray(target_pos, dtype=np.float64),
+            ))
 
         if save_trajectory:
             own_s = info.get("own_state", {})
@@ -183,6 +198,22 @@ def evaluate_single_episode(env, agent, config, scenario=None, seed=0, save_traj
         if terminated or truncated:
             reason = info.get("reason", "unknown")
             break
+
+    # ---- 离线 prediction error 对齐 ----
+    # step t 的 predicted_target_position 应与 step t + horizon_steps 的真实 target_position 对齐
+    aligned_errors = []
+    for i, (step_t, pred_pos, _) in enumerate(prediction_records):
+        aligned_step = step_t + horizon_steps
+        # 在 prediction_records 中查找 aligned_step 对应的 true_target_pos
+        for j in range(i, len(prediction_records)):
+            if prediction_records[j][0] == aligned_step:
+                true_pos = prediction_records[j][2]
+                err = float(np.linalg.norm(pred_pos - true_pos))
+                aligned_errors.append(err)
+                break
+    # 如果有离线对齐误差，优先使用；否则保留 info 中的原始值（通常为 NaN）
+    if aligned_errors:
+        prediction_errors = aligned_errors
 
     return {
         "seed": seed,

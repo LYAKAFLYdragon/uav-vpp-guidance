@@ -48,10 +48,12 @@ class TestTrajectoryStateBuffer:
         assert np.allclose(seq[2], [0.0, 0.0])
         assert np.allclose(seq[3], [7.0, 8.0])
 
-    def test_empty_buffer_raises(self):
+    def test_empty_buffer_returns_zeros(self):
+        """Empty buffer should return zero-padded sequence (allows CV predictor to work before any push)."""
         buf = TrajectoryStateBuffer(history_len=5, feature_dim=3)
-        with pytest.raises(ValueError, match="Buffer is empty"):
-            buf.get_sequence()
+        seq = buf.get_sequence()
+        assert seq.shape == (5, 3)
+        assert np.allclose(seq, 0.0)
 
     def test_is_ready(self):
         buf = TrajectoryStateBuffer(history_len=3, feature_dim=2)
@@ -67,8 +69,9 @@ class TestTrajectoryStateBuffer:
         buf.push(np.array([1.0, 2.0, 3.0]))
         buf.reset()
         assert len(buf._buffer) == 0
-        with pytest.raises(ValueError):
-            buf.get_sequence()
+        seq = buf.get_sequence()
+        assert seq.shape == (5, 3)
+        assert np.allclose(seq, 0.0)
 
     def test_feature_dim_mismatch(self):
         buf = TrajectoryStateBuffer(history_len=5, feature_dim=3)

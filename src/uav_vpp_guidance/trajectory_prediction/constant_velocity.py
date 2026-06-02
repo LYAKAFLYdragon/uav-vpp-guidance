@@ -39,7 +39,7 @@ class ConstantVelocityPredictor(BaseTrajectoryPredictor):
         Returns:
             tuple: (pred_pos, pred_var, info)
         """
-        info = {"model": "constant_velocity", "fallback": False}
+        info = {"model": "constant_velocity", "fallback": False, "output_is_absolute": True}
 
         if current_target_state is None:
             info["fallback"] = True

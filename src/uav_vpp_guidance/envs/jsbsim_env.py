@@ -252,7 +252,10 @@ class _JSBSimAircraft:
         # Geodetic position
         lon = self.get_property_value("position/long-gc-deg")
         lat = self.get_property_value("position/lat-geod-deg")
-        alt_m = self.get_property_value("position/h-sl-m")
+        # JSBSim F-16 model does not populate position/h-sl-m reliably;
+        # use position/h-sl-ft and convert to meters.
+        alt_ft = self.get_property_value("position/h-sl-ft")
+        alt_m = alt_ft * 0.3048
 
         # Attitude (rad)
         roll = self.get_property_value("attitude/roll-rad")
@@ -285,13 +288,21 @@ class _JSBSimAircraft:
         v_b = self.get_property_value("velocities/v-fps") * fps_to_mps
         w_b = self.get_property_value("velocities/w-fps") * fps_to_mps
 
+        # 统一别名字段，供上层模块（TerminationChecker、feature_builder 等）直接使用
         self._state = {
             "position_neu": np.array([n, e, u], dtype=np.float64),
+            "position_m": np.array([n, e, u], dtype=np.float64),          # 兼容 simple 后端字段
             "position_lla": np.array([lon, lat, alt_m], dtype=np.float64),
+            "altitude_m": float(alt_m),
             "attitude_rpy": np.array([roll, pitch, yaw], dtype=np.float64),
+            "roll_rad": float(roll),
+            "pitch_rad": float(pitch),
+            "yaw_rad": float(yaw),
             "velocity_ned": np.array([vn, ve, vd], dtype=np.float64),
+            "velocity_vector_mps": np.array([vn, ve, -vd], dtype=np.float64),  # NED→NEU 兼容
             "velocity_body": np.array([u_b, v_b, w_b], dtype=np.float64),
-            "vt_mps": vt,
+            "speed_mps": float(vt),
+            "vt_mps": float(vt),
             "sim_time": self.jsbsim_exec.get_sim_time(),
         }
 

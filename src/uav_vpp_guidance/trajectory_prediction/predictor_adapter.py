@@ -169,14 +169,18 @@ class TrajectoryPredictorAdapter:
             pred_disp, pred_var, pred_info = self.predictor.predict(history_seq, current_target_state)
             info.update(pred_info)
 
-            # 获取当前目标位置
-            target_pos = current_target_state.get("position_neu") or current_target_state.get("position_m")
+            # 获取当前目标位置（兼容 position_neu / position_m）
+            target_pos = current_target_state.get("position_neu", None)
             if target_pos is None:
-                raise ValueError("current_target_state missing position")
+                target_pos = current_target_state.get("position_m", None)
+            if target_pos is None:
+                raise ValueError("current_target_state missing position (position_neu or position_m)")
             target_pos = np.asarray(target_pos, dtype=np.float64)
 
-            # 若 predictor 输出的是相对位移，叠加到当前位置
-            if pred_disp is not None and self.output_mode == "relative_displacement":
+            # 若 predictor 输出的是相对位移，叠加到当前位置。
+            # CV/CA 经典模型直接返回绝对位置，不需要叠加。
+            pred_is_absolute = pred_info.get("output_is_absolute", False)
+            if pred_disp is not None and self.output_mode == "relative_displacement" and not pred_is_absolute:
                 pred_pos = target_pos + np.asarray(pred_disp, dtype=np.float64)
             elif pred_disp is not None:
                 pred_pos = np.asarray(pred_disp, dtype=np.float64)
@@ -186,11 +190,14 @@ class TrajectoryPredictorAdapter:
             return pred_pos, pred_var, info
 
         except Exception as exc:
-            # 回退到 fallback
+            # 回退到 fallback（不覆盖主 info 的关键字段）
             info["fallback"] = True
             info["fallback_reason"] = str(exc)
             pred_pos, pred_var, fallback_info = self._fallback_predictor.predict(
                 current_target_state=current_target_state
             )
-            info.update(fallback_info)
+            # 只提取 fallback_info 中的非冲突诊断字段
+            for key in ("fallback_model", "model_type"):
+                if key in fallback_info and key not in info:
+                    info[key] = fallback_info[key]
             return pred_pos, pred_var, info

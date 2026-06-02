@@ -25,7 +25,7 @@ from ..virtual_point.generator import VirtualPointGenerator
 from ..guidance.los_rate_guidance import LOSRateGuidance
 from ..guidance.gain_config import GuidanceGains
 from ..flight_control.command_limiter import clip_command
-from ..flight_control.command_filter import FirstOrderCommandFilter
+from ..flight_control.command_filter import MultiChannelCommandFilter
 from ..flight_control.low_level_controller import LowLevelController
 from ..trajectory_prediction import (
     TrajectoryPredictorAdapter,
@@ -102,9 +102,9 @@ class CloseRangeTrackingEnv:
         self.reward_calculator = RewardCalculator(config)
         self.termination_checker = TerminationChecker(self.env_config)
 
-        # Command filter
+        # Command filter (three independent channels)
         filter_alpha = config.get("guidance", {}).get("gains", {}).get("alpha_filter", 0.3)
-        self._command_filter = FirstOrderCommandFilter(alpha=filter_alpha)
+        self._command_filter = MultiChannelCommandFilter(alpha=filter_alpha)
 
         # Current guidance gains (default fixed)
         self.current_gains = GuidanceGains()
@@ -400,12 +400,8 @@ class CloseRangeTrackingEnv:
         return terminated, truncated, term_info
 
     def _apply_command_filter(self, command: dict) -> dict:
-        """Apply first-order filter to each command channel."""
-        return {
-            "nz_cmd": float(self._command_filter.filter(command["nz_cmd"])),
-            "roll_rate_cmd": float(self._command_filter.filter(command["roll_rate_cmd"])),
-            "throttle_cmd": float(self._command_filter.filter(command["throttle_cmd"])),
-        }
+        """Apply independent first-order filters to each command channel."""
+        return self._command_filter.filter(command)
 
     def _get_current_states(self):
         """获取当前本机和目标状态（统一格式）。"""

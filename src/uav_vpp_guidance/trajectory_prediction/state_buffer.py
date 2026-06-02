@@ -69,7 +69,10 @@ class TrajectoryStateBuffer:
             np.ndarray: shape 为 [history_len, feature_dim]。
         """
         if len(self._buffer) == 0:
-            raise ValueError("Buffer is empty. Call push() before get_sequence().")
+            # Return zero-padded sequence when buffer is empty.
+            # This allows predictors that do not require history (e.g. CV)
+            # to operate before any push() calls.
+            return np.zeros((self.history_len, self.feature_dim), dtype=np.float32)
 
         seq = np.array(list(self._buffer), dtype=np.float32)
         current_len = seq.shape[0]

@@ -1,0 +1,52 @@
+# No-Prediction VPP Baseline Experiment Configuration
+#
+# This config disables trajectory prediction and uses current_target anchor mode.
+# It serves as the baseline before adding predictive components.
+
+includes:
+  - ../env.yaml
+  - ../ppo.yaml
+  - ../guidance.yaml
+  - ../reward.yaml
+
+experiment:
+  name: no_prediction_vpp
+  seed: 0
+  mode: smoke
+  output_root: outputs
+
+env:
+  use_jsbsim: false
+  decision_freq: 5
+  sim_freq: 60
+  max_high_level_steps: 512
+  target_mode: constant_velocity
+
+trajectory_prediction:
+  enabled: false
+
+virtual_point:
+  anchor_mode: current_target
+  action_dim: 3
+  d_long_range: [-1500.0, 1500.0]
+  d_lat_range: [-800.0, 800.0]
+  d_vert_range: [-500.0, 500.0]
+  smoothing_alpha: 0.3
+
+guidance:
+  mode: los_rate
+  use_gain_adapter: false
+
+training:
+  total_steps: 10000
+  rollout_steps: 512
+  eval_interval: 2000
+  save_interval: 5000
+
+evaluation:
+  episodes: 10
+  scenario_types:
+    - favorable
+    - neutral
+    - disadvantage
+    - challenging

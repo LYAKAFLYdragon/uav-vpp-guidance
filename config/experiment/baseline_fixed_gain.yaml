@@ -1,0 +1,25 @@
+# Experiment: Baseline with fixed guidance gains (no virtual point, no gain optimization)
+experiment_name: "001_baseline_fixed_gain"
+seed: 0
+
+env:
+  config_file: "config/env.yaml"
+
+guidance:
+  config_file: "config/guidance.yaml"
+  virtual_point:
+    enabled: false
+
+ppo:
+  config_file: "config/ppo.yaml"
+
+training:
+  total_timesteps: 5_000_000
+  save_freq: 500_000
+  eval_freq: 100_000
+  log_dir: "experiments/001_baseline_fixed_gain/logs"
+  checkpoint_dir: "experiments/001_baseline_fixed_gain/checkpoints"
+
+output:
+  acmi_dir: "experiments/001_baseline_fixed_gain/acmi"
+  figure_dir: "experiments/001_baseline_fixed_gain/figures"

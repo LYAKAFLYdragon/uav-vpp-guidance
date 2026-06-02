@@ -1,0 +1,29 @@
+# Experiment: Ablation - remove gain observation from policy input
+experiment_name: "005_ablation_no_gain_obs"
+seed: 0
+
+env:
+  config_file: "config/env.yaml"
+
+guidance:
+  config_file: "config/guidance.yaml"
+  virtual_point:
+    enabled: true
+  include_gains_in_obs: false
+
+gain_optimizer:
+  config_file: "config/gain_space.yaml"
+
+ppo:
+  config_file: "config/ppo.yaml"
+
+bilevel:
+  policy_training_iterations: 5
+  timesteps_per_policy_iteration: 1_000_000
+  gain_eval_episodes: 30
+  log_dir: "experiments/005_ablation_no_gain_obs/logs"
+  checkpoint_dir: "experiments/005_ablation_no_gain_obs/checkpoints"
+
+output:
+  acmi_dir: "experiments/005_ablation_no_gain_obs/acmi"
+  figure_dir: "experiments/005_ablation_no_gain_obs/figures"

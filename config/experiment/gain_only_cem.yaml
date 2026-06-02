@@ -1,0 +1,26 @@
+# Experiment: Freeze trained VPP policy, optimize gains only via CEM
+experiment_name: "003_gain_only_cem"
+seed: 0
+
+env:
+  config_file: "config/env.yaml"
+
+guidance:
+  config_file: "config/guidance.yaml"
+  virtual_point:
+    enabled: true
+
+gain_optimizer:
+  config_file: "config/gain_space.yaml"
+
+policy_checkpoint: "experiments/002_fixed_gain_vpp/checkpoints/final_model.pt"
+
+training:
+  total_timesteps: 0
+  gain_iterations: 20
+  log_dir: "experiments/003_gain_only/logs"
+  checkpoint_dir: "experiments/003_gain_only/checkpoints"
+
+output:
+  acmi_dir: "experiments/003_gain_only/acmi"
+  figure_dir: "experiments/003_gain_only/figures"

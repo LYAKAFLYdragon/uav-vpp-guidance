@@ -1,0 +1,21 @@
+gain_space:
+  k_los: [0.1, 5.0]
+  k_pos: [0.0, 3.0]
+  k_damp: [0.0, 2.0]
+  k_roll: [0.1, 5.0]
+  alpha_filter: [0.05, 0.8]
+
+gain_optimizer:
+  type: cem
+  candidates: 12
+  elite_ratio: 0.25
+  eval_episodes_per_candidate: 30
+  trust_region: 0.2
+  update_interval_iterations: 1
+
+regret:
+  w_return: 1.0
+  w_success: 200.0
+  w_crash: 300.0
+  w_saturation: 50.0
+  w_command_smooth: 10.0

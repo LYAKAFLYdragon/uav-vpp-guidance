@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "uav-vpp-guidance"
+version = "0.1.0"
+description = "UAV Virtual Pursuit Point Guidance with LOS-rate guidance and strategy-gain bilevel optimization"
+authors = [{name = "Research Team"}]
+license = {text = "MIT"}
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "torch>=2.0.0",
+    "numpy>=1.24.0",
+    "pyyaml>=6.0",
+    "tensorboard>=2.13.0",
+    "matplotlib>=3.7.0",
+    "pandas>=2.0.0",
+    "scipy>=1.10.0",
+    "tqdm>=4.65.0",
+    "pymap3d>=2.9.0",
+    "jsbsim>=1.1.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=7.3.0", "black>=23.0", "ruff>=0.1.0"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-dir]
+"" = "src"

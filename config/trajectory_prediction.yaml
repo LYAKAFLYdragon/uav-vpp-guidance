@@ -1,0 +1,40 @@
+trajectory_prediction:
+  enabled: true
+
+  model:
+    type: lstm
+    input_dim: 16
+    hidden_dim: 128
+    num_layers: 2
+    dropout: 0.1
+    predict_variance: false
+
+  history:
+    history_len: 10
+    sample_rate_hz: 5
+    padding_mode: repeat_first
+
+  prediction:
+    lookahead_time_s: 1.0
+    output_mode: relative_displacement
+    fallback_mode: constant_velocity
+
+  integration:
+    anchor_mode: predicted_target
+    freeze_predictor_during_rl: true
+    add_prediction_to_observation: false
+    add_uncertainty_to_observation: false
+
+  normalization:
+    position_scale_m: 1000.0
+    velocity_scale_mps: 300.0
+    angle_mode: sin_cos
+    overload_scale: 9.0
+
+  training:
+    batch_size: 256
+    learning_rate: 1.0e-3
+    epochs: 100
+    loss: mse
+    train_val_split: 0.8
+    device: cuda

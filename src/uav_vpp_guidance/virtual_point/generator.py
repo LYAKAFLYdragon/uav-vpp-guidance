@@ -1,0 +1,161 @@
+"""
+Virtual Pursuit Point (VPP) generator.
+
+Converts a normalized policy action into a virtual pursuit point
+relative to the target aircraft.
+
+升级：支持将策略输出的相对偏移量叠加到预测未来位置，
+而不仅仅是目标当前位置。
+"""
+
+import numpy as np
+
+
+class VirtualPointGenerator:
+    """
+    Convert policy action into a virtual pursuit point.
+
+    Policy action should be normalized in [-1, 1].
+    It is mapped to:
+    - longitudinal offset
+    - lateral offset
+    - vertical offset
+    - prediction time
+    - speed bias
+
+    支持三种锚点模式：
+    - current_target: 目标当前位置（旧逻辑）
+    - constant_velocity: 匀速外推预测位置
+    - predicted_target: 通过 trajectory_predictor_adapter 获取预测位置
+    """
+
+    def __init__(self, config):
+        """
+        Args:
+            config (dict): Virtual point configuration dictionary.
+        """
+        self.config = config
+        self.action_dim = config.get("action_dim", 5)
+        self.d_long_range = config.get("d_long_range", [-1500.0, 1500.0])
+        self.d_lat_range = config.get("d_lat_range", [-800.0, 800.0])
+        self.d_vert_range = config.get("d_vert_range", [-500.0, 500.0])
+        self.tau_pred_range = config.get("tau_pred_range", [0.0, 3.0])
+        self.speed_bias_range = config.get("speed_bias_range", [-80.0, 80.0])
+        self.smoothing_alpha = config.get("smoothing_alpha", 0.3)
+        self._prev_action = None
+
+    def action_to_virtual_point(
+        self,
+        action,
+        own_state,
+        target_state,
+        anchor_mode: str = "current_target",
+        lookahead_time_s: float = 1.0,
+        trajectory_predictor_adapter=None,
+        predicted_target_position=None,
+        return_info: bool = False,
+    ):
+        """
+        Convert normalized policy action to a virtual pursuit point.
+
+        Args:
+            action (np.ndarray): Normalized action vector in [-1, 1].
+                前 3 维映射为 [Δx, Δy, Δz]（纵向、横向、垂直偏移）。
+            own_state (dict): Own aircraft state.
+            target_state (dict): Target aircraft state.
+            anchor_mode (str): 锚点模式，"current_target" / "constant_velocity" / "predicted_target"。
+            lookahead_time_s (float): 前瞻时间（用于 constant_velocity 模式）。
+            trajectory_predictor_adapter (TrajectoryPredictorAdapter, optional):
+                轨迹预测适配器（用于 predicted_target 模式，向后兼容）。
+            predicted_target_position (np.ndarray, optional):
+                外部传入的预测目标位置（优先于 adapter）。
+            return_info (bool): 若为 True，额外返回 info 字典。
+
+        Returns:
+            dict or tuple: 默认返回 virtual_point dict；
+                若 return_info=True，返回 (virtual_point, info)。
+        """
+        action = np.asarray(action, dtype=np.float64)
+
+        # 将 action 前 3 维映射为实际偏移量
+        offset = np.array([
+            self._rescale(action[0], self.d_long_range),
+            self._rescale(action[1], self.d_lat_range),
+            self._rescale(action[2], self.d_vert_range),
+        ], dtype=np.float64)
+
+        # 确定锚点位置
+        if anchor_mode == "current_target":
+            anchor_pos = self._get_target_position(target_state)
+            pred_var = None
+            prediction_info = {"anchor_mode": "current_target"}
+
+        elif anchor_mode == "constant_velocity":
+            anchor_pos = self._constant_velocity_prediction(target_state, lookahead_time_s)
+            pred_var = None
+            prediction_info = {"anchor_mode": "constant_velocity", "lookahead_time_s": lookahead_time_s}
+
+        elif anchor_mode == "predicted_target":
+            if predicted_target_position is not None:
+                anchor_pos = np.asarray(predicted_target_position, dtype=np.float64)
+                pred_var = None
+                prediction_info = {"anchor_mode": "predicted_target", "source": "external"}
+            elif trajectory_predictor_adapter is not None:
+                anchor_pos, pred_var, prediction_info = trajectory_predictor_adapter.predict(target_state)
+                prediction_info["anchor_mode"] = "predicted_target"
+            else:
+                raise ValueError(
+                    "anchor_mode='predicted_target' requires either predicted_target_position or trajectory_predictor_adapter"
+                )
+
+        else:
+            raise ValueError(f"Unknown anchor_mode: {anchor_mode}")
+
+        # 虚拟追踪点 = 锚点 + 偏移
+        virtual_point_pos = anchor_pos + offset
+
+        virtual_point = {
+            "position": virtual_point_pos,
+            "offset": offset,
+        }
+
+        if not return_info:
+            return virtual_point
+
+        info = {
+            "anchor_mode": anchor_mode,
+            "anchor_pos": anchor_pos,
+            "offset": offset,
+            "pred_var": pred_var,
+            "prediction_info": prediction_info,
+        }
+        return virtual_point, info
+
+    @staticmethod
+    def _rescale(val, range_limits):
+        """将 [-1, 1] 映射到 [min, max]。"""
+        min_val, max_val = range_limits
+        return 0.5 * (val + 1.0) * (max_val - min_val) + min_val
+
+    @staticmethod
+    def _get_target_position(target_state):
+        """从 target_state 中提取位置。"""
+        pos = target_state.get("position_neu")
+        if pos is None:
+            pos = target_state.get("position")
+        if pos is None:
+            raise ValueError("target_state must contain 'position_neu' or 'position'")
+        return np.asarray(pos, dtype=np.float64)
+
+    @staticmethod
+    def _constant_velocity_prediction(target_state, lookahead_time_s):
+        """匀速外推预测目标未来位置。"""
+        pos = VirtualPointGenerator._get_target_position(target_state)
+        vel = target_state.get("velocity_ned")
+        if vel is None:
+            vel = target_state.get("velocity")
+        if vel is None:
+            # 缺少速度信息时返回当前位置
+            return pos
+        vel = np.asarray(vel, dtype=np.float64)
+        return pos + vel * lookahead_time_s

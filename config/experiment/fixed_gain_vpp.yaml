@@ -1,0 +1,25 @@
+# Experiment: Virtual Pursuit Point with fixed guidance gains
+experiment_name: "002_fixed_gain_vpp"
+seed: 0
+
+env:
+  config_file: "config/env.yaml"
+
+guidance:
+  config_file: "config/guidance.yaml"
+  virtual_point:
+    enabled: true
+
+ppo:
+  config_file: "config/ppo.yaml"
+
+training:
+  total_timesteps: 5_000_000
+  save_freq: 500_000
+  eval_freq: 100_000
+  log_dir: "experiments/002_fixed_gain_vpp/logs"
+  checkpoint_dir: "experiments/002_fixed_gain_vpp/checkpoints"
+
+output:
+  acmi_dir: "experiments/002_fixed_gain_vpp/acmi"
+  figure_dir: "experiments/002_fixed_gain_vpp/figures"

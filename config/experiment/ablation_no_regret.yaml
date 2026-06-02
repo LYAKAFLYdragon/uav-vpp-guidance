@@ -1,0 +1,29 @@
+# Experiment: Ablation - remove regret-aware gain update
+experiment_name: "005_ablation_no_regret"
+seed: 0
+
+env:
+  config_file: "config/env.yaml"
+
+guidance:
+  config_file: "config/guidance.yaml"
+  virtual_point:
+    enabled: true
+
+gain_optimizer:
+  config_file: "config/gain_space.yaml"
+  use_regret: false
+
+ppo:
+  config_file: "config/ppo.yaml"
+
+bilevel:
+  policy_training_iterations: 5
+  timesteps_per_policy_iteration: 1_000_000
+  gain_eval_episodes: 30
+  log_dir: "experiments/005_ablation_no_regret/logs"
+  checkpoint_dir: "experiments/005_ablation_no_regret/checkpoints"
+
+output:
+  acmi_dir: "experiments/005_ablation_no_regret/acmi"
+  figure_dir: "experiments/005_ablation_no_regret/figures"

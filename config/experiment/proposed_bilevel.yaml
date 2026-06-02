@@ -1,0 +1,28 @@
+# Experiment: Proposed strategy-gain bilevel optimization
+experiment_name: "004_bilevel"
+seed: 0
+
+env:
+  config_file: "config/env.yaml"
+
+guidance:
+  config_file: "config/guidance.yaml"
+  virtual_point:
+    enabled: true
+
+gain_optimizer:
+  config_file: "config/gain_space.yaml"
+
+ppo:
+  config_file: "config/ppo.yaml"
+
+bilevel:
+  policy_training_iterations: 5
+  timesteps_per_policy_iteration: 1_000_000
+  gain_eval_episodes: 30
+  log_dir: "experiments/004_bilevel/logs"
+  checkpoint_dir: "experiments/004_bilevel/checkpoints"
+
+output:
+  acmi_dir: "experiments/004_bilevel/acmi"
+  figure_dir: "experiments/004_bilevel/figures"

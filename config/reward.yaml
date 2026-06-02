@@ -1,0 +1,11 @@
+reward:
+  w_geometry: 1.0
+  w_range: 0.5
+  w_angle: 0.8
+  w_energy: 0.2
+  w_safety: 2.0
+  w_saturation: 1.0
+  w_smooth: 0.1
+  terminal_success: 200.0
+  terminal_failure: -200.0
+  terminal_crash: -300.0

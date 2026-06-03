@@ -100,13 +100,19 @@ class LOSRateGuidance:
 
         # Sanity checks
         if self.distance_scale_m <= 0.0:
-            raise ValueError(f"distance_scale_m must be positive, got {self.distance_scale_m}")
+            raise ValueError(
+                f"distance_scale_m must be positive, got {self.distance_scale_m}"
+            )
         if self.speed_error_scale_mps <= 0.0:
-            raise ValueError(f"speed_error_scale_mps must be positive, got {self.speed_error_scale_mps}")
+            raise ValueError(
+                f"speed_error_scale_mps must be positive, got {self.speed_error_scale_mps}"
+            )
         if self.epsilon <= 0.0:
             raise ValueError(f"epsilon must be positive, got {self.epsilon}")
         if self.capture_radius_m < 0.0:
-            raise ValueError(f"capture_radius_m must be non-negative, got {self.capture_radius_m}")
+            raise ValueError(
+                f"capture_radius_m must be non-negative, got {self.capture_radius_m}"
+            )
 
     # ------------------------------------------------------------------
     # Public API
@@ -198,7 +204,9 @@ class LOSRateGuidance:
             capture_ratio = distance / self.capture_radius_m  # [0, 1)
             # Blend from capture hold to normal command as we exit the radius
             command["roll_rate_cmd"] = capture_ratio * command["roll_rate_cmd"]
-            command["nz_cmd"] = (1.0 - capture_ratio) * self.base_nz + capture_ratio * command["nz_cmd"]
+            command["nz_cmd"] = (
+                1.0 - capture_ratio
+            ) * self.base_nz + capture_ratio * command["nz_cmd"]
             # Throttle remains as computed (speed hold)
 
         # ------------------------------------------------------------------
@@ -220,12 +228,15 @@ class LOSRateGuidance:
             logger.warning(
                 "LOSRateGuidance produced non-finite command (distance=%.3e, "
                 "own_speed=%.3e). Falling back to safe hold commands.",
-                distance, own_speed,
+                distance,
+                own_speed,
             )
             command = {
                 "nz_cmd": float(np.clip(self.base_nz, self.nz_min, self.nz_max)),
                 "roll_rate_cmd": 0.0,
-                "throttle_cmd": float(np.clip(self.base_throttle, self.throttle_min, self.throttle_max)),
+                "throttle_cmd": float(
+                    np.clip(self.base_throttle, self.throttle_min, self.throttle_max)
+                ),
             }
 
         self.prev_command = command
@@ -262,9 +273,7 @@ class LOSRateGuidance:
                 "position_neu, position_m, position)"
             )
 
-    def _compute_heading_from_velocity(
-        self, vel: np.ndarray, speed: float
-    ) -> float:
+    def _compute_heading_from_velocity(self, vel: np.ndarray, speed: float) -> float:
         """
         Compute heading from velocity vector.
 
@@ -290,9 +299,7 @@ class LOSRateGuidance:
             return float(np.arctan2(los_horizontal[1], los_horizontal[0]))
         return fallback_heading
 
-    def _compute_stable_elevation(
-        self, rel_pos: np.ndarray, distance: float
-    ) -> float:
+    def _compute_stable_elevation(self, rel_pos: np.ndarray, distance: float) -> float:
         """
         Compute LOS elevation angle using arctan2 for numerical stability.
 
@@ -331,17 +338,27 @@ class LOSRateGuidance:
         Clamped to [0, 1]. If own_speed is non-finite, returns base_throttle.
         """
         if not np.isfinite(own_speed):
-            return float(np.clip(self.base_throttle, self.throttle_min, self.throttle_max))
+            return float(
+                np.clip(self.base_throttle, self.throttle_min, self.throttle_max)
+            )
         speed_error = self.target_speed_mps - own_speed
-        throttle = self.base_throttle + k_speed * (speed_error / self.speed_error_scale_mps)
+        throttle = self.base_throttle + k_speed * (
+            speed_error / self.speed_error_scale_mps
+        )
         return float(np.clip(throttle, self.throttle_min, self.throttle_max))
 
     def _apply_internal_limits(self, command: Dict[str, float]) -> Dict[str, float]:
         """Clip commands to configured physical limits."""
         return {
             "nz_cmd": float(np.clip(command["nz_cmd"], self.nz_min, self.nz_max)),
-            "roll_rate_cmd": float(np.clip(command["roll_rate_cmd"], self.roll_rate_min, self.roll_rate_max)),
-            "throttle_cmd": float(np.clip(command["throttle_cmd"], self.throttle_min, self.throttle_max)),
+            "roll_rate_cmd": float(
+                np.clip(
+                    command["roll_rate_cmd"], self.roll_rate_min, self.roll_rate_max
+                )
+            ),
+            "throttle_cmd": float(
+                np.clip(command["throttle_cmd"], self.throttle_min, self.throttle_max)
+            ),
         }
 
     def _apply_internal_filter(self, command: Dict[str, float]) -> Dict[str, float]:
@@ -350,15 +367,19 @@ class LOSRateGuidance:
             return dict(command)
         alpha = self.alpha_filter
         return {
-            "nz_cmd": alpha * command["nz_cmd"] + (1.0 - alpha) * self.prev_command["nz_cmd"],
-            "roll_rate_cmd": alpha * command["roll_rate_cmd"] + (1.0 - alpha) * self.prev_command["roll_rate_cmd"],
-            "throttle_cmd": alpha * command["throttle_cmd"] + (1.0 - alpha) * self.prev_command["throttle_cmd"],
+            "nz_cmd": alpha * command["nz_cmd"]
+            + (1.0 - alpha) * self.prev_command["nz_cmd"],
+            "roll_rate_cmd": alpha * command["roll_rate_cmd"]
+            + (1.0 - alpha) * self.prev_command["roll_rate_cmd"],
+            "throttle_cmd": alpha * command["throttle_cmd"]
+            + (1.0 - alpha) * self.prev_command["throttle_cmd"],
         }
 
 
 # ---------------------------------------------------------------------------
 # Module-level helpers
 # ---------------------------------------------------------------------------
+
 
 def _extract_position(state: Dict[str, Any]) -> np.ndarray:
     """Extract 3-D position vector from state dict."""

@@ -19,7 +19,6 @@ from uav_vpp_guidance.guidance.los_rate_guidance import (
     LOSRateGuidance,
     _normalize_angle,
     _stable_angle_diff,
-    EPS,
 )
 from uav_vpp_guidance.guidance.gain_config import GuidanceGains
 
@@ -304,11 +303,15 @@ class TestLOSRateGuidance:
         # Roll should be attenuated: capture_ratio = distance / 100 < 1
         # so |roll_rate_cmd| should be less than the raw un-attenuated value.
         # We can verify this by comparing with a case where capture_radius = 0 (no attenuation).
-        guidance_no_cap = LOSRateGuidance(config={**config, "params": {**config["params"], "capture_radius_m": 0.0}})
+        guidance_no_cap = LOSRateGuidance(
+            config={**config, "params": {**config["params"], "capture_radius_m": 0.0}}
+        )
         cmd_no_cap = guidance_no_cap.compute_command(own_state, None, virtual_point)
         assert abs(cmd["roll_rate_cmd"]) < abs(cmd_no_cap["roll_rate_cmd"])
         # nz is blended toward base_nz; at d=0 it would equal base_nz, at d<100 it is closer than raw
-        assert abs(cmd["nz_cmd"] - config["params"]["base_nz"]) <= abs(cmd_no_cap["nz_cmd"] - config["params"]["base_nz"])
+        assert abs(cmd["nz_cmd"] - config["params"]["base_nz"]) <= abs(
+            cmd_no_cap["nz_cmd"] - config["params"]["base_nz"]
+        )
 
     def test_capture_radius_zero_fallback(self):
         """At distance=0, commands should fully fall back to safe hold."""
@@ -331,7 +334,14 @@ class TestLOSRateGuidance:
     def test_internal_clip_limits(self):
         """Internal clipping should enforce limits even if raw command exceeds them."""
         config = {
-            "limits": {"nz_min": -2.0, "nz_max": 5.0, "roll_rate_min": -1.0, "roll_rate_max": 1.0, "throttle_min": 0.0, "throttle_max": 1.0},
+            "limits": {
+                "nz_min": -2.0,
+                "nz_max": 5.0,
+                "roll_rate_min": -1.0,
+                "roll_rate_max": 1.0,
+                "throttle_min": 0.0,
+                "throttle_max": 1.0,
+            },
             "params": {"enable_internal_clip": True},
         }
         guidance = LOSRateGuidance(config=config)
@@ -340,7 +350,9 @@ class TestLOSRateGuidance:
             "velocity_vector_mps": np.array([200.0, 0.0, 0.0]),
             "roll_rad": 0.0,
         }
-        virtual_point = {"position_m": np.array([0.0, -1000.0, 5000.0])}  # behind and left
+        virtual_point = {
+            "position_m": np.array([0.0, -1000.0, 5000.0])
+        }  # behind and left
         cmd = guidance.compute_command(own_state, None, virtual_point)
         assert -2.0 <= cmd["nz_cmd"] <= 5.0
         assert -1.0 <= cmd["roll_rate_cmd"] <= 1.0
@@ -360,7 +372,7 @@ class TestLOSRateGuidance:
         }
         vp1 = {"position_m": np.array([1000.0, 0.0, 5000.0])}
         vp2 = {"position_m": np.array([0.0, 1000.0, 5000.0])}
-        cmd1 = guidance.compute_command(own_state, None, vp1)
+        guidance.compute_command(own_state, None, vp1)
         cmd2 = guidance.compute_command(own_state, None, vp2)
         # With alpha=0.5, cmd2 should be blend of raw cmd2 and cmd1
         # We just verify that filtering happened (prev_command was used)
@@ -415,6 +427,7 @@ class TestLOSRateGuidance:
 # Angle helper tests
 # ---------------------------------------------------------------------------
 
+
 class TestNormalizeAngle:
     def test_normalize_angle_standard(self):
         assert _normalize_angle(0.0) == pytest.approx(0.0, abs=1e-9)
@@ -433,8 +446,12 @@ class TestNormalizeAngle:
 class TestStableAngleDiff:
     def test_stable_angle_diff_basic(self):
         assert _stable_angle_diff(0.0, 0.0) == pytest.approx(0.0, abs=1e-9)
-        assert _stable_angle_diff(math.pi / 2, 0.0) == pytest.approx(math.pi / 2, abs=1e-9)
-        assert _stable_angle_diff(0.0, math.pi / 2) == pytest.approx(-math.pi / 2, abs=1e-9)
+        assert _stable_angle_diff(math.pi / 2, 0.0) == pytest.approx(
+            math.pi / 2, abs=1e-9
+        )
+        assert _stable_angle_diff(0.0, math.pi / 2) == pytest.approx(
+            -math.pi / 2, abs=1e-9
+        )
 
     def test_stable_angle_diff_wraparound_pi(self):
         """Difference near ±pi should map correctly to [-pi, pi]."""
@@ -442,7 +459,9 @@ class TestStableAngleDiff:
         assert _stable_angle_diff(math.pi, -math.pi) == pytest.approx(0.0, abs=1e-9)
         # a = π - 0.01, b = -π + 0.01 → diff ≈ 2*(π - 0.01) - 2π = -0.02 ... wait
         # Let's use a simpler case: a = 3π/4, b = -3π/4 → diff = 1.5π → wrapped to -0.5π
-        assert _stable_angle_diff(3 * math.pi / 4, -3 * math.pi / 4) == pytest.approx(-math.pi / 2, abs=1e-9)
+        assert _stable_angle_diff(3 * math.pi / 4, -3 * math.pi / 4) == pytest.approx(
+            -math.pi / 2, abs=1e-9
+        )
 
     def test_stable_angle_diff_2pi_periodicity(self):
         """Adding 2π should not change the difference."""

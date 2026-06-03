@@ -2,7 +2,7 @@ name: Tests
 
 on:
   push:
-    branches: [main]
+    branches: [main, "fix/**", "feature/**"]
   pull_request:
     branches: [main]
 
@@ -26,6 +26,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
+          pip install tomli
           pip install -e ".[dev]"
 
       - name: Check Python syntax
@@ -38,5 +39,12 @@ jobs:
 
       - name: Check TOML/YAML syntax
         run: |
-          python -c "import tomllib; tomllib.load(open('pyproject.toml','rb'))"
+          python -c "
+          import sys
+          if sys.version_info >= (3, 11):
+              import tomllib
+          else:
+              import tomli as tomllib
+          tomllib.load(open('pyproject.toml', 'rb'))
+          "
           python -c "import yaml; [yaml.safe_load(open(p)) for p in ['config/env.yaml','config/ppo.yaml','config/guidance.yaml']]"

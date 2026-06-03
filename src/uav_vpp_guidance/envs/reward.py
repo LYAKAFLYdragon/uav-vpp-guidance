@@ -50,16 +50,16 @@ class RewardCalculator:
         self._ref_altitude_m = 5000.0
         self._prev_command = None
 
-    def compute(self, obs, info):
+    def compute(self, info):
         """
         Compute the scalar reward for the current step.
 
         Args:
-            obs (dict): Current observation dict from _get_observation().
             info (dict): Auxiliary information containing:
                 - own_state, target_state
                 - relative_state (from compute_relative_geometry)
                 - command (current command dict)
+                - terminal_reward (optional): injected by env when episode ends
 
         Returns:
             tuple: (reward, reward_terms)

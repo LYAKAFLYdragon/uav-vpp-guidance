@@ -170,3 +170,106 @@ class TestCloseRangeTrackingEnvNoPrediction:
         assert terminated is True
         assert info.get("is_out_of_bounds") is True
         env.close()
+
+    def test_obs_relative_state_matches_info(self, base_config):
+        """obs['relative_state'] 必须与 info['relative_state'] 完全一致（均为 post-step）。"""
+        env = CloseRangeTrackingEnv(base_config)
+        env.reset(seed=0)
+        action = np.array([0.1, -0.2, 0.05])
+        obs, reward, terminated, truncated, info = env.step(action)
+        obs_rel = obs["relative_state"]
+        info_rel = info["relative_state"]
+        assert obs_rel["range_m"] == pytest.approx(info_rel["range_m"], abs=1e-6)
+        assert obs_rel["ata_rad"] == pytest.approx(info_rel["ata_rad"], abs=1e-6)
+        assert obs_rel["aa_rad"] == pytest.approx(info_rel["aa_rad"], abs=1e-6)
+        assert obs_rel["range_rate_mps"] == pytest.approx(info_rel["range_rate_mps"], abs=1e-6)
+        env.close()
+
+    def test_reward_uses_post_step_state(self, base_config):
+        """reward 必须基于 step 后的 post-step 状态计算，而非 step 前。"""
+        env = CloseRangeTrackingEnv(base_config)
+        env.reset(seed=0)
+        # 执行一个 action，记录 step 前后的 range
+        pre_own, pre_target = env._get_current_states()
+        pre_rel = env._get_observation()["relative_state"]
+        action = np.array([0.5, 0.0, 0.0])
+        obs, reward, terminated, truncated, info = env.step(action)
+        post_rel = obs["relative_state"]
+        # info 中的 range 应该与 post-step 一致，而非 pre-step
+        assert info["range_m"] == pytest.approx(post_rel["range_m"], abs=1e-6)
+        assert info["range_m"] != pytest.approx(pre_rel["range_m"], abs=1e-6)
+        env.close()
+
+    def test_terminal_reward_on_success(self, base_config):
+        """success 时 terminal_reward 应为正，且 reward_terms 正确反映。"""
+        base_config["env"]["success_range_m"] = 5000.0
+        base_config["env"]["success_ata_deg"] = 180.0
+        env = CloseRangeTrackingEnv(base_config)
+        env.reset(seed=0)
+        _, reward, terminated, _, info = env.step(np.zeros(3))
+        assert terminated is True
+        assert info["termination_info"]["is_success"] is True
+        rt = info["reward_terms"]
+        assert rt["terminal_reward"] == pytest.approx(200.0, abs=1e-6)
+        assert reward > 0  # total reward should be boosted by terminal success
+        env.close()
+
+    def test_terminal_reward_on_crash(self, base_config):
+        """crash 时 terminal_reward 应为负，且 reward_terms 正确反映。"""
+        base_config["env"]["min_altitude_m"] = 6000.0
+        env = CloseRangeTrackingEnv(base_config)
+        env.reset(seed=0)
+        _, reward, terminated, _, info = env.step(np.zeros(3))
+        assert terminated is True
+        assert info["termination_info"]["is_crash"] is True
+        rt = info["reward_terms"]
+        assert rt["terminal_reward"] == pytest.approx(-300.0, abs=1e-6)
+        env.close()
+
+    def test_terminal_reward_on_out_of_bounds(self, base_config):
+        """OOB 时 terminal_reward 应为负（使用 terminal_failure）。"""
+        base_config["env"]["max_range_m"] = 100.0
+        env = CloseRangeTrackingEnv(base_config)
+        env.reset(seed=0)
+        _, reward, terminated, _, info = env.step(np.zeros(3))
+        assert terminated is True
+        assert info["termination_info"]["is_out_of_bounds"] is True
+        rt = info["reward_terms"]
+        assert rt["terminal_reward"] == pytest.approx(-200.0, abs=1e-6)
+        env.close()
+
+    def test_timeout_returns_truncated_not_terminated(self, base_config):
+        """timeout 时必须返回 truncated=True, terminated=False（非任务终止）。"""
+        base_config["env"]["max_high_level_steps"] = 1
+        env = CloseRangeTrackingEnv(base_config)
+        env.reset(seed=0)
+        _, _, terminated, truncated, info = env.step(np.zeros(3))
+        assert terminated is False
+        assert truncated is True
+        assert info["termination_info"]["is_timeout"] is True
+        env.close()
+
+    def test_terminal_reward_on_timeout(self, base_config):
+        """timeout 时 terminal_reward 应为负（使用 terminal_failure）。"""
+        base_config["env"]["max_high_level_steps"] = 1
+        env = CloseRangeTrackingEnv(base_config)
+        env.reset(seed=0)
+        _, reward, terminated, truncated, info = env.step(np.zeros(3))
+        assert terminated is False
+        assert truncated is True
+        rt = info["reward_terms"]
+        assert rt["terminal_reward"] == pytest.approx(-200.0, abs=1e-6)
+        env.close()
+
+    def test_timeout_info_reason_is_timeout(self, base_config):
+        """timeout 时 info['termination_info']['reason'] 应为 'timeout'。"""
+        base_config["env"]["max_high_level_steps"] = 1
+        env = CloseRangeTrackingEnv(base_config)
+        env.reset(seed=0)
+        _, _, terminated, truncated, info = env.step(np.zeros(3))
+        assert terminated is False
+        assert truncated is True
+        assert info["termination_info"]["reason"] == "timeout"
+        assert info["termination_info"]["is_timeout"] is True
+        assert info["is_timeout"] is True
+        env.close()

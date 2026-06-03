@@ -26,7 +26,7 @@ class TestRewardCalculator:
             "own_state": {"altitude_m": 5000.0},
             "command": {"nz_cmd": 2.0, "roll_rate_cmd": 0.5, "throttle_cmd": 0.7},
         }
-        reward, terms = calc.compute(obs, info)
+        reward, terms = calc.compute(info)
         assert isinstance(reward, float)
         assert isinstance(terms, dict)
         assert "reward_total" in terms
@@ -40,7 +40,7 @@ class TestRewardCalculator:
             "own_state": {"altitude_m": 5000.0},
             "command": {"nz_cmd": 8.0, "roll_rate_cmd": 2.0},
         }
-        reward, terms = calc.compute(None, info)
+        reward, terms = calc.compute(info)
         # Saturation penalty should make reward more negative
         assert terms["reward_saturation"] < 0.0
 

@@ -152,6 +152,59 @@ python -m uav_vpp_guidance.evaluation.evaluate_no_prediction \
     --rule-mode pure_pursuit
 ```
 
+## Post-Step Reward / Termination Semantics
+
+`CloseRangeTrackingEnv.step()` 遵循严格的 **post-step 评估** 时序：
+
+```
+action → virtual point → guidance → limit/filter → backend step
+                                                    ↓
+                                        重新获取 post-step own/target
+                                                    ↓
+                                        compute post-step relative_state
+                                                    ↓
+                                        check termination (post-step)
+                                                    ↓
+                                        compute reward (post-step)
+                                                    ↓
+                                        inject terminal_reward if done
+                                                    ↓
+                                        return obs / reward / done / info
+```
+
+### 为什么必须是 post-step？
+
+- **Reward**：agent 应该收到的是“执行 action 后的结果反馈”，而非 action 之前的状态反馈。若用 pre-step 计算 reward，策略会学到错误的因果链。
+- **Termination**：success/crash/OOB 必须在后端推进后才能判定。例如：一个俯冲动作可能在 step 前高度正常，step 后低于 `min_altitude_m`，此时必须触发 crash。
+- **Consistency**：`obs["relative_state"]`、`info["relative_state"]`、`info["range_m"]`、`info["ata_deg"]` 全部来自同一组 post-step 状态，避免信息不一致。
+
+### Terminal Reward 注入规则
+
+当 `TerminationChecker.check()` 返回 `done=True` 时，环境根据 `reason` 向 `RewardCalculator` 注入 `terminal_reward`：
+
+| Termination Reason | `terminal_reward` 值 | 来源配置 |
+|-------------------|----------------------|---------|
+| `success` | `+reward.terminal_success`（默认 `+200.0`） | `reward.terminal_success` |
+| `crash` | `+reward.terminal_crash`（默认 `-300.0`） | `reward.terminal_crash` |
+| `out_of_bounds` | `+reward.terminal_failure`（默认 `-200.0`） | `reward.terminal_failure` |
+| `timeout` | `+reward.terminal_failure`（默认 `-200.0`） | `reward.terminal_failure` |
+
+注入后的 `reward_terms` 包含：
+
+```python
+{
+    "reward_range": ...,
+    "reward_angle": ...,
+    "reward_safety": ...,
+    "reward_saturation": ...,
+    "reward_smooth": ...,
+    "terminal_reward": 200.0,   # 实际注入值
+    "reward_total": ...,         # 包含 terminal_reward 的总和
+}
+```
+
+> ⚠️ **注意**：`terminal_reward` 只在 `done=True` 的 step 注入。若 step 正常结束（未触发终止），`terminal_reward = 0.0`。
+
 ## 后续计划
 
 1. **接入 PPO 训练**：在 `train_no_prediction_vpp.py` 中实现完整 PPO 训练循环

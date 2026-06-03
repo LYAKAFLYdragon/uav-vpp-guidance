@@ -168,6 +168,7 @@ def build_observation(own_state, target_state, guidance_state=None, gains=None):
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _get_position(state):
     pos = state.get("position_neu")
     if pos is None:
@@ -178,12 +179,43 @@ def _get_position(state):
 
 
 def _get_velocity(state):
-    vel = state.get("velocity_ned")
-    if vel is None:
-        vel = state.get("velocity_vector_mps")
-    if vel is None:
-        raise ValueError("State missing velocity field (velocity_ned or velocity_vector_mps)")
-    return np.asarray(vel, dtype=np.float64)
+    """Extract velocity in NEU frame.
+
+    Priority:
+      1. velocity_vector_mps (assumed NEU: [vn, ve, vu])
+      2. velocity_ned (converted to NEU: [vn, ve, -vd])
+      3. velocity (assumed NEU)
+    """
+    vel = state.get("velocity_vector_mps")
+    if vel is not None:
+        arr = np.asarray(vel, dtype=np.float64)
+        if arr.shape != (3,):
+            raise ValueError(
+                f"velocity_vector_mps must be a 3-element vector, got shape {arr.shape}"
+            )
+        return arr
+
+    vel_ned = state.get("velocity_ned")
+    if vel_ned is not None:
+        v = np.asarray(vel_ned, dtype=np.float64)
+        if v.shape != (3,):
+            raise ValueError(
+                f"velocity_ned must be a 3-element vector, got shape {v.shape}"
+            )
+        return np.array([v[0], v[1], -v[2]], dtype=np.float64)
+
+    vel = state.get("velocity")
+    if vel is not None:
+        arr = np.asarray(vel, dtype=np.float64)
+        if arr.shape != (3,):
+            raise ValueError(
+                f"velocity must be a 3-element vector, got shape {arr.shape}"
+            )
+        return arr
+
+    raise ValueError(
+        "State missing velocity field (velocity_vector_mps, velocity_ned, or velocity)"
+    )
 
 
 def _get_altitude(state):

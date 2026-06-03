@@ -8,6 +8,7 @@ policy performance.
 """
 
 import argparse
+import copy
 import csv
 import json
 import os
@@ -40,15 +41,16 @@ def evaluate_mode(
     sample_obs = env.reset(seed=0)
     obs_dim = int(sample_obs["observation_vector"].shape[0])
     action_dim = int(config.get("policy", {}).get("action_dim", 3))
-    agent = PPOAgent(
-        obs_dim=obs_dim, action_dim=action_dim, config=config, device="cpu"
-    )
 
     all_episodes = []
     nan_inf_issues = 0
     backend_violations = 0
     for seed in seeds:
         set_seed(seed)
+        # Re-initialize agent per seed so weight init is deterministic
+        agent = PPOAgent(
+            obs_dim=obs_dim, action_dim=action_dim, config=config, device="cpu"
+        )
         for ep in range(episodes_per_seed):
             ep_seed = seed * 10000 + ep
             scenario = scenarios[ep % len(scenarios)] if scenarios else None
@@ -215,9 +217,10 @@ def main():
     total_issues = 0
     for mode in modes:
         start = time.time()
+        mode_config = copy.deepcopy(config)
         res = evaluate_mode(
             mode,
-            dict(config),
+            mode_config,
             args.seeds,
             args.episodes,
             scenarios,
@@ -240,8 +243,12 @@ def main():
 
     # Save JSON
     json_path = os.path.join(args.output_dir, "results.json")
+    output_payload = {
+        "policy_type": "untrained_deterministic_ppo",
+        "modes": results,
+    }
     with open(json_path, "w", encoding="utf-8") as f:
-        json.dump(results, f, indent=2, default=str)
+        json.dump(output_payload, f, indent=2, default=str)
     print(f"\nResults saved to: {json_path}")
 
     # Save CSV summary
@@ -269,7 +276,10 @@ def main():
     print(f"CSV saved to: {csv_path}")
 
     if total_issues > 0:
-        print(f"\nWARNING: {total_issues} total issues detected")
+        print(f"\nERROR: {total_issues} total issues detected")
+        raise SystemExit(1)
+
+    raise SystemExit(0)
 
 
 if __name__ == "__main__":

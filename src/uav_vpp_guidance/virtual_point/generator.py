@@ -78,11 +78,14 @@ class VirtualPointGenerator:
         action = np.asarray(action, dtype=np.float64)
 
         # 将 action 前 3 维映射为实际偏移量
-        offset = np.array([
-            self._rescale(action[0], self.d_long_range),
-            self._rescale(action[1], self.d_lat_range),
-            self._rescale(action[2], self.d_vert_range),
-        ], dtype=np.float64)
+        offset = np.array(
+            [
+                self._rescale(action[0], self.d_long_range),
+                self._rescale(action[1], self.d_lat_range),
+                self._rescale(action[2], self.d_vert_range),
+            ],
+            dtype=np.float64,
+        )
 
         # 确定锚点位置
         if anchor_mode == "current_target":
@@ -91,17 +94,27 @@ class VirtualPointGenerator:
             prediction_info = {"anchor_mode": "current_target"}
 
         elif anchor_mode == "constant_velocity":
-            anchor_pos = self._constant_velocity_prediction(target_state, lookahead_time_s)
+            anchor_pos = self._constant_velocity_prediction(
+                target_state, lookahead_time_s
+            )
             pred_var = None
-            prediction_info = {"anchor_mode": "constant_velocity", "lookahead_time_s": lookahead_time_s}
+            prediction_info = {
+                "anchor_mode": "constant_velocity",
+                "lookahead_time_s": lookahead_time_s,
+            }
 
         elif anchor_mode == "predicted_target":
             if predicted_target_position is not None:
                 anchor_pos = np.asarray(predicted_target_position, dtype=np.float64)
                 pred_var = None
-                prediction_info = {"anchor_mode": "predicted_target", "source": "external"}
+                prediction_info = {
+                    "anchor_mode": "predicted_target",
+                    "source": "external",
+                }
             elif trajectory_predictor_adapter is not None:
-                anchor_pos, pred_var, prediction_info = trajectory_predictor_adapter.predict(target_state)
+                anchor_pos, pred_var, prediction_info = (
+                    trajectory_predictor_adapter.predict(target_state)
+                )
                 prediction_info["anchor_mode"] = "predicted_target"
             else:
                 raise ValueError(
@@ -139,23 +152,58 @@ class VirtualPointGenerator:
 
     @staticmethod
     def _get_target_position(target_state):
-        """从 target_state 中提取位置。"""
+        """从 target_state 中提取位置。支持 position_neu, position_m, position。"""
         pos = target_state.get("position_neu")
+        if pos is None:
+            pos = target_state.get("position_m")
         if pos is None:
             pos = target_state.get("position")
         if pos is None:
-            raise ValueError("target_state must contain 'position_neu' or 'position'")
-        return np.asarray(pos, dtype=np.float64)
+            raise ValueError(
+                "target_state must contain 'position_neu', 'position_m', or 'position'"
+            )
+        arr = np.asarray(pos, dtype=np.float64)
+        if arr.shape != (3,):
+            raise ValueError(
+                f"Target position must be a 3-element vector, got shape {arr.shape}"
+            )
+        return arr
 
     @staticmethod
     def _constant_velocity_prediction(target_state, lookahead_time_s):
-        """匀速外推预测目标未来位置。"""
+        """匀速外推预测目标未来位置。支持 velocity_vector_mps, velocity, velocity_ned。
+
+        velocity_ned 会被转换为 NEU frame（垂直速度取反）。
+        """
         pos = VirtualPointGenerator._get_target_position(target_state)
-        vel = target_state.get("velocity_ned")
-        if vel is None:
-            vel = target_state.get("velocity")
-        if vel is None:
-            # 缺少速度信息时返回当前位置
-            return pos
-        vel = np.asarray(vel, dtype=np.float64)
-        return pos + vel * lookahead_time_s
+
+        vel = target_state.get("velocity_vector_mps")
+        if vel is not None:
+            vel_arr = np.asarray(vel, dtype=np.float64)
+            if vel_arr.shape != (3,):
+                raise ValueError(
+                    f"velocity_vector_mps must be a 3-element vector, got shape {vel_arr.shape}"
+                )
+            return pos + vel_arr * lookahead_time_s
+
+        vel = target_state.get("velocity")
+        if vel is not None:
+            vel_arr = np.asarray(vel, dtype=np.float64)
+            if vel_arr.shape != (3,):
+                raise ValueError(
+                    f"velocity must be a 3-element vector, got shape {vel_arr.shape}"
+                )
+            return pos + vel_arr * lookahead_time_s
+
+        vel_ned = target_state.get("velocity_ned")
+        if vel_ned is not None:
+            v = np.asarray(vel_ned, dtype=np.float64)
+            if v.shape != (3,):
+                raise ValueError(
+                    f"velocity_ned must be a 3-element vector, got shape {v.shape}"
+                )
+            vel_neu = np.array([v[0], v[1], -v[2]], dtype=np.float64)
+            return pos + vel_neu * lookahead_time_s
+
+        # 缺少速度信息时返回当前位置
+        return pos

@@ -33,7 +33,8 @@ This project implements **Virtual Pursuit Point (VPP) guidance with trajectory p
 | Phase 5 — No-Prediction VPP PPO Training | `no_prediction_vpp_ppo_training.md` | ✅ Complete |
 | Phase 6A — Classical CV/CA Prediction VPP Integration | `classical_prediction_vpp_integration.md` | ✅ Complete |
 | Phase 6B — Full PPO Training & Scenario Evaluation (No-Pred / CV / CA) | `stage6b_prediction_comparison_experiment.md` | ✅ Ready |
-| Phase 6C — Neural Trajectory Prediction (LSTM/GRU/TSLANet) | TBD | 📝 TODO |
+| Phase 6C — Neural Trajectory Prediction (LSTM/GRU) Offline Training | `trajectory_prediction/dataset.py`, `trainer.py`, `train_pipeline.py` | ✅ Complete |
+| Phase 6D — Neural Predictor Online Integration | `predictor_adapter.py` (checkpoint loading, LSTM/GRU closed-loop) | ✅ Complete |
 
 ## Key Documents
 

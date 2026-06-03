@@ -11,14 +11,33 @@
 - gru
 """
 
+import os
+
 import numpy as np
+import torch
 from typing import Optional, Tuple
 
 from .state_buffer import TrajectoryStateBuffer
 from .feature_builder import build_target_prediction_feature
 from .constant_velocity import ConstantVelocityPredictor
 from .constant_acceleration import ConstantAccelerationPredictor
-from .base_predictor import BaseTrajectoryPredictor
+
+
+def _load_checkpoint_if_present(model: torch.nn.Module, config: dict) -> None:
+    """如果配置中指定了 checkpoint_path，则加载模型权重。"""
+    checkpoint_path = config.get("checkpoint_path")
+    if checkpoint_path is None:
+        return
+    if not os.path.exists(checkpoint_path):
+        raise FileNotFoundError(
+            f"Checkpoint not found: {checkpoint_path}. "
+            "Please train the model first or correct the path."
+        )
+    device = torch.device(config.get("device", "cpu"))
+    state_dict = torch.load(checkpoint_path, map_location=device)
+    model.load_state_dict(state_dict)
+    model.to(device)
+    model.eval()
 
 
 def create_predictor_from_config(config: dict):
@@ -41,24 +60,30 @@ def create_predictor_from_config(config: dict):
         return ConstantAccelerationPredictor(lookahead_time_s=lookahead_time_s)
     elif predictor_type == "lstm":
         from .lstm_predictor import LSTMTrajectoryPredictor
+
         model_cfg = config.get("model", {})
-        return LSTMTrajectoryPredictor(
+        model = LSTMTrajectoryPredictor(
             input_dim=model_cfg.get("input_dim", 16),
             hidden_dim=model_cfg.get("hidden_dim", 128),
             num_layers=model_cfg.get("num_layers", 2),
             dropout=model_cfg.get("dropout", 0.1),
             predict_variance=model_cfg.get("predict_variance", False),
         )
+        _load_checkpoint_if_present(model, config)
+        return model
     elif predictor_type == "gru":
         from .gru_predictor import GRUTrajectoryPredictor
+
         model_cfg = config.get("model", {})
-        return GRUTrajectoryPredictor(
+        model = GRUTrajectoryPredictor(
             input_dim=model_cfg.get("input_dim", 16),
             hidden_dim=model_cfg.get("hidden_dim", 128),
             num_layers=model_cfg.get("num_layers", 2),
             dropout=model_cfg.get("dropout", 0.1),
             predict_variance=model_cfg.get("predict_variance", False),
         )
+        _load_checkpoint_if_present(model, config)
+        return model
     else:
         raise ValueError(f"Unknown predictor_type: {predictor_type}")
 
@@ -129,10 +154,14 @@ class TrajectoryPredictorAdapter:
             target_state (dict): 目标状态。
             relative_state (dict): 相对态势。
         """
-        feature = build_target_prediction_feature(own_state, target_state, relative_state, self.config)
+        feature = build_target_prediction_feature(
+            own_state, target_state, relative_state, self.config
+        )
         self.state_buffer.push(feature)
 
-    def predict(self, current_target_state) -> Tuple[np.ndarray, Optional[np.ndarray], dict]:
+    def predict(
+        self, current_target_state
+    ) -> Tuple[np.ndarray, Optional[np.ndarray], dict]:
         """
         预测目标未来位置。
 
@@ -161,12 +190,23 @@ class TrajectoryPredictorAdapter:
 
         # 尝试使用主预测器
         try:
+            # Neural predictors (LSTM/GRU) require a fully populated buffer.
+            # Classical predictors (CV/CA) can tolerate padded short history.
+            if isinstance(self.predictor, torch.nn.Module):
+                if not self.state_buffer.is_ready():
+                    raise ValueError(
+                        f"Neural predictor requires {self.state_buffer.history_len} "
+                        f"history frames, got {len(self.state_buffer._buffer)}"
+                    )
+
             history_seq = self.state_buffer.get_sequence()
             # 增加 batch 维度 -> [1, history_len, feature_dim]
             if history_seq.ndim == 2:
                 history_seq = np.expand_dims(history_seq, axis=0)
 
-            pred_disp, pred_var, pred_info = self.predictor.predict(history_seq, current_target_state)
+            pred_disp, pred_var, pred_info = self.predictor.predict(
+                history_seq, current_target_state
+            )
             info.update(pred_info)
 
             # 获取当前目标位置（兼容 position_neu / position_m）
@@ -174,13 +214,19 @@ class TrajectoryPredictorAdapter:
             if target_pos is None:
                 target_pos = current_target_state.get("position_m", None)
             if target_pos is None:
-                raise ValueError("current_target_state missing position (position_neu or position_m)")
+                raise ValueError(
+                    "current_target_state missing position (position_neu or position_m)"
+                )
             target_pos = np.asarray(target_pos, dtype=np.float64)
 
             # 若 predictor 输出的是相对位移，叠加到当前位置。
             # CV/CA 经典模型直接返回绝对位置，不需要叠加。
             pred_is_absolute = pred_info.get("output_is_absolute", False)
-            if pred_disp is not None and self.output_mode == "relative_displacement" and not pred_is_absolute:
+            if (
+                pred_disp is not None
+                and self.output_mode == "relative_displacement"
+                and not pred_is_absolute
+            ):
                 pred_pos = target_pos + np.asarray(pred_disp, dtype=np.float64)
             elif pred_disp is not None:
                 pred_pos = np.asarray(pred_disp, dtype=np.float64)

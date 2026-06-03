@@ -86,6 +86,26 @@ guidance:
     range_threshold_m: 3000.0
 ```
 
+### Capture Radius Mechanism
+
+When the own aircraft approaches the Virtual Pursuit Point (distance < `capture_radius_m`, default 50 m), the guidance law automatically blends commands toward a safe hold state to avoid the distance singularity:
+
+- `roll_rate_cmd` is attenuated linearly to 0 as distance → 0.
+- `nz_cmd` blends toward `base_nz` (typically 1.0 g, level flight).
+- Throttle remains on speed-hold logic.
+
+Configure in `guidance.yaml`:
+
+```yaml
+guidance:
+  params:
+    capture_radius_m: 50.0
+    enable_internal_clip: true
+    enable_internal_filter: false
+```
+
+**Trade-offs**: Larger capture radius produces smoother terminal behavior but may delay fine-positioning. Smaller radius preserves responsiveness but increases numerical risk near the singularity.
+
 Enable optional command post-processing:
 
 ```yaml

@@ -264,6 +264,7 @@ def _compute_terminal_metrics(step_commands, step_ranges, config):
             "terminal_nz_limit_exceedance_rate": np.nan,
             "terminal_roll_rate_limit_exceedance_rate": np.nan,
             "terminal_mean_range_m": np.nan,
+            "terminal_estimated_miss_distance_m": np.nan,
         }
 
     # Terminal phase = last 20% of steps, minimum 5 steps
@@ -305,6 +306,9 @@ def _compute_terminal_metrics(step_commands, step_ranges, config):
         "terminal_roll_rate_limit_exceedance_rate": rr_exceed,
         "terminal_mean_range_m": (
             float(np.mean(terminal_ranges)) if terminal_ranges else np.nan
+        ),
+        "terminal_estimated_miss_distance_m": (
+            float(np.min(terminal_ranges)) if terminal_ranges else np.nan
         ),
     }
 
@@ -373,6 +377,9 @@ def aggregate_metrics(episodes):
         ),
         "terminal_mean_range_m": safe_mean(
             [e["terminal_mean_range_m"] for e in episodes]
+        ),
+        "terminal_estimated_miss_distance_m": safe_mean(
+            [e["terminal_estimated_miss_distance_m"] for e in episodes]
         ),
     }
     result["instant_success_rate"] = result["success_rate"]
@@ -653,15 +660,16 @@ def run_benchmark(
 
         f.write("\n## Terminal-Phase Stability Metrics\n\n")
         f.write(
-            "| Method | Term Range (m) | NZ Var | Roll Var | Throttle Var | NZ Exceed | Roll Exceed |\n"
+            "| Method | Term Range (m) | Est Miss (m) | NZ Var | Roll Var | Throttle Var | NZ Exceed | Roll Exceed |\n"
         )
         f.write(
-            "|--------|----------------|--------|----------|--------------|-----------|-------------|\n"
+            "|--------|----------------|--------------|--------|----------|--------------|-----------|-------------|\n"
         )
         for m in all_method_metrics:
             f.write(
                 f"| {m['method']} | "
                 f"{m.get('terminal_mean_range_m', np.nan):.1f} | "
+                f"{m.get('terminal_estimated_miss_distance_m', np.nan):.1f} | "
                 f"{m.get('terminal_nz_cmd_variance', np.nan):.4f} | "
                 f"{m.get('terminal_roll_rate_cmd_variance', np.nan):.4f} | "
                 f"{m.get('terminal_throttle_cmd_variance', np.nan):.4f} | "

@@ -23,6 +23,13 @@ The default guidance law computes:
 Strengths: intuitive geometric interpretation, good for midcourse pursuit.
 Weaknesses: can produce high command variance in terminal phase when distance → 0.
 
+**Numerical Hardening**: The implementation uses:
+- `EPS = 1e-9` with `d_safe = max(d, EPS)` to avoid division-by-zero.
+- `np.arctan2` instead of `np.arcsin` for elevation (no endpoint singularity at ±90°).
+- `_stable_angle_diff` via `atan2(sin, cos)` for robust heading-error wrapping, even after 1000π cumulative drift.
+- **Capture radius blending**: when `d < capture_radius_m` (default 50 m), commands fade to safe hold (`nz → base_nz`, `roll_rate → 0`).
+- NaN/Inf fallback: if any command becomes non-finite, the system instantly outputs safe hold commands.
+
 ### Proportional Navigation (True 3D PN)
 
 Classical PN guidance with LOS-rate estimation via filtered numerical differentiation:

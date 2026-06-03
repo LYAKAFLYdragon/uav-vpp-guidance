@@ -18,16 +18,18 @@ from uav_vpp_guidance.utils.config import load_yaml_config, merge_config
 from uav_vpp_guidance.utils.seed import set_seed
 from uav_vpp_guidance.utils.logger import create_experiment_dir, save_config_snapshot
 from uav_vpp_guidance.envs.tracking_env import CloseRangeTrackingEnv
+from uav_vpp_guidance.baselines.rule_based_pursuit import RuleBasedPursuitPolicy
 
 
-def smoke_rollout(env: CloseRangeTrackingEnv, num_steps: int = 100, seed: int = 0):
+def smoke_rollout(env: CloseRangeTrackingEnv, num_steps: int = 100, seed: int = 0, policy=None):
     """
-    执行 smoke rollout：随机动作，验证闭环不崩溃。
+    执行 smoke rollout：验证闭环不崩溃。
 
     Args:
         env (CloseRangeTrackingEnv): 环境实例。
         num_steps (int): rollout 步数。
         seed (int): 随机种子。
+        policy: 策略对象（需有 get_action 方法）；若为 None 则使用随机策略。
 
     Returns:
         dict: Rollout summary statistics.
@@ -43,8 +45,14 @@ def smoke_rollout(env: CloseRangeTrackingEnv, num_steps: int = 100, seed: int = 
     min_range = float("inf")
 
     for step in range(num_steps):
-        # 随机动作（3 维偏移，归一化 [-1, 1]）
-        action = rng.uniform(-1.0, 1.0, size=3).astype(np.float64)
+        if policy is not None:
+            rel_state = obs.get("relative_state", {})
+            own_state = obs.get("own_state", {})
+            target_state = obs.get("target_state", {})
+            action = policy.get_action(own_state, target_state, rel_state)
+        else:
+            # 随机动作（3 维偏移，归一化 [-1, 1]）
+            action = rng.uniform(-1.0, 1.0, size=3).astype(np.float64)
 
         obs, reward, terminated, truncated, info = env.step(action)
         rewards.append(reward)
@@ -69,6 +77,7 @@ def smoke_rollout(env: CloseRangeTrackingEnv, num_steps: int = 100, seed: int = 
         "done": done,
         "reason": reason,
         "min_range_m": min_range,
+        "policy": policy.mode if policy is not None else "random",
     }
     return summary
 
@@ -78,6 +87,8 @@ def main():
     parser.add_argument("--config", type=str, required=True, help="Path to experiment config YAML")
     parser.add_argument("--smoke", action="store_true", help="Run smoke rollout instead of training")
     parser.add_argument("--smoke-steps", type=int, default=100, help="Smoke rollout steps")
+    parser.add_argument("--rule-mode", type=str, default=None, choices=["pure_pursuit", "lag_pursuit", "lead_pursuit"],
+                        help="Use rule-based policy for smoke rollout (default: random)")
     parser.add_argument("--seed", type=int, default=None, help="Random seed override")
     args = parser.parse_args()
 
@@ -101,9 +112,14 @@ def main():
     print(f"Backend: {'JSBSim' if config.get('env', {}).get('use_jsbsim', True) else 'SimplePointMass'}")
 
     if args.smoke:
-        print(f"\nRunning smoke rollout ({args.smoke_steps} steps)...")
+        policy = None
+        if args.rule_mode is not None:
+            policy = RuleBasedPursuitPolicy(mode=args.rule_mode)
+            print(f"\nRunning smoke rollout ({args.smoke_steps} steps) with rule-based policy: {args.rule_mode}...")
+        else:
+            print(f"\nRunning smoke rollout ({args.smoke_steps} steps) with random policy...")
         env = CloseRangeTrackingEnv(config)
-        summary = smoke_rollout(env, num_steps=args.smoke_steps, seed=seed)
+        summary = smoke_rollout(env, num_steps=args.smoke_steps, seed=seed, policy=policy)
         env.close()
 
         print("\n=== Smoke Rollout Summary ===")

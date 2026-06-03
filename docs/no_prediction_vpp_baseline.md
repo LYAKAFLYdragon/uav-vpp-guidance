@@ -124,8 +124,13 @@ observation, reward, done, info
 ### Smoke Rollout
 
 ```bash
+# Random policy smoke
 python -m uav_vpp_guidance.training.train_no_prediction_vpp \
     --config config/experiment/no_prediction_vpp.yaml --smoke
+
+# Rule-based policy smoke
+python -m uav_vpp_guidance.training.train_no_prediction_vpp \
+    --config config/experiment/no_prediction_vpp.yaml --smoke --rule-mode pure_pursuit
 ```
 
 输出保存至：`outputs/tables/no_prediction_vpp/smoke_summary.json`

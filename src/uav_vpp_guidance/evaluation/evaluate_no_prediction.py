@@ -116,7 +116,7 @@ def evaluate(env: CloseRangeTrackingEnv, num_episodes: int = 10, policy=None, se
 def main():
     parser = argparse.ArgumentParser(description="Evaluate No-Prediction VPP Baseline")
     parser.add_argument("--config", type=str, required=True, help="Path to experiment config YAML")
-    parser.add_argument("--episodes", type=int, default=10, help="Number of evaluation episodes")
+    parser.add_argument("--episodes", type=int, default=None, help="Number of evaluation episodes (overrides config)")
     parser.add_argument("--rule-mode", type=str, default=None, choices=["pure_pursuit", "lag_pursuit", "lead_pursuit"],
                         help="Use rule-based policy instead of random")
     parser.add_argument("--seed", type=int, default=None, help="Random seed override")
@@ -136,6 +136,11 @@ def main():
 
     exp_name = config.get("experiment", {}).get("name", "no_prediction_vpp")
 
+    # Episode count: CLI override > config.evaluation.episodes > default 10
+    num_episodes = args.episodes
+    if num_episodes is None:
+        num_episodes = config.get("evaluation", {}).get("episodes", 10)
+
     env = CloseRangeTrackingEnv(config)
 
     policy = None
@@ -145,8 +150,8 @@ def main():
     else:
         print("Using random policy")
 
-    print(f"Evaluating {args.episodes} episodes...")
-    metrics = evaluate(env, num_episodes=args.episodes, policy=policy, seed=seed)
+    print(f"Evaluating {num_episodes} episodes...")
+    metrics = evaluate(env, num_episodes=num_episodes, policy=policy, seed=seed)
     env.close()
 
     print("\n=== Evaluation Metrics ===")

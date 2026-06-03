@@ -122,7 +122,7 @@ class SimplePointMassEnv:
 
     @staticmethod
     def _ensure_derived_fields(state: dict):
-        """确保派生字段（speed_mps 等）存在。"""
+        """确保派生字段（speed_mps 等）存在。缺失时填充合理默认值。"""
         vel = state.get("velocity_vector_mps")
         if vel is not None and "speed_mps" not in state:
             state["speed_mps"] = float(np.linalg.norm(vel))
@@ -130,6 +130,19 @@ class SimplePointMassEnv:
             pos = state.get("position_m")
             if pos is not None:
                 state["altitude_m"] = float(pos[2])
+        # 简化模型中姿态和过载可能未提供，填充默认值以避免下游 KeyError
+        if "pitch_rad" not in state:
+            state["pitch_rad"] = 0.0
+        if "roll_rad" not in state:
+            state["roll_rad"] = 0.0
+        if "yaw_rad" not in state:
+            vel = state.get("velocity_vector_mps")
+            if vel is not None:
+                state["yaw_rad"] = float(np.arctan2(vel[1], vel[0]))
+            else:
+                state["yaw_rad"] = 0.0
+        if "nz" not in state:
+            state["nz"] = 1.0  # 默认平飞
 
     # ------------------------------------------------------------------
     # Step

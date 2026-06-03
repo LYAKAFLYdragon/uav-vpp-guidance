@@ -114,8 +114,11 @@ class RewardCalculator:
                 smooth_penalty += delta
         reward_smooth = -self.w_smooth * smooth_penalty
 
+        # 6. 终端奖励（由调用方根据 done/reason 注入，这里预留接口）
+        terminal_reward = info.get("terminal_reward", 0.0)
+
         # 汇总
-        reward = reward_range + reward_angle + reward_safety + reward_saturation + reward_smooth
+        reward = reward_range + reward_angle + reward_safety + reward_saturation + reward_smooth + terminal_reward
 
         reward_terms = {
             "reward_range": reward_range,
@@ -123,6 +126,7 @@ class RewardCalculator:
             "reward_safety": reward_safety,
             "reward_saturation": reward_saturation,
             "reward_smooth": reward_smooth,
+            "terminal_reward": terminal_reward,
             "reward_total": reward,
         }
 

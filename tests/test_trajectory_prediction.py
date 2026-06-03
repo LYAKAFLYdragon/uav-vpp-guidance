@@ -2,6 +2,8 @@
 轨迹预测模型单元测试。
 """
 
+import os
+
 import pytest
 import numpy as np
 import torch
@@ -104,3 +106,145 @@ class TestGRUTrajectoryPredictor:
         model.unfreeze()
         for param in model.parameters():
             assert param.requires_grad
+
+
+# ---------------------------------------------------------------------------
+# Coordinate utils tests
+# ---------------------------------------------------------------------------
+
+class TestCoordinateUtils:
+    def test_get_velocity_zero_speed_with_heading(self):
+        """velocity_mps=0.0 + heading_rad should return [0,0,0], not raise."""
+        from uav_vpp_guidance.trajectory_prediction.coordinate_utils import get_velocity_neu
+        state = {"velocity_mps": 0.0, "heading_rad": 0.0}
+        vel = get_velocity_neu(state)
+        assert np.allclose(vel, [0.0, 0.0, 0.0])
+
+    def test_get_velocity_speed_mps_zero(self):
+        """speed_mps=0.0 should not be skipped by 'or' chain."""
+        from uav_vpp_guidance.trajectory_prediction.coordinate_utils import get_velocity_neu
+        state = {"speed_mps": 0.0, "heading_rad": np.pi / 4}
+        vel = get_velocity_neu(state)
+        assert np.allclose(vel, [0.0, 0.0, 0.0])
+
+    def test_get_acceleration_ned_conversion(self):
+        """acceleration_ned=[0,0,9.8] -> NEU [0,0,-9.8]."""
+        from uav_vpp_guidance.trajectory_prediction.coordinate_utils import get_acceleration_neu
+        state = {"acceleration_ned": np.array([0.0, 0.0, 9.8])}
+        acc = get_acceleration_neu(state)
+        assert np.allclose(acc, [0.0, 0.0, -9.8])
+
+    def test_get_acceleration_bad_shape_raises(self):
+        """Wrong-shape acceleration field should raise ValueError."""
+        from uav_vpp_guidance.trajectory_prediction.coordinate_utils import get_acceleration_neu
+        state = {"acceleration_vector_mps2": np.array([1.0, 2.0])}
+        with pytest.raises(ValueError):
+            get_acceleration_neu(state)
+
+    def test_get_acceleration_ned_bad_shape_raises(self):
+        state = {"acceleration_ned": np.array([1.0])}
+        from uav_vpp_guidance.trajectory_prediction.coordinate_utils import get_acceleration_neu
+        with pytest.raises(ValueError):
+            get_acceleration_neu(state)
+
+    def test_get_position_only_position_field(self):
+        """Only 'position' field should work for neural displacement anchor."""
+        from uav_vpp_guidance.trajectory_prediction.coordinate_utils import get_position_neu
+        state = {"position": np.array([100.0, 200.0, 300.0])}
+        pos = get_position_neu(state)
+        assert np.allclose(pos, [100.0, 200.0, 300.0])
+
+
+# ---------------------------------------------------------------------------
+# Device utils tests
+# ---------------------------------------------------------------------------
+
+class TestDeviceUtils:
+    def test_resolve_cpu(self):
+        from uav_vpp_guidance.trajectory_prediction.device_utils import resolve_torch_device
+        dev = resolve_torch_device("cpu")
+        assert str(dev) == "cpu"
+
+    def test_cuda_unavailable_fallback(self):
+        import torch
+        from uav_vpp_guidance.trajectory_prediction.device_utils import resolve_torch_device
+        if torch.cuda.is_available():
+            pytest.skip("CUDA is available on this machine")
+        dev = resolve_torch_device("cuda", allow_fallback=True)
+        assert str(dev) == "cpu"
+
+    def test_cuda_unavailable_strict_raises(self):
+        import torch
+        from uav_vpp_guidance.trajectory_prediction.device_utils import resolve_torch_device
+        if torch.cuda.is_available():
+            pytest.skip("CUDA is available on this machine")
+        with pytest.raises(RuntimeError):
+            resolve_torch_device("cuda", allow_fallback=False)
+
+    def test_load_checkpoint_cpu(self, tmpdir):
+        import torch
+        from uav_vpp_guidance.trajectory_prediction.device_utils import load_checkpoint_to_model
+        from uav_vpp_guidance.trajectory_prediction.lstm_predictor import LSTMTrajectoryPredictor
+
+        model = LSTMTrajectoryPredictor(input_dim=16, hidden_dim=32, num_layers=1, dropout=0.0)
+        ckpt = os.path.join(str(tmpdir), "ckpt.pt")
+        torch.save(model.state_dict(), ckpt)
+
+        model2 = LSTMTrajectoryPredictor(input_dim=16, hidden_dim=32, num_layers=1, dropout=0.0)
+        load_checkpoint_to_model(model2, ckpt, device_str="cpu", allow_device_fallback=True, strict=True)
+        assert str(next(model2.parameters()).device) == "cpu"
+
+    def test_load_checkpoint_missing_strict(self, tmpdir):
+        import torch
+        from uav_vpp_guidance.trajectory_prediction.device_utils import load_checkpoint_to_model
+        from uav_vpp_guidance.trajectory_prediction.lstm_predictor import LSTMTrajectoryPredictor
+
+        model = LSTMTrajectoryPredictor(input_dim=16, hidden_dim=32, num_layers=1, dropout=0.0)
+        bad_path = os.path.join(str(tmpdir), "nonexistent.pt")
+        with pytest.raises(FileNotFoundError):
+            load_checkpoint_to_model(model, bad_path, device_str="cpu", strict=True)
+
+
+# ---------------------------------------------------------------------------
+# Fallback mode tests
+# ---------------------------------------------------------------------------
+
+class TestFallbackModes:
+    def test_fallback_constant_velocity(self):
+        from uav_vpp_guidance.trajectory_prediction.predictor_adapter import _create_fallback_predictor
+        fb = _create_fallback_predictor("constant_velocity", 1.0)
+        assert fb is not None
+
+    def test_fallback_constant_acceleration(self):
+        from uav_vpp_guidance.trajectory_prediction.predictor_adapter import _create_fallback_predictor
+        fb = _create_fallback_predictor("constant_acceleration", 1.0)
+        assert fb is not None
+
+    def test_fallback_current_target(self):
+        from uav_vpp_guidance.trajectory_prediction.predictor_adapter import _create_fallback_predictor
+        fb = _create_fallback_predictor("current_target", 1.0)
+        assert fb is not None
+        pos, _, info = fb.predict(current_target_state={"position_neu": np.array([1.0, 2.0, 3.0])})
+        assert np.allclose(pos, [1.0, 2.0, 3.0])
+        assert info.get("model") == "current_target"
+
+    def test_fallback_none(self):
+        from uav_vpp_guidance.trajectory_prediction.predictor_adapter import _create_fallback_predictor
+        fb = _create_fallback_predictor("none", 1.0)
+        assert fb is None
+
+    def test_adapter_fallback_none_raises(self):
+        from uav_vpp_guidance.trajectory_prediction.predictor_adapter import TrajectoryPredictorAdapter
+        from uav_vpp_guidance.trajectory_prediction.lstm_predictor import LSTMTrajectoryPredictor
+        from uav_vpp_guidance.trajectory_prediction.state_buffer import TrajectoryStateBuffer
+
+        predictor = LSTMTrajectoryPredictor(input_dim=16, hidden_dim=32, num_layers=1, dropout=0.0)
+        buffer = TrajectoryStateBuffer(history_len=5, feature_dim=16)
+        config = {
+            "prediction": {"lookahead_time_s": 1.0, "output_mode": "relative_displacement", "fallback_mode": "none"},
+            "integration": {"anchor_mode": "predicted_target"},
+            "normalization": {},
+        }
+        adapter = TrajectoryPredictorAdapter(predictor, buffer, config)
+        with pytest.raises(RuntimeError):
+            adapter.predict(current_target_state={"position_neu": np.zeros(3)})

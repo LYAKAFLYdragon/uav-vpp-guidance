@@ -228,6 +228,7 @@ def train_ppo(config, output_dir, smoke=False):
         "step", "episode", "episode_return", "episode_length",
         "success", "score_win", "crash", "out_of_bounds", "timeout",
         "mean_range", "final_range", "final_ata",
+        "prediction_valid_rate", "fallback_rate", "predictor_init_failed_count",
     ]
     update_fieldnames = [
         "step", "update_num", "policy_loss", "value_loss", "entropy",
@@ -263,6 +264,9 @@ def train_ppo(config, output_dir, smoke=False):
                 episode_oob = False
                 episode_timeout = False
                 episode_score_win = False
+                episode_pred_valid_steps = 0
+                episode_fallback_steps = 0
+                episode_predictor_init_failed_steps = 0
 
                 start_time = time.time()
                 update_num = 0
@@ -282,6 +286,15 @@ def train_ppo(config, output_dir, smoke=False):
                         rel_state = obs.get("relative_state", {})
                         range_m = rel_state.get("range_m", 0.0)
                         episode_ranges.append(range_m)
+
+                        # Predictor observability
+                        if info.get("prediction_enabled", False):
+                            if info.get("prediction_valid", False):
+                                episode_pred_valid_steps += 1
+                            if info.get("fallback", False) or info.get("prediction_fallback_reason") is not None:
+                                episode_fallback_steps += 1
+                            if info.get("predictor_init_failed", False):
+                                episode_predictor_init_failed_steps += 1
 
                         # Update last stored transition with actual reward and done
                         agent.buffer.rewards[agent.buffer.ptr - 1] = float(reward)
@@ -305,6 +318,10 @@ def train_ppo(config, output_dir, smoke=False):
                             final_ata = float(np.rad2deg(rel_state.get("ata_rad", 0.0)))
                             mean_range = float(np.mean(episode_ranges)) if episode_ranges else 0.0
 
+                            ep_len = max(1, episode_length)
+                            prediction_valid_rate = episode_pred_valid_steps / ep_len
+                            fallback_rate = episode_fallback_steps / ep_len
+
                             # Log episode stats immediately
                             ep_row = {
                                 "step": global_step,
@@ -319,6 +336,9 @@ def train_ppo(config, output_dir, smoke=False):
                                 "mean_range": mean_range,
                                 "final_range": final_range,
                                 "final_ata": final_ata,
+                                "prediction_valid_rate": round(prediction_valid_rate, 4),
+                                "fallback_rate": round(fallback_rate, 4),
+                                "predictor_init_failed_count": episode_predictor_init_failed_steps,
                             }
                             ep_writer.writerow(ep_row)
                             f_ep.flush()
@@ -327,6 +347,9 @@ def train_ppo(config, output_dir, smoke=False):
                             episode_return = 0.0
                             episode_length = 0
                             episode_ranges = []
+                            episode_pred_valid_steps = 0
+                            episode_fallback_steps = 0
+                            episode_predictor_init_failed_steps = 0
 
                             # Reset environment
                             scenario = sample_scenario(config, rng)
@@ -426,6 +449,25 @@ def train_ppo(config, output_dir, smoke=False):
 
     # Smoke summary
     if smoke:
+        tp_cfg = config.get("trajectory_prediction", {})
+        # Aggregate predictor health from episode log if available
+        pred_valid_rates = []
+        fallback_rates = []
+        init_failed_count = 0
+        if os.path.exists(episode_log_path):
+            try:
+                with open(episode_log_path, "r", newline="", encoding="utf-8") as f:
+                    reader = csv.DictReader(f)
+                    for row in reader:
+                        if row.get("prediction_valid_rate"):
+                            pred_valid_rates.append(float(row["prediction_valid_rate"]))
+                        if row.get("fallback_rate"):
+                            fallback_rates.append(float(row["fallback_rate"]))
+                        if row.get("predictor_init_failed_count"):
+                            init_failed_count += int(row["predictor_init_failed_count"])
+            except Exception:
+                pass
+
         smoke_summary = {
             "smoke": True,
             "total_timesteps": global_step,
@@ -436,6 +478,11 @@ def train_ppo(config, output_dir, smoke=False):
             "episode_train_log": episode_log_path,
             "update_train_log": update_log_path,
             "eval_log": eval_log_path,
+            "predictor_type": tp_cfg.get("predictor_type", "none"),
+            "prediction_enabled": tp_cfg.get("enabled", False),
+            "prediction_valid_rate": float(np.mean(pred_valid_rates)) if pred_valid_rates else None,
+            "fallback_rate": float(np.mean(fallback_rates)) if fallback_rates else None,
+            "predictor_init_failed": init_failed_count > 0,
         }
         smoke_path = os.path.join(log_dir, "smoke_summary.json")
         with open(smoke_path, "w", encoding="utf-8") as f:

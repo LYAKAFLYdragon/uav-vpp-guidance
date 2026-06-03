@@ -72,3 +72,72 @@ Alternation continues until convergence or budget exhaustion.
 | Energy awareness | No | No | Yes (energy mode) |
 | Limit exceedance | Higher near capture | Lower | Lowest |
 | Tuning complexity | Low | Medium (filter alpha, N) | Medium |
+
+## Trajectory Prediction
+
+### Coordinate System Convention
+
+All trajectory prediction internal logic uses **NEU** (North-East-Up) exclusively:
+- **NEU**: z-axis points **up**.
+- **NED**: z-axis points **down** (legacy JSBSim convention).
+
+Conversion rules (centralized in `coordinate_utils.py`):
+- `velocity_ned=[vn, ve, vd]` → NEU `[vn, ve, -vd]`
+- `acceleration_ned=[an, ae, ad]` → NEU `[an, ae, -ad]`
+
+This fixes a previous bug where CV/CA predictors using NED velocity with NEU position would subtract vertical speed incorrectly (e.g., descending target predicted as ascending).
+
+### Strict Predictor Initialization
+
+Neural predictors (LSTM/GRU) with a configured `checkpoint_path` default to `strict_predictor_init=True`:
+- Missing or corrupted checkpoints raise `RuntimeError` before training starts.
+- Prevents silent fallback to untrained random weights.
+- When `strict_predictor_init=False`, initialization failures emit a warning and disable prediction.
+
+### Fallback Semantics
+
+`TrajectoryPredictorAdapter` supports four `fallback_mode` values:
+
+| Mode | Behavior | Use Case |
+|------|----------|----------|
+| `constant_velocity` | `Pos + Vel * T` physics baseline | Safe default |
+| `constant_acceleration` | `Pos + Vel * T + 0.5 * Acc * T^2` | Better when acceleration is available |
+| `current_target` | Return current target position | Conservative, no extrapolation |
+| `none` | Re-raise exception | Strict mode for debugging |
+
+When fallback is triggered, `info` contains:
+- `fallback=True`
+- `fallback_mode`: which fallback was used
+- `fallback_reason`: why the primary predictor failed
+- `fallback_model`: model name of the fallback predictor
+- `prediction_valid=False`
+
+### Device Resolution
+
+`device_utils.py` provides safe CPU/CUDA device selection:
+- `resolve_torch_device(device_str, allow_fallback=True)`: resolves "cuda" → CPU if CUDA unavailable, with optional warning or strict raise.
+- `load_checkpoint_to_model(model, ckpt_path, device_str, allow_device_fallback, strict)`: loads checkpoint with `map_location` set to resolved device.
+
+### Predictor Health Metrics
+
+During PPO training (`train_prediction_vpp_ppo.py`), the episode log tracks per-episode:
+- `prediction_valid_rate`: fraction of steps with valid neural prediction.
+- `fallback_rate`: fraction of steps where fallback was activated.
+- `predictor_init_failed_count`: steps where predictor initialization failed.
+
+The smoke summary JSON (`smoke_summary.json`) includes:
+- `predictor_type`: "lstm", "gru", "constant_velocity", etc.
+- `prediction_enabled`: true/false
+- `prediction_valid_rate`: aggregated valid prediction rate
+- `fallback_rate`: aggregated fallback rate
+- `predictor_init_failed`: true if initialization failed at any point
+
+### Supported Predictors
+
+| Model | Description | Status |
+|---|---|---|
+| `ConstantVelocityPredictor` | Physics baseline: `Pos + Vel * T` | ✅ |
+| `ConstantAccelerationPredictor` | Physics baseline with acceleration | ✅ |
+| `LSTMTrajectoryPredictor` | Stacked LSTM + MLP head | ✅ Complete |
+| `GRUTrajectoryPredictor` | Stacked GRU + MLP head | ✅ Complete |
+| Transformer | Temporal attention encoder | 🔜 Interface reserved |

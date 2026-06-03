@@ -284,6 +284,70 @@ python -m uav_vpp_guidance.visualization.plot_prediction_comparison `
 
 See [docs/classical_prediction_vpp_integration.md](docs/classical_prediction_vpp_integration.md) for details.
 
+## Stage 6D–6F: Neural Predictor (LSTM/GRU) Integration
+
+Extends the VPP framework with pre-trained neural trajectory predictors:
+
+### Coordinate Convention
+
+All trajectory prediction internal logic uses **NEU** (North-East-Up) exclusively:
+- `velocity_ned=[vn, ve, vd]` is converted to NEU `[vn, ve, -vd]` via `coordinate_utils.py`.
+- This fixes the previous bug where CV/CA predictors using NED velocity with NEU position would subtract vertical speed incorrectly.
+
+### Strict Predictor Initialization
+
+Neural predictors with a configured `checkpoint_path` default to `strict_predictor_init=True`:
+- Missing or corrupted checkpoints raise `RuntimeError` before training starts.
+- Prevents silent fallback to untrained random weights.
+
+### Fallback Semantics
+
+`TrajectoryPredictorAdapter` supports configurable `fallback_mode`:
+- `constant_velocity`: Physics baseline extrapolation.
+- `constant_acceleration`: Physics baseline with acceleration estimate.
+- `current_target`: Return current target position (no extrapolation).
+- `none`: Re-raise exception instead of swallowing.
+
+### Smoke Training
+
+```powershell
+# Frozen LSTM predictor
+python -m uav_vpp_guidance.training.train_prediction_vpp_ppo `
+    --config config/experiment/train_vpp_ppo_lstm_frozen.yaml --smoke
+
+# Frozen GRU predictor
+python -m uav_vpp_guidance.training.train_prediction_vpp_ppo `
+    --config config/experiment/train_vpp_ppo_gru_frozen.yaml --smoke
+```
+
+### Evaluation
+
+```powershell
+# LSTM evaluation
+python -m uav_vpp_guidance.evaluation.evaluate_policy `
+    --config config/experiment/evaluate_vpp_lstm_prediction.yaml `
+    --checkpoint outputs/experiments/vpp_ppo_lstm_frozen/checkpoints/best.pt `
+    --backend simple --episodes 10 --seeds 0 1 2 --save-trajectories
+
+# GRU evaluation
+python -m uav_vpp_guidance.evaluation.evaluate_policy `
+    --config config/experiment/evaluate_vpp_gru_prediction.yaml `
+    --checkpoint outputs/experiments/vpp_ppo_gru_frozen/checkpoints/best.pt `
+    --backend simple --episodes 10 --seeds 0 1 2 --save-trajectories
+```
+
+### Predictor Health Metrics
+
+During PPO training, the episode log tracks:
+- `prediction_valid_rate`: fraction of steps with valid neural prediction.
+- `fallback_rate`: fraction of steps where fallback was activated.
+- `predictor_init_failed_count`: steps where predictor initialization failed.
+
+The smoke summary JSON includes:
+- `predictor_type`, `prediction_enabled`
+- `prediction_valid_rate`, `fallback_rate`
+- `predictor_init_failed`
+
 ## Trajectory Prediction Module
 
 The trajectory prediction module (`trajectory_prediction/`) upgrades the VPP anchor from the target's **current position** to the target's **predicted future position**:
@@ -297,8 +361,8 @@ Pos_Virtual = Pos_T_pred + Δp
 | Model | Description | Status |
 |---|---|---|
 | `ConstantVelocityPredictor` | Physics baseline: `Pos + Vel * T` | ✅ |
-| `LSTMTrajectoryPredictor` | Stacked LSTM + MLP head | ✅ Skeleton |
-| `GRUTrajectoryPredictor` | Stacked GRU + MLP head | ✅ Skeleton |
+| `LSTMTrajectoryPredictor` | Stacked LSTM + MLP head | ✅ Complete (offline training + online integration) |
+| `GRUTrajectoryPredictor` | Stacked GRU + MLP head | ✅ Complete (offline training + online integration) |
 | Transformer | Temporal attention encoder | 🔜 Interface reserved |
 
 ### Anchor Modes
@@ -344,7 +408,9 @@ See `docs/legacy_mapping.md` and `legacy_notes/files_to_migrate.md` for detailed
 - [x] Trajectory prediction module framework
 - [x] Constant velocity / LSTM / GRU predictors
 - [x] Predictor adapter integrated with VPP generator
-- [ ] Episode-based supervised training
+- [x] Episode-based supervised training (Stage 6C)
+- [x] Neural predictor online integration (Stage 6D)
+- [x] Coordinate/device/fallback hardening (Stage 6E)
 - [ ] Transformer predictor
 
 ### Phase 4 (Completed): No-Prediction VPP Baseline
@@ -380,6 +446,35 @@ See `docs/legacy_mapping.md` and `legacy_notes/files_to_migrate.md` for detailed
 - [x] Command variance and limit-exceedance tracking in terminal phase
 - [ ] Full multi-seed training (≥200k steps) for paper-grade results
 
+### Phase 6C (Completed): LSTM/GRU Offline Training Pipeline
+- [x] Dataset builder from episode logs (CSV / DataFrame / dict-list)
+- [x] Sliding-window feature extraction with NEU displacement labels
+- [x] LSTM/GRU trainer with train/validate/fit/checkpoint
+- [x] Training pipeline CLI and PowerShell script
+- [x] 14 unit tests for dataset, trainer, pipeline
+
+### Phase 6D (Completed): Neural Predictor Online Integration
+- [x] LSTM/GRU predictor adapter with checkpoint loading
+- [x] `is_ready()` guard for neural predictors
+- [x] LSTM closed-loop integration test in TrackingEnv
+- [x] Frozen predictor during RL by default
+
+### Phase 6E (Completed): Coordinate-System + Device + Fallback Hardening
+- [x] Unified `coordinate_utils.py`: NED→NEU conversion for position/velocity/acceleration
+- [x] `device_utils.py`: safe CPU/CUDA resolution with fallback/strict modes
+- [x] Strict predictor initialization: missing checkpoint fails fast
+- [x] Configurable fallback modes: `constant_velocity`, `constant_acceleration`, `current_target`, `none`
+- [x] `fallback_model` / `fallback_reason` / `prediction_valid` observability in info
+- [x] `predictor_init_failed` exposed in env step info
+- [x] GRU closed-loop integration test
+
+### Phase 6F (In Progress): Frozen Neural Predictor PPO Smoke + Full Ablation
+- [x] `train_vpp_ppo_lstm_frozen.yaml` config
+- [x] `train_vpp_ppo_gru_frozen.yaml` config
+- [x] `evaluate_vpp_gru_prediction.yaml` config
+- [x] Predictor observability in PPO smoke training (prediction_valid_rate, fallback_rate)
+- [ ] Full multi-seed training (≥200k steps) for paper-grade results
+
 ### Phase 7 (In Progress): JSBSim High-Fidelity Validation
 
 **Status**: Guidance diversity smoke-tested on JSBSim F-16. No NaN/Inf issues.
@@ -399,8 +494,8 @@ python scripts/eval_jsbsim_guidance_comparison.py --seeds 0 1 2 --episodes 3 --r
 
 - [x] Guidance mode ablation smoke test (geometric vs PN vs hybrid)
 - [x] Terminal-phase command stability metrics on JSBSim
+- [x] LSTM/GRU predictor training and integration
 - [ ] Full JSBSim dynamics and scenario migration
-- [ ] LSTM/GRU predictor training and integration
 - [ ] Gain-only CEM optimization
 - [ ] Strategy-gain bilevel training
 - [ ] Terminal-phase command saturation analysis with high-fidelity actuator model

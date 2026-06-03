@@ -81,11 +81,12 @@ def get_velocity_neu(state: dict) -> np.ndarray:
         return arr
 
     # 4. Scalar fallback
-    speed = (
-        state.get("velocity_mps")
-        or state.get("speed_mps")
-        or state.get("vt_mps")
-    )
+    speed = state.get("velocity_mps")
+    if speed is None:
+        speed = state.get("speed_mps")
+    if speed is None:
+        speed = state.get("vt_mps")
+
     heading = state.get("heading_rad")
     if heading is None and "attitude_rpy" in state:
         heading = np.asarray(state["attitude_rpy"], dtype=np.float64)[2]
@@ -110,14 +111,26 @@ def get_acceleration_neu(state: dict) -> np.ndarray:
 
     Returns:
         np.ndarray of shape (3,) or None if not available.
+
+    Raises:
+        ValueError: if acceleration field has wrong shape.
     """
     acc = state.get("acceleration_vector_mps2")
     if acc is not None:
-        return np.asarray(acc, dtype=np.float64)
+        arr = np.asarray(acc, dtype=np.float64)
+        if arr.shape != (3,):
+            raise ValueError(
+                f"acceleration_vector_mps2 must be a 3-element vector, got shape {arr.shape}"
+            )
+        return arr
 
     acc_ned = state.get("acceleration_ned")
     if acc_ned is not None:
         a = np.asarray(acc_ned, dtype=np.float64)
+        if a.shape != (3,):
+            raise ValueError(
+                f"acceleration_ned must be a 3-element vector, got shape {a.shape}"
+            )
         return np.array([a[0], a[1], -a[2]], dtype=np.float64)
 
     return None

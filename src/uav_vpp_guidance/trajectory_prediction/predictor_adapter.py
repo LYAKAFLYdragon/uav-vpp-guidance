@@ -21,7 +21,30 @@ from .state_buffer import TrajectoryStateBuffer
 from .feature_builder import build_target_prediction_feature
 from .constant_velocity import ConstantVelocityPredictor
 from .constant_acceleration import ConstantAccelerationPredictor
+from .coordinate_utils import get_position_neu
 from .device_utils import load_checkpoint_to_model, resolve_torch_device
+
+
+# ---------------------------------------------------------------------------
+# Fallback predictor classes
+# ---------------------------------------------------------------------------
+
+class _CurrentTargetFallback:
+    """Fallback that returns the current target position (no motion extrapolation)."""
+
+    def predict(self, history_seq=None, current_target_state=None):
+        if current_target_state is None:
+            return None, None, {
+                "model": "current_target",
+                "fallback": True,
+                "fallback_reason": "current_target_state is None",
+            }
+        pos = get_position_neu(current_target_state)
+        return pos, None, {
+            "model": "current_target",
+            "fallback": False,
+            "output_is_absolute": True,
+        }
 
 
 # ---------------------------------------------------------------------------
@@ -31,6 +54,7 @@ from .device_utils import load_checkpoint_to_model, resolve_torch_device
 _FALLBACK_REGISTRY = {
     "constant_velocity": ConstantVelocityPredictor,
     "constant_acceleration": ConstantAccelerationPredictor,
+    "current_target": _CurrentTargetFallback,
 }
 
 
@@ -44,6 +68,8 @@ def _create_fallback_predictor(fallback_mode: str, lookahead_time_s: float):
             f"Unknown fallback_mode: {fallback_mode}. "
             f"Supported: {list(_FALLBACK_REGISTRY.keys()) + ['none']}"
         )
+    if fallback_mode == "current_target":
+        return cls()
     return cls(lookahead_time_s=lookahead_time_s)
 
 
@@ -288,7 +314,8 @@ class TrajectoryPredictorAdapter:
                 current_target_state=current_target_state
             )
             # 只提取 fallback_info 中的非冲突诊断字段
-            for key in ("fallback_model", "model_type"):
-                if key in fallback_info and key not in info:
-                    info[key] = fallback_info[key]
+            for key in ("fallback_model", "model_type", "model"):
+                if key in fallback_info and "fallback_model" not in info:
+                    info["fallback_model"] = fallback_info[key]
+                    break
             return pred_pos, pred_var, info

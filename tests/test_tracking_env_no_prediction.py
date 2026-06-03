@@ -237,3 +237,39 @@ class TestCloseRangeTrackingEnvNoPrediction:
         rt = info["reward_terms"]
         assert rt["terminal_reward"] == pytest.approx(-200.0, abs=1e-6)
         env.close()
+
+    def test_timeout_returns_truncated_not_terminated(self, base_config):
+        """timeout 时必须返回 truncated=True, terminated=False（非任务终止）。"""
+        base_config["env"]["max_high_level_steps"] = 1
+        env = CloseRangeTrackingEnv(base_config)
+        env.reset(seed=0)
+        _, _, terminated, truncated, info = env.step(np.zeros(3))
+        assert terminated is False
+        assert truncated is True
+        assert info["termination_info"]["is_timeout"] is True
+        env.close()
+
+    def test_terminal_reward_on_timeout(self, base_config):
+        """timeout 时 terminal_reward 应为负（使用 terminal_failure）。"""
+        base_config["env"]["max_high_level_steps"] = 1
+        env = CloseRangeTrackingEnv(base_config)
+        env.reset(seed=0)
+        _, reward, terminated, truncated, info = env.step(np.zeros(3))
+        assert terminated is False
+        assert truncated is True
+        rt = info["reward_terms"]
+        assert rt["terminal_reward"] == pytest.approx(-200.0, abs=1e-6)
+        env.close()
+
+    def test_timeout_info_reason_is_timeout(self, base_config):
+        """timeout 时 info['termination_info']['reason'] 应为 'timeout'。"""
+        base_config["env"]["max_high_level_steps"] = 1
+        env = CloseRangeTrackingEnv(base_config)
+        env.reset(seed=0)
+        _, _, terminated, truncated, info = env.step(np.zeros(3))
+        assert terminated is False
+        assert truncated is True
+        assert info["termination_info"]["reason"] == "timeout"
+        assert info["termination_info"]["is_timeout"] is True
+        assert info["is_timeout"] is True
+        env.close()

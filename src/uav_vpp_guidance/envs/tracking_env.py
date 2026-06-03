@@ -402,6 +402,10 @@ class CloseRangeTrackingEnv:
         """
         Check termination conditions.
 
+        Semantics:
+          - success / crash / out_of_bounds → terminated=True, truncated=False
+          - timeout → terminated=False, truncated=True
+
         Returns:
             tuple: (terminated, truncated, term_info)
         """
@@ -409,21 +413,12 @@ class CloseRangeTrackingEnv:
         truncated = False
         done, term_info = self.termination_checker.check(own_state, target_state, rel_state, self.current_step)
         if done:
-            if term_info.get("is_success"):
-                pass  # terminal reward added in _compute_reward if needed
-            elif term_info.get("is_crash"):
-                pass
-            terminated = True
-        elif self.current_step >= self.max_steps:
-            truncated = True
-            term_info = {
-                "reason": "timeout",
-                "is_success": False,
-                "is_crash": False,
-                "is_timeout": True,
-                "is_out_of_bounds": False,
-                "success_hold_steps": 0,
-            }
+            if term_info.get("is_timeout"):
+                # Timeout is a time-limit truncation, not a task termination.
+                truncated = True
+            else:
+                # success, crash, out_of_bounds are true terminations.
+                terminated = True
 
         return terminated, truncated, term_info
 

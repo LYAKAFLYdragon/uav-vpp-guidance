@@ -392,9 +392,9 @@ Quick comparison (random policy, 3 seeds × 3 episodes):
 | proportional_navigation | 33.3% | 0.0717 | ~0 | 0.00% | 0.00% |
 | hybrid | 33.3% | 0.0717 | ~0 | 0.00% | 0.00% |
 
-Run full comparison:
+Run full comparison (requires JSBSim backend):
 ```powershell
-python scripts/eval_jsbsim_guidance_comparison.py --seeds 0 1 2 --episodes 3
+python scripts/eval_jsbsim_guidance_comparison.py --seeds 0 1 2 --episodes 3 --require-backend jsbsim
 ```
 
 - [x] Guidance mode ablation smoke test (geometric vs PN vs hybrid)

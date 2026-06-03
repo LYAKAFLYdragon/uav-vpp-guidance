@@ -262,16 +262,13 @@ class LOSRateGuidance:
         """Validate that state dict contains at least a position field."""
         if not isinstance(state, dict):
             raise TypeError(f"{name} must be a dict, got {type(state).__name__}")
-        pos = state.get("position_neu")
-        if pos is None:
-            pos = state.get("position_m")
-        if pos is None:
-            pos = state.get("position")
-        if pos is None:
-            raise ValueError(
-                f"{name} missing position field (expected one of: "
-                "position_neu, position_m, position)"
-            )
+        for key in ("position_ned", "position_neu", "position_m", "position"):
+            if state.get(key) is not None:
+                return
+        raise ValueError(
+            f"{name} missing position field (expected one of: "
+            "position_ned, position_neu, position_m, position)"
+        )
 
     def _compute_heading_from_velocity(self, vel: np.ndarray, speed: float) -> float:
         """
@@ -382,33 +379,45 @@ class LOSRateGuidance:
 
 
 def _extract_position(state: Dict[str, Any]) -> np.ndarray:
-    """Extract 3-D position vector from state dict."""
-    pos = state.get("position_neu")
-    if pos is None:
-        pos = state.get("position_m")
-    if pos is None:
-        pos = state.get("position")
-    if pos is None:
-        raise ValueError("State missing position field")
-    arr = np.asarray(pos, dtype=np.float64)
-    if arr.shape != (3,):
-        raise ValueError(f"Position must be a 3-element vector, got shape {arr.shape}")
-    return arr
+    """Extract 3-D position vector from state dict.
+
+    Tries keys in order: position_ned, position_neu, position_m, position.
+    Raises ValueError if missing or wrong shape.
+    """
+    for key in ("position_ned", "position_neu", "position_m", "position"):
+        pos = state.get(key)
+        if pos is not None:
+            arr = np.asarray(pos, dtype=np.float64)
+            if arr.shape != (3,):
+                raise ValueError(
+                    f"Position must be a 3-element vector, got shape {arr.shape}"
+                )
+            return arr
+    raise ValueError(
+        "State missing position field (expected one of: "
+        "position_ned, position_neu, position_m, position)"
+    )
 
 
 def _extract_velocity(state: Dict[str, Any]) -> np.ndarray:
-    """Extract 3-D velocity vector from state dict."""
-    vel = state.get("velocity_ned")
-    if vel is None:
-        vel = state.get("velocity_vector_mps")
-    if vel is None:
-        vel = state.get("velocity")
-    if vel is None:
-        raise ValueError("State missing velocity field")
-    arr = np.asarray(vel, dtype=np.float64)
-    if arr.shape != (3,):
-        raise ValueError(f"Velocity must be a 3-element vector, got shape {arr.shape}")
-    return arr
+    """Extract 3-D velocity vector from state dict.
+
+    Tries keys in order: velocity_ned, velocity_vector_mps, velocity.
+    Raises ValueError if missing or wrong shape.
+    """
+    for key in ("velocity_ned", "velocity_vector_mps", "velocity"):
+        vel = state.get(key)
+        if vel is not None:
+            arr = np.asarray(vel, dtype=np.float64)
+            if arr.shape != (3,):
+                raise ValueError(
+                    f"Velocity must be a 3-element vector, got shape {arr.shape}"
+                )
+            return arr
+    raise ValueError(
+        "State missing velocity field (expected one of: "
+        "velocity_ned, velocity_vector_mps, velocity)"
+    )
 
 
 def _stable_angle_diff(a: float, b: float) -> float:

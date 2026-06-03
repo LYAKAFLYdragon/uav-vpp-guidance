@@ -46,6 +46,7 @@ def test_default_config(default_pn):
     assert default_pn.los_rate_filter_alpha == pytest.approx(0.3)
     assert default_pn.max_accel_mps2 == pytest.approx(100.0)
     assert default_pn.epsilon == pytest.approx(1.0e-6)
+    assert default_pn.dt == pytest.approx(0.2)
 
 
 def test_custom_config():
@@ -57,6 +58,7 @@ def test_custom_config():
                 "los_rate_filter_alpha": 0.5,
                 "max_accel_mps2": 150.0,
                 "epsilon": 1.0e-4,
+                "dt": 0.1,
             },
         }
     )
@@ -64,6 +66,12 @@ def test_custom_config():
     assert pn.los_rate_filter_alpha == pytest.approx(0.5)
     assert pn.k_roll == pytest.approx(2.0)
     assert pn.epsilon == pytest.approx(1.0e-4)
+    assert pn.dt == pytest.approx(0.1)
+
+
+def test_invalid_dt_raises():
+    with pytest.raises(ValueError, match="dt must be positive"):
+        ProportionalNavigationGuidance({"params": {"dt": 0.0}})
 
 
 # ---------------------------------------------------------------------------
@@ -182,6 +190,86 @@ def test_multiple_calls_filter_state(default_pn, own_state, virtual_point):
     assert cmd1.keys() == cmd2.keys()
     for k in cmd1:
         assert math.isfinite(cmd2[k])
+
+
+# ---------------------------------------------------------------------------
+# LOS rate dt scaling
+# ---------------------------------------------------------------------------
+
+
+def test_los_rate_scales_with_dt():
+    """Smaller dt should produce larger LOS rate and more aggressive commands."""
+    own = {
+        "position_m": np.array([0.0, 0.0, 5000.0]),
+        "velocity_vector_mps": np.array([200.0, 0.0, 0.0]),
+        "roll_rad": 0.0,
+    }
+    vp1 = {"position_m": np.array([1000.0, 0.0, 5000.0])}
+    vp2 = {"position_m": np.array([1100.0, 50.0, 5050.0])}
+
+    pn_fast = ProportionalNavigationGuidance({"params": {"dt": 0.05}})
+    pn_slow = ProportionalNavigationGuidance({"params": {"dt": 0.4}})
+
+    # Warm up both filters
+    pn_fast.compute_command(own, None, vp1)
+    pn_slow.compute_command(own, None, vp1)
+
+    cmd_fast = pn_fast.compute_command(own, None, vp2)
+    cmd_slow = pn_slow.compute_command(own, None, vp2)
+
+    # Faster dt -> larger LOS rate -> larger acceleration -> higher nz
+    assert cmd_fast["nz_cmd"] > cmd_slow["nz_cmd"]
+
+
+def test_dt_epsilon_protection():
+    """Very small dt should not explode due to epsilon protection."""
+    pn = ProportionalNavigationGuidance({"params": {"dt": 1e-12, "epsilon": 1e-9}})
+    own = {
+        "position_m": np.array([0.0, 0.0, 5000.0]),
+        "velocity_vector_mps": np.array([200.0, 0.0, 0.0]),
+        "roll_rad": 0.0,
+    }
+    vp = {"position_m": np.array([1000.0, 0.0, 5000.0])}
+    pn.compute_command(own, None, vp)
+    cmd = pn.compute_command(own, None, vp)
+    assert math.isfinite(cmd["nz_cmd"])
+    assert math.isfinite(cmd["roll_rate_cmd"])
+
+
+def test_relative_velocity_uses_target_when_available():
+    """PN should use target velocity for closing velocity when provided."""
+    own = {
+        "position_m": np.array([0.0, 0.0, 5000.0]),
+        "velocity_vector_mps": np.array([200.0, 0.0, 0.0]),
+        "roll_rad": 0.0,
+    }
+    target = {
+        "position_m": np.array([2000.0, 0.0, 5000.0]),
+        "velocity_vector_mps": np.array([100.0, 0.0, 0.0]),
+    }
+    vp = {"position_m": np.array([2000.0, 0.0, 5000.0])}
+    pn = ProportionalNavigationGuidance()
+    # Warm filter
+    pn.compute_command(own, target, vp)
+    cmd = pn.compute_command(own, target, vp)
+    assert math.isfinite(cmd["nz_cmd"])
+    assert math.isfinite(cmd["roll_rate_cmd"])
+
+
+def test_relative_velocity_fallback_when_target_has_no_velocity():
+    """PN should fallback to -own_vel when target lacks velocity field."""
+    own = {
+        "position_m": np.array([0.0, 0.0, 5000.0]),
+        "velocity_vector_mps": np.array([200.0, 0.0, 0.0]),
+        "roll_rad": 0.0,
+    }
+    target = {"position_m": np.array([2000.0, 0.0, 5000.0])}
+    vp = {"position_m": np.array([2000.0, 0.0, 5000.0])}
+    pn = ProportionalNavigationGuidance()
+    pn.compute_command(own, target, vp)
+    cmd = pn.compute_command(own, target, vp)
+    assert math.isfinite(cmd["nz_cmd"])
+    assert math.isfinite(cmd["roll_rate_cmd"])
 
 
 # ---------------------------------------------------------------------------

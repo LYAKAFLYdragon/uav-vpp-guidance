@@ -2,7 +2,6 @@
 Unit tests for virtual point generation.
 """
 
-import pytest
 import numpy as np
 from uav_vpp_guidance.virtual_point.generator import VirtualPointGenerator
 from uav_vpp_guidance.virtual_point.smoother import VirtualPointSmoother
@@ -22,6 +21,54 @@ class TestVirtualPointGenerator:
         target_state = {"position_neu": np.array([1000.0, 0.0, 0.0])}
         vp = gen.action_to_virtual_point(action, own_state, target_state)
         assert np.allclose(vp["position"], np.array([1000.0, 0.0, 0.0]))
+
+    def test_get_target_position_with_position_m(self):
+        """_get_target_position 应支持 position_m 字段。"""
+        target_state = {"position_m": np.array([500.0, 200.0, 300.0])}
+        pos = VirtualPointGenerator._get_target_position(target_state)
+        assert np.allclose(pos, np.array([500.0, 200.0, 300.0]))
+
+    def test_get_target_position_priority_neu_over_m(self):
+        """position_neu 优先于 position_m。"""
+        target_state = {
+            "position_neu": np.array([1.0, 2.0, 3.0]),
+            "position_m": np.array([4.0, 5.0, 6.0]),
+        }
+        pos = VirtualPointGenerator._get_target_position(target_state)
+        assert np.allclose(pos, np.array([1.0, 2.0, 3.0]))
+
+    def test_constant_velocity_with_velocity_vector_mps(self):
+        """constant_velocity 应支持 velocity_vector_mps (NEU)。"""
+        target_state = {
+            "position_neu": np.array([1000.0, 0.0, 0.0]),
+            "velocity_vector_mps": np.array([50.0, 0.0, 10.0]),
+        }
+        pos = VirtualPointGenerator._constant_velocity_prediction(target_state, 2.0)
+        assert np.allclose(pos, np.array([1100.0, 0.0, 20.0]))
+
+    def test_constant_velocity_with_velocity_ned_converts_to_neu(self):
+        """velocity_ned [vn, ve, vd] 应转换为 NEU [vn, ve, -vd]。"""
+        target_state = {
+            "position_neu": np.array([1000.0, 0.0, 0.0]),
+            "velocity_ned": np.array([50.0, 0.0, -10.0]),  # vd=-10 -> 向上 10
+        }
+        pos = VirtualPointGenerator._constant_velocity_prediction(target_state, 2.0)
+        assert np.allclose(pos, np.array([1100.0, 0.0, 20.0]))
+
+    def test_constant_velocity_fallback_to_velocity(self):
+        """velocity 字段作为 fallback。"""
+        target_state = {
+            "position_neu": np.array([1000.0, 0.0, 0.0]),
+            "velocity": np.array([30.0, 0.0, 5.0]),
+        }
+        pos = VirtualPointGenerator._constant_velocity_prediction(target_state, 2.0)
+        assert np.allclose(pos, np.array([1060.0, 0.0, 10.0]))
+
+    def test_constant_velocity_missing_velocity_returns_current_pos(self):
+        """缺少速度信息时返回当前位置。"""
+        target_state = {"position_neu": np.array([1000.0, 0.0, 0.0])}
+        pos = VirtualPointGenerator._constant_velocity_prediction(target_state, 2.0)
+        assert np.allclose(pos, np.array([1000.0, 0.0, 0.0]))
 
 
 class TestVirtualPointSmoother:

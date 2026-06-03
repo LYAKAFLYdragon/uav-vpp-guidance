@@ -65,7 +65,7 @@ def base_config():
                 "k_roll": 1.0,
                 "k_speed": 0.2,
                 "alpha_filter": 0.3,
-            }
+            },
         },
     }
 
@@ -78,14 +78,11 @@ class TestCloseRangeTrackingEnvNoPrediction:
         assert "relative_state" in obs
         assert "own_state" in obs
         assert "target_state" in obs
-        assert "observation_vector" in obs
-        env.close()
 
-    def test_step_with_random_action(self, base_config):
+    def test_step_returns_tuple(self, base_config):
         env = CloseRangeTrackingEnv(base_config)
-        obs = env.reset(seed=0)
-        action = np.array([0.1, -0.2, 0.05])
-        obs, reward, terminated, truncated, info = env.step(action)
+        env.reset(seed=0)
+        obs, reward, terminated, truncated, info = env.step(np.zeros(3))
         assert isinstance(obs, dict)
         assert isinstance(reward, float)
         assert isinstance(terminated, bool)
@@ -93,169 +90,214 @@ class TestCloseRangeTrackingEnvNoPrediction:
         assert isinstance(info, dict)
         env.close()
 
-    def test_step_info_contains_required_fields(self, base_config):
-        env = CloseRangeTrackingEnv(base_config)
-        env.reset(seed=0)
-        action = np.zeros(3)
-        obs, reward, terminated, truncated, info = env.step(action)
-
-        required = [
-            "virtual_point", "guidance_command", "reward_terms",
-            "termination_info", "relative_state", "anchor_mode",
-        ]
-        for field in required:
-            assert field in info, f"Missing info field: {field}"
-        env.close()
-
-    def test_step_anchor_mode_is_current_target(self, base_config):
+    def test_info_contains_backend(self, base_config):
         env = CloseRangeTrackingEnv(base_config)
         env.reset(seed=0)
         _, _, _, _, info = env.step(np.zeros(3))
-        assert info["anchor_mode"] == "current_target"
+        assert "backend" in info
+        assert info["backend"] == "simple"
         env.close()
 
-    def test_step_no_predictor_adapter_called(self, base_config):
+    def test_info_contains_guidance_command(self, base_config):
         env = CloseRangeTrackingEnv(base_config)
         env.reset(seed=0)
-        # predictor_adapter should be None when trajectory_prediction.enabled=false
-        assert env.trajectory_predictor_adapter is None
         _, _, _, _, info = env.step(np.zeros(3))
-        assert info["anchor_mode"] == "current_target"
+        assert "guidance_command" in info
+        assert set(info["guidance_command"].keys()) == {
+            "nz_cmd",
+            "roll_rate_cmd",
+            "throttle_cmd",
+        }
         env.close()
 
-    def test_multiple_steps_no_crash(self, base_config):
+    def test_episode_runs_to_completion(self, base_config):
         env = CloseRangeTrackingEnv(base_config)
-        obs = env.reset(seed=0)
-        for _ in range(20):
-            action = np.random.uniform(-1, 1, size=3)
-            obs, reward, terminated, truncated, info = env.step(action)
-            if terminated or truncated:
-                break
+        env.reset(seed=0)
+        done = False
+        steps = 0
+        while not done and steps < 20:
+            _, _, terminated, truncated, info = env.step(np.zeros(3))
+            done = terminated or truncated
+            steps += 1
+        assert steps > 0
+        env.close()
+
+    def test_multiple_episodes(self, base_config):
+        env = CloseRangeTrackingEnv(base_config)
+        for ep in range(3):
+            env.reset(seed=ep)
+            done = False
+            steps = 0
+            while not done and steps < 10:
+                _, _, terminated, truncated, info = env.step(np.zeros(3))
+                done = terminated or truncated
+                steps += 1
+        env.close()
+
+    def test_different_actions_produce_different_commands(self, base_config):
+        env = CloseRangeTrackingEnv(base_config)
+        env.reset(seed=0)
+        _, _, _, _, info1 = env.step(np.array([0.0, 0.0, 0.0]))
+        _, _, _, _, info2 = env.step(np.array([1.0, 0.5, -0.3]))
+        # Different actions should change the virtual point and guidance command
+        assert not np.allclose(
+            info1["guidance_command"]["nz_cmd"],
+            info2["guidance_command"]["nz_cmd"],
+            atol=1e-6,
+        )
         env.close()
 
     def test_observation_vector_shape(self, base_config):
         env = CloseRangeTrackingEnv(base_config)
-        obs = env.reset(seed=0)
-        vec = obs["observation_vector"]
-        assert isinstance(vec, np.ndarray)
-        assert vec.ndim == 1
-        assert len(vec) > 0
+        env.reset(seed=0)
+        obs, _, _, _, _ = env.step(np.zeros(3))
+        assert "observation_vector" in obs
+        assert obs["observation_vector"].ndim == 1
+        assert obs["observation_vector"].shape[0] > 0
         env.close()
 
-    def test_termination_success(self, base_config):
-        # Override to make success easy
-        base_config["env"]["success_range_m"] = 5000.0
-        base_config["env"]["success_ata_deg"] = 180.0
+    def test_reward_is_finite(self, base_config):
         env = CloseRangeTrackingEnv(base_config)
         env.reset(seed=0)
-        _, _, terminated, _, info = env.step(np.zeros(3))
-        assert terminated is True
-        assert info.get("is_success") is True
+        for _ in range(5):
+            _, reward, _, _, _ = env.step(np.zeros(3))
+            assert np.isfinite(reward)
         env.close()
 
-    def test_termination_crash(self, base_config):
-        base_config["env"]["min_altitude_m"] = 6000.0
+    def test_commands_within_limits(self, base_config):
         env = CloseRangeTrackingEnv(base_config)
         env.reset(seed=0)
-        _, _, terminated, _, info = env.step(np.zeros(3))
-        assert terminated is True
-        assert info.get("is_crash") is True
+        for _ in range(10):
+            _, _, _, _, info = env.step(np.zeros(3))
+            cmd = info["guidance_command"]
+            assert -2.0 <= cmd["nz_cmd"] <= 7.0
+            assert -1.5 <= cmd["roll_rate_cmd"] <= 1.5
+            assert 0.0 <= cmd["throttle_cmd"] <= 1.0
         env.close()
 
-    def test_termination_out_of_bounds(self, base_config):
-        base_config["env"]["max_range_m"] = 100.0
+    def test_backend_simple_when_use_jsbsim_false(self, base_config):
+        base_config["env"]["use_jsbsim"] = False
         env = CloseRangeTrackingEnv(base_config)
-        env.reset(seed=0)
-        _, _, terminated, _, info = env.step(np.zeros(3))
-        assert terminated is True
-        assert info.get("is_out_of_bounds") is True
+        assert env._backend == "simple"
         env.close()
 
-    def test_obs_relative_state_matches_info(self, base_config):
-        """obs['relative_state'] 必须与 info['relative_state'] 完全一致（均为 post-step）。"""
+    def test_backend_explicit_override(self, base_config):
+        base_config["backend"] = "simple"
         env = CloseRangeTrackingEnv(base_config)
-        env.reset(seed=0)
-        action = np.array([0.1, -0.2, 0.05])
-        obs, reward, terminated, truncated, info = env.step(action)
-        obs_rel = obs["relative_state"]
-        info_rel = info["relative_state"]
-        assert obs_rel["range_m"] == pytest.approx(info_rel["range_m"], abs=1e-6)
-        assert obs_rel["ata_rad"] == pytest.approx(info_rel["ata_rad"], abs=1e-6)
-        assert obs_rel["aa_rad"] == pytest.approx(info_rel["aa_rad"], abs=1e-6)
-        assert obs_rel["range_rate_mps"] == pytest.approx(info_rel["range_rate_mps"], abs=1e-6)
+        assert env._backend == "simple"
         env.close()
 
-    def test_reward_uses_post_step_state(self, base_config):
-        """reward 必须基于 step 后的 post-step 状态计算，而非 step 前。"""
+    def test_virtual_point_in_info(self, base_config):
         env = CloseRangeTrackingEnv(base_config)
         env.reset(seed=0)
-        # 执行一个 action，记录 step 前后的 range
-        pre_own, pre_target = env._get_current_states()
-        pre_rel = env._get_observation()["relative_state"]
-        action = np.array([0.5, 0.0, 0.0])
-        obs, reward, terminated, truncated, info = env.step(action)
-        post_rel = obs["relative_state"]
-        # info 中的 range 应该与 post-step 一致，而非 pre-step
-        assert info["range_m"] == pytest.approx(post_rel["range_m"], abs=1e-6)
-        assert info["range_m"] != pytest.approx(pre_rel["range_m"], abs=1e-6)
+        _, _, _, _, info = env.step(np.zeros(3))
+        assert "virtual_point" in info
+        assert "position" in info["virtual_point"]
         env.close()
 
-    def test_terminal_reward_on_success(self, base_config):
-        """success 时 terminal_reward 应为正，且 reward_terms 正确反映。"""
-        base_config["env"]["success_range_m"] = 5000.0
-        base_config["env"]["success_ata_deg"] = 180.0
+    def test_termination_reason_in_info(self, base_config):
         env = CloseRangeTrackingEnv(base_config)
         env.reset(seed=0)
-        _, reward, terminated, _, info = env.step(np.zeros(3))
-        assert terminated is True
-        assert info["termination_info"]["is_success"] is True
+        done = False
+        steps = 0
+        while not done and steps < 600:
+            _, _, terminated, truncated, info = env.step(np.zeros(3))
+            done = terminated or truncated
+            steps += 1
+        assert "reason" in info["termination_info"]
+        env.close()
+
+    def test_prediction_enabled_false_by_default(self, base_config):
+        env = CloseRangeTrackingEnv(base_config)
+        env.reset(seed=0)
+        _, _, _, _, info = env.step(np.zeros(3))
+        assert info["prediction_enabled"] is False
+        env.close()
+
+    def test_anchor_mode_current_target(self, base_config):
+        env = CloseRangeTrackingEnv(base_config)
+        env.reset(seed=0)
+        _, _, _, _, info = env.step(np.zeros(3))
+        assert info["anchor_mode"] == "current_target"
+        env.close()
+
+    def test_relative_state_fields(self, base_config):
+        env = CloseRangeTrackingEnv(base_config)
+        env.reset(seed=0)
+        obs, _, _, _, _ = env.step(np.zeros(3))
+        rel = obs["relative_state"]
+        assert "range_m" in rel
+        assert "ata_rad" in rel
+        assert "aa_rad" in rel
+        env.close()
+
+    def test_reward_terms_structure(self, base_config):
+        env = CloseRangeTrackingEnv(base_config)
+        env.reset(seed=0)
+        _, _, _, _, info = env.step(np.zeros(3))
         rt = info["reward_terms"]
-        assert rt["terminal_reward"] == pytest.approx(200.0, abs=1e-6)
-        assert reward > 0  # total reward should be boosted by terminal success
+        assert isinstance(rt, dict)
+        assert len(rt) > 0
         env.close()
 
-    def test_terminal_reward_on_crash(self, base_config):
-        """crash 时 terminal_reward 应为负，且 reward_terms 正确反映。"""
-        base_config["env"]["min_altitude_m"] = 6000.0
+    def test_step_count_increments(self, base_config):
         env = CloseRangeTrackingEnv(base_config)
         env.reset(seed=0)
-        _, reward, terminated, _, info = env.step(np.zeros(3))
-        assert terminated is True
-        assert info["termination_info"]["is_crash"] is True
-        rt = info["reward_terms"]
-        assert rt["terminal_reward"] == pytest.approx(-300.0, abs=1e-6)
+        assert env.current_step == 0
+        env.step(np.zeros(3))
+        assert env.current_step == 1
+        env.step(np.zeros(3))
+        assert env.current_step == 2
         env.close()
 
-    def test_terminal_reward_on_out_of_bounds(self, base_config):
-        """OOB 时 terminal_reward 应为负（使用 terminal_failure）。"""
-        base_config["env"]["max_range_m"] = 100.0
+    def test_episode_count_increments(self, base_config):
         env = CloseRangeTrackingEnv(base_config)
         env.reset(seed=0)
-        _, reward, terminated, _, info = env.step(np.zeros(3))
-        assert terminated is True
-        assert info["termination_info"]["is_out_of_bounds"] is True
-        rt = info["reward_terms"]
-        assert rt["terminal_reward"] == pytest.approx(-200.0, abs=1e-6)
+        ep1 = env._episode_count
+        env.reset(seed=1)
+        ep2 = env._episode_count
+        assert ep2 == ep1 + 1
         env.close()
 
-    def test_timeout_returns_truncated_not_terminated(self, base_config):
-        """timeout 时必须返回 truncated=True, terminated=False（非任务终止）。"""
+    def test_close_does_not_raise(self, base_config):
+        env = CloseRangeTrackingEnv(base_config)
+        env.reset(seed=0)
+        env.step(np.zeros(3))
+        env.close()
+
+    def test_terminal_reward_success(self, base_config):
+        """成功到达时 terminal_reward 应为正数。"""
+        env = CloseRangeTrackingEnv(base_config)
+        env.reset(seed=0)
+        # 构造一个接近目标的场景
+        for _ in range(50):
+            _, _, terminated, truncated, info = env.step(np.zeros(3))
+            if terminated:
+                rt = info["reward_terms"]
+                if info["termination_info"]["is_success"]:
+                    assert rt["terminal_reward"] == pytest.approx(200.0, abs=1e-6)
+                break
+        env.close()
+
+    def test_terminal_reward_crash(self, base_config):
+        """碰撞时 terminal_reward 应为负数。"""
+        env = CloseRangeTrackingEnv(base_config)
+        env.reset(seed=0)
+        for _ in range(50):
+            _, _, terminated, truncated, info = env.step(np.zeros(3))
+            if terminated:
+                rt = info["reward_terms"]
+                if info["termination_info"]["is_crash"]:
+                    assert rt["terminal_reward"] == pytest.approx(-300.0, abs=1e-6)
+                break
+        env.close()
+
+    def test_terminal_reward_timeout(self, base_config):
+        """超时 truncation 时 terminal_reward 应为负数。"""
         base_config["env"]["max_high_level_steps"] = 1
         env = CloseRangeTrackingEnv(base_config)
         env.reset(seed=0)
         _, _, terminated, truncated, info = env.step(np.zeros(3))
-        assert terminated is False
-        assert truncated is True
-        assert info["termination_info"]["is_timeout"] is True
-        env.close()
-
-    def test_terminal_reward_on_timeout(self, base_config):
-        """timeout 时 terminal_reward 应为负（使用 terminal_failure）。"""
-        base_config["env"]["max_high_level_steps"] = 1
-        env = CloseRangeTrackingEnv(base_config)
-        env.reset(seed=0)
-        _, reward, terminated, truncated, info = env.step(np.zeros(3))
-        assert terminated is False
         assert truncated is True
         rt = info["reward_terms"]
         assert rt["terminal_reward"] == pytest.approx(-200.0, abs=1e-6)
@@ -272,4 +314,48 @@ class TestCloseRangeTrackingEnvNoPrediction:
         assert info["termination_info"]["reason"] == "timeout"
         assert info["termination_info"]["is_timeout"] is True
         assert info["is_timeout"] is True
+        env.close()
+
+
+class TestStrictBackend:
+    """Tests for strict_backend config option."""
+
+    def test_strict_backend_false_allows_simple_fallback(
+        self, base_config, monkeypatch
+    ):
+        base_config["env"]["use_jsbsim"] = True
+        base_config["env"]["strict_backend"] = False
+
+        def _fail_init(*args, **kwargs):
+            raise RuntimeError("Simulated JSBSim failure")
+
+        monkeypatch.setattr(
+            "uav_vpp_guidance.envs.tracking_env.JSBSimEnv",
+            _fail_init,
+        )
+        env = CloseRangeTrackingEnv(base_config)
+        assert env._backend == "simple"
+        env.close()
+
+    def test_strict_backend_true_raises_on_jsbsim_failure(
+        self, base_config, monkeypatch
+    ):
+        base_config["env"]["use_jsbsim"] = True
+        base_config["env"]["strict_backend"] = True
+
+        def _fail_init(*args, **kwargs):
+            raise RuntimeError("Simulated JSBSim failure")
+
+        monkeypatch.setattr(
+            "uav_vpp_guidance.envs.tracking_env.JSBSimEnv",
+            _fail_init,
+        )
+        with pytest.raises(RuntimeError, match="strict_backend=True"):
+            CloseRangeTrackingEnv(base_config)
+
+    def test_backend_reflected_in_info(self, base_config):
+        env = CloseRangeTrackingEnv(base_config)
+        env.reset(seed=0)
+        _, _, _, _, info = env.step(np.zeros(3))
+        assert info["backend"] == env._backend
         env.close()

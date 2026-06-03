@@ -47,6 +47,9 @@ class ProportionalNavigationGuidance:
         self.base_throttle = float(params.get("base_throttle", 0.7))
         self.target_speed_mps = float(params.get("target_speed_mps", 250.0))
         self.speed_error_scale_mps = float(params.get("speed_error_scale_mps", 100.0))
+        self.dt = float(params.get("dt", 0.2))
+        if self.dt <= 0.0:
+            raise ValueError(f"dt must be positive, got {self.dt}")
 
         # Internal state for LOS rate filtering
         self._prev_los_vec: Optional[np.ndarray] = None
@@ -96,7 +99,8 @@ class ProportionalNavigationGuidance:
 
         # Relative geometry
         rel_pos = vp_pos - own_pos
-        rel_vel = own_vel  # For pure pursuit geometry; could use closing velocity
+        # Use target-relative closing velocity when available, else own velocity
+        rel_vel = self._compute_relative_velocity(own_vel, target_state)
         distance = float(np.linalg.norm(rel_pos))
 
         # LOS unit vector
@@ -182,20 +186,33 @@ class ProportionalNavigationGuidance:
             )
         return (self.k_roll, self.k_speed)
 
+    def _compute_relative_velocity(
+        self, own_vel: np.ndarray, target_state: Optional[Dict[str, Any]]
+    ) -> np.ndarray:
+        """Compute relative velocity (target - own) for closing velocity."""
+        if target_state is None:
+            return -own_vel
+        try:
+            target_vel = _extract_velocity(target_state)
+            return target_vel - own_vel
+        except (ValueError, TypeError):
+            # Fallback if target has no velocity field
+            return -own_vel
+
     def _estimate_los_rate(self, los_unit: np.ndarray) -> np.ndarray:
         """
         Estimate LOS rate via numerical differentiation with first-order filtering.
 
-        Returns LOS rate vector in rad/s (approximate, scaled by 1/dt implicitly
-        through the filter).
+        Returns LOS rate vector in rad/s.
         """
         if self._prev_los_vec is None:
             self._prev_los_vec = los_unit.copy()
             self._filtered_los_rate = np.zeros(3, dtype=np.float64)
             return self._filtered_los_rate
 
-        # Raw LOS rate as vector difference
-        raw_rate = los_unit - self._prev_los_vec
+        dt_safe = max(self.dt, self.epsilon)
+        # Raw LOS rate as vector difference divided by dt
+        raw_rate = (los_unit - self._prev_los_vec) / dt_safe
         self._prev_los_vec = los_unit.copy()
 
         # First-order filter

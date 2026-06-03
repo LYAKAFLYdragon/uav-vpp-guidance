@@ -76,6 +76,7 @@ class CloseRangeTrackingEnv:
         self._sim_steps_per_decision = max(1, self.sim_freq // self.decision_freq)
 
         # Backend initialization
+        strict_backend = self.env_config.get("strict_backend", False)
         if requested_backend == "jsbsim":
             try:
                 self.jsbsim_env = JSBSimEnv(self.env_config)
@@ -91,8 +92,20 @@ class CloseRangeTrackingEnv:
                 self._low_level_controller = LowLevelController(
                     config.get("guidance", {}).get("gains", {})
                 )
-            except Exception:
+            except Exception as exc:
+                if strict_backend:
+                    raise RuntimeError(
+                        f"JSBSim backend initialization failed "
+                        f"(strict_backend=True): {exc}"
+                    ) from exc
                 # Fallback to simple env if JSBSim init fails
+                import warnings
+                warnings.warn(
+                    f"JSBSim backend initialization failed: {exc}. "
+                    f"Falling back to SimplePointMassEnv.",
+                    RuntimeWarning,
+                    stacklevel=2,
+                )
                 self.jsbsim_env = None
                 self._low_level_controller = None
                 self._simple_env = SimplePointMassEnv(self.env_config)
@@ -125,7 +138,15 @@ class CloseRangeTrackingEnv:
         # Optional command post-processor (energy comp, terminal protection, etc.)
         self.command_post_processor = None
         if guidance_config.get("post_process", {}).get("enabled", False):
-            self.command_post_processor = CommandPostProcessor(guidance_config)
+            # Merge global limits so post-processor can read them
+            processor_config = {
+                **guidance_config,
+                "limits": {
+                    **config.get("limits", {}),
+                    **guidance_config.get("limits", {}),
+                },
+            }
+            self.command_post_processor = CommandPostProcessor(processor_config)
 
         self.reward_calculator = RewardCalculator(config)
         self.termination_checker = TerminationChecker(self.env_config)

@@ -33,6 +33,7 @@ class CommandPostProcessor:
         config = config or {}
         limits = config.get("limits", {})
         params = config.get("post_process", {})
+        guidance_params = config.get("params", {})
 
         # Saturation limits
         self.nz_min = float(limits.get("nz_min", -2.0))
@@ -61,6 +62,7 @@ class CommandPostProcessor:
         self.terminal_range_m = float(params.get("terminal_range_m", 500.0))
         self.terminal_nz_scale = float(params.get("terminal_nz_scale", 0.7))
         self.terminal_roll_scale = float(params.get("terminal_roll_scale", 0.8))
+        self.base_nz = float(guidance_params.get("base_nz", params.get("base_nz", 1.0)))
 
         self.epsilon = float(params.get("epsilon", 1.0e-6))
 
@@ -141,19 +143,24 @@ class CommandPostProcessor:
     def _apply_terminal_protection(
         self, nz: float, roll: float, range_m: float
     ) -> tuple:
-        """Scale down aggressive commands when inside terminal range."""
+        """Scale down aggressive commands when inside terminal range.
+
+        Instead of scaling the absolute nz_cmd (which would distort 1g level
+        flight), we scale the deviation from base_nz so that the command
+        converges to base_nz as range -> 0.
+        """
         if range_m > self.terminal_range_m:
             return nz, roll
-        # Linear scale from 1.0 at boundary to terminal_scale at range=0
+        # Linear scale from epsilon at range=0 to 1.0 at boundary
         scale = max(
             self.epsilon,
-            (range_m / self.terminal_range_m),
+            min(1.0, range_m / self.terminal_range_m),
         )
-        # Blend: final = scale * raw + (1-scale) * scale_factor * raw
-        # => final = [scale + (1-scale)*factor] * raw
-        nz_factor = scale + (1.0 - scale) * self.terminal_nz_scale
+        # Scale deviation from base_nz: nz = base_nz + scale * (nz - base_nz)
+        nz = self.base_nz + scale * (nz - self.base_nz)
+        # Roll still scales toward zero
         roll_factor = scale + (1.0 - scale) * self.terminal_roll_scale
-        return nz * nz_factor, roll * roll_factor
+        return nz, roll * roll_factor
 
     def _apply_load_roll_coordination(self, nz: float, roll: float) -> float:
         """Reduce roll rate when nz is near its limits (structural/energy protection)."""

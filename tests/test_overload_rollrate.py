@@ -34,6 +34,7 @@ def test_default_config(default_post):
     assert default_post.enable_energy_comp is False
     assert default_post.enable_terminal_protection is True
     assert default_post.terminal_range_m == 500.0
+    assert default_post.base_nz == 1.0
 
 
 def test_custom_config():
@@ -51,6 +52,37 @@ def test_custom_config():
     assert post.enable_energy_comp is True
     assert post.energy_k_nz == pytest.approx(0.1)
     assert post.terminal_range_m == 200.0
+
+
+def test_base_nz_from_guidance_params():
+    post = CommandPostProcessor(
+        {
+            "params": {"base_nz": 1.5},
+            "post_process": {},
+        }
+    )
+    assert post.base_nz == pytest.approx(1.5)
+
+
+# ---------------------------------------------------------------------------
+# Global limits merging
+# ---------------------------------------------------------------------------
+
+
+def test_global_limits_read_from_top_level_config():
+    """CommandPostProcessor must read limits from merged top-level config."""
+    post = CommandPostProcessor(
+        {
+            "limits": {"nz_max": 4.0, "roll_rate_max": 0.8},
+            "post_process": {},
+        }
+    )
+    assert post.nz_max == pytest.approx(4.0)
+    assert post.roll_rate_max == pytest.approx(0.8)
+    cmd = {"nz_cmd": 10.0, "roll_rate_cmd": 1.5, "throttle_cmd": 0.5}
+    result = post.process(cmd)
+    assert result["nz_cmd"] == pytest.approx(4.0)
+    assert result["roll_rate_cmd"] == pytest.approx(0.8)
 
 
 # ---------------------------------------------------------------------------
@@ -132,8 +164,47 @@ def test_terminal_protection_inactive(default_post, raw_command):
 def test_terminal_protection_at_zero_range(default_post, raw_command):
     rel = {"range_m": 0.0}
     result = default_post.process(raw_command, relative_state=rel)
-    assert result["nz_cmd"] >= 0.0
+    # nz should converge to base_nz (1.0), not be scaled below it
+    assert result["nz_cmd"] == pytest.approx(default_post.base_nz, abs=1e-3)
     assert math.isfinite(result["nz_cmd"])
+
+
+def test_terminal_protection_preserves_base_nz():
+    """nz_cmd=1.0 at terminal range must not be scaled below 1g."""
+    post = CommandPostProcessor(
+        {
+            "params": {"base_nz": 1.0},
+            "post_process": {
+                "enable_terminal_protection": True,
+                "terminal_range_m": 500.0,
+                "terminal_nz_scale": 0.5,
+            },
+        }
+    )
+    cmd = {"nz_cmd": 1.0, "roll_rate_cmd": 0.5, "throttle_cmd": 0.5}
+    rel = {"range_m": 0.0}
+    result = post.process(cmd, relative_state=rel)
+    # With deviation scaling, nz=base_nz + epsilon*(nz-base_nz) ≈ base_nz
+    assert result["nz_cmd"] == pytest.approx(post.base_nz, abs=1e-3)
+
+
+def test_terminal_protection_scales_deviation():
+    """Higher nz_cmd should be pulled toward base_nz at close range."""
+    post = CommandPostProcessor(
+        {
+            "params": {"base_nz": 1.0},
+            "post_process": {
+                "enable_terminal_protection": True,
+                "terminal_range_m": 500.0,
+            },
+        }
+    )
+    cmd_high = {"nz_cmd": 5.0, "roll_rate_cmd": 0.5, "throttle_cmd": 0.5}
+    rel = {"range_m": 0.0}
+    result = post.process(cmd_high, relative_state=rel)
+    # Should be pulled toward base_nz
+    assert result["nz_cmd"] < cmd_high["nz_cmd"]
+    assert result["nz_cmd"] >= post.base_nz
 
 
 # ---------------------------------------------------------------------------

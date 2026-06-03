@@ -12,7 +12,7 @@ from typing import Dict, Any, Optional
 
 import numpy as np
 
-from .los_rate_guidance import LOSRateGuidance
+from .los_rate_guidance import LOSRateGuidance, _extract_position, _extract_velocity
 from .proportional_navigation import ProportionalNavigationGuidance
 
 logger = logging.getLogger(__name__)
@@ -94,20 +94,9 @@ class HybridGuidance:
         Returns:
             dict: Command with keys 'nz_cmd', 'roll_rate_cmd', 'throttle_cmd'.
         """
-        # Compute range for switching decision
-        own_pos_raw = own_state.get("position_ned")
-        if own_pos_raw is None:
-            own_pos_raw = own_state.get("position_m")
-        if own_pos_raw is None:
-            own_pos_raw = [0.0, 0.0, 0.0]
-        own_pos = np.asarray(own_pos_raw, dtype=np.float64)
-
-        vp_pos_raw = virtual_point.get("position_ned")
-        if vp_pos_raw is None:
-            vp_pos_raw = virtual_point.get("position_m")
-        if vp_pos_raw is None:
-            vp_pos_raw = [0.0, 0.0, 0.0]
-        vp_pos = np.asarray(vp_pos_raw, dtype=np.float64)
+        # Compute range for switching decision using unified position helper
+        own_pos = _extract_position(own_state)
+        vp_pos = _extract_position(virtual_point)
         rel_pos = vp_pos - own_pos
         range_m = float(np.linalg.norm(rel_pos))
 
@@ -169,12 +158,8 @@ class HybridGuidance:
         range_m: float,
     ) -> Dict[str, float]:
         """Hysteresis switch based on energy state with dwell time."""
-        vel = own_state.get("velocity_ned")
-        if vel is None:
-            vel = own_state.get("velocity_vector_mps")
-        if vel is None:
-            vel = [0.0, 0.0, 0.0]
-        speed = float(np.linalg.norm(np.asarray(vel, dtype=np.float64)))
+        vel = _extract_velocity(own_state)
+        speed = float(np.linalg.norm(vel))
 
         lower_range = self.range_threshold_m - 0.5 * self.hysteresis_m
         upper_range = self.range_threshold_m + 0.5 * self.hysteresis_m

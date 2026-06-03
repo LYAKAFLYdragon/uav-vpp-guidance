@@ -294,6 +294,7 @@ def test_blended_mode_transition_zone():
 
 
 def test_blended_output_between_pure_commands():
+    """Blended mode output should interpolate between PN and LOS."""
     from uav_vpp_guidance.guidance.los_rate_guidance import LOSRateGuidance
     from uav_vpp_guidance.guidance.proportional_navigation import (
         ProportionalNavigationGuidance,
@@ -314,14 +315,18 @@ def test_blended_output_between_pure_commands():
     }
     vp_mid = {"position_m": np.array([3000.0, 500.0, 5000.0])}
 
-    # Compute pure LOS and pure PN for the SAME mid point using fresh instances
+    # Warm up hybrid's internal PN filter (first call initializes filter)
+    _ = hyb.compute_command(own, None, vp_mid)
+    # Second call gets actual blended output with warmed-up filter
+    cmd_mid = hyb.compute_command(own, None, vp_mid)
+
+    # Compute pure LOS and pure PN with identically warmed-up state
     los = LOSRateGuidance(config)
     pn = ProportionalNavigationGuidance(config)
     cmd_los = los.compute_command(own, None, vp_mid)
-    # Warm up PN filter first
-    pn.compute_command(own, None, {"position_m": np.array([2900.0, 450.0, 5000.0])})
+    # Warm up PN filter with same VP
+    pn.compute_command(own, None, vp_mid)
     cmd_pn = pn.compute_command(own, None, vp_mid)
-    cmd_mid = hyb.compute_command(own, None, vp_mid)
 
     # Blended command should lie between pure PN and pure LOS
     for key in ("nz_cmd", "roll_rate_cmd", "throttle_cmd"):
@@ -332,6 +337,123 @@ def test_blended_output_between_pure_commands():
             or math.isclose(cmd_mid[key], lo, abs_tol=1e-6)
             or math.isclose(cmd_mid[key], hi, abs_tol=1e-6)
         )
+
+
+# ---------------------------------------------------------------------------
+# Position field parsing (defensive hardening)
+# ---------------------------------------------------------------------------
+
+
+def test_virtual_point_position_key_computes_range():
+    """VPP outputs 'position'; HybridGuidance must read it correctly."""
+    hyb = HybridGuidance({"params": {"hybrid_mode": "range", "min_dwell_steps": 1}})
+    own = {
+        "position": np.array([0.0, 0.0, 5000.0]),
+        "velocity_vector_mps": np.array([200.0, 0.0, 0.0]),
+    }
+    vp_far = {"position": np.array([10000.0, 0.0, 5000.0])}
+    cmd = hyb.compute_command(own, None, vp_far)
+    assert hyb._active_law == "pn"
+    for v in cmd.values():
+        assert math.isfinite(v)
+
+
+def test_own_state_position_neu_no_zero_fallback():
+    """own_state with 'position_neu' must not silently fallback to [0,0,0]."""
+    hyb = HybridGuidance({"params": {"hybrid_mode": "range", "min_dwell_steps": 1}})
+    own = {
+        "position_neu": np.array([0.0, 0.0, 5000.0]),
+        "velocity_vector_mps": np.array([200.0, 0.0, 0.0]),
+    }
+    # VP at [3000,0,5000] -> range=3000, at threshold (PN side)
+    vp = {"position_m": np.array([3000.0, 0.0, 5000.0])}
+    hyb.compute_command(own, None, vp)
+    # If fallback to zero had happened, range would be 3000 anyway,
+    # but let's verify with a case where it matters.
+    own_moved = {
+        "position_neu": np.array([1000.0, 0.0, 5000.0]),
+        "velocity_vector_mps": np.array([200.0, 0.0, 0.0]),
+    }
+    vp_same = {"position_m": np.array([3000.0, 0.0, 5000.0])}
+    cmd2 = hyb.compute_command(own_moved, None, vp_same)
+    # Range should be 2000, so after dwell it switches to LOS
+    assert hyb._active_law == "los"
+    for v in cmd2.values():
+        assert math.isfinite(v)
+
+
+def test_blended_weight_changes_with_real_range():
+    """Blended mode w should vary when range changes."""
+    hyb = HybridGuidance(
+        {
+            "params": {
+                "hybrid_mode": "blended",
+                "range_threshold_m": 3000.0,
+                "blend_transition_m": 1000.0,
+            }
+        }
+    )
+    own = {
+        "position_m": np.array([0.0, 0.0, 5000.0]),
+        "velocity_vector_mps": np.array([200.0, 0.0, 0.0]),
+    }
+    vp_far = {"position_m": np.array([10000.0, 0.0, 5000.0])}
+    vp_near = {"position_m": np.array([500.0, 0.0, 5000.0])}
+
+    cmd_far = hyb.compute_command(own, None, vp_far)
+    cmd_near = hyb.compute_command(own, None, vp_near)
+
+    # Far should be more PN-like (lower nz, smaller roll than near)
+    # Near should be more LOS-like
+    # We just assert they differ, proving range affects blending
+    assert cmd_far["nz_cmd"] != pytest.approx(cmd_near["nz_cmd"], abs=1e-3)
+
+
+def test_range_switch_at_threshold_correct():
+    """Range mode must switch correctly near threshold with dwell."""
+    hyb = HybridGuidance(
+        {
+            "params": {
+                "hybrid_mode": "range",
+                "range_threshold_m": 3000.0,
+                "min_dwell_steps": 1,
+            }
+        }
+    )
+    own = {
+        "position_m": np.array([0.0, 0.0, 5000.0]),
+        "velocity_vector_mps": np.array([200.0, 0.0, 0.0]),
+    }
+    vp_far = {"position_m": np.array([4000.0, 0.0, 5000.0])}
+    vp_near = {"position_m": np.array([2000.0, 0.0, 5000.0])}
+
+    hyb.compute_command(own, None, vp_far)
+    assert hyb._active_law == "pn"
+    hyb.compute_command(own, None, vp_near)
+    assert hyb._active_law == "los"
+
+
+def test_missing_position_raises():
+    """Missing position field must raise, not silently fallback."""
+    hyb = HybridGuidance()
+    own = {"velocity_vector_mps": np.array([200.0, 0.0, 0.0])}
+    vp = {"position_m": np.array([1000.0, 0.0, 5000.0])}
+    with pytest.raises(ValueError, match="position"):
+        hyb.compute_command(own, None, vp)
+
+
+def test_position_ned_supported():
+    """position_ned key must be supported."""
+    hyb = HybridGuidance({"params": {"hybrid_mode": "range", "min_dwell_steps": 1}})
+    own = {
+        "position_ned": np.array([0.0, 0.0, -5000.0]),
+        "velocity_ned": np.array([200.0, 0.0, 0.0]),
+    }
+    vp = {"position_ned": np.array([3000.0, 0.0, -5000.0])}
+    cmd = hyb.compute_command(own, None, vp)
+    assert hyb._active_law == "pn"
+    for v in cmd.values():
+        assert math.isfinite(v)
 
 
 # ---------------------------------------------------------------------------

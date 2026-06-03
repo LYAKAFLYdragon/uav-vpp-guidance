@@ -312,14 +312,20 @@ class CloseRangeTrackingEnv:
         else:
             self._step_simple(filtered_command)
 
-        # 8. 获取新状态并计算观察
+        # 8. 获取 step 后的新状态（post-step）
+        own_state_post, target_state_post = self._get_current_states()
+        rel_state_post = compute_relative_geometry(own_state_post, target_state_post)
+
+        # 9. 检查终止（基于 post-step 状态）
+        terminated, truncated, term_info = self._check_done(own_state_post, target_state_post, rel_state_post)
+
+        # 10. 计算 reward（基于 post-step 状态，含 terminal_reward 注入）
+        reward, reward_terms = self._compute_reward(
+            own_state_post, target_state_post, rel_state_post, filtered_command, term_info
+        )
+
+        # 11. 获取观察（post-step）
         obs = self._get_observation()
-
-        # 9. 计算 reward
-        reward, reward_terms = self._compute_reward(obs, own_state, target_state, rel_state, filtered_command)
-
-        # 10. 检查终止
-        terminated, truncated, term_info = self._check_done(own_state, target_state, rel_state)
 
         # 组装 info
         info = {
@@ -328,17 +334,17 @@ class CloseRangeTrackingEnv:
             "raw_command": raw_command,
             "reward_terms": reward_terms,
             "termination_info": term_info,
-            "relative_state": rel_state,
+            "relative_state": rel_state_post,
             "anchor_mode": anchor_mode,
-            "own_state": own_state,
-            "target_state": target_state,
+            "own_state": own_state_post,
+            "target_state": target_state_post,
             "current_step": self.current_step,
             "episode": self._episode_count,
             "backend": self._backend,
-            "range_m": rel_state.get("range_m", np.nan),
-            "ata_deg": float(np.rad2deg(rel_state.get("ata_rad", np.nan))),
-            "aspect_deg": float(np.rad2deg(rel_state.get("aa_rad", np.nan))),
-            "los_rate": rel_state.get("range_rate_mps", np.nan),
+            "range_m": rel_state_post.get("range_m", np.nan),
+            "ata_deg": float(np.rad2deg(rel_state_post.get("ata_rad", np.nan))),
+            "aspect_deg": float(np.rad2deg(rel_state_post.get("aa_rad", np.nan))),
+            "los_rate": rel_state_post.get("range_rate_mps", np.nan),
             "nz_cmd": filtered_command.get("nz_cmd", np.nan),
             "roll_rate_cmd": filtered_command.get("roll_rate_cmd", np.nan),
             "throttle_cmd": filtered_command.get("throttle_cmd", np.nan),
@@ -354,9 +360,20 @@ class CloseRangeTrackingEnv:
 
         return obs, reward, terminated, truncated, info
 
-    def _compute_reward(self, obs, own_state, target_state, rel_state, command):
+    def _compute_reward(self, own_state, target_state, rel_state, command, term_info):
         """
         Compute reward for the current step.
+
+        Reward and termination are evaluated on post-step states to ensure
+        consistency: the agent receives feedback about the consequence of its
+        action, not the state before the action was taken.
+
+        Args:
+            own_state (dict): Post-step own aircraft state.
+            target_state (dict): Post-step target state.
+            rel_state (dict): Post-step relative geometry.
+            command (dict): Executed command.
+            term_info (dict): Termination info from _check_done.
 
         Returns:
             tuple: (reward, reward_terms)
@@ -367,7 +384,18 @@ class CloseRangeTrackingEnv:
             "relative_state": rel_state,
             "command": command,
         }
-        reward, reward_terms = self.reward_calculator.compute(obs, info)
+
+        # Inject terminal reward based on termination reason
+        terminal_reward = 0.0
+        if term_info.get("is_success"):
+            terminal_reward = self.reward_calculator.terminal_success
+        elif term_info.get("is_crash"):
+            terminal_reward = self.reward_calculator.terminal_crash
+        elif term_info.get("is_timeout") or term_info.get("is_out_of_bounds"):
+            terminal_reward = self.reward_calculator.terminal_failure
+        info["terminal_reward"] = terminal_reward
+
+        reward, reward_terms = self.reward_calculator.compute(info)
         return reward, reward_terms
 
     def _check_done(self, own_state, target_state, rel_state):

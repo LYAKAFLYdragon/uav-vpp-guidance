@@ -135,7 +135,7 @@ class TestConstantVelocityPredictor:
             "velocity_ned": np.array([100.0, 50.0, 10.0]),
         }
         pos, _, _ = pred.predict(current_target_state=target_state)
-        expected = np.array([100.0, 50.0, 5010.0])
+        expected = np.array([100.0, 50.0, 4990.0])
         np.testing.assert_allclose(pos, expected, atol=1e-6)
 
 

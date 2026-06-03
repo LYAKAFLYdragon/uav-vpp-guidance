@@ -19,7 +19,7 @@ class TestConstantVelocityPredictor:
             "velocity_ned": np.array([10.0, 20.0, 5.0]),
         }
         pred_pos, pred_var, info = predictor.predict(current_target_state=state)
-        expected = np.array([120.0, 240.0, 310.0])
+        expected = np.array([120.0, 240.0, 290.0])
         assert np.allclose(pred_pos, expected)
         assert pred_var is None
         assert not info["fallback"]

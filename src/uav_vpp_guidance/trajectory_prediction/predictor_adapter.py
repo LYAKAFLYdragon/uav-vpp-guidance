@@ -21,24 +21,35 @@ from .state_buffer import TrajectoryStateBuffer
 from .feature_builder import build_target_prediction_feature
 from .constant_velocity import ConstantVelocityPredictor
 from .constant_acceleration import ConstantAccelerationPredictor
+from .device_utils import load_checkpoint_to_model, resolve_torch_device
 
 
-def _load_checkpoint_if_present(model: torch.nn.Module, config: dict) -> None:
-    """如果配置中指定了 checkpoint_path，则加载模型权重。"""
-    checkpoint_path = config.get("checkpoint_path")
-    if checkpoint_path is None:
-        return
-    if not os.path.exists(checkpoint_path):
-        raise FileNotFoundError(
-            f"Checkpoint not found: {checkpoint_path}. "
-            "Please train the model first or correct the path."
+# ---------------------------------------------------------------------------
+# Fallback predictor factory
+# ---------------------------------------------------------------------------
+
+_FALLBACK_REGISTRY = {
+    "constant_velocity": ConstantVelocityPredictor,
+    "constant_acceleration": ConstantAccelerationPredictor,
+}
+
+
+def _create_fallback_predictor(fallback_mode: str, lookahead_time_s: float):
+    """根据 fallback_mode 创建对应的 fallback predictor。"""
+    if fallback_mode == "none":
+        return None
+    cls = _FALLBACK_REGISTRY.get(fallback_mode)
+    if cls is None:
+        raise ValueError(
+            f"Unknown fallback_mode: {fallback_mode}. "
+            f"Supported: {list(_FALLBACK_REGISTRY.keys()) + ['none']}"
         )
-    device = torch.device(config.get("device", "cpu"))
-    state_dict = torch.load(checkpoint_path, map_location=device)
-    model.load_state_dict(state_dict)
-    model.to(device)
-    model.eval()
+    return cls(lookahead_time_s=lookahead_time_s)
 
+
+# ---------------------------------------------------------------------------
+# Predictor factory
+# ---------------------------------------------------------------------------
 
 def create_predictor_from_config(config: dict):
     """
@@ -69,7 +80,18 @@ def create_predictor_from_config(config: dict):
             dropout=model_cfg.get("dropout", 0.1),
             predict_variance=model_cfg.get("predict_variance", False),
         )
-        _load_checkpoint_if_present(model, config)
+        ckpt = config.get("checkpoint_path")
+        if ckpt:
+            device_str = config.get("device", "cpu")
+            allow_fallback = config.get("allow_device_fallback", True)
+            strict = config.get("strict_checkpoint", True)
+            load_checkpoint_to_model(
+                model,
+                ckpt,
+                device_str=device_str,
+                allow_device_fallback=allow_fallback,
+                strict=strict,
+            )
         return model
     elif predictor_type == "gru":
         from .gru_predictor import GRUTrajectoryPredictor
@@ -82,7 +104,18 @@ def create_predictor_from_config(config: dict):
             dropout=model_cfg.get("dropout", 0.1),
             predict_variance=model_cfg.get("predict_variance", False),
         )
-        _load_checkpoint_if_present(model, config)
+        ckpt = config.get("checkpoint_path")
+        if ckpt:
+            device_str = config.get("device", "cpu")
+            allow_fallback = config.get("allow_device_fallback", True)
+            strict = config.get("strict_checkpoint", True)
+            load_checkpoint_to_model(
+                model,
+                ckpt,
+                device_str=device_str,
+                allow_device_fallback=allow_fallback,
+                strict=strict,
+            )
         return model
     else:
         raise ValueError(f"Unknown predictor_type: {predictor_type}")
@@ -112,6 +145,10 @@ def create_state_buffer_from_config(config: dict):
     )
 
 
+# ---------------------------------------------------------------------------
+# Adapter
+# ---------------------------------------------------------------------------
+
 class TrajectoryPredictorAdapter:
     """
     连接历史状态缓冲区、特征构造器和预测模型的适配器。
@@ -136,9 +173,9 @@ class TrajectoryPredictorAdapter:
         int_cfg = config.get("integration", {})
         self.anchor_mode = int_cfg.get("anchor_mode", "predicted_target")
 
-        # 初始化 fallback 预测器（匀速外推）
-        self._fallback_predictor = ConstantVelocityPredictor(
-            lookahead_time_s=self.lookahead_time_s
+        # 初始化 fallback 预测器
+        self._fallback_predictor = _create_fallback_predictor(
+            self.fallback_mode, self.lookahead_time_s
         )
 
     def reset(self):
@@ -179,13 +216,16 @@ class TrajectoryPredictorAdapter:
             tuple: (pred_pos, pred_var, info)
                 pred_pos (np.ndarray): 预测的未来目标位置 [3]。
                 pred_var (np.ndarray or None): 预测方差。
-                info (dict): 包含 anchor_mode、model_type、fallback 标志等。
+                info (dict): 包含 anchor_mode、model_type、fallback、
+                    fallback_reason、fallback_mode、prediction_valid 等。
         """
         info = {
             "anchor_mode": self.anchor_mode,
             "model_type": getattr(self.predictor, "__class__", object).__name__,
             "fallback": False,
             "fallback_reason": None,
+            "fallback_mode": None,
+            "prediction_valid": True,
         }
 
         # 尝试使用主预测器
@@ -210,14 +250,9 @@ class TrajectoryPredictorAdapter:
             info.update(pred_info)
 
             # 获取当前目标位置（兼容 position_neu / position_m）
-            target_pos = current_target_state.get("position_neu", None)
-            if target_pos is None:
-                target_pos = current_target_state.get("position_m", None)
-            if target_pos is None:
-                raise ValueError(
-                    "current_target_state missing position (position_neu or position_m)"
-                )
-            target_pos = np.asarray(target_pos, dtype=np.float64)
+            from .coordinate_utils import get_position_neu
+
+            target_pos = get_position_neu(current_target_state)
 
             # 若 predictor 输出的是相对位移，叠加到当前位置。
             # CV/CA 经典模型直接返回绝对位置，不需要叠加。
@@ -239,6 +274,16 @@ class TrajectoryPredictorAdapter:
             # 回退到 fallback（不覆盖主 info 的关键字段）
             info["fallback"] = True
             info["fallback_reason"] = str(exc)
+            info["prediction_valid"] = False
+
+            if self._fallback_predictor is None:
+                info["fallback_mode"] = "none"
+                raise RuntimeError(
+                    f"Primary predictor failed and fallback_mode is 'none'. "
+                    f"Error: {exc}"
+                ) from exc
+
+            info["fallback_mode"] = self.fallback_mode
             pred_pos, pred_var, fallback_info = self._fallback_predictor.predict(
                 current_target_state=current_target_state
             )

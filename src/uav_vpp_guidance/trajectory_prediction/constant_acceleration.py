@@ -7,11 +7,14 @@
 
 当历史不足以估计加速度时，回退到 ConstantVelocityPredictor；
 当历史不足以估计速度时，回退到当前位置。
+
+所有坐标统一使用 NEU (North-East-Up)。
 """
 
 import numpy as np
 from .base_predictor import BaseTrajectoryPredictor
 from .constant_velocity import ConstantVelocityPredictor
+from .coordinate_utils import get_position_neu, get_velocity_neu
 
 
 class ConstantAccelerationPredictor(BaseTrajectoryPredictor):
@@ -35,58 +38,48 @@ class ConstantAccelerationPredictor(BaseTrajectoryPredictor):
 
         Args:
             history_seq (np.ndarray, optional): 历史状态序列，shape 为 [history_len, feature_dim]。
-                用于从多帧历史估计加速度。
             current_target_state (dict, optional): 目标当前状态。
 
         Returns:
             tuple: (pred_pos, pred_var, info)
         """
-        info = {"model": "constant_acceleration", "fallback": False, "fallback_reason": None, "output_is_absolute": True}
+        info = {
+            "model": "constant_acceleration",
+            "fallback": False,
+            "fallback_reason": None,
+            "output_is_absolute": True,
+        }
 
         if current_target_state is None:
             info["fallback"] = True
             info["fallback_reason"] = "current_target_state is None"
             return None, None, info
 
-        # 提取当前位置
-        pos = current_target_state.get("position_neu")
-        if pos is None:
-            pos = current_target_state.get("position_m")
-        if pos is None:
+        # 提取当前位置 (NEU)
+        try:
+            pos = get_position_neu(current_target_state)
+        except ValueError as exc:
             info["fallback"] = True
-            info["fallback_reason"] = "position missing"
+            info["fallback_reason"] = str(exc)
             return None, None, info
-        pos = np.asarray(pos, dtype=np.float64)
 
-        # 提取当前速度
-        vel = current_target_state.get("velocity_ned")
-        if vel is None:
-            vel = current_target_state.get("velocity_vector_mps")
-        if vel is not None:
-            vel = np.asarray(vel, dtype=np.float64)
-        else:
-            # 尝试用速度和航向做简化转换
-            speed = current_target_state.get("velocity_mps") or current_target_state.get("speed_mps") or current_target_state.get("vt_mps")
-            heading = current_target_state.get("heading_rad") or current_target_state.get("attitude_rpy", [0, 0, 0])[2]
-            if speed is not None and heading is not None:
-                vel = np.array([
-                    speed * np.cos(heading),
-                    speed * np.sin(heading),
-                    0.0
-                ], dtype=np.float64)
-            else:
-                info["fallback"] = True
-                info["fallback_reason"] = "velocity information insufficient"
-                return pos, None, info
+        # 提取当前速度 (NEU)
+        try:
+            vel = get_velocity_neu(current_target_state)
+        except ValueError as exc:
+            info["fallback"] = True
+            info["fallback_reason"] = str(exc)
+            return pos, None, info
 
         # 尝试从历史序列估计加速度
         acc = self._estimate_acceleration(history_seq, current_target_state)
 
         if acc is None:
-            # 历史不足，回退到 CV
             info["fallback"] = True
             info["fallback_reason"] = "insufficient history for acceleration estimation"
-            pred_pos, _, cv_info = self._fallback_cv.predict(history_seq=None, current_target_state=current_target_state)
+            pred_pos, _, cv_info = self._fallback_cv.predict(
+                history_seq=None, current_target_state=current_target_state
+            )
             info["cv_fallback"] = cv_info
             return pred_pos, None, info
 
@@ -94,7 +87,9 @@ class ConstantAccelerationPredictor(BaseTrajectoryPredictor):
         if not np.isfinite(acc).all():
             info["fallback"] = True
             info["fallback_reason"] = "non-finite acceleration estimate"
-            pred_pos, _, cv_info = self._fallback_cv.predict(history_seq=None, current_target_state=current_target_state)
+            pred_pos, _, cv_info = self._fallback_cv.predict(
+                history_seq=None, current_target_state=current_target_state
+            )
             info["cv_fallback"] = cv_info
             return pred_pos, None, info
 

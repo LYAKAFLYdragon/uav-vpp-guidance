@@ -162,8 +162,10 @@ class CloseRangeTrackingEnv:
 
         # Trajectory prediction adapter
         self.trajectory_predictor_adapter = None
+        self._predictor_init_failed = False
         tp_config = config.get("trajectory_prediction", {})
         if tp_config.get("enabled", False):
+            strict_init = tp_config.get("strict_predictor_init", False)
             try:
                 predictor = create_predictor_from_config(tp_config)
                 state_buffer = create_state_buffer_from_config(tp_config)
@@ -176,6 +178,12 @@ class CloseRangeTrackingEnv:
                 if tp_config.get("freeze_predictor_during_rl", True):
                     predictor.freeze()
             except Exception as exc:
+                self._predictor_init_failed = True
+                if strict_init:
+                    raise RuntimeError(
+                        f"strict_predictor_init=True: Failed to create trajectory predictor. "
+                        f"Error: {exc}"
+                    ) from exc
                 print(f"WARNING: Failed to create trajectory predictor: {exc}")
                 self.trajectory_predictor_adapter = None
 
@@ -302,6 +310,7 @@ class CloseRangeTrackingEnv:
         tp_enabled = self.config.get("trajectory_prediction", {}).get("enabled", False)
         prediction_info = {
             "prediction_enabled": tp_enabled,
+            "predictor_init_failed": self._predictor_init_failed,
             "predictor_type": None,
             "prediction_valid": False,
             "prediction_fallback_reason": None,
@@ -446,6 +455,7 @@ class CloseRangeTrackingEnv:
             "roll_rate_cmd": filtered_command.get("roll_rate_cmd", np.nan),
             "throttle_cmd": filtered_command.get("throttle_cmd", np.nan),
             "prediction_enabled": prediction_info["prediction_enabled"],
+            "predictor_init_failed": prediction_info["predictor_init_failed"],
             "predictor_type": prediction_info["predictor_type"],
             "prediction_valid": prediction_info["prediction_valid"],
             "prediction_fallback_reason": prediction_info["prediction_fallback_reason"],

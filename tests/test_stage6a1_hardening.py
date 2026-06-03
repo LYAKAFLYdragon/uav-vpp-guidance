@@ -15,10 +15,12 @@ import pytest
 
 from uav_vpp_guidance.trajectory_prediction.feature_builder import (
     build_target_prediction_feature,
-    _get_position,
-    _get_velocity,
     _get_attitude_rpy,
     _get_distance,
+)
+from uav_vpp_guidance.trajectory_prediction.coordinate_utils import (
+    get_position_neu,
+    get_velocity_neu,
 )
 from uav_vpp_guidance.trajectory_prediction.predictor_adapter import TrajectoryPredictorAdapter
 from uav_vpp_guidance.trajectory_prediction.constant_acceleration import ConstantAccelerationPredictor
@@ -37,28 +39,28 @@ from uav_vpp_guidance.flight_control.command_filter import (
 def test_get_position_fallback():
     """position_m should be accepted when position_neu is absent."""
     state = {"position_m": np.array([1.0, 2.0, 3.0])}
-    pos = _get_position(state)
+    pos = get_position_neu(state)
     assert np.allclose(pos, [1.0, 2.0, 3.0])
 
 
 def test_get_position_prefers_neu():
     """position_neu should take precedence over position_m."""
     state = {"position_neu": np.array([10.0, 20.0, 30.0]), "position_m": np.array([1.0, 2.0, 3.0])}
-    pos = _get_position(state)
+    pos = get_position_neu(state)
     assert np.allclose(pos, [10.0, 20.0, 30.0])
 
 
 def test_get_velocity_vector_mps_fallback():
     """velocity_vector_mps should be accepted when velocity_ned is absent."""
     state = {"velocity_vector_mps": np.array([100.0, 50.0, 10.0])}
-    vel = _get_velocity(state)
+    vel = get_velocity_neu(state)
     assert np.allclose(vel, [100.0, 50.0, 10.0])
 
 
 def test_get_velocity_ned_to_neu_conversion():
     """velocity_ned [vn, ve, vd] should be converted to NEU [vn, ve, -vd]."""
     state = {"velocity_ned": np.array([100.0, 50.0, -10.0])}
-    vel = _get_velocity(state)
+    vel = get_velocity_neu(state)
     # NED [100, 50, -10] -> NEU [100, 50, 10]
     assert np.allclose(vel, [100.0, 50.0, 10.0])
 

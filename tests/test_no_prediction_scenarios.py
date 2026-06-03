@@ -198,8 +198,8 @@ class TestEvaluateScenario:
             num_episodes=1, seeds=[0], save_trajectories=True,
             output_root="outputs"
         )
-        traj_dir = os.path.join("outputs", "trajectories", "no_prediction_vpp", "favorable", "seed_0")
-        assert os.path.exists(traj_dir)
+        traj_dir = os.path.join("outputs", "trajectories", "no_prediction_vpp", "simple", "favorable", "seed_0")
+        assert os.path.exists(traj_dir), f"Trajectory directory not found: {traj_dir}"
         assert os.path.exists(os.path.join(traj_dir, "episode_0.csv"))
         env.close()
 

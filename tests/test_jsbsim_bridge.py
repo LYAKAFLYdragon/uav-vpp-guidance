@@ -12,6 +12,13 @@ from uav_vpp_guidance.flight_control.low_level_controller import LowLevelControl
 from uav_vpp_guidance.flight_control.actuator_interface import JSBSimActuatorInterface
 
 
+_JSBSIM_DATA_DIR = os.path.join("E:/CloseAirCombat_control", "envs", "JSBSim", "data")
+skip_if_no_jsbsim_data = pytest.mark.skipif(
+    not os.path.isdir(_JSBSIM_DATA_DIR),
+    reason=f"JSBSim data directory not found: {_JSBSIM_DATA_DIR}",
+)
+
+
 @pytest.fixture
 def jsbsim_config():
     return {
@@ -99,6 +106,7 @@ class TestBackendSelection:
         env.close()
 
 
+@skip_if_no_jsbsim_data
 class TestJSBSimEnvResetAndStep:
     def test_jsbsim_reset(self, jsbsim_config):
         env = CloseRangeTrackingEnv(jsbsim_config)
@@ -144,6 +152,7 @@ class TestPredictorNotCalled:
         assert env.trajectory_predictor_adapter is None
         env.close()
 
+    @skip_if_no_jsbsim_data
     def test_no_predictor_call_in_jsbsim_step(self, jsbsim_config):
         env = CloseRangeTrackingEnv(jsbsim_config)
         env.reset(seed=0)
@@ -191,6 +200,7 @@ class TestActuatorInterface:
         assert np.isfinite(result["fcs/elevator-cmd-norm"])
 
 
+@skip_if_no_jsbsim_data
 class TestUnifiedState:
     def test_jsbsim_state_has_position(self, jsbsim_config):
         env = CloseRangeTrackingEnv(jsbsim_config)
@@ -208,6 +218,7 @@ class TestUnifiedState:
         env.close()
 
 
+@skip_if_no_jsbsim_data
 class TestScenarioDictSupport:
     def test_jsbsim_scenario_dict_reset(self, jsbsim_config):
         scenario = {

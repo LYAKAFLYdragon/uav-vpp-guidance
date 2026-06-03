@@ -18,6 +18,21 @@ guidance:
     k_energy: 0.1
     alpha_filter: 0.3
 
+  # LOS-rate guidance parameters (previously hard-coded magic numbers)
+  params:
+    # Distance scaling for nz_cmd proportional term (m)
+    distance_scale_m: 2000.0
+    # Target speed reference for throttle logic (m/s)
+    target_speed_mps: 250.0
+    # Speed error scaling denominator for throttle (m/s)
+    speed_error_scale_mps: 100.0
+    # Base throttle command (0-1)
+    base_throttle: 0.7
+    # Epsilon for division / singularity protection (m and m/s)
+    epsilon: 1.0e-6
+    # Base normal overload (1g = level flight)
+    base_nz: 1.0
+
 limits:
   nz_min: -2.0
   nz_max: 7.0

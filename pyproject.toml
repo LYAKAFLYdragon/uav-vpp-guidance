@@ -26,6 +26,17 @@ dependencies = [
 [project.optional-dependencies]
 dev = ["pytest>=7.3.0", "black>=23.0", "ruff>=0.1.0"]
 
+[project.scripts]
+uav-vpp-train-fixed-gain = "uav_vpp_guidance.training.train_fixed_gain:main"
+uav-vpp-train-gain-only = "uav_vpp_guidance.training.train_gain_only:main"
+uav-vpp-train-bilevel = "uav_vpp_guidance.training.train_bilevel:main"
+uav-vpp-train-no-prediction = "uav_vpp_guidance.training.train_no_prediction_vpp:main"
+uav-vpp-train-no-prediction-ppo = "uav_vpp_guidance.training.train_no_prediction_vpp_ppo:main"
+uav-vpp-train-prediction-ppo = "uav_vpp_guidance.training.train_prediction_vpp_ppo:main"
+uav-vpp-eval-no-prediction = "uav_vpp_guidance.evaluation.evaluate_no_prediction:main"
+uav-vpp-eval-prediction-comparison = "uav_vpp_guidance.evaluation.evaluate_prediction_comparison:main"
+uav-vpp-eval-stage6b = "uav_vpp_guidance.evaluation.run_stage6b_simple_benchmark:main"
+
 [tool.setuptools.packages.find]
 where = ["src"]
 

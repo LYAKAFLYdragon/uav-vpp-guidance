@@ -468,6 +468,16 @@ See `docs/legacy_mapping.md` and `legacy_notes/files_to_migrate.md` for detailed
 - [x] `predictor_init_failed` exposed in env step info
 - [x] GRU closed-loop integration test
 
+### Phase 6E.2 (Completed): Predictor Telemetry & Reproducibility Gate
+- [x] `checkpoint_strict` canonical key with `strict_checkpoint` backward-compatible alias
+- [x] `fallback_phase` semantics: `warmup`, `runtime_failure`, `init_failure`, `configured_current_target`, `none`
+- [x] Delayed `prediction_error_m` tracker: compares predicted position at t+T against actual target position
+- [x] PPO observability aggregation: `post_warmup_fallback_rate`, `warmup_fallback_rate`, `runtime_fallback_rate`, `mean_prediction_error_m`
+- [x] Partial episode metrics flush at training end
+- [x] Evaluation scripts (`evaluate_policy.py`, `evaluate_prediction_comparison.py`) include prediction health metrics
+- [x] Checkpoint reproducibility manifest (`checkpoint_manifest.example.yaml`) + verify script
+- [x] Trajectory prediction config validator (`validate_tp_config`)
+
 ### Phase 6F (In Progress): Frozen Neural Predictor PPO Smoke + Full Ablation
 - [x] `train_vpp_ppo_lstm_frozen.yaml` config
 - [x] `train_vpp_ppo_gru_frozen.yaml` config

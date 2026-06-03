@@ -248,3 +248,132 @@ class TestFallbackModes:
         adapter = TrajectoryPredictorAdapter(predictor, buffer, config)
         with pytest.raises(RuntimeError):
             adapter.predict(current_target_state={"position_neu": np.zeros(3)})
+
+
+# ---------------------------------------------------------------------------
+# Checkpoint strict key resolution tests
+# ---------------------------------------------------------------------------
+
+class TestCheckpointStrictResolution:
+    def test_canonical_false(self):
+        from uav_vpp_guidance.trajectory_prediction.predictor_adapter import _resolve_checkpoint_strict
+        assert _resolve_checkpoint_strict({"checkpoint_strict": False}) is False
+
+    def test_alias_still_works(self):
+        from uav_vpp_guidance.trajectory_prediction.predictor_adapter import _resolve_checkpoint_strict
+        assert _resolve_checkpoint_strict({"strict_checkpoint": False}) is False
+
+    def test_conflict_raises(self):
+        from uav_vpp_guidance.trajectory_prediction.predictor_adapter import _resolve_checkpoint_strict
+        with pytest.raises(ValueError):
+            _resolve_checkpoint_strict({"checkpoint_strict": True, "strict_checkpoint": False})
+
+    def test_default_true(self):
+        from uav_vpp_guidance.trajectory_prediction.predictor_adapter import _resolve_checkpoint_strict
+        assert _resolve_checkpoint_strict({}) is True
+
+
+# ---------------------------------------------------------------------------
+# Prediction error tracker tests
+# ---------------------------------------------------------------------------
+
+class TestPredictionErrorTracker:
+    def test_cv_predictor_delayed_error_near_zero(self):
+        from uav_vpp_guidance.trajectory_prediction.prediction_error_tracker import PredictionErrorTracker
+        tracker = PredictionErrorTracker(high_level_dt=0.2)
+
+        # Constant velocity target moving at [10, 0, 0] m/s
+        # At t=0, predict position at t=1.0 (lookahead=1.0)
+        tracker.register_prediction(
+            current_time_s=0.0,
+            lookahead_time_s=1.0,
+            predicted_position_neu=np.array([10.0, 0.0, 0.0]),
+        )
+        # Update at t=1.0, actual position is [10, 0, 0]
+        tracker.update(
+            current_time_s=1.0,
+            actual_target_position_neu=np.array([10.0, 0.0, 0.0]),
+        )
+        assert tracker.error_count == 1
+        assert tracker.latest_error == pytest.approx(0.0, abs=1e-9)
+        assert tracker.mean_error == pytest.approx(0.0, abs=1e-9)
+
+    def test_multiple_pending_predictions(self):
+        from uav_vpp_guidance.trajectory_prediction.prediction_error_tracker import PredictionErrorTracker
+        tracker = PredictionErrorTracker(high_level_dt=0.2)
+
+        tracker.register_prediction(0.0, 1.0, np.array([10.0, 0.0, 0.0]))
+        tracker.register_prediction(0.2, 1.0, np.array([12.0, 0.0, 0.0]))
+
+        tracker.update(1.0, np.array([10.0, 0.0, 0.0]))
+        assert tracker.error_count == 1
+        assert tracker.pending_count == 1
+
+        tracker.update(1.2, np.array([12.0, 0.0, 0.0]))
+        assert tracker.error_count == 2
+        assert tracker.pending_count == 0
+
+    def test_stats_dict(self):
+        from uav_vpp_guidance.trajectory_prediction.prediction_error_tracker import PredictionErrorTracker
+        tracker = PredictionErrorTracker(high_level_dt=0.2)
+        stats = tracker.get_stats()
+        assert stats["latest_prediction_error_m"] is None
+        assert stats["mean_prediction_error_m"] is None
+        assert stats["prediction_error_count"] == 0
+
+
+# ---------------------------------------------------------------------------
+# Config validator tests
+# ---------------------------------------------------------------------------
+
+class TestConfigValidator:
+    def test_valid_cv_config(self):
+        from uav_vpp_guidance.trajectory_prediction.config_validator import validate_tp_config
+        config = {
+            "enabled": True,
+            "predictor_type": "constant_velocity",
+            "prediction": {"fallback_mode": "constant_velocity"},
+            "integration": {"anchor_mode": "predicted_target"},
+        }
+        assert validate_tp_config(config, on_unknown="warn") == []
+
+    def test_invalid_predictor_type(self):
+        from uav_vpp_guidance.trajectory_prediction.config_validator import validate_tp_config
+        with pytest.raises(ValueError, match="predictor_type"):
+            validate_tp_config({"predictor_type": "transformer"})
+
+    def test_invalid_fallback_mode(self):
+        from uav_vpp_guidance.trajectory_prediction.config_validator import validate_tp_config
+        with pytest.raises(ValueError, match="fallback_mode"):
+            validate_tp_config({"prediction": {"fallback_mode": "random_walk"}})
+
+    def test_strict_init_missing_checkpoint(self):
+        from uav_vpp_guidance.trajectory_prediction.config_validator import validate_tp_config
+        with pytest.raises(ValueError, match="checkpoint_path"):
+            validate_tp_config({
+                "predictor_type": "lstm",
+                "strict_predictor_init": True,
+            })
+
+    def test_invalid_device(self):
+        from uav_vpp_guidance.trajectory_prediction.config_validator import validate_tp_config
+        with pytest.raises(ValueError, match="device"):
+            validate_tp_config({"device": "gpu"})
+
+    def test_invalid_checkpoint_strict_type(self):
+        from uav_vpp_guidance.trajectory_prediction.config_validator import validate_tp_config
+        with pytest.raises(ValueError, match="checkpoint_strict"):
+            validate_tp_config({"checkpoint_strict": "yes"})
+
+    def test_unknown_key_warn(self):
+        import warnings
+        from uav_vpp_guidance.trajectory_prediction.config_validator import validate_tp_config
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            validate_tp_config({"unkown_key_xyz": 123}, on_unknown="warn")
+            assert any("unkown_key_xyz" in str(warning.message) for warning in w)
+
+    def test_unknown_key_raise(self):
+        from uav_vpp_guidance.trajectory_prediction.config_validator import validate_tp_config
+        with pytest.raises(ValueError, match="Unknown"):
+            validate_tp_config({"unkown_key_xyz": 123}, on_unknown="raise")

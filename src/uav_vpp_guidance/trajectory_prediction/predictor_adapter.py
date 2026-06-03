@@ -77,6 +77,30 @@ def _create_fallback_predictor(fallback_mode: str, lookahead_time_s: float):
 # Predictor factory
 # ---------------------------------------------------------------------------
 
+def _resolve_checkpoint_strict(config: dict) -> bool:
+    """Resolve checkpoint_strict canonical key with backward-compatible alias.
+
+    Canonical key: checkpoint_strict
+    Legacy alias: strict_checkpoint
+
+    Raises:
+        ValueError: if both keys are present with different values.
+    """
+    canonical = config.get("checkpoint_strict")
+    alias = config.get("strict_checkpoint")
+    if canonical is not None and alias is not None and canonical != alias:
+        raise ValueError(
+            f"Conflicting checkpoint strict keys: "
+            f"checkpoint_strict={canonical} != strict_checkpoint={alias}. "
+            f"Please use only 'checkpoint_strict'."
+        )
+    if canonical is not None:
+        return bool(canonical)
+    if alias is not None:
+        return bool(alias)
+    return True
+
+
 def create_predictor_from_config(config: dict):
     """
     根据配置创建对应的轨迹预测器。
@@ -110,7 +134,7 @@ def create_predictor_from_config(config: dict):
         if ckpt:
             device_str = config.get("device", "cpu")
             allow_fallback = config.get("allow_device_fallback", True)
-            strict = config.get("strict_checkpoint", True)
+            strict = _resolve_checkpoint_strict(config)
             load_checkpoint_to_model(
                 model,
                 ckpt,
@@ -134,7 +158,7 @@ def create_predictor_from_config(config: dict):
         if ckpt:
             device_str = config.get("device", "cpu")
             allow_fallback = config.get("allow_device_fallback", True)
-            strict = config.get("strict_checkpoint", True)
+            strict = _resolve_checkpoint_strict(config)
             load_checkpoint_to_model(
                 model,
                 ckpt,
@@ -251,6 +275,8 @@ class TrajectoryPredictorAdapter:
             "fallback": False,
             "fallback_reason": None,
             "fallback_mode": None,
+            "fallback_phase": None,
+            "fallback_model": None,
             "prediction_valid": True,
         }
 
@@ -276,8 +302,6 @@ class TrajectoryPredictorAdapter:
             info.update(pred_info)
 
             # 获取当前目标位置（兼容 position_neu / position_m）
-            from .coordinate_utils import get_position_neu
-
             target_pos = get_position_neu(current_target_state)
 
             # 若 predictor 输出的是相对位移，叠加到当前位置。
@@ -302,6 +326,12 @@ class TrajectoryPredictorAdapter:
             info["fallback_reason"] = str(exc)
             info["prediction_valid"] = False
 
+            # Determine fallback_phase
+            if isinstance(self.predictor, torch.nn.Module) and not self.state_buffer.is_ready():
+                info["fallback_phase"] = "warmup"
+            else:
+                info["fallback_phase"] = "runtime_failure"
+
             if self._fallback_predictor is None:
                 info["fallback_mode"] = "none"
                 raise RuntimeError(
@@ -315,7 +345,7 @@ class TrajectoryPredictorAdapter:
             )
             # 只提取 fallback_info 中的非冲突诊断字段
             for key in ("fallback_model", "model_type", "model"):
-                if key in fallback_info and "fallback_model" not in info:
+                if key in fallback_info and info.get("fallback_model") is None:
                     info["fallback_model"] = fallback_info[key]
                     break
             return pred_pos, pred_var, info

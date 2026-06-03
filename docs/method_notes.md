@@ -141,3 +141,85 @@ The smoke summary JSON (`smoke_summary.json`) includes:
 | `LSTMTrajectoryPredictor` | Stacked LSTM + MLP head | ✅ Complete |
 | `GRUTrajectoryPredictor` | Stacked GRU + MLP head | ✅ Complete |
 | Transformer | Temporal attention encoder | 🔜 Interface reserved |
+
+
+## Stage 6E.2: Predictor Telemetry & Reproducibility
+
+### Checkpoint Strict Key
+
+Canonical key: `checkpoint_strict`
+Legacy alias: `strict_checkpoint` (still supported for backward compatibility)
+
+If both keys are present with different values, a `ValueError` is raised to prevent silent misconfiguration.
+
+### Fallback Phase Semantics
+
+`fallback_phase` classifies why a fallback was triggered:
+
+| Phase | Meaning |
+|-------|---------|
+| `warmup` | Neural predictor buffer not yet full (early episode steps) |
+| `runtime_failure` | Primary predictor threw an exception during inference |
+| `init_failure` | Predictor initialization failed at env construction |
+| `configured_current_target` | Anchor mode was already `current_target` (no prediction attempted) |
+| `none` | `fallback_mode=none` and primary predictor failed (re-raises) |
+
+`post_warmup_fallback_rate` excludes warmup steps, giving a cleaner metric of runtime predictor reliability.
+
+### Prediction Error Calculation
+
+`PredictionErrorTracker` implements delayed error evaluation:
+1. At simulation time `t`, a prediction `Pos_pred(t+T)` is registered with lookahead `T`.
+2. When simulation reaches `t+T`, the tracker compares `Pos_pred(t+T)` against the actual target position.
+3. `prediction_error_m = ||Pos_pred - Pos_actual||`.
+
+This avoids the common pitfall of comparing a prediction against the *current* position (which is always wrong by construction for moving targets).
+
+Output metrics:
+- `latest_prediction_error_m`: most recent matured error
+- `mean_prediction_error_m`: average over all matured errors in the episode
+- `median_prediction_error_m`: median over all matured errors
+- `prediction_error_count`: number of matured evaluations
+
+### PPO Observability Fields
+
+Per-episode CSV log (`episode_train_log.csv`) includes:
+- `prediction_valid_rate`, `fallback_rate`
+- `post_warmup_fallback_rate`, `warmup_fallback_rate`, `runtime_fallback_rate`
+- `mean_prediction_error_m`, `prediction_error_count`
+
+Smoke summary JSON (`smoke_summary.json`) aggregates:
+- All rates above (mean across episodes)
+- `predictor_init_failed`: true if any step reported init failure
+
+### Checkpoint Reproducibility
+
+Each trained neural predictor should have a manifest entry:
+
+```yaml
+entries:
+  - model_type: lstm
+    checkpoint_path: outputs/trajectory_prediction/best_model.pt
+    sha256: "..."
+    training_config:
+      config_path: config/experiment/train_vpp_ppo_lstm_frozen.yaml
+      git_commit: "36ae1cd"
+    inference_params:
+      history_len: 10
+      lookahead_time_s: 1.0
+      coordinate_frame: neu
+```
+
+Verify with:
+```powershell
+python scripts/verify_checkpoint_manifest.py --manifest config/trajectory_prediction/checkpoint_manifest.yaml
+```
+
+### Config Validation
+
+Use `validate_tp_config(config, on_unknown="warn")` to catch:
+- Invalid `predictor_type`, `fallback_mode`, `anchor_mode`
+- Missing `checkpoint_path` when `strict_predictor_init=True` for LSTM/GRU
+- Invalid `device` string
+- Non-bool `checkpoint_strict`
+- Unknown keys (warn or raise depending on `on_unknown`)

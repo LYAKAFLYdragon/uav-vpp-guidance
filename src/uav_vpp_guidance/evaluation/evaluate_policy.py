@@ -88,6 +88,15 @@ def evaluate_policy(env, agent, config, num_episodes=10, seeds=None, save_trajec
             final_ata = 0.0
             reason = "timeout"
             trajectory = []
+            # Predictor health counters
+            ep_pred_valid_steps = 0
+            ep_fallback_steps = 0
+            ep_warmup_fallback_steps = 0
+            ep_runtime_fallback_steps = 0
+            ep_post_warmup_fallback_steps = 0
+            ep_predictor_init_failed_steps = 0
+            ep_prediction_errors = []
+            ep_prediction_error_count = 0
 
             for step in range(env.max_steps):
                 obs_vec = obs["observation_vector"]
@@ -133,10 +142,31 @@ def evaluate_policy(env, agent, config, num_episodes=10, seeds=None, save_trajec
                         "termination_reason": info.get("reason", ""),
                     })
 
+                # Collect predictor health per step
+                if info.get("prediction_enabled", False):
+                    if info.get("prediction_valid", False):
+                        ep_pred_valid_steps += 1
+                    if info.get("fallback", False) or info.get("prediction_fallback_reason") is not None:
+                        ep_fallback_steps += 1
+                        phase = info.get("prediction_fallback_phase")
+                        if phase == "warmup":
+                            ep_warmup_fallback_steps += 1
+                        elif phase == "runtime_failure":
+                            ep_runtime_fallback_steps += 1
+                        if phase != "warmup":
+                            ep_post_warmup_fallback_steps += 1
+                    if info.get("predictor_init_failed", False):
+                        ep_predictor_init_failed_steps += 1
+                    pred_err = info.get("prediction_error_m", np.nan)
+                    if np.isfinite(pred_err):
+                        ep_prediction_errors.append(float(pred_err))
+                        ep_prediction_error_count += 1
+
                 if terminated or truncated:
                     reason = info.get("reason", "unknown")
                     break
 
+            ep_len = max(1, ep_length)
             ep_result = {
                 "episode": ep,
                 "seed": seed,
@@ -151,6 +181,15 @@ def evaluate_policy(env, agent, config, num_episodes=10, seeds=None, save_trajec
                 "is_crash": reason == "crash",
                 "is_timeout": reason == "timeout",
                 "is_out_of_bounds": reason == "out_of_bounds",
+                "prediction_valid_rate": ep_pred_valid_steps / ep_len,
+                "fallback_rate": ep_fallback_steps / ep_len,
+                "post_warmup_fallback_rate": ep_post_warmup_fallback_steps / ep_len,
+                "warmup_fallback_rate": ep_warmup_fallback_steps / ep_len,
+                "runtime_fallback_rate": ep_runtime_fallback_steps / ep_len,
+                "predictor_init_failed_count": ep_predictor_init_failed_steps,
+                "mean_prediction_error_m": float(np.mean(ep_prediction_errors)) if ep_prediction_errors else np.nan,
+                "median_prediction_error_m": float(np.median(ep_prediction_errors)) if ep_prediction_errors else np.nan,
+                "prediction_error_count": ep_prediction_error_count,
             }
             seed_episodes.append(ep_result)
             all_episodes.append(ep_result)
@@ -172,6 +211,10 @@ def evaluate_policy(env, agent, config, num_episodes=10, seeds=None, save_trajec
     final_atas = [e["final_ata_deg"] for e in all_episodes]
     min_ranges = [e["min_range_m"] for e in all_episodes]
 
+    def _safe_mean(vals):
+        clean = [v for v in vals if np.isfinite(v)]
+        return float(np.mean(clean)) if clean else np.nan
+
     metrics = {
         "num_episodes": len(all_episodes),
         "num_seeds": len(seeds),
@@ -185,6 +228,15 @@ def evaluate_policy(env, agent, config, num_episodes=10, seeds=None, save_trajec
         "mean_final_range_m": float(np.mean(final_ranges)) if final_ranges else 0.0,
         "mean_final_ata_deg": float(np.mean(final_atas)) if final_atas else 0.0,
         "mean_min_range_m": float(np.mean(min_ranges)) if min_ranges else 0.0,
+        "prediction_valid_rate": _safe_mean([e["prediction_valid_rate"] for e in all_episodes]),
+        "fallback_rate": _safe_mean([e["fallback_rate"] for e in all_episodes]),
+        "post_warmup_fallback_rate": _safe_mean([e["post_warmup_fallback_rate"] for e in all_episodes]),
+        "warmup_fallback_rate": _safe_mean([e["warmup_fallback_rate"] for e in all_episodes]),
+        "runtime_fallback_rate": _safe_mean([e["runtime_fallback_rate"] for e in all_episodes]),
+        "predictor_init_failed_count": sum(e["predictor_init_failed_count"] for e in all_episodes),
+        "mean_prediction_error_m": _safe_mean([e["mean_prediction_error_m"] for e in all_episodes]),
+        "median_prediction_error_m": _safe_mean([e["median_prediction_error_m"] for e in all_episodes]),
+        "prediction_error_count": sum(e["prediction_error_count"] for e in all_episodes),
         "episodes": all_episodes,
         "per_seed": per_seed_results,
     }
@@ -274,6 +326,10 @@ def main():
         "num_episodes", "num_seeds", "mean_return", "std_return",
         "success_rate", "crash_rate", "out_of_bounds_rate", "timeout_rate",
         "mean_length", "mean_final_range_m", "mean_final_ata_deg", "mean_min_range_m",
+        "prediction_valid_rate", "fallback_rate", "post_warmup_fallback_rate",
+        "warmup_fallback_rate", "runtime_fallback_rate",
+        "predictor_init_failed_count", "mean_prediction_error_m",
+        "median_prediction_error_m", "prediction_error_count",
     ]
     with open(csv_path, "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=scalar_keys)

@@ -74,6 +74,10 @@ def evaluate_single_episode(env, agent, config, scenario=None, seed=0, save_traj
     prediction_enabled_count = 0
     prediction_valid_count = 0
     prediction_fallback_count = 0
+    warmup_fallback_count = 0
+    runtime_fallback_count = 0
+    post_warmup_fallback_count = 0
+    predictor_init_failed_count = 0
     prediction_errors = []
     virtual_point_shifts = []
     anchor_shifts = []
@@ -123,6 +127,15 @@ def evaluate_single_episode(env, agent, config, scenario=None, seed=0, save_traj
                 prediction_valid_count += 1
             if info.get("prediction_fallback_reason"):
                 prediction_fallback_count += 1
+                phase = info.get("prediction_fallback_phase")
+                if phase == "warmup":
+                    warmup_fallback_count += 1
+                elif phase == "runtime_failure":
+                    runtime_fallback_count += 1
+                if phase != "warmup":
+                    post_warmup_fallback_count += 1
+            if info.get("predictor_init_failed", False):
+                predictor_init_failed_count += 1
 
         pred_error = info.get("prediction_error_m", np.nan)
         if np.isfinite(pred_error):
@@ -233,7 +246,12 @@ def evaluate_single_episode(env, agent, config, scenario=None, seed=0, save_traj
         "prediction_enabled_rate": prediction_enabled_count / max(1, ep_length),
         "prediction_valid_rate": prediction_valid_count / max(1, ep_length),
         "prediction_fallback_rate": prediction_fallback_count / max(1, ep_length),
+        "warmup_fallback_rate": warmup_fallback_count / max(1, ep_length),
+        "runtime_fallback_rate": runtime_fallback_count / max(1, ep_length),
+        "post_warmup_fallback_rate": post_warmup_fallback_count / max(1, ep_length),
+        "predictor_init_failed_count": predictor_init_failed_count,
         "mean_prediction_error_m": float(np.mean(prediction_errors)) if prediction_errors else np.nan,
+        "median_prediction_error_m": float(np.median(prediction_errors)) if prediction_errors else np.nan,
         "mean_virtual_point_shift_m": float(np.mean(virtual_point_shifts)) if virtual_point_shifts else np.nan,
         "mean_anchor_shift_m": float(np.mean(anchor_shifts)) if anchor_shifts else np.nan,
         "time_to_first_advantage_s": time_to_first_advantage if time_to_first_advantage is not None else np.nan,
@@ -273,7 +291,12 @@ def aggregate_metrics(episodes):
         "mean_prediction_enabled_rate": safe_mean([e["prediction_enabled_rate"] for e in episodes]),
         "mean_prediction_valid_rate": safe_mean([e["prediction_valid_rate"] for e in episodes]),
         "mean_prediction_fallback_rate": safe_mean([e["prediction_fallback_rate"] for e in episodes]),
+        "mean_warmup_fallback_rate": safe_mean([e["warmup_fallback_rate"] for e in episodes]),
+        "mean_runtime_fallback_rate": safe_mean([e["runtime_fallback_rate"] for e in episodes]),
+        "mean_post_warmup_fallback_rate": safe_mean([e["post_warmup_fallback_rate"] for e in episodes]),
+        "predictor_init_failed_count": sum(e["predictor_init_failed_count"] for e in episodes),
         "mean_prediction_error_m": safe_mean([e["mean_prediction_error_m"] for e in episodes]),
+        "median_prediction_error_m": safe_mean([e["median_prediction_error_m"] for e in episodes]),
         "mean_virtual_point_shift_m": safe_mean([e["mean_virtual_point_shift_m"] for e in episodes]),
         "mean_anchor_shift_m": safe_mean([e["mean_anchor_shift_m"] for e in episodes]),
         "mean_time_to_first_advantage_s": safe_mean([e["time_to_first_advantage_s"] for e in episodes]),

@@ -35,6 +35,7 @@ from ..trajectory_prediction import (
     create_predictor_from_config,
     create_state_buffer_from_config,
 )
+from ..trajectory_prediction.prediction_error_tracker import PredictionErrorTracker
 
 
 class CloseRangeTrackingEnv:
@@ -163,6 +164,9 @@ class CloseRangeTrackingEnv:
         # Trajectory prediction adapter
         self.trajectory_predictor_adapter = None
         self._predictor_init_failed = False
+        self._prediction_error_tracker = PredictionErrorTracker(
+            high_level_dt=self.env_config.get("high_level_dt", 0.2)
+        )
         tp_config = config.get("trajectory_prediction", {})
         if tp_config.get("enabled", False):
             strict_init = tp_config.get("strict_predictor_init", False)
@@ -189,6 +193,7 @@ class CloseRangeTrackingEnv:
 
         self.current_step = 0
         self._episode_count = 0
+        self._sim_time_s = 0.0
 
     # ------------------------------------------------------------------
     # Gym-like interface
@@ -207,6 +212,7 @@ class CloseRangeTrackingEnv:
         """
         self.current_step = 0
         self._episode_count += 1
+        self._sim_time_s = 0.0
         self.reward_calculator.reset()
         self.termination_checker.reset()
         if hasattr(self.guidance, "reset"):
@@ -217,6 +223,7 @@ class CloseRangeTrackingEnv:
 
         if self.trajectory_predictor_adapter is not None:
             self.trajectory_predictor_adapter.reset()
+        self._prediction_error_tracker.reset()
 
         if self._backend == "jsbsim":
             self._reset_jsbsim(scenario)
@@ -299,6 +306,8 @@ class CloseRangeTrackingEnv:
             tuple: (observation, reward, terminated, truncated, info)
         """
         self.current_step += 1
+        high_level_dt = self.env_config.get("high_level_dt", 0.2)
+        self._sim_time_s += high_level_dt
 
         # 1. 获取当前状态
         own_state, target_state = self._get_current_states()
@@ -314,8 +323,15 @@ class CloseRangeTrackingEnv:
             "predictor_type": None,
             "prediction_valid": False,
             "prediction_fallback_reason": None,
+            "prediction_fallback_mode": None,
+            "prediction_fallback_model": None,
+            "prediction_fallback_phase": None,
             "predicted_target_position": None,
             "prediction_error_m": np.nan,
+            "latest_prediction_error_m": np.nan,
+            "mean_prediction_error_m": np.nan,
+            "median_prediction_error_m": np.nan,
+            "prediction_error_count": 0,
         }
         if tp_enabled and self.trajectory_predictor_adapter is not None:
             try:
@@ -324,6 +340,7 @@ class CloseRangeTrackingEnv:
                 )
             except Exception as exc:
                 prediction_info["prediction_fallback_reason"] = f"update_failed: {exc}"
+                prediction_info["prediction_fallback_phase"] = "runtime_failure"
 
         # 4. 生成虚拟追踪点
         anchor_mode = self.config.get("virtual_point", {}).get(
@@ -341,6 +358,7 @@ class CloseRangeTrackingEnv:
 
         # 若 anchor_mode=predicted_target，获取预测位置
         predicted_target_pos = None
+        lookahead_time_s = self.config.get("trajectory_prediction", {}).get("prediction", {}).get("lookahead_time_s", 1.0)
         if (
             anchor_mode == "predicted_target"
             and tp_enabled
@@ -357,21 +375,36 @@ class CloseRangeTrackingEnv:
                 prediction_info["prediction_fallback_reason"] = pred_info.get(
                     "fallback_reason"
                 )
+                prediction_info["prediction_fallback_mode"] = pred_info.get(
+                    "fallback_mode"
+                )
+                prediction_info["prediction_fallback_model"] = pred_info.get(
+                    "fallback_model"
+                )
+                prediction_info["prediction_fallback_phase"] = pred_info.get(
+                    "fallback_phase"
+                )
                 if pred_pos is not None and np.isfinite(pred_pos).all():
                     predicted_target_pos = np.asarray(pred_pos, dtype=np.float64)
                     prediction_info["predicted_target_position"] = (
                         predicted_target_pos.tolist()
                     )
+                    # Register prediction for delayed error tracking
+                    self._prediction_error_tracker.register_prediction(
+                        current_time_s=self._sim_time_s,
+                        lookahead_time_s=lookahead_time_s,
+                        predicted_position_neu=predicted_target_pos,
+                    )
             except Exception as exc:
                 prediction_info["prediction_fallback_reason"] = f"predict_failed: {exc}"
+                prediction_info["prediction_fallback_phase"] = "runtime_failure"
 
         # 若预测不可用，回退到 current_target
         if predicted_target_pos is None:
             predicted_target_pos = target_for_vp["position_neu"]
-            prediction_info["prediction_fallback_reason"] = (
-                prediction_info["prediction_fallback_reason"]
-                or "fallback_to_current_target"
-            )
+            if prediction_info["prediction_fallback_reason"] is None:
+                prediction_info["prediction_fallback_reason"] = "fallback_to_current_target"
+                prediction_info["prediction_fallback_phase"] = "configured_current_target"
             anchor_mode = "current_target"
 
         vp_result = self.virtual_point_generator.action_to_virtual_point(
@@ -416,6 +449,23 @@ class CloseRangeTrackingEnv:
         own_state_post, target_state_post = self._get_current_states()
         rel_state_post = compute_relative_geometry(own_state_post, target_state_post)
 
+        # 8a. Update prediction error tracker with actual target position
+        actual_target_pos = target_state_post.get("position_m")
+        if actual_target_pos is None:
+            actual_target_pos = target_state_post.get("position_neu")
+        if actual_target_pos is not None:
+            self._prediction_error_tracker.update(
+                current_time_s=self._sim_time_s,
+                actual_target_position_neu=actual_target_pos,
+            )
+            err_stats = self._prediction_error_tracker.get_stats()
+            prediction_info["latest_prediction_error_m"] = err_stats["latest_prediction_error_m"]
+            prediction_info["mean_prediction_error_m"] = err_stats["mean_prediction_error_m"]
+            prediction_info["median_prediction_error_m"] = err_stats["median_prediction_error_m"]
+            prediction_info["prediction_error_count"] = err_stats["prediction_error_count"]
+            if err_stats["latest_prediction_error_m"] is not None:
+                prediction_info["prediction_error_m"] = err_stats["latest_prediction_error_m"]
+
         # 9. 检查终止（基于 post-step 状态）
         terminated, truncated, term_info = self._check_done(
             own_state_post, target_state_post, rel_state_post
@@ -459,8 +509,15 @@ class CloseRangeTrackingEnv:
             "predictor_type": prediction_info["predictor_type"],
             "prediction_valid": prediction_info["prediction_valid"],
             "prediction_fallback_reason": prediction_info["prediction_fallback_reason"],
+            "prediction_fallback_mode": prediction_info["prediction_fallback_mode"],
+            "prediction_fallback_model": prediction_info["prediction_fallback_model"],
+            "prediction_fallback_phase": prediction_info["prediction_fallback_phase"],
             "predicted_target_position": prediction_info["predicted_target_position"],
             "prediction_error_m": prediction_info["prediction_error_m"],
+            "latest_prediction_error_m": prediction_info["latest_prediction_error_m"],
+            "mean_prediction_error_m": prediction_info["mean_prediction_error_m"],
+            "median_prediction_error_m": prediction_info["median_prediction_error_m"],
+            "prediction_error_count": prediction_info["prediction_error_count"],
         }
         info.update(actuator_info)
         info.update(term_info)

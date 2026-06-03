@@ -1,0 +1,56 @@
+# Checkpoint reproducibility manifest example.
+# Copy this file and fill in the actual values for each trained checkpoint.
+#
+# Usage:
+#   python scripts/verify_checkpoint_manifest.py --manifest config/trajectory_prediction/checkpoint_manifest.yaml
+
+manifest_version: "1.0"
+
+entries:
+  - model_type: lstm
+    checkpoint_path: outputs/trajectory_prediction/best_model.pt
+    sha256: "placeholder_replace_with_actual_sha256"
+    training_config:
+      config_path: config/experiment/train_vpp_ppo_lstm_frozen.yaml
+      git_commit: "36ae1cd"
+      seed: 0
+    dataset:
+      generation_command: "python -m uav_vpp_guidance.trajectory_prediction.train_pipeline --config config/trajectory_prediction.yaml"
+      source_episodes: "outputs/trajectories/no_prediction_vpp_ppo/"
+    model_architecture:
+      input_dim: 16
+      hidden_dim: 128
+      num_layers: 2
+      dropout: 0.1
+      predict_variance: false
+    inference_params:
+      history_len: 10
+      horizon_steps: 5
+      lookahead_time_s: 1.0
+      dt: 0.2
+      coordinate_frame: neu
+      feature_schema_version: "1.0"
+
+  - model_type: gru
+    checkpoint_path: outputs/trajectory_prediction/best_model_gru.pt
+    sha256: "placeholder_replace_with_actual_sha256"
+    training_config:
+      config_path: config/experiment/train_vpp_ppo_gru_frozen.yaml
+      git_commit: "36ae1cd"
+      seed: 0
+    dataset:
+      generation_command: "python -m uav_vpp_guidance.trajectory_prediction.train_pipeline --config config/trajectory_prediction.yaml --model gru"
+      source_episodes: "outputs/trajectories/no_prediction_vpp_ppo/"
+    model_architecture:
+      input_dim: 16
+      hidden_dim: 128
+      num_layers: 2
+      dropout: 0.1
+      predict_variance: false
+    inference_params:
+      history_len: 10
+      horizon_steps: 5
+      lookahead_time_s: 1.0
+      dt: 0.2
+      coordinate_frame: neu
+      feature_schema_version: "1.0"

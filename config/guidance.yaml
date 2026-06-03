@@ -29,9 +29,23 @@ guidance:
     # Base throttle command (0-1)
     base_throttle: 0.7
     # Epsilon for division / singularity protection (m and m/s)
-    epsilon: 1.0e-6
+    epsilon: 1.0e-9
     # Base normal overload (1g = level flight)
     base_nz: 1.0
+    # Capture radius: when distance to VPP is below this, blend to level flight
+    capture_radius_m: 50.0
+    # Internal clipping guard (defense in depth)
+    enable_internal_clip: true
+    # Internal first-order filter (disable if caller already filters)
+    enable_internal_filter: false
+
+  limits:
+    nz_min: -2.0
+    nz_max: 7.0
+    roll_rate_min: -1.5
+    roll_rate_max: 1.5
+    throttle_min: 0.0
+    throttle_max: 1.0
 
 limits:
   nz_min: -2.0

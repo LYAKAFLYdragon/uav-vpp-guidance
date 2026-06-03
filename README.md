@@ -285,10 +285,25 @@ See `docs/legacy_mapping.md` and `legacy_notes/files_to_migrate.md` for detailed
 - [x] Training curve plotting
 - [x] All tests passing
 
-### Phase 6 (Next): Trajectory Prediction Integration
-- [ ] Constant Velocity predictor baseline
-- [ ] LSTM/GRU predictor training and integration
-- [ ] Ablation: No-Prediction vs CV vs LSTM/GRU
+### Phase 6A (Completed): Classical CV/CA Prediction VPP Integration
+- [x] Constant Velocity predictor baseline
+- [x] Constant Acceleration predictor baseline
+- [x] Predictor adapter with buffer update / feature build / prediction chain
+- [x] Environment prediction anchor integration (predicted_target)
+- [x] Ablation: No-Prediction vs CV vs CA on SimplePointMass
+
+### Phase 6B (Current): Full Simple-Backend Benchmark
+- [ ] Fixed-scenario benchmark (favorable / neutral / disadvantage / challenging)
+- [ ] Multi-seed statistical comparison (bootstrap CI, paired delta)
+- [ ] Automated summary.md generation
+- [ ] Smoke vs full benchmark runner
+
+### Phase 7 (Next): JSBSim High-Fidelity Validation
 - [ ] Full JSBSim dynamics and scenario migration
+- [ ] LSTM/GRU predictor training and integration
 - [ ] Gain-only CEM optimization
 - [ ] Strategy-gain bilevel training
+
+> **Warning**: Smoke benchmark results are for mechanism validation only and must
+> not be presented as final paper conclusions. Full runs with sufficient seeds
+> and episodes are required for statistical claims.

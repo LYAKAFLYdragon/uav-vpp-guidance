@@ -1,7 +1,9 @@
 # No-Prediction VPP Baseline Experiment Configuration
 #
-# This config disables trajectory prediction and uses current_target anchor mode.
-# It serves as the baseline before adding predictive components.
+# Phase: P3 (No-Prediction Baseline)
+# Backend: simple (3DoF point mass)
+# Purpose: Baseline before adding predictive components.
+# Usage: python -m uav_vpp_guidance.training.train_no_prediction_vpp --smoke
 
 includes:
   - ../env.yaml
@@ -15,6 +17,8 @@ experiment:
   mode: smoke
   output_root: outputs
 
+# Backend selection: simple = fast 3DoF; jsbsim = high-fidelity F-16
+backend: simple
 env:
   use_jsbsim: false
   decision_freq: 5

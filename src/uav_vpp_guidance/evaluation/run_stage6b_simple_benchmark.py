@@ -32,9 +32,10 @@ import numpy as np
 
 from uav_vpp_guidance.utils.config import load_yaml_config, merge_config
 from uav_vpp_guidance.utils.seed import set_seed
+from uav_vpp_guidance.utils.reproducibility import get_run_metadata, save_run_metadata
 from uav_vpp_guidance.envs.tracking_env import CloseRangeTrackingEnv
 from uav_vpp_guidance.agents.ppo_agent import PPOAgent
-from uav_vpp_guidance.evaluation.statistical_comparison import compare_methods, compare_per_scenario
+from uav_vpp_guidance.evaluation.statistical_comparison import compare_methods
 
 
 def load_experiment_config(config_path):
@@ -58,7 +59,9 @@ def sample_scenario(config, rng):
     return scenarios[name]
 
 
-def evaluate_single_episode(env, agent, config, scenario=None, seed=0, save_trajectory=False, method_name=""):
+def evaluate_single_episode(
+    env, agent, config, scenario=None, seed=0, save_trajectory=False, method_name=""
+):
     """Evaluate a single episode and return metrics + trajectory."""
     obs = env.reset(scenario=scenario, seed=seed)
     ep_reward = 0.0
@@ -115,52 +118,88 @@ def evaluate_single_episode(env, agent, config, scenario=None, seed=0, save_traj
             target_pos = info.get("target_state", {}).get("position_neu")
         vp_pos = info.get("virtual_point", {}).get("position")
         if target_pos is not None and vp_pos is not None:
-            virtual_point_shifts.append(float(np.linalg.norm(np.asarray(vp_pos) - np.asarray(target_pos))))
+            virtual_point_shifts.append(
+                float(np.linalg.norm(np.asarray(vp_pos) - np.asarray(target_pos)))
+            )
 
         pred_target_pos = info.get("predicted_target_position")
         if target_pos is not None and pred_target_pos is not None:
-            anchor_shifts.append(float(np.linalg.norm(np.asarray(pred_target_pos) - np.asarray(target_pos))))
+            anchor_shifts.append(
+                float(
+                    np.linalg.norm(np.asarray(pred_target_pos) - np.asarray(target_pos))
+                )
+            )
 
         if save_trajectory:
             own_s = info.get("own_state", {})
             target_s = info.get("target_state", {})
-            own_pos = own_s.get("position_m", own_s.get("position_neu", np.full(3, np.nan)))
-            target_pos_arr = target_s.get("position_m", target_s.get("position_neu", np.full(3, np.nan)))
-            target_vel = target_s.get("velocity_vector_mps", target_s.get("velocity_ned", np.full(3, np.nan)))
-            pred_target = info.get("predicted_target_position", [np.nan, np.nan, np.nan])
+            own_pos = own_s.get(
+                "position_m", own_s.get("position_neu", np.full(3, np.nan))
+            )
+            target_pos_arr = target_s.get(
+                "position_m", target_s.get("position_neu", np.full(3, np.nan))
+            )
+            # target velocity available if needed for trajectory analysis
+            pred_target = info.get(
+                "predicted_target_position", [np.nan, np.nan, np.nan]
+            )
             vp = info.get("virtual_point", {})
             vp_pos_arr = vp.get("position", np.full(3, np.nan))
 
-            trajectory.append({
-                "step": step,
-                "time": step * env.env_config.get("high_level_dt", 0.2),
-                "backend": env._backend,
-                "method": method_name,
-                "predictor_type": info.get("predictor_type", ""),
-                "prediction_enabled": int(info.get("prediction_enabled", False)),
-                "prediction_valid": int(info.get("prediction_valid", False)),
-                "prediction_fallback_reason": info.get("prediction_fallback_reason", ""),
-                "target_x": float(target_pos_arr[0]) if len(target_pos_arr) > 0 else np.nan,
-                "target_y": float(target_pos_arr[1]) if len(target_pos_arr) > 1 else np.nan,
-                "target_z": float(target_pos_arr[2]) if len(target_pos_arr) > 2 else np.nan,
-                "predicted_target_x": float(pred_target[0]) if pred_target is not None else np.nan,
-                "predicted_target_y": float(pred_target[1]) if pred_target is not None else np.nan,
-                "predicted_target_z": float(pred_target[2]) if pred_target is not None else np.nan,
-                "prediction_error_m": float(pred_error) if np.isfinite(pred_error) else np.nan,
-                "virtual_x": float(vp_pos_arr[0]) if len(vp_pos_arr) > 0 else np.nan,
-                "virtual_y": float(vp_pos_arr[1]) if len(vp_pos_arr) > 1 else np.nan,
-                "virtual_z": float(vp_pos_arr[2]) if len(vp_pos_arr) > 2 else np.nan,
-                "ego_x": float(own_pos[0]) if len(own_pos) > 0 else np.nan,
-                "ego_y": float(own_pos[1]) if len(own_pos) > 1 else np.nan,
-                "ego_z": float(own_pos[2]) if len(own_pos) > 2 else np.nan,
-                "range_m": range_m,
-                "ata_deg": ata_deg,
-                "nz_cmd": info.get("nz_cmd", np.nan),
-                "roll_rate_cmd": info.get("roll_rate_cmd", np.nan),
-                "throttle_cmd": info.get("throttle_cmd", np.nan),
-                "done": int(terminated or truncated),
-                "termination_reason": info.get("reason", ""),
-            })
+            trajectory.append(
+                {
+                    "step": step,
+                    "time": step * env.env_config.get("high_level_dt", 0.2),
+                    "backend": env._backend,
+                    "method": method_name,
+                    "predictor_type": info.get("predictor_type", ""),
+                    "prediction_enabled": int(info.get("prediction_enabled", False)),
+                    "prediction_valid": int(info.get("prediction_valid", False)),
+                    "prediction_fallback_reason": info.get(
+                        "prediction_fallback_reason", ""
+                    ),
+                    "target_x": (
+                        float(target_pos_arr[0]) if len(target_pos_arr) > 0 else np.nan
+                    ),
+                    "target_y": (
+                        float(target_pos_arr[1]) if len(target_pos_arr) > 1 else np.nan
+                    ),
+                    "target_z": (
+                        float(target_pos_arr[2]) if len(target_pos_arr) > 2 else np.nan
+                    ),
+                    "predicted_target_x": (
+                        float(pred_target[0]) if pred_target is not None else np.nan
+                    ),
+                    "predicted_target_y": (
+                        float(pred_target[1]) if pred_target is not None else np.nan
+                    ),
+                    "predicted_target_z": (
+                        float(pred_target[2]) if pred_target is not None else np.nan
+                    ),
+                    "prediction_error_m": (
+                        float(pred_error) if np.isfinite(pred_error) else np.nan
+                    ),
+                    "virtual_x": (
+                        float(vp_pos_arr[0]) if len(vp_pos_arr) > 0 else np.nan
+                    ),
+                    "virtual_y": (
+                        float(vp_pos_arr[1]) if len(vp_pos_arr) > 1 else np.nan
+                    ),
+                    "virtual_z": (
+                        float(vp_pos_arr[2]) if len(vp_pos_arr) > 2 else np.nan
+                    ),
+                    "ego_x": float(own_pos[0]) if len(own_pos) > 0 else np.nan,
+                    "ego_y": float(own_pos[1]) if len(own_pos) > 1 else np.nan,
+                    "ego_z": float(own_pos[2]) if len(own_pos) > 2 else np.nan,
+                    "range_m": range_m,
+                    "ata_deg": ata_deg,
+                    "nz_cmd": info.get("nz_cmd", np.nan),
+                    "roll_rate_cmd": info.get("roll_rate_cmd", np.nan),
+                    "throttle_cmd": info.get("throttle_cmd", np.nan),
+                    "done": int(terminated or truncated),
+                    "termination_reason": info.get("reason", ""),
+                }
+            )
 
         if terminated or truncated:
             reason = info.get("reason", "unknown")
@@ -168,7 +207,9 @@ def evaluate_single_episode(env, agent, config, scenario=None, seed=0, save_traj
 
     return {
         "seed": seed,
-        "scenario": scenario.get("name", "random") if isinstance(scenario, dict) else "random",
+        "scenario": (
+            scenario.get("name", "random") if isinstance(scenario, dict) else "random"
+        ),
         "return": ep_reward,
         "length": ep_length,
         "min_range_m": min_range,
@@ -184,9 +225,15 @@ def evaluate_single_episode(env, agent, config, scenario=None, seed=0, save_traj
         "prediction_enabled_rate": prediction_enabled_count / max(1, ep_length),
         "prediction_valid_rate": prediction_valid_count / max(1, ep_length),
         "prediction_fallback_rate": prediction_fallback_count / max(1, ep_length),
-        "mean_prediction_error_m": float(np.mean(prediction_errors)) if prediction_errors else np.nan,
-        "mean_virtual_point_shift_m": float(np.mean(virtual_point_shifts)) if virtual_point_shifts else np.nan,
-        "mean_anchor_shift_m": float(np.mean(anchor_shifts)) if anchor_shifts else np.nan,
+        "mean_prediction_error_m": (
+            float(np.mean(prediction_errors)) if prediction_errors else np.nan
+        ),
+        "mean_virtual_point_shift_m": (
+            float(np.mean(virtual_point_shifts)) if virtual_point_shifts else np.nan
+        ),
+        "mean_anchor_shift_m": (
+            float(np.mean(anchor_shifts)) if anchor_shifts else np.nan
+        ),
     }, trajectory
 
 
@@ -212,18 +259,30 @@ def aggregate_metrics(episodes):
         "mean_length": safe_mean(lengths),
         "success_rate": sum(1 for e in episodes if e["is_success"]) / len(episodes),
         "crash_rate": sum(1 for e in episodes if e["is_crash"]) / len(episodes),
-        "out_of_bounds_rate": sum(1 for e in episodes if e["is_out_of_bounds"]) / len(episodes),
+        "out_of_bounds_rate": sum(1 for e in episodes if e["is_out_of_bounds"])
+        / len(episodes),
         "timeout_rate": sum(1 for e in episodes if e["is_timeout"]) / len(episodes),
-        "score_win_rate": sum(1 for e in episodes if e.get("score_win", False)) / len(episodes),
+        "score_win_rate": sum(1 for e in episodes if e.get("score_win", False))
+        / len(episodes),
         "mean_final_range_m": safe_mean(final_ranges),
         "mean_final_ata_deg": safe_mean(final_atas),
         "mean_min_range_m": safe_mean(min_ranges),
         "mean_min_ata_deg": safe_mean(min_atas),
-        "mean_prediction_enabled_rate": safe_mean([e["prediction_enabled_rate"] for e in episodes]),
-        "mean_prediction_valid_rate": safe_mean([e["prediction_valid_rate"] for e in episodes]),
-        "mean_prediction_fallback_rate": safe_mean([e["prediction_fallback_rate"] for e in episodes]),
-        "mean_prediction_error_m": safe_mean([e["mean_prediction_error_m"] for e in episodes]),
-        "mean_virtual_point_shift_m": safe_mean([e["mean_virtual_point_shift_m"] for e in episodes]),
+        "mean_prediction_enabled_rate": safe_mean(
+            [e["prediction_enabled_rate"] for e in episodes]
+        ),
+        "mean_prediction_valid_rate": safe_mean(
+            [e["prediction_valid_rate"] for e in episodes]
+        ),
+        "mean_prediction_fallback_rate": safe_mean(
+            [e["prediction_fallback_rate"] for e in episodes]
+        ),
+        "mean_prediction_error_m": safe_mean(
+            [e["mean_prediction_error_m"] for e in episodes]
+        ),
+        "mean_virtual_point_shift_m": safe_mean(
+            [e["mean_virtual_point_shift_m"] for e in episodes]
+        ),
         "mean_anchor_shift_m": safe_mean([e["mean_anchor_shift_m"] for e in episodes]),
     }
     result["instant_success_rate"] = result["success_rate"]
@@ -232,7 +291,17 @@ def aggregate_metrics(episodes):
     return result
 
 
-def evaluate_method(env, agent, config, method_name, num_episodes=10, seeds=None, scenarios=None, save_trajectories=False, output_dir=None):
+def evaluate_method(
+    env,
+    agent,
+    config,
+    method_name,
+    num_episodes=10,
+    seeds=None,
+    scenarios=None,
+    save_trajectories=False,
+    output_dir=None,
+):
     """Evaluate a single method across multiple seeds and optional fixed scenarios."""
     if seeds is None:
         seeds = [0, 1, 2]
@@ -254,11 +323,20 @@ def evaluate_method(env, agent, config, method_name, num_episodes=10, seeds=None
                 scenario = config.get("scenarios", {}).get(scenario_name)
             else:
                 scenario = sample_scenario(config, rng)
-                scenario_name = scenario.get("name", "random") if isinstance(scenario, dict) else "random"
+                scenario_name = (
+                    scenario.get("name", "random")
+                    if isinstance(scenario, dict)
+                    else "random"
+                )
 
             ep_result, trajectory = evaluate_single_episode(
-                env, agent, config, scenario=scenario, seed=ep_seed,
-                save_trajectory=save_trajectories, method_name=method_name,
+                env,
+                agent,
+                config,
+                scenario=scenario,
+                seed=ep_seed,
+                save_trajectory=save_trajectories,
+                method_name=method_name,
             )
             all_episodes.append(ep_result)
             seed_episodes.append(ep_result)
@@ -280,14 +358,36 @@ def evaluate_method(env, agent, config, method_name, num_episodes=10, seeds=None
     overall["scenario"] = "all"
     overall["seed"] = "all"
     overall["episodes"] = len(all_episodes)
-    overall["per_scenario"] = {name: aggregate_metrics(eps) for name, eps in per_scenario_episodes.items()}
+    overall["per_scenario"] = {
+        name: aggregate_metrics(eps) for name, eps in per_scenario_episodes.items()
+    }
     overall["raw_episodes"] = all_episodes
     overall["per_seed"] = per_seed_results
     return overall
 
 
-def run_benchmark(config_path, smoke=False, episodes=None, seeds=None, scenarios=None, output_dir=None):
-    """Run the full Stage 6B benchmark."""
+def run_benchmark(
+    config_path,
+    smoke=False,
+    episodes=None,
+    seeds=None,
+    scenarios=None,
+    output_dir=None,
+    backend=None,
+    force=False,
+):
+    """Run the full Stage 6B benchmark.
+
+    Args:
+        config_path (str): Path to benchmark config YAML.
+        smoke (bool): Run minimal CI smoke benchmark.
+        episodes (int, optional): Override episodes per seed.
+        seeds (list[int], optional): Override random seeds.
+        scenarios (list[str], optional): Override scenario names.
+        output_dir (str, optional): Override output directory.
+        backend (str, optional): Override backend type ('simple' or 'jsbsim').
+        force (bool): If True, allow overwriting existing output directory.
+    """
     config = load_experiment_config(config_path)
 
     bench_cfg = config.get("benchmark", {})
@@ -296,7 +396,9 @@ def run_benchmark(config_path, smoke=False, episodes=None, seeds=None, scenarios
     if seeds is None:
         seeds = bench_cfg.get("seeds", [0, 1, 2, 3, 4])
     if scenarios is None:
-        scenarios = bench_cfg.get("scenarios", ["favorable", "neutral", "disadvantage", "challenging"])
+        scenarios = bench_cfg.get(
+            "scenarios", ["favorable", "neutral", "disadvantage", "challenging"]
+        )
 
     if smoke:
         episodes = 2
@@ -304,18 +406,36 @@ def run_benchmark(config_path, smoke=False, episodes=None, seeds=None, scenarios
         scenarios = ["favorable", "neutral"]
         print("[SMOKE] Running minimal benchmark for CI validation")
 
+    # Backend override
+    if backend is not None:
+        config["backend"] = backend
+        config.setdefault("env", {})
+        config["env"]["use_jsbsim"] = backend == "jsbsim"
+        print(f"[CONFIG] Backend overridden to: {backend}")
+
     if output_dir is None:
         output_dir = os.path.join(
             config.get("experiment", {}).get("output_root", "outputs/benchmark"),
             config.get("experiment", {}).get("name", "stage6b_simple_prediction"),
         )
+
+    if not force and os.path.exists(output_dir) and os.listdir(output_dir):
+        print(
+            f"WARNING: Output directory '{output_dir}' already exists and is not empty.\n"
+            f"         Use --force to overwrite, or specify a different --output-dir."
+        )
+        sys.exit(1)
+
     os.makedirs(output_dir, exist_ok=True)
 
-    print(f"=== Stage 6B Simple-Backend Benchmark ===")
+    print("=== Stage 6B Simple-Backend Benchmark ===")
+    print(f"Config: {config_path}")
     print(f"Output dir: {output_dir}")
     print(f"Episodes: {episodes}")
     print(f"Seeds: {seeds}")
     print(f"Scenarios: {scenarios}")
+    if backend:
+        print(f"Backend override: {backend}")
 
     methods_cfg = config.get("methods", {})
     if not methods_cfg:
@@ -336,10 +456,15 @@ def run_benchmark(config_path, smoke=False, episodes=None, seeds=None, scenarios
         obs_dim = int(sample_obs["observation_vector"].shape[0])
         action_dim = int(method_config.get("policy", {}).get("action_dim", 3))
 
-        agent = PPOAgent(obs_dim=obs_dim, action_dim=action_dim, config=method_config, device="cpu")
+        agent = PPOAgent(
+            obs_dim=obs_dim, action_dim=action_dim, config=method_config, device="cpu"
+        )
 
         metrics = evaluate_method(
-            env, agent, method_config, method_name,
+            env,
+            agent,
+            method_config,
+            method_name,
             num_episodes=episodes,
             seeds=seeds,
             scenarios=scenarios,
@@ -375,11 +500,20 @@ def run_benchmark(config_path, smoke=False, episodes=None, seeds=None, scenarios
     # Save CSV
     csv_path = os.path.join(output_dir, "prediction_metrics.csv")
     scalar_keys = [
-        "method", "scenario", "seed", "episodes",
-        "instant_success_rate", "score_win_rate", "mean_return",
-        "mean_final_range_m", "mean_final_ata_deg",
-        "prediction_rmse_m", "prediction_fallback_rate",
-        "timeout_rate", "crash_rate", "out_of_bounds_rate",
+        "method",
+        "scenario",
+        "seed",
+        "episodes",
+        "instant_success_rate",
+        "score_win_rate",
+        "mean_return",
+        "mean_final_range_m",
+        "mean_final_ata_deg",
+        "prediction_rmse_m",
+        "prediction_fallback_rate",
+        "timeout_rate",
+        "crash_rate",
+        "out_of_bounds_rate",
     ]
     with open(csv_path, "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=scalar_keys)
@@ -395,7 +529,20 @@ def run_benchmark(config_path, smoke=False, episodes=None, seeds=None, scenarios
         per_scenario = m.get("per_scenario", {})
         for sc_name, sc_metrics in per_scenario.items():
             row = {"method": method_name, "scenario": sc_name}
-            row.update({k: sc_metrics.get(k, sc_metrics.get(k.replace("instant_", "").replace("prediction_", "mean_prediction_"), "")) for k in scalar_keys[2:]})
+            row.update(
+                {
+                    k: sc_metrics.get(
+                        k,
+                        sc_metrics.get(
+                            k.replace("instant_", "").replace(
+                                "prediction_", "mean_prediction_"
+                            ),
+                            "",
+                        ),
+                    )
+                    for k in scalar_keys[2:]
+                }
+            )
             scenario_rows.append(row)
 
     scenario_csv_path = os.path.join(output_dir, "scenario_metrics.csv")
@@ -412,9 +559,15 @@ def run_benchmark(config_path, smoke=False, episodes=None, seeds=None, scenarios
     summary_path = os.path.join(output_dir, "summary.md")
     with open(summary_path, "w", encoding="utf-8") as f:
         f.write("# Stage 6B: Simple-Backend Prediction Benchmark Summary\n\n")
-        f.write("> **Warning**: This benchmark evaluates mechanism and comparative trends.\n")
-        f.write("> Smoke or small-run results must not be presented as final paper conclusions.\n")
-        f.write("> Full runs with sufficient seeds and episodes are required for statistical claims.\n\n")
+        f.write(
+            "> **Warning**: This benchmark evaluates mechanism and comparative trends.\n"
+        )
+        f.write(
+            "> Smoke or small-run results must not be presented as final paper conclusions.\n"
+        )
+        f.write(
+            "> Full runs with sufficient seeds and episodes are required for statistical claims.\n\n"
+        )
 
         f.write("## Configuration\n\n")
         f.write(f"- **Date**: {datetime.now().isoformat()}\n")
@@ -425,8 +578,12 @@ def run_benchmark(config_path, smoke=False, episodes=None, seeds=None, scenarios
         f.write(f"- **Elapsed time**: {elapsed:.1f}s\n\n")
 
         f.write("## Aggregated Metrics\n\n")
-        f.write("| Method | Episodes | Success | Score Win | Return | Final Range (m) | Final ATA (deg) | Timeout | Crash | OOB |\n")
-        f.write("|--------|----------|---------|-----------|--------|-----------------|-----------------|---------|-------|-----|\n")
+        f.write(
+            "| Method | Episodes | Success | Score Win | Return | Final Range (m) | Final ATA (deg) | Timeout | Crash | OOB |\n"
+        )
+        f.write(
+            "|--------|----------|---------|-----------|--------|-----------------|-----------------|---------|-------|-----|\n"
+        )
         for m in all_method_metrics:
             f.write(
                 f"| {m['method']} | {m['episodes']} | "
@@ -446,8 +603,12 @@ def run_benchmark(config_path, smoke=False, episodes=None, seeds=None, scenarios
             per_scenario = m.get("per_scenario", {})
             if per_scenario:
                 f.write(f"### {method_name}\n\n")
-                f.write("| Scenario | Success | Score Win | Return | Final Range (m) |\n")
-                f.write("|----------|---------|-----------|--------|-----------------|\n")
+                f.write(
+                    "| Scenario | Success | Score Win | Return | Final Range (m) |\n"
+                )
+                f.write(
+                    "|----------|---------|-----------|--------|-----------------|\n"
+                )
                 for sc_name, sc_metrics in per_scenario.items():
                     f.write(
                         f"| {sc_name} | "
@@ -459,8 +620,12 @@ def run_benchmark(config_path, smoke=False, episodes=None, seeds=None, scenarios
                 f.write("\n")
 
         f.write("## Pairwise Comparison (vs no_prediction)\n\n")
-        f.write("| Comparison | Baseline Return | Treatment Return | Delta | Relative Delta (%) |\n")
-        f.write("|------------|-----------------|------------------|-------|--------------------|\n")
+        f.write(
+            "| Comparison | Baseline Return | Treatment Return | Delta | Relative Delta (%) |\n"
+        )
+        f.write(
+            "|------------|-----------------|------------------|-------|--------------------|\n"
+        )
         for key, comp in comparison.get("pairwise", {}).items():
             baseline_val = comp.get("baseline_value", np.nan)
             treatment_val = comp.get("treatment_value", np.nan)
@@ -477,27 +642,71 @@ def run_benchmark(config_path, smoke=False, episodes=None, seeds=None, scenarios
         f.write("Generated by `run_stage6b_simple_benchmark.py`\n")
 
     print(f"Summary markdown saved to: {summary_path}")
+
+    # Save run metadata
+    metadata = get_run_metadata(config)
+    metadata["benchmark"] = {
+        "episodes": episodes,
+        "seeds": seeds,
+        "scenarios": scenarios,
+        "methods": list(methods_cfg.keys()),
+        "elapsed_seconds": elapsed,
+    }
+    meta_path = save_run_metadata(output_dir, metadata)
+    print(f"Run metadata saved to: {meta_path}")
+
     return output_dir
 
 
 def main():
     parser = argparse.ArgumentParser(description="Stage 6B Simple-Backend Benchmark")
-    parser.add_argument("--config", type=str, required=True, help="Path to benchmark config YAML")
-    parser.add_argument("--smoke", action="store_true", help="Run minimal smoke benchmark")
+    parser.add_argument(
+        "--config", type=str, required=True, help="Path to benchmark config YAML"
+    )
+    parser.add_argument(
+        "--smoke", action="store_true", help="Run minimal smoke benchmark"
+    )
     parser.add_argument("--episodes", type=int, default=None, help="Episodes per seed")
-    parser.add_argument("--seeds", type=int, nargs="+", default=None, help="Random seeds")
-    parser.add_argument("--scenarios", type=str, nargs="+", default=None, help="Fixed scenario names")
-    parser.add_argument("--output-dir", type=str, default=None, help="Output directory override")
+    parser.add_argument(
+        "--seeds", type=int, nargs="+", default=None, help="Random seeds"
+    )
+    parser.add_argument(
+        "--scenarios", type=str, nargs="+", default=None, help="Fixed scenario names"
+    )
+    parser.add_argument(
+        "--output-dir", type=str, default=None, help="Output directory override"
+    )
+    parser.add_argument(
+        "--backend",
+        type=str,
+        default=None,
+        choices=["simple", "jsbsim"],
+        help="Override backend type",
+    )
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Force overwrite of existing output directory",
+    )
     args = parser.parse_args()
 
-    run_benchmark(
-        args.config,
-        smoke=args.smoke,
-        episodes=args.episodes,
-        seeds=args.seeds,
-        scenarios=args.scenarios,
-        output_dir=args.output_dir,
-    )
+    try:
+        run_benchmark(
+            args.config,
+            smoke=args.smoke,
+            episodes=args.episodes,
+            seeds=args.seeds,
+            scenarios=args.scenarios,
+            output_dir=args.output_dir,
+            backend=args.backend,
+            force=args.force,
+        )
+    except Exception as exc:
+        print(f"\nERROR: Benchmark failed with exception: {exc}")
+        import traceback
+
+        traceback.print_exc()
+        sys.exit(1)
 
 
 if __name__ == "__main__":

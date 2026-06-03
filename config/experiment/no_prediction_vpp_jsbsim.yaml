@@ -1,4 +1,9 @@
 # No-Prediction VPP Baseline — JSBSim High-Fidelity Bridge Configuration
+#
+# Phase: P7 (JSBSim Validation)
+# Backend: jsbsim (F-16 high-fidelity)
+# Purpose: Validate baseline on JSBSim before adding guidance diversity.
+# Usage: python -m uav_vpp_guidance.training.train_no_prediction_vpp_ppo --config ... --smoke
 
 includes:
   - ../env.yaml
@@ -12,9 +17,8 @@ experiment:
   mode: eval
   output_root: outputs
 
-# Backend selection
+# Backend selection: jsbsim requires legacy_project_root
 backend: jsbsim
-
 env:
   use_jsbsim: true
   aircraft_model: f16

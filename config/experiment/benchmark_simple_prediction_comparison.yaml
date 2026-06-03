@@ -1,7 +1,10 @@
 # Stage 6B: Simple-Backend Prediction Comparison Benchmark
 #
-# Full benchmark comparing no_prediction, cv_prediction, and ca_prediction
-# on fixed scenarios with multiple seeds.
+# Phase: P6B
+# Backend: simple (3DoF point mass)
+# Purpose: Full benchmark comparing no_prediction, cv_prediction, and ca_prediction
+#          on fixed scenarios with multiple seeds.
+# Paper-grade: episodes=20, seeds=[0..4]
 #
 # Usage:
 #   # Smoke (minimal, for CI)

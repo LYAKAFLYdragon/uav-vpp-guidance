@@ -443,3 +443,335 @@ class TestPredictionEnvIntegration:
         high = policy.get("action_high", [])
         assert all(v == -1.0 for v in low)
         assert all(v == 1.0 for v in high)
+
+
+# ---------------------------------------------------------------------------
+# Stage 6A Hardening: Additional CV/CA Prediction VPP Anchor Tests
+# ---------------------------------------------------------------------------
+
+class TestConstantVelocityPredictorHardening:
+    """补充 CV predictor 字段兼容性与 info 稳定性测试。"""
+
+    def test_predict_supports_position_m_and_velocity_vector_mps(self):
+        """支持 position_m + velocity_vector_mps 组合。"""
+        pred = ConstantVelocityPredictor(lookahead_time_s=1.0)
+        state = {
+            "position_m": np.array([100.0, 200.0, 300.0]),
+            "velocity_vector_mps": np.array([10.0, 20.0, 5.0]),
+        }
+        pos, var, info = pred.predict(current_target_state=state)
+        expected = np.array([110.0, 220.0, 305.0])
+        np.testing.assert_allclose(pos, expected, atol=1e-6)
+        assert not info["fallback"]
+
+    def test_predict_info_fields(self):
+        """info 必须包含 model、fallback、output_is_absolute 字段。"""
+        pred = ConstantVelocityPredictor(lookahead_time_s=1.0)
+        state = {
+            "position_neu": np.array([0.0, 0.0, 5000.0]),
+            "velocity_ned": np.array([10.0, 0.0, 0.0]),
+        }
+        pos, var, info = pred.predict(current_target_state=state)
+        assert info["model"] == "constant_velocity"
+        assert "fallback" in info
+        assert info["output_is_absolute"] is True
+
+    def test_predict_fallback_returns_current_position(self):
+        """缺少 velocity 时 fallback 返回当前位置。"""
+        pred = ConstantVelocityPredictor(lookahead_time_s=1.0)
+        state = {
+            "position_neu": np.array([42.0, 0.0, 5000.0]),
+        }
+        pos, var, info = pred.predict(current_target_state=state)
+        assert info["fallback"] is True
+        np.testing.assert_allclose(pos, np.array([42.0, 0.0, 5000.0]), atol=1e-6)
+
+
+class TestConstantAccelerationPredictorHardening:
+    """补充 CA predictor 字段兼容性与 fallback 稳定性测试。"""
+
+    def test_predict_supports_position_m_and_velocity_vector_mps(self):
+        """支持 position_m + velocity_vector_mps 组合。"""
+        pred = ConstantAccelerationPredictor(lookahead_time_s=1.0)
+        state = {
+            "position_m": np.array([0.0, 0.0, 5000.0]),
+            "velocity_vector_mps": np.array([100.0, 0.0, 0.0]),
+        }
+        history = np.random.randn(5, 16).astype(np.float64)
+        for i in range(3):
+            history[-(i+1), 3:6] = np.array([0.333, 0.0, 0.0])
+        pos, var, info = pred.predict(history_seq=history, current_target_state=state)
+        assert pos.shape == (3,)
+        assert info["model"] == "constant_acceleration"
+
+    def test_fallback_reason_field_stable(self):
+        """历史不足时 fallback_reason 必须被正确设置。"""
+        pred = ConstantAccelerationPredictor(lookahead_time_s=1.0)
+        state = {
+            "position_neu": np.array([0.0, 0.0, 5000.0]),
+            "velocity_ned": np.array([100.0, 0.0, 0.0]),
+        }
+        # 只有 2 帧历史，不足以估计加速度
+        history = np.random.randn(2, 16).astype(np.float64)
+        pos, var, info = pred.predict(history_seq=history, current_target_state=state)
+        assert info["fallback"] is True
+        assert info["fallback_reason"] is not None
+        assert "insufficient history" in info["fallback_reason"]
+
+    def test_nan_inf_protection(self):
+        """非有限 acceleration 时必须 fallback 到 CV，不允许 NaN/Inf 进入结果。"""
+        pred = ConstantAccelerationPredictor(lookahead_time_s=1.0)
+        state = {
+            "position_neu": np.array([0.0, 0.0, 5000.0]),
+            "velocity_ned": np.array([100.0, 0.0, 0.0]),
+        }
+        history = np.random.randn(5, 16).astype(np.float64)
+        # 注入 NaN 到速度特征，导致加速度估计为 NaN
+        history[-1, 3:6] = np.nan
+        history[-2, 3:6] = np.nan
+        history[-3, 3:6] = np.nan
+        pos, var, info = pred.predict(history_seq=history, current_target_state=state)
+        assert info["fallback"] is True
+        assert "non-finite" in info["fallback_reason"]
+        assert np.isfinite(pos).all()
+
+
+class TestTrajectoryPredictorAdapterHardening:
+    """补充 Adapter 调用链与字段稳定性测试。"""
+
+    def test_adapter_enabled_update_predict_chain(self):
+        """enabled=true 时 update -> build feature -> predict 调用链可运行。"""
+        config = {
+            "predictor_type": "constant_velocity",
+            "prediction": {"lookahead_time_s": 1.0, "output_mode": "absolute_position"},
+            "integration": {"anchor_mode": "predicted_target"},
+            "history": {"history_len": 5, "padding_mode": "repeat_first"},
+            "model": {"input_dim": 16},
+            "normalization": {"position_scale_m": 1000.0, "velocity_scale_mps": 300.0, "overload_scale": 9.0},
+        }
+        predictor = create_predictor_from_config(config)
+        buf = create_state_buffer_from_config(config)
+        adapter = TrajectoryPredictorAdapter(predictor, buf, config)
+
+        # 模拟 5 次 update
+        for i in range(5):
+            adapter.update(
+                own_state={"position_neu": np.array([0.0, 0.0, 5000.0]), "velocity_ned": np.array([200.0, 0.0, 0.0]), "attitude_rpy": np.zeros(3)},
+                target_state={"position_neu": np.array([1000.0, 0.0, 5000.0]), "velocity_ned": np.array([50.0, 0.0, 0.0]), "attitude_rpy": np.zeros(3)},
+                relative_state={"distance": 1000.0, "relative_velocity": np.array([50.0, 0.0, 0.0])},
+            )
+
+        target_state = {
+            "position_neu": np.array([1000.0, 0.0, 5000.0]),
+            "velocity_ned": np.array([50.0, 0.0, 0.0]),
+        }
+        pred_pos, pred_var, info = adapter.predict(target_state)
+        assert pred_pos.shape == (3,)
+        assert info["anchor_mode"] == "predicted_target"
+        assert "model_type" in info
+
+    def test_adapter_prediction_valid_fallback_reason_fields(self):
+        """prediction_valid、fallback_reason、predicted_target_position 字段稳定。"""
+        config = {
+            "predictor_type": "constant_acceleration",
+            "prediction": {"lookahead_time_s": 1.0, "output_mode": "absolute_position"},
+            "integration": {"anchor_mode": "predicted_target"},
+            "history": {"history_len": 5, "padding_mode": "repeat_first"},
+            "model": {"input_dim": 16},
+            "normalization": {"position_scale_m": 1000.0, "velocity_scale_mps": 300.0, "overload_scale": 9.0},
+        }
+        predictor = create_predictor_from_config(config)
+        buf = create_state_buffer_from_config(config)
+        adapter = TrajectoryPredictorAdapter(predictor, buf, config)
+
+        # 无历史，直接 predict 会触发 fallback
+        target_state = {
+            "position_neu": np.array([1000.0, 0.0, 5000.0]),
+            "velocity_ned": np.array([50.0, 0.0, 0.0]),
+        }
+        pred_pos, pred_var, info = adapter.predict(target_state)
+        assert pred_pos is not None
+        assert pred_pos.shape == (3,)
+        # fallback 时 info 中应有 fallback_reason
+        assert "fallback" in info
+        if info["fallback"]:
+            assert info.get("fallback_reason") is not None
+
+    def test_adapter_disabled_does_not_affect_baseline(self):
+        """disabled 或 enabled=false 时不应影响 no-prediction baseline。"""
+        config = {
+            "predictor_type": "constant_velocity",
+            "prediction": {"lookahead_time_s": 1.0, "output_mode": "absolute_position"},
+            "integration": {"anchor_mode": "predicted_target"},
+            "history": {"history_len": 5, "padding_mode": "repeat_first"},
+            "model": {"input_dim": 16},
+            "normalization": {"position_scale_m": 1000.0, "velocity_scale_mps": 300.0, "overload_scale": 9.0},
+        }
+        predictor = create_predictor_from_config(config)
+        buf = create_state_buffer_from_config(config)
+        adapter = TrajectoryPredictorAdapter(predictor, buf, config)
+
+        # 即使 adapter 存在，如果 env 中 enabled=false，也不应调用它
+        # 这个测试主要验证 adapter 本身不会抛出异常
+        adapter.reset()
+        target_state = {
+            "position_neu": np.array([0.0, 0.0, 5000.0]),
+            "velocity_ned": np.array([0.0, 0.0, 0.0]),
+        }
+        pred_pos, _, info = adapter.predict(target_state)
+        assert pred_pos is not None
+
+
+class TestCloseRangeTrackingEnvPredictionAnchorHardening:
+    """补充 CloseRangeTrackingEnv prediction anchor 集成测试。"""
+
+    def _make_base_config(self):
+        return {
+            "experiment": {"name": "test_pred_anchor", "seed": 42, "output_root": "outputs"},
+            "env": {
+                "use_jsbsim": False,
+                "decision_freq": 5,
+                "sim_freq": 60,
+                "max_high_level_steps": 512,
+                "success_range_m": 900.0,
+                "success_ata_deg": 25.0,
+                "success_hold_time_s": 0.2,
+                "hysteresis_range_m": 950.0,
+                "hysteresis_ata_deg": 30.0,
+                "min_altitude_m": 500.0,
+                "max_altitude_m": 15000.0,
+                "max_range_m": 8000.0,
+                "target_mode": "constant_velocity",
+            },
+            "virtual_point": {
+                "action_dim": 3,
+                "d_long_range": [-1500.0, 1500.0],
+                "d_lat_range": [-800.0, 800.0],
+                "d_vert_range": [-500.0, 500.0],
+                "smoothing_alpha": 0.3,
+            },
+            "limits": {
+                "nz_min": -2.0, "nz_max": 7.0,
+                "roll_rate_min": -1.5, "roll_rate_max": 1.5,
+                "throttle_min": 0.0, "throttle_max": 1.0,
+            },
+            "reward": {
+                "w_range": 0.5, "w_angle": 0.8, "w_energy": 0.2,
+                "w_safety": 2.0, "w_saturation": 1.0, "w_smooth": 0.1,
+                "terminal_success": 200.0, "terminal_failure": -200.0, "terminal_crash": -300.0,
+                "min_altitude_m": 500.0,
+            },
+            "guidance": {
+                "mode": "los_rate", "use_gain_adapter": False,
+                "gains": {"k_los": 1.0, "k_pos": 0.5, "k_damp": 0.2, "k_roll": 1.0, "k_speed": 0.2, "alpha_filter": 0.3},
+            },
+        }
+
+    def test_no_prediction_current_target_no_predictor_involved(self):
+        """enabled=false + current_target 时 predictor 不参与闭环。"""
+        config = self._make_base_config()
+        config["trajectory_prediction"] = {"enabled": False}
+        config["virtual_point"]["anchor_mode"] = "current_target"
+        env = CloseRangeTrackingEnv(config)
+        assert env.trajectory_predictor_adapter is None
+        env.reset(seed=0)
+        _, _, _, _, info = env.step(np.zeros(3))
+        assert info["prediction_enabled"] is False
+        assert info["anchor_mode"] == "current_target"
+        env.close()
+
+    def test_cv_prediction_anchor_mode_in_info(self):
+        """enabled=true + CV + predicted_target 时 info anchor_mode=predicted_target。"""
+        config = self._make_base_config()
+        config["virtual_point"]["anchor_mode"] = "predicted_target"
+        config["trajectory_prediction"] = {
+            "enabled": True,
+            "predictor_type": "constant_velocity",
+            "freeze_predictor_during_rl": True,
+            "prediction": {"lookahead_time_s": 1.0, "output_mode": "absolute_position"},
+            "history": {"history_len": 5, "padding_mode": "repeat_first"},
+            "model": {"input_dim": 16},
+            "normalization": {"position_scale_m": 1000.0, "velocity_scale_mps": 300.0, "overload_scale": 9.0},
+        }
+        env = CloseRangeTrackingEnv(config)
+        env.reset(seed=0)
+        _, _, _, _, info = env.step(np.zeros(3))
+        assert info["prediction_enabled"] is True
+        assert info["anchor_mode"] == "predicted_target"
+        assert info["predictor_type"] == "ConstantVelocityPredictor"
+        env.close()
+
+    def test_ca_prediction_multi_step_no_crash(self):
+        """enabled=true + CA + predicted_target 时可 step 多步不崩溃。"""
+        config = self._make_base_config()
+        config["virtual_point"]["anchor_mode"] = "predicted_target"
+        config["trajectory_prediction"] = {
+            "enabled": True,
+            "predictor_type": "constant_acceleration",
+            "freeze_predictor_during_rl": True,
+            "prediction": {"lookahead_time_s": 1.0, "output_mode": "absolute_position"},
+            "history": {"history_len": 5, "padding_mode": "repeat_first"},
+            "model": {"input_dim": 16},
+            "normalization": {"position_scale_m": 1000.0, "velocity_scale_mps": 300.0, "overload_scale": 9.0},
+        }
+        env = CloseRangeTrackingEnv(config)
+        env.reset(seed=0)
+        for _ in range(20):
+            action = np.random.uniform(-1, 1, size=3)
+            obs, reward, terminated, truncated, info = env.step(action)
+            if terminated or truncated:
+                break
+        env.close()
+
+    def test_prediction_info_fields_present(self):
+        """info 中必须包含 prediction_valid、prediction_fallback_reason、predicted_target_position、prediction_error_m。"""
+        config = self._make_base_config()
+        config["virtual_point"]["anchor_mode"] = "predicted_target"
+        config["trajectory_prediction"] = {
+            "enabled": True,
+            "predictor_type": "constant_velocity",
+            "freeze_predictor_during_rl": True,
+            "prediction": {"lookahead_time_s": 1.0, "output_mode": "absolute_position"},
+            "history": {"history_len": 5, "padding_mode": "repeat_first"},
+            "model": {"input_dim": 16},
+            "normalization": {"position_scale_m": 1000.0, "velocity_scale_mps": 300.0, "overload_scale": 9.0},
+        }
+        env = CloseRangeTrackingEnv(config)
+        env.reset(seed=0)
+        _, _, _, _, info = env.step(np.zeros(3))
+        required_fields = [
+            "prediction_valid", "prediction_fallback_reason",
+            "predicted_target_position", "prediction_error_m",
+        ]
+        for field in required_fields:
+            assert field in info, f"Missing info field: {field}"
+        env.close()
+
+    def test_virtual_point_based_on_predicted_target(self):
+        """virtual_point 应基于 predicted_target_position，而非 current target position。"""
+        config = self._make_base_config()
+        config["virtual_point"]["anchor_mode"] = "predicted_target"
+        config["trajectory_prediction"] = {
+            "enabled": True,
+            "predictor_type": "constant_velocity",
+            "freeze_predictor_during_rl": True,
+            "prediction": {"lookahead_time_s": 1.0, "output_mode": "absolute_position"},
+            "history": {"history_len": 5, "padding_mode": "repeat_first"},
+            "model": {"input_dim": 16},
+            "normalization": {"position_scale_m": 1000.0, "velocity_scale_mps": 300.0, "overload_scale": 9.0},
+        }
+        env = CloseRangeTrackingEnv(config)
+        env.reset(seed=0)
+        _, _, _, _, info = env.step(np.zeros(3))
+        pred_target_pos = info.get("predicted_target_position")
+        vp = info.get("virtual_point", {})
+        vp_pos = vp.get("position")
+        assert pred_target_pos is not None
+        assert vp_pos is not None
+        # virtual point 应接近 predicted_target_position（允许 action 带来的偏移）
+        vp_arr = np.asarray(vp_pos)
+        pred_arr = np.asarray(pred_target_pos)
+        shift = np.linalg.norm(vp_arr - pred_arr)
+        # action=zeros 时，shift 应很小（< 100m）
+        assert shift < 100.0, f"virtual_point too far from predicted_target: {shift:.1f} m"
+        env.close()

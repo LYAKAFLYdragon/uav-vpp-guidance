@@ -256,7 +256,7 @@ def aggregate_metrics(episodes):
         clean = [v for v in vals if np.isfinite(v)]
         return float(np.mean(clean)) if clean else np.nan
 
-    return {
+    result = {
         "num_episodes": len(episodes),
         "mean_return": safe_mean(returns),
         "std_return": float(np.std(returns)) if returns else np.nan,
@@ -279,6 +279,11 @@ def aggregate_metrics(episodes):
         "mean_time_to_first_advantage_s": safe_mean([e["time_to_first_advantage_s"] for e in episodes]),
         "mean_advantage_hold_time_s": safe_mean([e["advantage_hold_time_s"] for e in episodes]),
     }
+    # Unified field aliases for ablation / paper tables
+    result["instant_success_rate"] = result["success_rate"]
+    result["prediction_rmse_m"] = result["mean_prediction_error_m"]
+    result["prediction_fallback_rate"] = result["mean_prediction_fallback_rate"]
+    return result
 
 
 def evaluate_method(env, agent, config, method_name, num_episodes=10, seeds=None, scenarios=None, save_trajectories=False, output_dir=None):
@@ -331,8 +336,11 @@ def evaluate_method(env, agent, config, method_name, num_episodes=10, seeds=None
 
     overall = aggregate_metrics(all_episodes)
     overall["method"] = method_name
+    overall["scenario"] = "all"
+    overall["seed"] = "all"
+    overall["episodes"] = len(all_episodes)
     overall["per_scenario"] = {name: aggregate_metrics(eps) for name, eps in per_scenario_episodes.items()}
-    overall["episodes"] = all_episodes
+    overall["raw_episodes"] = all_episodes
     overall["per_seed"] = per_seed_results
     return overall
 
@@ -455,12 +463,11 @@ def main():
     # Save CSV (overall only; per-scenario in JSON)
     csv_path = os.path.join(output_dir, "prediction_metrics.csv")
     scalar_keys = [
-        "method", "num_episodes", "mean_return", "std_return",
-        "success_rate", "score_win_rate", "crash_rate", "out_of_bounds_rate", "timeout_rate",
-        "mean_length", "mean_final_range_m", "mean_final_ata_deg", "mean_min_range_m", "mean_min_ata_deg",
-        "mean_prediction_enabled_rate", "mean_prediction_valid_rate", "mean_prediction_fallback_rate",
-        "mean_prediction_error_m", "mean_virtual_point_shift_m", "mean_anchor_shift_m",
-        "mean_time_to_first_advantage_s", "mean_advantage_hold_time_s",
+        "method", "scenario", "seed", "episodes",
+        "instant_success_rate", "score_win_rate", "mean_return",
+        "mean_final_range_m", "mean_final_ata_deg",
+        "prediction_rmse_m", "prediction_fallback_rate",
+        "timeout_rate", "crash_rate", "out_of_bounds_rate",
     ]
     with open(csv_path, "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=scalar_keys)
@@ -479,8 +486,13 @@ def main():
                 writer = csv.DictWriter(f, fieldnames=["scenario"] + scalar_keys[1:])
                 writer.writeheader()
                 for sc_name, sc_metrics in per_scenario.items():
-                    row = {"scenario": sc_name}
-                    row.update({k: sc_metrics.get(k, "") for k in scalar_keys[1:]})
+                    row = {
+                        "scenario": sc_name,
+                        "seed": "all",
+                        "episodes": sc_metrics.get("num_episodes", ""),
+                    }
+                    for k in scalar_keys[3:]:
+                        row[k] = sc_metrics.get(k, sc_metrics.get(k.replace("instant_", "").replace("prediction_", "mean_prediction_"), ""))
                     writer.writerow(row)
             print(f"Scenario CSV saved to: {scenario_csv}")
 

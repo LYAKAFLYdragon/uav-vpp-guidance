@@ -1,12 +1,15 @@
 """
-轨迹预测模型独立训练器骨架。
+轨迹预测模型独立训练器。
 
 用于在收集到的 episode 数据上监督训练 LSTM/GRU 预测模型。
 """
 
+import os
+import time
+
 import torch
-import torch.nn as nn
-from torch.utils.data import DataLoader
+
+from .losses import relative_displacement_mse_loss
 
 
 class TrajectoryPredictorTrainer:
@@ -31,29 +34,142 @@ class TrajectoryPredictorTrainer:
         self.model.to(self.device)
 
         self.lr = config.get("learning_rate", 1.0e-3)
-        self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.lr)
-        self.loss_fn = nn.MSELoss()
+        self.weight_decay = config.get("weight_decay", 1.0e-5)
+        self.optimizer = torch.optim.Adam(
+            self.model.parameters(), lr=self.lr, weight_decay=self.weight_decay
+        )
+
+        # 使用相对位移 MSE 损失
+        self.loss_fn = relative_displacement_mse_loss
+
+        self.epochs = config.get("epochs", 100)
+        self.patience = config.get("patience", 10)
+
+        # 输出目录
+        self.output_dir = config.get("output_dir", "outputs/trajectory_prediction")
+        os.makedirs(self.output_dir, exist_ok=True)
+
+        self.best_val_loss = float("inf")
+        self.best_epoch = -1
+        self.history = {"train_loss": [], "val_loss": []}
 
     def train_one_epoch(self):
         """
         训练一个 epoch。
 
-        TODO: 实现完整的训练循环。
+        Returns:
+            float: 该 epoch 的平均训练损失。
         """
-        raise NotImplementedError("train_one_epoch is not yet implemented.")
+        self.model.train()
+        total_loss = 0.0
+        num_batches = 0
+
+        for history_seq, target in self.train_loader:
+            history_seq = history_seq.to(self.device)
+            target = target.to(self.device)
+
+            self.optimizer.zero_grad()
+            pred = self.model(history_seq)
+
+            # 若模型输出 variance（6 维），只取前 3 维均值计算训练损失
+            if pred.shape[-1] == 6:
+                pred = pred[:, :3]
+
+            loss = self.loss_fn(pred, target)
+            loss.backward()
+
+            # 梯度裁剪
+            torch.nn.utils.clip_grad_norm_(
+                self.model.parameters(), self.config.get("grad_clip", 1.0)
+            )
+            self.optimizer.step()
+
+            total_loss += loss.item()
+            num_batches += 1
+
+        return total_loss / max(1, num_batches)
 
     def validate(self):
         """
         在验证集上评估。
 
-        TODO: 实现完整的验证循环。
+        Returns:
+            float: 验证集平均损失。
         """
-        raise NotImplementedError("validate is not yet implemented.")
+        self.model.eval()
+        total_loss = 0.0
+        num_batches = 0
+
+        with torch.no_grad():
+            for history_seq, target in self.val_loader:
+                history_seq = history_seq.to(self.device)
+                target = target.to(self.device)
+
+                pred = self.model(history_seq)
+                if pred.shape[-1] == 6:
+                    pred = pred[:, :3]
+
+                loss = self.loss_fn(pred, target)
+                total_loss += loss.item()
+                num_batches += 1
+
+        return total_loss / max(1, num_batches)
 
     def fit(self):
         """
         完整训练流程。
 
-        TODO: 实现多 epoch 训练和早停逻辑。
+        执行多 epoch 训练，每 epoch 结束后在验证集上评估，
+        保存验证损失最低的模型权重，支持早停。
+
+        Returns:
+            dict: 训练历史，包含 train_loss 和 val_loss 列表。
         """
-        raise NotImplementedError("fit is not yet implemented.")
+        patience_counter = 0
+        start_time = time.time()
+
+        for epoch in range(1, self.epochs + 1):
+            train_loss = self.train_one_epoch()
+            val_loss = self.validate()
+
+            self.history["train_loss"].append(train_loss)
+            self.history["val_loss"].append(val_loss)
+
+            # 保存最优模型
+            if val_loss < self.best_val_loss:
+                self.best_val_loss = val_loss
+                self.best_epoch = epoch
+                patience_counter = 0
+                self.save_checkpoint("best_model.pt")
+            else:
+                patience_counter += 1
+
+            # 每个 epoch 都保存当前模型
+            self.save_checkpoint("latest_model.pt")
+
+            print(
+                f"Epoch {epoch:03d}/{self.epochs} | "
+                f"train_loss={train_loss:.6f} | val_loss={val_loss:.6f} | "
+                f"best={self.best_val_loss:.6f}@{self.best_epoch} | "
+                f"patience={patience_counter}/{self.patience}"
+            )
+
+            if patience_counter >= self.patience:
+                print(f"Early stopping triggered at epoch {epoch}.")
+                break
+
+        elapsed = time.time() - start_time
+        print(
+            f"Training finished in {elapsed:.1f}s. Best val_loss={self.best_val_loss:.6f} at epoch {self.best_epoch}."
+        )
+        return self.history
+
+    def save_checkpoint(self, filename):
+        """保存模型权重到输出目录。"""
+        path = os.path.join(self.output_dir, filename)
+        torch.save(self.model.state_dict(), path)
+
+    def load_checkpoint(self, filename):
+        """从输出目录加载模型权重。"""
+        path = os.path.join(self.output_dir, filename)
+        self.model.load_state_dict(torch.load(path, map_location=self.device))

@@ -21,6 +21,7 @@ class GuidanceGains:
         k_energy: Energy compensation gain.
         alpha_filter: Command filter smoothing factor.
     """
+
     k_los: float = 1.0
     k_pos: float = 0.5
     k_damp: float = 0.2

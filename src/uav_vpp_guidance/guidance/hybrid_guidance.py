@@ -47,21 +47,33 @@ class HybridGuidance:
         )
         self.epsilon = float(self.params.get("epsilon", 1.0e-6))
 
+        # Hysteresis / dwell-time anti-chatter
+        self.hysteresis_m = float(self.params.get("hysteresis_m", 500.0))
+        self.energy_speed_hysteresis_mps = float(
+            self.params.get("energy_speed_hysteresis_mps", 20.0)
+        )
+        self.min_dwell_steps = int(self.params.get("min_dwell_steps", 3))
+
         # Instantiate sub-guidance laws
         self.los_guidance = LOSRateGuidance(config)
         self.pn_guidance = ProportionalNavigationGuidance(config)
 
         # Tracking
         self._active_law: str = "pn"
+        self._steps_in_law: int = 0
+        self._pending_law: Optional[str] = None
 
     # ------------------------------------------------------------------
     # Public API
     # ------------------------------------------------------------------
 
     def reset(self) -> None:
-        """Reset internal state of both sub-laws."""
+        """Reset internal state of both sub-laws and switching logic."""
         self.pn_guidance.reset()
+        self.los_guidance.reset()
         self._active_law = "pn"
+        self._steps_in_law = 0
+        self._pending_law = None
 
     def compute_command(
         self,
@@ -134,15 +146,18 @@ class HybridGuidance:
         gains: Optional[Any],
         range_m: float,
     ) -> Dict[str, float]:
-        """Pure switch at range_threshold_m."""
-        if range_m < self.range_threshold_m:
-            self._active_law = "los"
-            return self.los_guidance.compute_command(
-                own_state, target_state, virtual_point, gains
-            )
-        self._active_law = "pn"
-        return self.pn_guidance.compute_command(
-            own_state, target_state, virtual_point, gains
+        """Hysteresis switch at range_threshold_m with dwell time."""
+        lower = self.range_threshold_m - 0.5 * self.hysteresis_m
+        upper = self.range_threshold_m + 0.5 * self.hysteresis_m
+
+        # Determine desired law based on hysteresis bands
+        if self._active_law == "pn":
+            desired = "los" if range_m < lower else "pn"
+        else:
+            desired = "pn" if range_m > upper else "los"
+
+        return self._apply_switch(
+            desired, own_state, target_state, virtual_point, gains
         )
 
     def _energy_mode(
@@ -153,7 +168,7 @@ class HybridGuidance:
         gains: Optional[Any],
         range_m: float,
     ) -> Dict[str, float]:
-        """Switch to LOS when low on energy (speed or terminal range)."""
+        """Hysteresis switch based on energy state with dwell time."""
         vel = own_state.get("velocity_ned")
         if vel is None:
             vel = own_state.get("velocity_vector_mps")
@@ -161,12 +176,53 @@ class HybridGuidance:
             vel = [0.0, 0.0, 0.0]
         speed = float(np.linalg.norm(np.asarray(vel, dtype=np.float64)))
 
-        if range_m < self.range_threshold_m or speed < self.energy_speed_threshold_mps:
-            self._active_law = "los"
+        lower_range = self.range_threshold_m - 0.5 * self.hysteresis_m
+        upper_range = self.range_threshold_m + 0.5 * self.hysteresis_m
+        lower_speed = (
+            self.energy_speed_threshold_mps - 0.5 * self.energy_speed_hysteresis_mps
+        )
+        upper_speed = (
+            self.energy_speed_threshold_mps + 0.5 * self.energy_speed_hysteresis_mps
+        )
+
+        if self._active_law == "pn":
+            desired = "los" if (range_m < lower_range or speed < lower_speed) else "pn"
+        else:
+            desired = "pn" if (range_m > upper_range and speed > upper_speed) else "los"
+
+        return self._apply_switch(
+            desired, own_state, target_state, virtual_point, gains
+        )
+
+    def _apply_switch(
+        self,
+        desired: str,
+        own_state: Dict[str, Any],
+        target_state: Optional[Dict[str, Any]],
+        virtual_point: Dict[str, Any],
+        gains: Optional[Any],
+    ) -> Dict[str, float]:
+        """Apply switching with dwell-time anti-chatter."""
+        if desired == self._active_law:
+            self._steps_in_law += 1
+            self._pending_law = None
+        else:
+            if self._pending_law == desired:
+                self._steps_in_law += 1
+            else:
+                self._pending_law = desired
+                self._steps_in_law = 1
+
+            if self._steps_in_law >= self.min_dwell_steps:
+                self._active_law = desired
+                self._pending_law = None
+                self._steps_in_law = 0
+                logger.debug(f"Hybrid switched to {desired}")
+
+        if self._active_law == "los":
             return self.los_guidance.compute_command(
                 own_state, target_state, virtual_point, gains
             )
-        self._active_law = "pn"
         return self.pn_guidance.compute_command(
             own_state, target_state, virtual_point, gains
         )

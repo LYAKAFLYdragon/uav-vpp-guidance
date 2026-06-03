@@ -95,7 +95,9 @@ def test_range_mode_far_uses_pn(default_hybrid, own_state, virtual_point_far):
 
 
 def test_range_mode_near_uses_los(default_hybrid, own_state, virtual_point_near):
-    cmd = default_hybrid.compute_command(own_state, None, virtual_point_near)
+    # Default min_dwell_steps=3, need multiple calls to switch
+    for _ in range(3):
+        cmd = default_hybrid.compute_command(own_state, None, virtual_point_near)
     assert default_hybrid._active_law == "los"
     for v in cmd.values():
         assert math.isfinite(v)
@@ -106,6 +108,91 @@ def test_range_mode_at_threshold(default_hybrid, own_state):
     default_hybrid.compute_command(own_state, None, vp)
     # At exactly threshold (range == threshold), range < threshold is False -> PN
     assert default_hybrid._active_law == "pn"
+
+
+def test_range_mode_hysteresis_prevents_chatter():
+    hyb = HybridGuidance(
+        {
+            "params": {
+                "hybrid_mode": "range",
+                "range_threshold_m": 3000.0,
+                "hysteresis_m": 500.0,
+                "min_dwell_steps": 3,
+            },
+        }
+    )
+    own = {
+        "position_m": np.array([0.0, 0.0, 5000.0]),
+        "velocity_vector_mps": np.array([200.0, 0.0, 0.0]),
+        "roll_rad": 0.0,
+    }
+    # Start far away -> PN
+    hyb.compute_command(own, None, {"position_m": np.array([10000.0, 0.0, 5000.0])})
+    assert hyb._active_law == "pn"
+
+    # Move to just inside threshold (2750m) but above lower bound (2750 > 2500)
+    # With hysteresis, PN should stay active until range < 2500
+    hyb.compute_command(own, None, {"position_m": np.array([2750.0, 0.0, 5000.0])})
+    assert hyb._active_law == "pn"
+
+    # Move below lower bound -> should switch to LOS after dwell steps
+    for _ in range(3):
+        hyb.compute_command(own, None, {"position_m": np.array([2400.0, 0.0, 5000.0])})
+    assert hyb._active_law == "los"
+
+
+def test_range_mode_dwell_time_enforced():
+    hyb = HybridGuidance(
+        {
+            "params": {
+                "hybrid_mode": "range",
+                "range_threshold_m": 3000.0,
+                "hysteresis_m": 500.0,
+                "min_dwell_steps": 5,
+            },
+        }
+    )
+    own = {
+        "position_m": np.array([0.0, 0.0, 5000.0]),
+        "velocity_vector_mps": np.array([200.0, 0.0, 0.0]),
+        "roll_rad": 0.0,
+    }
+    # Start in LOS (short range)
+    for _ in range(5):
+        hyb.compute_command(own, None, {"position_m": np.array([2000.0, 0.0, 5000.0])})
+    assert hyb._active_law == "los"
+
+    # Move to far range but only 2 steps -> should NOT switch yet
+    for _ in range(2):
+        hyb.compute_command(own, None, {"position_m": np.array([10000.0, 0.0, 5000.0])})
+    assert hyb._active_law == "los"
+
+    # After 5 total steps in pending -> switch to PN
+    for _ in range(3):
+        hyb.compute_command(own, None, {"position_m": np.array([10000.0, 0.0, 5000.0])})
+    assert hyb._active_law == "pn"
+
+
+def test_reset_clears_dwell_and_pending():
+    hyb = HybridGuidance(
+        {
+            "params": {
+                "hybrid_mode": "range",
+                "range_threshold_m": 3000.0,
+                "min_dwell_steps": 3,
+            },
+        }
+    )
+    own = {
+        "position_m": np.array([0.0, 0.0, 5000.0]),
+        "velocity_vector_mps": np.array([200.0, 0.0, 0.0]),
+        "roll_rad": 0.0,
+    }
+    hyb.compute_command(own, None, {"position_m": np.array([2000.0, 0.0, 5000.0])})
+    hyb.reset()
+    assert hyb._active_law == "pn"
+    assert hyb._steps_in_law == 0
+    assert hyb._pending_law is None
 
 
 # ---------------------------------------------------------------------------
@@ -121,7 +208,8 @@ def test_energy_mode_low_speed_uses_los():
         "roll_rad": 0.0,
     }
     vp = {"position_m": np.array([10000.0, 0.0, 5000.0])}
-    hyb.compute_command(own, None, vp)
+    for _ in range(3):
+        hyb.compute_command(own, None, vp)
     assert hyb._active_law == "los"
 
 

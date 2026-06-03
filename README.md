@@ -380,12 +380,29 @@ See `docs/legacy_mapping.md` and `legacy_notes/files_to_migrate.md` for detailed
 - [x] Command variance and limit-exceedance tracking in terminal phase
 - [ ] Full multi-seed training (≥200k steps) for paper-grade results
 
-### Phase 7 (Next): JSBSim High-Fidelity Validation
+### Phase 7 (In Progress): JSBSim High-Fidelity Validation
+
+**Status**: Guidance diversity smoke-tested on JSBSim F-16. No NaN/Inf issues.
+
+Quick comparison (random policy, 3 seeds × 3 episodes):
+
+| Mode | Success | Term NZ Var | Term Roll Var | NZ Exceed | Roll Exceed |
+|------|---------|-------------|---------------|-----------|-------------|
+| los_rate | 33.3% | 0.0362 | ~0 | 0.00% | 0.00% |
+| proportional_navigation | 33.3% | 0.0717 | ~0 | 0.00% | 0.00% |
+| hybrid | 33.3% | 0.0717 | ~0 | 0.00% | 0.00% |
+
+Run full comparison:
+```powershell
+python scripts/eval_jsbsim_guidance_comparison.py --seeds 0 1 2 --episodes 3
+```
+
+- [x] Guidance mode ablation smoke test (geometric vs PN vs hybrid)
+- [x] Terminal-phase command stability metrics on JSBSim
 - [ ] Full JSBSim dynamics and scenario migration
 - [ ] LSTM/GRU predictor training and integration
 - [ ] Gain-only CEM optimization
 - [ ] Strategy-gain bilevel training
-- [ ] Guidance mode ablation (geometric vs PN vs hybrid) under JSBSim
 - [ ] Terminal-phase command saturation analysis with high-fidelity actuator model
 
 > **Warning**: Smoke benchmark results are for mechanism validation only and must

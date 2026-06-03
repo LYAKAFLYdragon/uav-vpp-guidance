@@ -1,0 +1,24 @@
+# Force LF line endings for all text files
+* text=auto eol=lf
+
+# Explicitly declare text files
+*.py text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
+*.toml text eol=lf
+*.txt text eol=lf
+*.md text eol=lf
+*.ps1 text eol=lf
+*.ini text eol=lf
+*.cfg text eol=lf
+
+# Denote binary files
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.zip binary
+*.pt binary
+*.pth binary
+*.mat binary
+*.acmi binary

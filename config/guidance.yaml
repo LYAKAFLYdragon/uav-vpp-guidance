@@ -39,6 +39,31 @@ guidance:
     # Internal first-order filter (disable if caller already filters)
     enable_internal_filter: false
 
+    # Proportional Navigation parameters
+    navigation_constant: 3.0
+    los_rate_filter_alpha: 0.3
+    max_accel_mps2: 100.0
+
+    # Hybrid guidance parameters
+    hybrid_mode: range            # 'range' | 'energy' | 'blended'
+    range_threshold_m: 3000.0
+    blend_transition_m: 1000.0
+    energy_speed_threshold_mps: 220.0
+
+    # Command post-processing
+  post_process:
+    enabled: false
+    enable_energy_compensation: false
+    energy_k_nz: 0.05
+    energy_k_speed: 0.01
+    enable_load_roll_coordination: false
+    coord_nz_threshold: 0.8
+    coord_roll_scale: 0.5
+    enable_terminal_protection: true
+    terminal_range_m: 500.0
+    terminal_nz_scale: 0.7
+    terminal_roll_scale: 0.8
+
   limits:
     nz_min: -2.0
     nz_max: 7.0

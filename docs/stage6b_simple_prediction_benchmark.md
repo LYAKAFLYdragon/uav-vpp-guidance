@@ -101,12 +101,20 @@ All outputs are written to `outputs/benchmark/stage6b_simple_prediction/`:
 | `timeout_rate` | Episode timeout rate |
 | `crash_rate` | Episode crash rate |
 | `out_of_bounds_rate` | Episode out-of-bounds rate |
+| `terminal_nz_cmd_variance` | Variance of `nz_cmd` in terminal phase (last 20% steps) |
+| `terminal_roll_rate_cmd_variance` | Variance of `roll_rate_cmd` in terminal phase |
+| `terminal_throttle_cmd_variance` | Variance of `throttle_cmd` in terminal phase |
+| `terminal_nz_limit_exceedance_rate` | Fraction of terminal steps where `nz_cmd` exceeds limits |
+| `terminal_roll_rate_limit_exceedance_rate` | Fraction of terminal steps where `roll_rate_cmd` exceeds limits |
+| `terminal_mean_range_m` | Mean range during terminal phase |
 
 ## Scope and Limitations
 
 - **Backend**: SimplePointMass / 3DoF only. JSBSim high-fidelity validation is
   Stage 7.
 - **Policy**: Random (untrained) PPO agent. Trained policies are Stage 6C/7.
+- **Guidance mode**: Default is `los_rate`. The benchmark runner accepts any valid
+  `guidance.mode` (`los_rate`, `proportional_navigation`, `hybrid`) via config.
 - **Claim restriction**: CV/CA are classical baselines. Their performance may
   vary by scenario. The benchmark measures this variation rather than assuming
   universal improvement.

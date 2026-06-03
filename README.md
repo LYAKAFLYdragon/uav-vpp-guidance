@@ -8,7 +8,9 @@ This project aims to build a reproducible, extensible, and paper-ready engineeri
 
 - **Virtual Pursuit Point (VPP) policy**: A learned policy outputs normalized parameters that define a virtual pursuit point relative to the target aircraft.
 - **LOS-rate guidance law**: Generate normal overload and roll-rate commands based on line-of-sight angular rate.
-- **Overload / roll-rate command generation**: Low-level command structure compatible with JSBSim F-16 dynamics.
+- **Proportional Navigation (True 3D PN)**: Classical PN guidance with filtered LOS-rate estimation for terminal-phase stability.
+- **Hybrid Guidance**: Automatic switching or continuous blending between geometric LOS-rate and PN based on engagement range / energy state.
+- **Command Post-Processor**: Final saturation, terminal-phase protection, load-roll coordination, and energy compensation before actuator mapping.
 - **Regret-minimized strategy-gain bilevel optimization**: Alternating optimization of the pursuit policy (strategy) and the guidance gains.
 - **Target trajectory prediction**: Predict the target's future position (`f_ψ`) so the VPP anchor shifts from the current position to the predicted future position.
 
@@ -37,7 +39,7 @@ uav-vpp-guidance/
 │   ├── envs/               # JSBSim wrapper, tracking env, scenarios
 │   ├── flight_control/     # Low-level controller, command filter/limiter
 │   ├── virtual_point/      # VPP generation, pursuit priors, smoothing
-│   ├── guidance/           # LOS-rate guidance, gain config
+│   ├── guidance/           # LOS-rate guidance, PN, hybrid, command post-processor, gain config
 │   ├── trajectory_prediction/  # Target trajectory prediction (LSTM/GRU/Transformer)
 │   ├── agents/             # PPO/SAC agents, networks, replay buffer
 │   ├── gain_optimizer/     # CEM, PBT, regret, bilevel trainer
@@ -66,6 +68,55 @@ Verify import:
 python -c "import uav_vpp_guidance; print('ok')"
 ```
 
+### Guidance Mode Selection
+
+Select the guidance law via `guidance.mode` in your config:
+
+```yaml
+guidance:
+  mode: los_rate          # "los_rate" | "proportional_navigation" | "hybrid"
+  gains:
+    k_los: 1.0
+    k_roll: 1.0
+    k_speed: 0.2
+  params:
+    distance_scale_m: 2000.0
+    navigation_constant: 3.0
+    hybrid_mode: range      # "range" | "energy" | "blended"
+    range_threshold_m: 3000.0
+```
+
+Enable optional command post-processing:
+
+```yaml
+guidance:
+  post_process:
+    enabled: true
+    enable_terminal_protection: true
+    terminal_range_m: 500.0
+    enable_energy_compensation: false
+    enable_load_roll_coordination: false
+```
+
+### Console Scripts
+
+After `pip install -e .`, the following entry points are available:
+
+```powershell
+# Training
+uav-vpp-train-fixed-gain
+uav-vpp-train-gain-only
+uav-vpp-train-bilevel
+uav-vpp-train-no-prediction
+uav-vpp-train-no-prediction-ppo
+uav-vpp-train-prediction-ppo
+
+# Evaluation
+uav-vpp-eval-no-prediction
+uav-vpp-eval-prediction-comparison
+uav-vpp-eval-stage6b
+```
+
 ### Minimal Run Commands
 
 Train VPP policy with fixed gains:
@@ -90,6 +141,15 @@ Run Monte Carlo evaluation:
 
 ```powershell
 .\scripts\eval_monte_carlo.ps1
+```
+
+Run Stage 6B benchmark (smoke test):
+
+```powershell
+.\scripts\run_stage6b_simple_benchmark.ps1 -Smoke
+# or
+python -m uav_vpp_guidance.evaluation.run_stage6b_simple_benchmark `
+    --config config/experiment/benchmark_simple_prediction_comparison.yaml --smoke
 ```
 
 ## No-Prediction VPP Baseline
@@ -292,17 +352,21 @@ See `docs/legacy_mapping.md` and `legacy_notes/files_to_migrate.md` for detailed
 - [x] Environment prediction anchor integration (predicted_target)
 - [x] Ablation: No-Prediction vs CV vs CA on SimplePointMass
 
-### Phase 6B (Current): Full Simple-Backend Benchmark
-- [ ] Fixed-scenario benchmark (favorable / neutral / disadvantage / challenging)
-- [ ] Multi-seed statistical comparison (bootstrap CI, paired delta)
-- [ ] Automated summary.md generation
-- [ ] Smoke vs full benchmark runner
+### Phase 6B (Completed): Full Simple-Backend Benchmark
+- [x] Fixed-scenario benchmark (favorable / neutral / disadvantage / challenging)
+- [x] Multi-seed statistical comparison (bootstrap CI, paired delta)
+- [x] Automated summary.md generation with terminal-phase stability metrics
+- [x] Smoke vs full benchmark runner
+- [x] Command variance and limit-exceedance tracking in terminal phase
+- [ ] Full multi-seed training (≥200k steps) for paper-grade results
 
 ### Phase 7 (Next): JSBSim High-Fidelity Validation
 - [ ] Full JSBSim dynamics and scenario migration
 - [ ] LSTM/GRU predictor training and integration
 - [ ] Gain-only CEM optimization
 - [ ] Strategy-gain bilevel training
+- [ ] Guidance mode ablation (geometric vs PN vs hybrid) under JSBSim
+- [ ] Terminal-phase command saturation analysis with high-fidelity actuator model
 
 > **Warning**: Smoke benchmark results are for mechanism validation only and must
 > not be presented as final paper conclusions. Full runs with sufficient seeds

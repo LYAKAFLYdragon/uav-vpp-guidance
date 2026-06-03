@@ -5,8 +5,6 @@ TODO: Review if legacy project contains energy compensation logic.
   If not, implement as an optional module.
 """
 
-import numpy as np
-
 
 def compute_energy_compensation(own_state, target_state, gains):
     """

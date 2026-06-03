@@ -14,7 +14,7 @@ P4 scope: JSBSim high-fidelity bridge with unified backend interface.
 """
 
 import numpy as np
-from typing import Optional, Tuple, Dict, Any
+from typing import Optional, Tuple
 
 from .jsbsim_env import JSBSimEnv
 from .simple_point_mass_env import SimplePointMassEnv
@@ -23,6 +23,9 @@ from .reward import RewardCalculator
 from .termination import TerminationChecker
 from ..virtual_point.generator import VirtualPointGenerator
 from ..guidance.los_rate_guidance import LOSRateGuidance
+from ..guidance.proportional_navigation import ProportionalNavigationGuidance
+from ..guidance.hybrid_guidance import HybridGuidance
+from ..guidance.overload_rollrate import CommandPostProcessor
 from ..guidance.gain_config import GuidanceGains
 from ..flight_control.command_limiter import clip_command
 from ..flight_control.command_filter import MultiChannelCommandFilter
@@ -65,7 +68,9 @@ class CloseRangeTrackingEnv:
         if explicit_backend is not None:
             requested_backend = explicit_backend
         else:
-            requested_backend = "jsbsim" if self.env_config.get("use_jsbsim", True) else "simple"
+            requested_backend = (
+                "jsbsim" if self.env_config.get("use_jsbsim", True) else "simple"
+            )
 
         # Number of JSBSim integration steps per high-level decision step
         self._sim_steps_per_decision = max(1, self.sim_freq // self.decision_freq)
@@ -76,13 +81,17 @@ class CloseRangeTrackingEnv:
                 self.jsbsim_env = JSBSimEnv(self.env_config)
                 self.own_uid = "own"
                 self.target_uid = "target"
-                self.jsbsim_env.add_aircraft(self.own_uid, {"model": self.aircraft_model})
-                self.jsbsim_env.add_aircraft(self.target_uid, {"model": self.aircraft_model})
+                self.jsbsim_env.add_aircraft(
+                    self.own_uid, {"model": self.aircraft_model}
+                )
+                self.jsbsim_env.add_aircraft(
+                    self.target_uid, {"model": self.aircraft_model}
+                )
                 self._backend = "jsbsim"
                 self._low_level_controller = LowLevelController(
                     config.get("guidance", {}).get("gains", {})
                 )
-            except Exception as exc:
+            except Exception:
                 # Fallback to simple env if JSBSim init fails
                 self.jsbsim_env = None
                 self._low_level_controller = None
@@ -96,14 +105,35 @@ class CloseRangeTrackingEnv:
 
         # Submodules
         self.virtual_point_generator = VirtualPointGenerator(
-            config.get("virtual_point", config.get("guidance", {}).get("virtual_point", {}))
+            config.get(
+                "virtual_point", config.get("guidance", {}).get("virtual_point", {})
+            )
         )
-        self.guidance = LOSRateGuidance(config.get("guidance", {}))
+
+        # Guidance law selection based on mode
+        guidance_config = config.get("guidance", {})
+        guidance_mode = str(guidance_config.get("mode", "los_rate")).lower()
+        if guidance_mode == "los_rate":
+            self.guidance = LOSRateGuidance(guidance_config)
+        elif guidance_mode == "proportional_navigation":
+            self.guidance = ProportionalNavigationGuidance(guidance_config)
+        elif guidance_mode == "hybrid":
+            self.guidance = HybridGuidance(guidance_config)
+        else:
+            raise ValueError(f"Unknown guidance mode: {guidance_mode}")
+
+        # Optional command post-processor (energy comp, terminal protection, etc.)
+        self.command_post_processor = None
+        if guidance_config.get("post_process", {}).get("enabled", False):
+            self.command_post_processor = CommandPostProcessor(guidance_config)
+
         self.reward_calculator = RewardCalculator(config)
         self.termination_checker = TerminationChecker(self.env_config)
 
         # Command filter (three independent channels)
-        filter_alpha = config.get("guidance", {}).get("gains", {}).get("alpha_filter", 0.3)
+        filter_alpha = (
+            config.get("guidance", {}).get("gains", {}).get("alpha_filter", 0.3)
+        )
         self._command_filter = MultiChannelCommandFilter(alpha=filter_alpha)
 
         # Current guidance gains (default fixed)
@@ -150,7 +180,8 @@ class CloseRangeTrackingEnv:
         self._episode_count += 1
         self.reward_calculator.reset()
         self.termination_checker.reset()
-        self.guidance.reset()
+        if hasattr(self.guidance, "reset"):
+            self.guidance.reset()
         self._command_filter.reset()
         if self._low_level_controller is not None:
             self._low_level_controller.reset()
@@ -195,8 +226,14 @@ class CloseRangeTrackingEnv:
         self.jsbsim_env.reset({self.own_uid: own_init, self.target_uid: target_init})
 
     def _reset_simple(self, scenario=None):
-        own_init = {"position_m": np.array([0.0, 0.0, 5000.0]), "velocity_vector_mps": np.array([200.0, 0.0, 0.0])}
-        target_init = {"position_m": np.array([2000.0, 0.0, 5000.0]), "velocity_vector_mps": np.array([200.0, 0.0, 0.0])}
+        own_init = {
+            "position_m": np.array([0.0, 0.0, 5000.0]),
+            "velocity_vector_mps": np.array([200.0, 0.0, 0.0]),
+        }
+        target_init = {
+            "position_m": np.array([2000.0, 0.0, 5000.0]),
+            "velocity_vector_mps": np.array([200.0, 0.0, 0.0]),
+        }
         if scenario is not None:
             own_scenario = _get_scenario_attr(scenario, "own_init")
             target_scenario = _get_scenario_attr(scenario, "target_init")
@@ -206,7 +243,9 @@ class CloseRangeTrackingEnv:
                 target_init = self._scenario_to_simple_init(target_scenario)
         self._simple_env.reset(own_init=own_init, target_init=target_init)
 
-    def step(self, action: Optional[np.ndarray] = None) -> Tuple[dict, float, bool, bool, dict]:
+    def step(
+        self, action: Optional[np.ndarray] = None
+    ) -> Tuple[dict, float, bool, bool, dict]:
         """
         Execute one high-level step.
 
@@ -250,12 +289,16 @@ class CloseRangeTrackingEnv:
         }
         if tp_enabled and self.trajectory_predictor_adapter is not None:
             try:
-                self.trajectory_predictor_adapter.update(own_state, target_state, rel_state)
+                self.trajectory_predictor_adapter.update(
+                    own_state, target_state, rel_state
+                )
             except Exception as exc:
                 prediction_info["prediction_fallback_reason"] = f"update_failed: {exc}"
 
         # 4. 生成虚拟追踪点
-        anchor_mode = self.config.get("virtual_point", {}).get("anchor_mode", "current_target")
+        anchor_mode = self.config.get("virtual_point", {}).get(
+            "anchor_mode", "current_target"
+        )
         if action is None:
             action = np.zeros(3)
         action = np.asarray(action, dtype=np.float64)
@@ -268,26 +311,43 @@ class CloseRangeTrackingEnv:
 
         # 若 anchor_mode=predicted_target，获取预测位置
         predicted_target_pos = None
-        if anchor_mode == "predicted_target" and tp_enabled and self.trajectory_predictor_adapter is not None:
+        if (
+            anchor_mode == "predicted_target"
+            and tp_enabled
+            and self.trajectory_predictor_adapter is not None
+        ):
             try:
-                pred_pos, _, pred_info = self.trajectory_predictor_adapter.predict(target_state)
+                pred_pos, _, pred_info = self.trajectory_predictor_adapter.predict(
+                    target_state
+                )
                 prediction_info["predictor_type"] = pred_info.get("model_type")
-                prediction_info["prediction_valid"] = not pred_info.get("fallback", False)
-                prediction_info["prediction_fallback_reason"] = pred_info.get("fallback_reason")
+                prediction_info["prediction_valid"] = not pred_info.get(
+                    "fallback", False
+                )
+                prediction_info["prediction_fallback_reason"] = pred_info.get(
+                    "fallback_reason"
+                )
                 if pred_pos is not None and np.isfinite(pred_pos).all():
                     predicted_target_pos = np.asarray(pred_pos, dtype=np.float64)
-                    prediction_info["predicted_target_position"] = predicted_target_pos.tolist()
+                    prediction_info["predicted_target_position"] = (
+                        predicted_target_pos.tolist()
+                    )
             except Exception as exc:
                 prediction_info["prediction_fallback_reason"] = f"predict_failed: {exc}"
 
         # 若预测不可用，回退到 current_target
         if predicted_target_pos is None:
             predicted_target_pos = target_for_vp["position_neu"]
-            prediction_info["prediction_fallback_reason"] = prediction_info["prediction_fallback_reason"] or "fallback_to_current_target"
+            prediction_info["prediction_fallback_reason"] = (
+                prediction_info["prediction_fallback_reason"]
+                or "fallback_to_current_target"
+            )
             anchor_mode = "current_target"
 
         vp_result = self.virtual_point_generator.action_to_virtual_point(
-            action, own_state, target_for_vp,
+            action,
+            own_state,
+            target_for_vp,
             anchor_mode=anchor_mode,
             trajectory_predictor_adapter=None,  # generator 不直接调用 predictor
             predicted_target_position=predicted_target_pos,
@@ -295,12 +355,22 @@ class CloseRangeTrackingEnv:
         )
         virtual_point, vp_info = vp_result
 
-        # 5. LOS-rate guidance生成指令
+        # 5. Guidance command generation
         raw_command = self.guidance.compute_command(
             own_state, target_state, virtual_point, self.current_gains
         )
 
-        # 6. 指令限幅与滤波
+        # 5b. Optional command post-processing (terminal protection, energy comp, etc.)
+        if self.command_post_processor is not None:
+            rel_geom = compute_relative_geometry(own_state, target_state)
+            raw_command = self.command_post_processor.process(
+                raw_command,
+                own_state=own_state,
+                target_state=target_state,
+                relative_state=rel_geom,
+            )
+
+        # 6. Command clipping and filtering
         limits = self.config.get("limits", {})
         clipped_command = clip_command(raw_command, limits)
         filtered_command = self._apply_command_filter(clipped_command)
@@ -317,11 +387,17 @@ class CloseRangeTrackingEnv:
         rel_state_post = compute_relative_geometry(own_state_post, target_state_post)
 
         # 9. 检查终止（基于 post-step 状态）
-        terminated, truncated, term_info = self._check_done(own_state_post, target_state_post, rel_state_post)
+        terminated, truncated, term_info = self._check_done(
+            own_state_post, target_state_post, rel_state_post
+        )
 
         # 10. 计算 reward（基于 post-step 状态，含 terminal_reward 注入）
         reward, reward_terms = self._compute_reward(
-            own_state_post, target_state_post, rel_state_post, filtered_command, term_info
+            own_state_post,
+            target_state_post,
+            rel_state_post,
+            filtered_command,
+            term_info,
         )
 
         # 11. 获取观察（post-step）
@@ -411,7 +487,9 @@ class CloseRangeTrackingEnv:
         """
         terminated = False
         truncated = False
-        done, term_info = self.termination_checker.check(own_state, target_state, rel_state, self.current_step)
+        done, term_info = self.termination_checker.check(
+            own_state, target_state, rel_state, self.current_step
+        )
         if done:
             if term_info.get("is_timeout"):
                 # Timeout is a time-limit truncation, not a task termination.
@@ -443,10 +521,14 @@ class CloseRangeTrackingEnv:
         own_state_raw = states[self.own_uid]
 
         # Use low-level controller to map guidance commands to JSBSim properties
-        actuator_output = self._low_level_controller.compute_actuator(command, own_state_raw)
+        actuator_output = self._low_level_controller.compute_actuator(
+            command, own_state_raw
+        )
 
         # Extract JSBSim properties
-        jsbsim_props = {k: v for k, v in actuator_output.items() if k.startswith("fcs/")}
+        jsbsim_props = {
+            k: v for k, v in actuator_output.items() if k.startswith("fcs/")
+        }
         control_inputs = {self.own_uid: jsbsim_props}
 
         for _ in range(self._sim_steps_per_decision):
@@ -502,7 +584,11 @@ class CloseRangeTrackingEnv:
         pitch_deg = _get_attr(aircraft_init, "pitch_deg", 0.0)
         roll_deg = _get_attr(aircraft_init, "roll_deg", 0.0)
 
-        h_sl_ft = float(pos[2]) / 0.3048 if hasattr(pos, "__len__") and len(pos) > 2 else 20000.0
+        h_sl_ft = (
+            float(pos[2]) / 0.3048
+            if hasattr(pos, "__len__") and len(pos) > 2
+            else 20000.0
+        )
         psi_deg = heading_deg
         u_fps = vel_mps / 0.3048
 
@@ -522,12 +608,16 @@ class CloseRangeTrackingEnv:
         vel_mps = _get_attr(aircraft_init, "velocity_mps", 200.0)
         heading_deg = _get_attr(aircraft_init, "heading_deg", 0.0)
         heading_rad = np.deg2rad(heading_deg)
-        vel = np.array([vel_mps * np.cos(heading_rad), vel_mps * np.sin(heading_rad), 0.0])
+        vel = np.array(
+            [vel_mps * np.cos(heading_rad), vel_mps * np.sin(heading_rad), 0.0]
+        )
         return {
             "position_m": np.asarray(pos, dtype=np.float64),
             "velocity_vector_mps": vel,
             "heading_rad": heading_rad,
-            "altitude_m": float(pos[2]) if hasattr(pos, "__len__") and len(pos) > 2 else 5000.0,
+            "altitude_m": (
+                float(pos[2]) if hasattr(pos, "__len__") and len(pos) > 2 else 5000.0
+            ),
         }
 
     def close(self):
@@ -539,6 +629,7 @@ class CloseRangeTrackingEnv:
 # ---------------------------------------------------------------------------
 # Module-level helpers
 # ---------------------------------------------------------------------------
+
 
 def _get_scenario_attr(scenario, key):
     """Get attribute from scenario dict or object."""

@@ -564,6 +564,7 @@ def main():
         metrics["predictor_checkpoint_path"] = predictor_ckpt
         metrics["allow_random_policy"] = args.allow_random_policy
         metrics["validation_mode"] = args.validation_mode
+        metrics["invalid_for_paper"] = args.allow_random_policy or (metrics.get("loaded_policy_checkpoint_path") is None)
         metrics["backend"] = args.backend
         metrics["config_path"] = args.config
         metrics["method_name"] = method_name

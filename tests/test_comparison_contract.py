@@ -1231,5 +1231,83 @@ class TestStage6FDiagnosisReport(unittest.TestCase):
         self.assertEqual(len(diag), 0)
 
 
+class TestStage6FDeepAudit(unittest.TestCase):
+    """Deep audit script must correctly identify CV/CA identity and scenario patterns."""
+
+    def test_cv_ca_identity_detection(self):
+        from scripts.analyze_stage6f_deep_audit import investigate_cv_ca_identity
+        import tempfile
+        import os
+
+        with tempfile.TemporaryDirectory() as tmp:
+            raw_root = Path(tmp)
+            # Create fake prediction_metrics.json for 2 seeds
+            for ts in [0, 1]:
+                seed_dir = raw_root / f"train_seed{ts}"
+                seed_dir.mkdir()
+                data = [
+                    {
+                        "method_name": "cv_prediction",
+                        "raw_episodes": [
+                            {"return": -100.0, "is_success": False, "reason": "out_of_bounds"},
+                            {"return": 200.0, "is_success": True, "reason": "success"},
+                        ],
+                        "mean_env_prediction_error_m": 40.5,
+                    },
+                    {
+                        "method_name": "ca_prediction",
+                        "raw_episodes": [
+                            {"return": -100.0, "is_success": False, "reason": "out_of_bounds"},
+                            {"return": 200.0, "is_success": True, "reason": "success"},
+                        ],
+                        "mean_env_prediction_error_m": 40.5,
+                    },
+                ]
+                with open(seed_dir / "prediction_metrics.json", "w", encoding="utf-8") as f:
+                    json.dump(data, f)
+
+            findings = investigate_cv_ca_identity(raw_root, [0, 1])
+            self.assertIn("100.0%", findings["evidence"][0])
+            self.assertTrue(findings["evidence"][1].startswith("Environment prediction errors match"))
+            self.assertIn("constant-velocity", findings["conclusion"].lower())
+
+    def test_scenario_pattern_analysis(self):
+        from scripts.analyze_stage6f_deep_audit import analyze_scenario_patterns
+        import pandas as pd
+
+        df = pd.DataFrame([
+            {"method": "a", "scenario": "favorable", "is_success": False, "return": -400, "reason": "out_of_bounds", "length": 150, "final_range_m": 8000},
+            {"method": "a", "scenario": "favorable", "is_success": False, "return": -400, "reason": "out_of_bounds", "length": 150, "final_range_m": 8000},
+            {"method": "a", "scenario": "challenging", "is_success": True, "return": 200, "reason": "success", "length": 60, "final_range_m": 500},
+            {"method": "a", "scenario": "challenging", "is_success": False, "return": -300, "reason": "out_of_bounds", "length": 80, "final_range_m": 7000},
+        ])
+        patterns = analyze_scenario_patterns(df)
+        self.assertEqual(patterns["favorable"]["success_rate"], 0.0)
+        self.assertEqual(patterns["challenging"]["success_rate"], 0.5)
+        self.assertEqual(patterns["favorable"]["failure_reasons"]["out_of_bounds"], 2)
+
+    def test_failure_root_cause_classification(self):
+        from scripts.analyze_stage6f_deep_audit import classify_root_cause
+        import pandas as pd
+
+        ep = pd.Series({
+            "reason": "out_of_bounds",
+            "scenario": "favorable",
+            "final_range_m": 7950,
+            "length": 160,
+            "mean_virtual_point_shift_m": 1200,
+        })
+        self.assertEqual(classify_root_cause(ep), "scenario_geometry_infeasible")
+
+        ep2 = pd.Series({
+            "reason": "out_of_bounds",
+            "scenario": "neutral",
+            "final_range_m": 7950,
+            "length": 160,
+            "mean_virtual_point_shift_m": 1200,
+        })
+        self.assertEqual(classify_root_cause(ep2), "range_divergence")
+
+
 if __name__ == "__main__":
     unittest.main()

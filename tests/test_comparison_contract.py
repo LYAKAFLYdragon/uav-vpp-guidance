@@ -601,7 +601,7 @@ class TestStage6FFullAblationRunnerDryRun(unittest.TestCase):
         f = io.StringIO()
         with redirect_stdout(f):
             old_argv = sys.argv
-            sys.argv = ["run_stage6f_full_ablation.py", "--dry-run", "--seeds", "0", "1"]
+            sys.argv = ["run_stage6f_full_ablation.py", "--dry-run", "--training-seeds", "0", "1", "--evaluation-seeds", "0", "1"]
             try:
                 runner_main()
             finally:
@@ -650,8 +650,248 @@ class TestStage6FManifest(unittest.TestCase):
             self.assertEqual(missing, set(), f"Manifest missing keys: {missing}")
             self.assertEqual(manifest["method"], "lstm_frozen")
             self.assertEqual(manifest["seed"], 7)
-            self.assertEqual(manifest["metrics_schema_version"], "6f.1")
+            self.assertEqual(manifest["metrics_schema_version"], "6f.2")
             self.assertFalse(manifest["allow_random_policy"])
+
+
+class TestTrainingSeedPropagation(unittest.TestCase):
+    """Comparison script must propagate --training-seed to episode and aggregate results."""
+
+    def test_evaluate_single_episode_training_seed_set_by_evaluate_method(self):
+        from uav_vpp_guidance.evaluation.evaluate_prediction_comparison import evaluate_method
+
+        # Create a minimal mock env/agent
+        class MockEnv:
+            def __init__(self):
+                self.max_steps = 5
+                self._backend = "simple"
+                self.config = {"trajectory_prediction": {"prediction": {"lookahead_time_s": 1.0}}}
+                self.env_config = {"high_level_dt": 0.2}
+            def reset(self, scenario=None, seed=0):
+                return {"observation_vector": np.zeros(10)}
+            def step(self, action):
+                return {"observation_vector": np.zeros(10)}, 0.0, True, False, {}
+            def close(self):
+                pass
+
+        class MockAgent:
+            def get_deterministic_action(self, obs):
+                return np.zeros(3)
+
+        env = MockEnv()
+        agent = MockAgent()
+        config = {"scenarios": {"favorable": {"name": "favorable"}}}
+        metrics = evaluate_method(
+            env, agent, config, "test_method",
+            num_episodes=2, seeds=[42],
+            scenarios=["favorable"],
+            training_seed=99,
+        )
+        # All raw episodes should have training_seed=99
+        for ep in metrics["raw_episodes"]:
+            self.assertEqual(ep["training_seed"], 99)
+            self.assertEqual(ep["evaluation_seed"], 42)
+
+    def test_aggregate_metrics_includes_scenario_balance(self):
+        from uav_vpp_guidance.evaluation.evaluate_prediction_comparison import aggregate_metrics
+        episodes = [
+            {"return": 1, "length": 10, "final_range_m": 100, "final_ata_deg": 5,
+             "is_success": True, "is_crash": False, "is_timeout": False, "is_out_of_bounds": False,
+             "prediction_enabled_rate": 0.5, "prediction_valid_rate": 0.4,
+             "prediction_fallback_rate": 0.1, "warmup_fallback_rate": 0.0,
+             "runtime_fallback_rate": 0.05, "post_warmup_fallback_rate": 0.05,
+             "predictor_init_failed_count": 0, "unknown_fallback_phase_count": 0,
+             "missing_fallback_phase_count": 0, "configured_current_target_fallback_count": 0,
+             "mean_env_prediction_error_m": 1.0, "median_env_prediction_error_m": 0.8,
+             "mean_offline_aligned_error_m": 1.2, "median_offline_aligned_error_m": 1.0,
+             "mean_virtual_point_shift_m": 2.0, "mean_anchor_shift_m": 1.5,
+             "time_to_first_advantage_s": 1.0, "advantage_hold_time_s": 5.0,
+             "score_win": True,
+             "min_range_m": 80, "min_ata_deg": 3,
+             "mean_prediction_error_m": 1.0, "median_prediction_error_m": 0.9},
+        ]
+        result = aggregate_metrics(episodes)
+        self.assertEqual(result["num_episodes"], 1)
+        self.assertAlmostEqual(result["mean_runtime_fallback_rate"], 0.05)
+
+
+class TestEpisodesPerScenario(unittest.TestCase):
+    """Balanced scenario evaluation must produce equal counts per scenario."""
+
+    def test_episodes_per_scenario_computes_total(self):
+        from uav_vpp_guidance.evaluation.evaluate_prediction_comparison import evaluate_method
+
+        class MockEnv:
+            def __init__(self):
+                self.max_steps = 3
+                self._backend = "simple"
+                self.config = {"trajectory_prediction": {"prediction": {"lookahead_time_s": 1.0}}}
+                self.env_config = {"high_level_dt": 0.2}
+            def reset(self, scenario=None, seed=0):
+                return {"observation_vector": np.zeros(10)}
+            def step(self, action):
+                return {"observation_vector": np.zeros(10)}, 0.0, True, False, {}
+            def close(self):
+                pass
+
+        class MockAgent:
+            def get_deterministic_action(self, obs):
+                return np.zeros(3)
+
+        env = MockEnv()
+        agent = MockAgent()
+        config = {"scenarios": {
+            "favorable": {"name": "favorable"},
+            "neutral": {"name": "neutral"},
+            "disadvantage": {"name": "disadvantage"},
+            "challenging": {"name": "challenging"},
+        }}
+        metrics = evaluate_method(
+            env, agent, config, "test_method",
+            num_episodes=12, seeds=[0],
+            scenarios=["favorable", "neutral", "disadvantage", "challenging"],
+        )
+        counts = metrics.get("scenario_episode_count", {})
+        self.assertEqual(counts.get("favorable"), 3)
+        self.assertEqual(counts.get("neutral"), 3)
+        self.assertEqual(counts.get("disadvantage"), 3)
+        self.assertEqual(counts.get("challenging"), 3)
+        self.assertTrue(metrics.get("scenario_balance_ok"))
+
+
+class TestMethodCheckpointOverrides(unittest.TestCase):
+    """Runner must build correct per-seed checkpoint override paths."""
+
+    def test_build_method_checkpoint_overrides(self):
+        from scripts.run_stage6f_full_ablation import build_method_checkpoint_overrides
+        overrides = build_method_checkpoint_overrides(training_seed=2)
+        # Should return 5 method=path entries
+        self.assertEqual(len(overrides), 5)
+        for ov in overrides:
+            self.assertIn("=", ov)
+            method, path = ov.split("=", 1)
+            self.assertIn("_seed2", path)
+            self.assertTrue(path.endswith(os.path.join("checkpoints", "best.pt")))
+
+    def test_override_contains_all_methods(self):
+        from scripts.run_stage6f_full_ablation import build_method_checkpoint_overrides, METHODS
+        overrides = build_method_checkpoint_overrides(training_seed=0)
+        methods_found = {ov.split("=", 1)[0] for ov in overrides}
+        expected = {m["name"] for m in METHODS}
+        self.assertEqual(methods_found, expected)
+
+
+class TestExperimentPlan(unittest.TestCase):
+    """Experiment plan must contain required fields and schema version."""
+
+    def test_write_experiment_plan(self):
+        from scripts.run_stage6f_full_ablation import write_experiment_plan
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmp:
+            write_experiment_plan(
+                output_dir=tmp,
+                training_seeds=[0, 1, 2],
+                evaluation_seeds=[0, 1],
+                episodes_per_scenario=25,
+                formal=True,
+            )
+            plan_path = Path(tmp) / "experiment_plan.json"
+            self.assertTrue(plan_path.exists())
+            with open(plan_path, "r", encoding="utf-8") as f:
+                plan = json.load(f)
+            self.assertEqual(plan["training_seeds"], [0, 1, 2])
+            self.assertEqual(plan["evaluation_seeds"], [0, 1])
+            self.assertEqual(plan["episodes_per_scenario"], 25)
+            self.assertTrue(plan["formal"])
+            self.assertFalse(plan["allow_random_policy"])
+            self.assertEqual(plan["metrics_schema_version"], "6f.2")
+            self.assertIn("methods", plan)
+            self.assertIn("scenarios", plan)
+
+
+class TestTwoLevelAggregation(unittest.TestCase):
+    """Aggregation script must produce cross-training-seed statistics."""
+
+    def test_aggregate_episodes_to_training_seed(self):
+        from scripts.aggregate_stage6f_results import aggregate_episodes_to_training_seed
+        episodes = [
+            {"return": 10, "length": 100, "final_range_m": 50, "final_ata_deg": 5,
+             "is_success": True, "prediction_valid_rate": 0.8,
+             "prediction_fallback_rate": 0.1, "runtime_fallback_rate": 0.05,
+             "post_warmup_fallback_rate": 0.05,
+             "mean_env_prediction_error_m": 1.0, "median_env_prediction_error_m": 0.9,
+             "mean_offline_aligned_error_m": 1.1, "median_offline_aligned_error_m": 1.0,
+             "unknown_fallback_phase_count": 0, "missing_fallback_phase_count": 0,
+             "configured_current_target_fallback_count": 2,
+             "predictor_init_failed_count": 0},
+            {"return": 12, "length": 110, "final_range_m": 45, "final_ata_deg": 4,
+             "is_success": True, "prediction_valid_rate": 0.75,
+             "prediction_fallback_rate": 0.15, "runtime_fallback_rate": 0.10,
+             "post_warmup_fallback_rate": 0.10,
+             "mean_env_prediction_error_m": 1.2, "median_env_prediction_error_m": 1.1,
+             "mean_offline_aligned_error_m": 1.3, "median_offline_aligned_error_m": 1.2,
+             "unknown_fallback_phase_count": 1, "missing_fallback_phase_count": 0,
+             "configured_current_target_fallback_count": 1,
+             "predictor_init_failed_count": 0},
+        ]
+        row = aggregate_episodes_to_training_seed(episodes)
+        self.assertEqual(row["num_episodes"], 2)
+        self.assertAlmostEqual(row["instant_success_rate"], 1.0)
+        self.assertAlmostEqual(row["mean_return"], 11.0)
+        self.assertAlmostEqual(row["configured_current_target_fallback_count"], 3)
+
+    def test_aggregate_training_seeds_to_cross_seed(self):
+        from scripts.aggregate_stage6f_results import aggregate_training_seeds_to_cross_seed
+        rows = [
+            {"num_episodes": 100, "instant_success_rate": 0.8, "mean_return": 10.0,
+             "mean_final_range_m": 50, "mean_final_ata_deg": 5,
+             "prediction_valid_rate": 0.7, "prediction_fallback_rate": 0.2,
+             "runtime_fallback_rate": 0.1, "post_warmup_fallback_rate": 0.1,
+             "mean_env_prediction_error_m": 1.0, "median_env_prediction_error_m": 0.9,
+             "mean_offline_aligned_error_m": 1.1, "median_offline_aligned_error_m": 1.0,
+             "unknown_fallback_phase_count": 0, "missing_fallback_phase_count": 0,
+             "configured_current_target_fallback_count": 5, "predictor_init_failed_count": 0},
+            {"num_episodes": 100, "instant_success_rate": 0.85, "mean_return": 11.0,
+             "mean_final_range_m": 48, "mean_final_ata_deg": 4.5,
+             "prediction_valid_rate": 0.75, "prediction_fallback_rate": 0.18,
+             "runtime_fallback_rate": 0.08, "post_warmup_fallback_rate": 0.08,
+             "mean_env_prediction_error_m": 0.9, "median_env_prediction_error_m": 0.85,
+             "mean_offline_aligned_error_m": 1.0, "median_offline_aligned_error_m": 0.95,
+             "unknown_fallback_phase_count": 1, "missing_fallback_phase_count": 0,
+             "configured_current_target_fallback_count": 4, "predictor_init_failed_count": 0},
+        ]
+        metadata = {
+            "method_name": "test_method",
+            "allow_random_policy": False,
+            "loaded_policy_checkpoint_path": "/path/to/checkpoint.pt",
+            "evaluation_seeds": [0, 1, 2],
+            "scenarios": ["favorable", "neutral", "disadvantage", "challenging"],
+            "episodes_per_scenario": 25,
+        }
+        result = aggregate_training_seeds_to_cross_seed(rows, metadata)
+        self.assertEqual(result["method"], "test_method")
+        self.assertEqual(result["num_training_seeds"], 2)
+        self.assertFalse(result["invalid_for_paper"])
+        self.assertAlmostEqual(result["instant_success_rate_mean"], 0.825, places=3)
+        self.assertIn("instant_success_rate_std", result)
+        self.assertIn("instant_success_rate_ci95", result)
+
+    def test_manifest_validation_warnings(self):
+        from scripts.aggregate_stage6f_results import _check_manifest
+        plan_ok = {
+            "metrics_schema_version": "6f.2",
+            "formal": True,
+            "allow_random_policy": False,
+        }
+        self.assertEqual(_check_manifest(plan_ok), [])
+
+        plan_bad = {
+            "metrics_schema_version": "6f.1",
+            "formal": False,
+            "allow_random_policy": True,
+        }
+        warnings = _check_manifest(plan_bad)
+        self.assertEqual(len(warnings), 3)
 
 
 if __name__ == "__main__":

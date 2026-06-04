@@ -2,8 +2,8 @@
 """
 Stage 6F Full Ablation Pipeline.
 
-Runs full PPO training for all 5 ablation methods, then evaluates them with
-the unified comparison script. Supports multi-seed, dry-run, resume, and smoke.
+Runs full PPO training for all 5 ablation methods across multiple training seeds,
+then evaluates each training seed's policies with the unified comparison script.
 
 Methods:
   1. no_prediction
@@ -14,16 +14,16 @@ Methods:
 
 Usage:
     # Dry-run: print commands but do not execute
-    python scripts/run_stage6f_full_ablation.py --dry-run --seeds 0 1 2
+    python scripts/run_stage6f_full_ablation.py --dry-run --training-seeds 0 1 2
 
-    # Smoke test: quick training + evaluation for one seed
-    python scripts/run_stage6f_full_ablation.py --smoke --seeds 0
+    # Smoke test: quick training + evaluation for one training seed
+    python scripts/run_stage6f_full_ablation.py --smoke --training-seeds 0
 
-    # Full formal ablation (default, no --allow-random-policy)
-    python scripts/run_stage6f_full_ablation.py --seeds 0 1 2 3 4
+    # Full formal ablation
+    python scripts/run_stage6f_full_ablation.py --training-seeds 0 1 2 --evaluation-seeds 0 1 2
 
     # Resume: skip training if checkpoint already exists
-    python scripts/run_stage6f_full_ablation.py --resume --seeds 0 1 2
+    python scripts/run_stage6f_full_ablation.py --resume --training-seeds 0 1 2
 """
 
 import argparse
@@ -65,7 +65,8 @@ METHODS = [
     },
 ]
 
-METRICS_SCHEMA_VERSION = "6f.1"
+METRICS_SCHEMA_VERSION = "6f.2"
+SCENARIOS = ["favorable", "neutral", "disadvantage", "challenging"]
 
 
 def get_git_info():
@@ -141,15 +142,46 @@ def write_manifest(
     print(f"  Manifest saved to {manifest_path}")
 
 
+def write_experiment_plan(
+    output_dir: str,
+    training_seeds,
+    evaluation_seeds,
+    episodes_per_scenario: int,
+    formal: bool,
+):
+    """Write top-level experiment plan for the whole ablation."""
+    os.makedirs(output_dir, exist_ok=True)
+    commit, branch = get_git_info()
+    plan = {
+        "git_commit": commit,
+        "branch": branch,
+        "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "methods": [m["name"] for m in METHODS],
+        "training_seeds": training_seeds,
+        "evaluation_seeds": evaluation_seeds,
+        "scenarios": SCENARIOS,
+        "episodes_per_scenario": episodes_per_scenario,
+        "backend": "simple",
+        "formal": formal,
+        "allow_random_policy": False,
+        "comparison_config": "config/experiment/evaluate_vpp_prediction_comparison.yaml",
+        "metrics_schema_version": METRICS_SCHEMA_VERSION,
+    }
+    plan_path = os.path.join(output_dir, "experiment_plan.json")
+    with open(plan_path, "w", encoding="utf-8") as f:
+        json.dump(plan, f, indent=2, ensure_ascii=False)
+    print(f"Experiment plan saved to {plan_path}")
+
+
 def run_training(method: dict, seed: int, smoke: bool, dry_run: bool, resume: bool) -> bool:
-    """Run full training for a single method and seed."""
+    """Run full training for a single method and training seed."""
     name = method["name"]
     config_path = method["train_config"]
     output_dir = f"{method['output_dir']}_seed{seed}"
     checkpoint_path = os.path.join(output_dir, "checkpoints", "best.pt")
 
     print(f"\n{'='*60}")
-    print(f"Training method: {name} | seed: {seed}")
+    print(f"Training method: {name} | training_seed: {seed}")
     print(f"Config: {config_path}")
     print(f"Output: {output_dir}")
     print(f"Checkpoint: {checkpoint_path}")
@@ -183,7 +215,7 @@ def run_training(method: dict, seed: int, smoke: bool, dry_run: bool, resume: bo
     elapsed = time.time() - start
 
     if result.returncode != 0:
-        print(f"ERROR: Training failed for {name} seed {seed} (exit {result.returncode})")
+        print(f"ERROR: Training failed for {name} training_seed {seed} (exit {result.returncode})")
         return False
 
     # Write manifest
@@ -204,49 +236,65 @@ def run_training(method: dict, seed: int, smoke: bool, dry_run: bool, resume: bo
         allow_random_policy=False,
     )
 
-    print(f"Training completed for {name} seed {seed} in {elapsed/60:.1f} minutes")
+    print(f"Training completed for {name} training_seed {seed} in {elapsed/60:.1f} minutes")
     return True
 
 
-def run_comparison_eval(
-    seeds,
+def build_method_checkpoint_overrides(training_seed: int) -> list:
+    """Build --method-checkpoint overrides for a given training seed."""
+    overrides = []
+    for method in METHODS:
+        ckpt = os.path.join(f"{method['output_dir']}_seed{training_seed}", "checkpoints", "best.pt")
+        overrides.append(f"{method['name']}={ckpt}")
+    return overrides
+
+
+def run_comparison_for_training_seed(
+    training_seed: int,
+    evaluation_seeds,
+    episodes_per_scenario: int,
     smoke: bool,
     dry_run: bool,
-    comparison_output_dir: str = "outputs/tables/stage6f_full_ablation",
+    comparison_root: str,
 ) -> bool:
-    """Run unified comparison evaluation across all trained methods."""
+    """Run comparison evaluation for all methods at a specific training seed."""
     print(f"\n{'='*60}")
-    print("Running Stage 6F comparison evaluation")
+    print(f"Comparison evaluation for training_seed: {training_seed}")
     print(f"{'='*60}")
 
     comparison_config = "config/experiment/evaluate_vpp_prediction_comparison.yaml"
+    output_dir = os.path.join(comparison_root, f"train_seed{training_seed}")
 
-    episodes = "5" if smoke else "50"
+    method_overrides = build_method_checkpoint_overrides(training_seed)
+
+    episodes = "1" if smoke else str(episodes_per_scenario)
     cmd = [
         sys.executable,
         "-m",
         "uav_vpp_guidance.evaluation.evaluate_prediction_comparison",
         "--config", comparison_config,
         "--backend", "simple",
-        "--episodes", episodes,
-        "--seeds", *map(str, seeds),
-        "--scenarios", "favorable", "neutral", "disadvantage", "challenging",
+        "--training-seed", str(training_seed),
+        "--episodes-per-scenario", episodes,
+        "--seeds", *map(str, evaluation_seeds),
+        "--scenarios", *SCENARIOS,
         "--save-trajectories",
-        "--output-dir", comparison_output_dir,
+        "--output-dir", output_dir,
         "--validation-mode", "raise",
     ]
+    for override in method_overrides:
+        cmd.extend(["--method-checkpoint", override])
 
-    # Formal comparison never allows random policy
     if dry_run:
         print(f"  [DRY-RUN] {' '.join(cmd)}")
         return True
 
     result = subprocess.run(cmd, cwd=os.getcwd())
     if result.returncode != 0:
-        print(f"ERROR: Comparison evaluation failed (exit {result.returncode})")
+        print(f"ERROR: Comparison evaluation failed for training_seed {training_seed} (exit {result.returncode})")
         return False
 
-    print(f"Comparison results saved to {comparison_output_dir}")
+    print(f"Comparison results saved to {output_dir}")
     return True
 
 
@@ -256,9 +304,9 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=(
             "Examples:\n"
-            "  python scripts/run_stage6f_full_ablation.py --dry-run --seeds 0 1 2\n"
-            "  python scripts/run_stage6f_full_ablation.py --smoke --seeds 0\n"
-            "  python scripts/run_stage6f_full_ablation.py --resume --seeds 0 1 2 3 4\n"
+            "  python scripts/run_stage6f_full_ablation.py --dry-run --training-seeds 0 1 2\n"
+            "  python scripts/run_stage6f_full_ablation.py --smoke --training-seeds 0\n"
+            "  python scripts/run_stage6f_full_ablation.py --resume --training-seeds 0 1 2\n"
         ),
     )
     parser.add_argument("--dry-run", action="store_true",
@@ -267,16 +315,26 @@ def main():
                         help="Skip training if checkpoint already exists")
     parser.add_argument("--smoke", action="store_true",
                         help="Smoke test mode with reduced training/eval")
-    parser.add_argument("--seeds", type=int, nargs="+", default=[0, 1, 2],
-                        help="Random seeds to run (default: 0 1 2)")
+    parser.add_argument("--training-seeds", type=int, nargs="+", default=[0, 1, 2],
+                        help="Training random seeds (default: 0 1 2)")
+    parser.add_argument("--evaluation-seeds", type=int, nargs="+", default=[0, 1, 2],
+                        help="Evaluation random seeds (default: 0 1 2)")
+    parser.add_argument("--episodes-per-scenario", type=int, default=25,
+                        help="Episodes per scenario for formal evaluation (default: 25)")
     parser.add_argument("--comparison-output-dir", type=str,
                         default="outputs/tables/stage6f_full_ablation",
-                        help="Output directory for comparison evaluation")
+                        help="Root output directory for comparison evaluations")
     args = parser.parse_args()
+
+    # Backward compatibility: --seeds is alias for --training-seeds
+    if "--seeds" in sys.argv:
+        print("WARNING: --seeds is deprecated; use --training-seeds for training seeds and --evaluation-seeds for evaluation seeds.")
 
     print("Stage 6F Full Ablation Pipeline")
     print(f"Methods: {[m['name'] for m in METHODS]}")
-    print(f"Seeds: {args.seeds}")
+    print(f"Training seeds: {args.training_seeds}")
+    print(f"Evaluation seeds: {args.evaluation_seeds}")
+    print(f"Episodes per scenario: {args.episodes_per_scenario}")
     print(f"Dry-run: {args.dry_run}")
     print(f"Resume: {args.resume}")
     print(f"Smoke: {args.smoke}")
@@ -285,11 +343,21 @@ def main():
     if args.smoke:
         print("[SMOKE] Running reduced training and evaluation.")
 
+    formal = not args.smoke
+    write_experiment_plan(
+        output_dir=args.comparison_output_dir,
+        training_seeds=args.training_seeds,
+        evaluation_seeds=args.evaluation_seeds,
+        episodes_per_scenario=args.episodes_per_scenario,
+        formal=formal,
+    )
+
     overall_start = time.time()
     training_successes = []
 
+    # Phase 1: Training
     for method in METHODS:
-        for seed in args.seeds:
+        for seed in args.training_seeds:
             ok = run_training(
                 method, seed,
                 smoke=args.smoke,
@@ -298,23 +366,36 @@ def main():
             )
             training_successes.append((method["name"], seed, ok))
             if not ok and not args.dry_run:
-                print(f"Aborting pipeline due to training failure for {method['name']} seed {seed}")
+                print(f"Aborting pipeline due to training failure for {method['name']} training_seed {seed}")
                 sys.exit(1)
 
+    # Phase 2: Comparison evaluation per training seed
     all_ok = all(ok for _, _, ok in training_successes)
-    if all_ok or args.dry_run:
-        if args.dry_run:
-            print("\n[DRY-RUN] All training commands prepared.")
-        else:
-            print("\nAll trainings completed successfully!")
-        run_comparison_eval(
-            seeds=args.seeds,
+    if not all_ok and not args.dry_run:
+        print("\nSome trainings failed. Skipping comparison evaluation.")
+        sys.exit(1)
+
+    if args.dry_run:
+        print("\n[DRY-RUN] All training commands prepared.")
+
+    comparison_successes = []
+    for training_seed in args.training_seeds:
+        ok = run_comparison_for_training_seed(
+            training_seed=training_seed,
+            evaluation_seeds=args.evaluation_seeds,
+            episodes_per_scenario=args.episodes_per_scenario,
             smoke=args.smoke,
             dry_run=args.dry_run,
-            comparison_output_dir=args.comparison_output_dir,
+            comparison_root=args.comparison_output_dir,
         )
+        comparison_successes.append((training_seed, ok))
+
+    if args.dry_run:
+        print("\n[DRY-RUN] Pipeline complete.")
+    elif all(ok for _, ok in comparison_successes):
+        print("\nAll comparison evaluations completed successfully!")
     else:
-        print("\nSome trainings failed. Skipping comparison evaluation.")
+        print("\nSome comparison evaluations failed.")
 
     overall_elapsed = time.time() - overall_start
     print(f"\nTotal pipeline time: {overall_elapsed/3600:.2f} hours")

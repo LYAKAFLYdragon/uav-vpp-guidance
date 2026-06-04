@@ -224,6 +224,9 @@ def evaluate_single_episode(env, agent, config, scenario=None, seed=0, save_traj
     return {
         "seed": seed,
         "scenario": scenario.get("name", "random") if isinstance(scenario, dict) else "random",
+        "training_seed": None,
+        "evaluation_seed": None,
+        "episode_seed": seed,
         "return": ep_reward,
         "length": ep_length,
         "min_range_m": min_range,
@@ -329,7 +332,7 @@ def aggregate_metrics(episodes):
     return result
 
 
-def evaluate_method(env, agent, config, method_name, num_episodes=10, seeds=None, scenarios=None, save_trajectories=False, output_dir=None):
+def evaluate_method(env, agent, config, method_name, num_episodes=10, seeds=None, scenarios=None, save_trajectories=False, output_dir=None, training_seed=None):
     """
     Evaluate a single method across multiple seeds and optional fixed scenarios.
 
@@ -362,6 +365,9 @@ def evaluate_method(env, agent, config, method_name, num_episodes=10, seeds=None
                 env, agent, config, scenario=scenario, seed=ep_seed,
                 save_trajectory=save_trajectories, method_name=method_name,
             )
+            ep_result["training_seed"] = training_seed
+            ep_result["evaluation_seed"] = seed
+            ep_result["episode_seed"] = ep_seed
             all_episodes.append(ep_result)
             seed_episodes.append(ep_result)
             per_scenario_episodes.setdefault(scenario_name, []).append(ep_result)
@@ -385,6 +391,18 @@ def evaluate_method(env, agent, config, method_name, num_episodes=10, seeds=None
     overall["per_scenario"] = {name: aggregate_metrics(eps) for name, eps in per_scenario_episodes.items()}
     overall["raw_episodes"] = all_episodes
     overall["per_seed"] = per_seed_results
+    # Scenario balance check
+    if scenarios:
+        scenario_counts = {name: len(eps) for name, eps in per_scenario_episodes.items()}
+        expected = num_episodes // len(scenarios)
+        balance_ok = all(c == expected for c in scenario_counts.values())
+        overall["scenario_episode_count"] = scenario_counts
+        overall["episodes_per_scenario"] = expected
+        overall["scenario_balance_ok"] = balance_ok
+    else:
+        overall["scenario_episode_count"] = {}
+        overall["episodes_per_scenario"] = None
+        overall["scenario_balance_ok"] = None
     return overall
 
 
@@ -396,8 +414,10 @@ def main():
                         help="Per-method checkpoint override, e.g. no_prediction=path/to/best.pt. Can be repeated.")
     parser.add_argument("--backend", type=str, default="simple", choices=["simple", "jsbsim"],
                         help="Simulation backend")
-    parser.add_argument("--episodes", type=int, default=10, help="Episodes per seed")
-    parser.add_argument("--seeds", type=int, nargs="+", default=[0, 1, 2], help="Random seeds")
+    parser.add_argument("--episodes", type=int, default=None, help="Episodes per seed (legacy; use --episodes-per-scenario for balanced evaluation)")
+    parser.add_argument("--seeds", type=int, nargs="+", default=[0, 1, 2], help="Evaluation random seeds")
+    parser.add_argument("--training-seed", type=int, default=None, help="Training seed of the policy being evaluated")
+    parser.add_argument("--episodes-per-scenario", type=int, default=None, help="Episodes per fixed scenario (overrides --episodes for balanced design)")
     parser.add_argument("--scenarios", type=str, nargs="+", default=None,
                         help="Fixed scenario names to evaluate (e.g. favorable neutral disadvantage challenging)")
     parser.add_argument("--save-trajectories", action="store_true", help="Save per-episode trajectory CSVs")
@@ -428,9 +448,23 @@ def main():
         )
     os.makedirs(output_dir, exist_ok=True)
 
+    # Resolve episodes count
+    num_episodes = args.episodes
+    if args.episodes_per_scenario is not None:
+        if args.scenarios:
+            num_episodes = args.episodes_per_scenario * len(args.scenarios)
+            print(f"Balanced evaluation: {args.episodes_per_scenario} episodes per scenario x {len(args.scenarios)} scenarios = {num_episodes} total")
+        else:
+            print("WARNING: --episodes-per-scenario requires --scenarios; falling back to --episodes")
+            num_episodes = args.episodes or 10
+    elif num_episodes is None:
+        num_episodes = 10
+
     print(f"Backend: {args.backend}")
     print(f"Output dir: {output_dir}")
-    print(f"Episodes: {args.episodes} x {len(args.seeds)} seeds")
+    print(f"Episodes: {num_episodes} x {len(args.seeds)} eval seeds")
+    if args.training_seed is not None:
+        print(f"Training seed: {args.training_seed}")
     if args.scenarios:
         print(f"Scenarios: {args.scenarios}")
     if args.checkpoint:
@@ -516,13 +550,14 @@ def main():
 
         metrics = evaluate_method(
             env, agent, method_config, method_name,
-            num_episodes=args.episodes,
+            num_episodes=num_episodes,
             seeds=args.seeds,
             scenarios=args.scenarios,
             save_trajectories=args.save_trajectories,
             output_dir=output_dir,
+            training_seed=args.training_seed,
         )
-        # Attach policy metadata
+        # Attach policy metadata and seed info
         metrics["policy_type"] = policy_type
         metrics["requested_policy_checkpoint_path"] = requested_policy_ckpt
         metrics["loaded_policy_checkpoint_path"] = loaded_policy_ckpt
@@ -532,6 +567,8 @@ def main():
         metrics["backend"] = args.backend
         metrics["config_path"] = args.config
         metrics["method_name"] = method_name
+        metrics["training_seed"] = args.training_seed
+        metrics["evaluation_seeds"] = args.seeds
         all_method_metrics.append(metrics)
 
         env.close()
@@ -561,6 +598,7 @@ def main():
     csv_path = os.path.join(output_dir, "prediction_metrics.csv")
     scalar_keys = [
         "method", "method_name", "scenario", "seed", "episodes",
+        "training_seed", "evaluation_seeds",
         "policy_type", "requested_policy_checkpoint_path", "loaded_policy_checkpoint_path",
         "predictor_checkpoint_path", "allow_random_policy", "validation_mode", "backend", "config_path",
         "instant_success_rate", "score_win_rate", "mean_return",
@@ -571,6 +609,7 @@ def main():
         "mean_offline_aligned_error_m", "median_offline_aligned_error_m",
         "unknown_fallback_phase_count", "missing_fallback_phase_count",
         "configured_current_target_fallback_count",
+        "scenario_balance_ok", "episodes_per_scenario",
     ]
     with open(csv_path, "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=scalar_keys)

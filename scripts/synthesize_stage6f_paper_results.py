@@ -356,6 +356,20 @@ def run_statistical_tests(df: pd.DataFrame) -> dict:
         gru_vs_lstm = mcnemar_paired_comparison(lstm_wh["is_success"].values, gru_wh["is_success"].values)
         gru_vs_lstm["return_diff_ci"] = paired_bootstrap_paired_diff_ci(lstm_wh["return"].values, gru_wh["return"].values)
         gru_vs_lstm["cohens_d"] = cohens_d_between_groups(lstm_wh["return"].values, gru_wh["return"].values)
+        # Cross-seed consistency: compute per-training-seed success rates
+        gru_seed_sr = gru_wh.groupby("training_seed")["is_success"].mean().sort_index()
+        lstm_seed_sr = lstm_wh.groupby("training_seed")["is_success"].mean().sort_index()
+        gru_vs_lstm["gru_per_seed_sr"] = {int(k): float(v) for k, v in gru_seed_sr.items()}
+        gru_vs_lstm["lstm_per_seed_sr"] = {int(k): float(v) for k, v in lstm_seed_sr.items()}
+        gru_vs_lstm["gru_mean_seed_sr"] = float(gru_seed_sr.mean())
+        gru_vs_lstm["lstm_mean_seed_sr"] = float(lstm_seed_sr.mean())
+        gru_vs_lstm["gru_std_seed_sr"] = float(gru_seed_sr.std(ddof=1)) if len(gru_seed_sr) >= 2 else np.nan
+        gru_vs_lstm["lstm_std_seed_sr"] = float(lstm_seed_sr.std(ddof=1)) if len(lstm_seed_sr) >= 2 else np.nan
+        # Consistency: GRU > LSTM in all seeds? (strict, to avoid ties masking instability)
+        seed_comparison = gru_seed_sr > lstm_seed_sr
+        gru_vs_lstm["gru_gt_lstm_all_seeds"] = bool(seed_comparison.all()) if len(seed_comparison) > 0 else False
+        gru_vs_lstm["gru_ge_lstm_all_seeds"] = bool((gru_seed_sr >= lstm_seed_sr).all()) if len(seed_comparison) > 0 else False
+        gru_vs_lstm["n_training_seeds"] = int(len(seed_comparison))
         results["gru_vs_lstm_weaving_headon"] = gru_vs_lstm
 
     # 2b. Neural vs classical in feasible subset
@@ -422,12 +436,26 @@ def build_claims_checklist(stats: dict, tables: dict) -> list:
             lstm_sr = lstm_row.iloc[0]["success_rate"]
     gru_sr_str = f"{gru_sr:.1%}" if gru_sr is not None else "N/A"
     lstm_sr_str = f"{lstm_sr:.1%}" if lstm_sr is not None else "N/A"
+    cross_seed_strict = bool(gvl.get("gru_gt_lstm_all_seeds", False))
+    cross_seed_weak = bool(gvl.get("gru_ge_lstm_all_seeds", False))
+    n_seeds = int(gvl.get("n_training_seeds", 0))
+    evidence = (
+        f"GRU SR={gru_sr_str}, LSTM SR={lstm_sr_str}, "
+        f"episode-level p={gvl.get('p_value', np.nan):.3f}, Cohen's d={gvl.get('cohens_d', np.nan):.2f}; "
+        f"cross-seed GRU>LSTM in all seeds={cross_seed_strict} (n={n_seeds} training seeds). "
+        f"NOTE: episode-level paired test with large n_episodes; independent training repeats are limited."
+    )
     claims.append({
         "claim": "GRU is more robust than LSTM under maneuvering head-on target (weaving_headon).",
-        "evidence": f"GRU SR={gru_sr_str}, LSTM SR={lstm_sr_str}, p={gvl.get('p_value', np.nan):.3f}, Cohen's d={gvl.get('cohens_d', np.nan):.2f}",
+        "evidence": evidence,
         "statistically_supported": bool(gvl.get("p_value", 1.0) < 0.05),
         "practically_meaningful": bool(abs((gru_sr or 0) - (lstm_sr or 0)) > 0.10),
-        "paper_safe_claim": bool(gvl.get("p_value", 1.0) < 0.05 and abs((gru_sr or 0) - (lstm_sr or 0)) > 0.10),
+        "paper_safe_claim": bool(
+            gvl.get("p_value", 1.0) < 0.05
+            and abs((gru_sr or 0) - (lstm_sr or 0)) > 0.10
+            and cross_seed_strict
+            and n_seeds >= 3
+        ),
     })
 
     # Claim 3: Tail-chase is a guidance-law limitation
@@ -576,6 +604,11 @@ def render_paper_main_results_md(tables: dict, stats: dict, claims: list) -> str
         lines.append(f"- McNemar exact p-value: {gvl['p_value']:.4f}")
         lines.append(f"- Return difference 95% CI: [{gvl['return_diff_ci'][0]:.1f}, {gvl['return_diff_ci'][1]:.1f}]")
         lines.append(f"- Cohen's d: {gvl['cohens_d']:.2f}")
+        lines.append(f"- Cross-seed GRU SR: {gvl.get('gru_per_seed_sr', {})}")
+        lines.append(f"- Cross-seed LSTM SR: {gvl.get('lstm_per_seed_sr', {})}")
+        lines.append(f"- GRU > LSTM in all seeds (strict): {gvl.get('gru_gt_lstm_all_seeds', False)}")
+        lines.append(f"- GRU >= LSTM in all seeds (weak): {gvl.get('gru_ge_lstm_all_seeds', False)}")
+        lines.append(f"- **WARNING**: Episode-level p-value is dominated by large n_episodes; only {gvl.get('n_training_seeds', 'unknown')} independent training seeds available.")
         lines.append("")
 
     nvc = stats.get("neural_vs_classical_feasible", {})

@@ -11,9 +11,11 @@ Covers:
 """
 
 import copy
+import json
 import os
 import sys
 import unittest
+from pathlib import Path
 
 import numpy as np
 
@@ -416,6 +418,240 @@ class TestFullConfigValidationEntrypoints(unittest.TestCase):
     def test_eval_comparison_entrypoint_imports_validate_full_config(self):
         import uav_vpp_guidance.evaluation.evaluate_prediction_comparison as comp_mod
         self.assertTrue(hasattr(comp_mod, "validate_full_config"))
+
+
+class TestRuntimeFallbackSemantics(unittest.TestCase):
+    """runtime_fallback_steps must only count phase=='runtime_failure'."""
+
+    def _make_acc_with_phase(self, phase, steps=5):
+        acc = PredictorHealthAccumulator()
+        for _ in range(steps):
+            acc.step({
+                "prediction_enabled": True,
+                "prediction_valid": False,
+                "prediction_fallback": True,
+                "prediction_fallback_phase": phase,
+                "predictor_init_failed": False,
+            })
+        return acc
+
+    def test_runtime_failure_counts(self):
+        acc = self._make_acc_with_phase("runtime_failure")
+        self.assertEqual(acc.runtime_fallback_steps, 5)
+        self.assertEqual(acc.fallback_steps, 5)
+
+    def test_configured_current_target_does_not_count(self):
+        acc = self._make_acc_with_phase("configured_current_target")
+        self.assertEqual(acc.runtime_fallback_steps, 0)
+        self.assertEqual(acc.configured_current_target_fallback_count, 5)
+        self.assertEqual(acc.fallback_steps, 5)
+
+    def test_unknown_does_not_count(self):
+        acc = self._make_acc_with_phase("unknown")
+        self.assertEqual(acc.runtime_fallback_steps, 0)
+        self.assertEqual(acc.unknown_fallback_phase_count, 5)
+        self.assertEqual(acc.fallback_steps, 5)
+
+    def test_missing_phase_does_not_count(self):
+        acc = self._make_acc_with_phase(None)
+        self.assertEqual(acc.runtime_fallback_steps, 0)
+        self.assertEqual(acc.missing_fallback_phase_count, 5)
+        self.assertEqual(acc.fallback_steps, 5)
+
+    def test_unrecognized_phase_does_not_count(self):
+        acc = self._make_acc_with_phase("garbage_phase")
+        self.assertEqual(acc.runtime_fallback_steps, 0)
+        self.assertEqual(acc.unknown_fallback_phase_count, 5)
+        self.assertEqual(acc.fallback_steps, 5)
+
+    def test_post_warmup_still_counts_all_non_warmup(self):
+        acc = PredictorHealthAccumulator()
+        for _ in range(3):
+            acc.step({
+                "prediction_enabled": True,
+                "prediction_valid": False,
+                "prediction_fallback": True,
+                "prediction_fallback_phase": "warmup",
+            })
+        for _ in range(4):
+            acc.step({
+                "prediction_enabled": True,
+                "prediction_valid": False,
+                "prediction_fallback": True,
+                "prediction_fallback_phase": "unknown",
+            })
+        rates = acc.rates(7)
+        self.assertEqual(acc.post_warmup_fallback_steps, 4)
+        self.assertEqual(acc.runtime_fallback_steps, 0)
+
+
+class TestUnifiedTelemetrySchema(unittest.TestCase):
+    """All three entrypoints must emit the same unified telemetry fields."""
+
+    UNIFIED_FIELDS = {
+        "prediction_valid_rate",
+        "fallback_rate",
+        "warmup_fallback_rate",
+        "runtime_fallback_rate",
+        "post_warmup_fallback_rate",
+        "predictor_init_failed_count",
+        "unknown_fallback_phase_count",
+        "missing_fallback_phase_count",
+        "configured_current_target_fallback_count",
+        "mean_prediction_error_m",
+        "median_prediction_error_m",
+        "prediction_error_count",
+    }
+
+    def test_train_episode_fieldnames(self):
+        import uav_vpp_guidance.training.train_prediction_vpp_ppo as train_mod
+        # Re-constitute fieldnames by calling the helper logic implicitly
+        # The module defines them inside train_ppo; check via source inspection
+        source = Path(train_mod.__file__).read_text(encoding="utf-8")
+        for field in self.UNIFIED_FIELDS:
+            self.assertIn(f'"{field}"', source, f"Missing field in train script: {field}")
+
+    def test_eval_policy_metrics_keys(self):
+        import uav_vpp_guidance.evaluation.evaluate_policy as eval_mod
+        source = Path(eval_mod.__file__).read_text(encoding="utf-8")
+        for field in self.UNIFIED_FIELDS:
+            self.assertIn(f'"{field}"', source, f"Missing field in evaluate_policy: {field}")
+
+    def test_eval_comparison_metrics_keys(self):
+        import uav_vpp_guidance.evaluation.evaluate_prediction_comparison as comp_mod
+        source = Path(comp_mod.__file__).read_text(encoding="utf-8")
+        for field in self.UNIFIED_FIELDS:
+            self.assertIn(f'"{field}"', source, f"Missing field in comparison script: {field}")
+
+
+class TestComparisonPolicyMetadataCSV(unittest.TestCase):
+    """Comparison CSV must include policy metadata and checkpoint provenance."""
+
+    def test_csv_contains_policy_metadata(self):
+        import subprocess
+        import tempfile
+        import csv
+
+        with tempfile.TemporaryDirectory() as tmp:
+            cmd = [
+                sys.executable,
+                "-m", "uav_vpp_guidance.evaluation.evaluate_prediction_comparison",
+                "--config", "config/experiment/evaluate_vpp_prediction_comparison.yaml",
+                "--backend", "simple",
+                "--episodes", "1",
+                "--seeds", "0",
+                "--allow-random-policy",
+                "--output-dir", tmp,
+            ]
+            result = subprocess.run(cmd, cwd=os.getcwd(), capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, f"Comparison failed: {result.stderr}")
+
+            csv_path = Path(tmp) / "prediction_metrics.csv"
+            self.assertTrue(csv_path.exists(), "prediction_metrics.csv not generated")
+            with open(csv_path, "r", newline="", encoding="utf-8") as f:
+                rows = list(csv.DictReader(f))
+            self.assertGreater(len(rows), 0)
+            first = rows[0]
+            required_cols = {
+                "policy_type",
+                "requested_policy_checkpoint_path",
+                "loaded_policy_checkpoint_path",
+                "predictor_checkpoint_path",
+                "allow_random_policy",
+            }
+            missing = required_cols - set(first.keys())
+            self.assertEqual(missing, set(), f"CSV missing columns: {missing}")
+
+    def test_random_policy_loaded_checkpoint_is_none(self):
+        import subprocess
+        import tempfile
+        import csv
+
+        with tempfile.TemporaryDirectory() as tmp:
+            cmd = [
+                sys.executable,
+                "-m", "uav_vpp_guidance.evaluation.evaluate_prediction_comparison",
+                "--config", "config/experiment/evaluate_vpp_prediction_comparison.yaml",
+                "--backend", "simple",
+                "--episodes", "1",
+                "--seeds", "0",
+                "--allow-random-policy",
+                "--output-dir", tmp,
+            ]
+            subprocess.run(cmd, cwd=os.getcwd(), capture_output=True, text=True)
+            csv_path = Path(tmp) / "prediction_metrics.csv"
+            with open(csv_path, "r", newline="", encoding="utf-8") as f:
+                rows = list(csv.DictReader(f))
+            no_pred = next((r for r in rows if r["method"] == "no_prediction"), None)
+            self.assertIsNotNone(no_pred)
+            # Since no_prediction checkpoint likely does not exist in test env,
+            # loaded_policy_checkpoint_path should be empty/None in CSV.
+            self.assertEqual(no_pred["policy_type"], "random_policy")
+            self.assertEqual(no_pred["loaded_policy_checkpoint_path"], "")
+
+
+class TestStage6FFullAblationRunnerDryRun(unittest.TestCase):
+    """Runner dry-run must produce commands for all methods and seeds."""
+
+    def test_dry_run_prints_all_methods_and_seeds(self):
+        import io
+        from contextlib import redirect_stdout
+        from scripts.run_stage6f_full_ablation import main as runner_main
+
+        f = io.StringIO()
+        with redirect_stdout(f):
+            old_argv = sys.argv
+            sys.argv = ["run_stage6f_full_ablation.py", "--dry-run", "--seeds", "0", "1"]
+            try:
+                runner_main()
+            finally:
+                sys.argv = old_argv
+
+        output = f.getvalue()
+        for method in ("no_prediction", "cv_prediction", "ca_prediction", "lstm_frozen", "gru_frozen"):
+            self.assertIn(method, output, f"Dry-run output missing method: {method}")
+        # Two seeds should be mentioned
+        self.assertIn("seed 0", output)
+        self.assertIn("seed 1", output)
+        # Formal mode must not include --allow-random-policy
+        self.assertNotIn("--allow-random-policy", output)
+
+
+class TestStage6FManifest(unittest.TestCase):
+    """Per-run manifest must contain required provenance fields."""
+
+    REQUIRED_MANIFEST_KEYS = {
+        "git_commit", "branch", "timestamp", "method", "seed",
+        "config_path", "config_hash", "output_dir",
+        "policy_checkpoint_path", "predictor_checkpoint_path",
+        "backend", "validation_mode", "allow_random_policy", "metrics_schema_version",
+    }
+
+    def test_manifest_helper_produces_required_keys(self):
+        from scripts.run_stage6f_full_ablation import write_manifest
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmp:
+            write_manifest(
+                output_dir=tmp,
+                method="lstm_frozen",
+                seed=7,
+                config_path="config/experiment/dummy.yaml",
+                policy_checkpoint_path="outputs/dummy/checkpoints/best.pt",
+                predictor_checkpoint_path="outputs/dummy/best_model.pt",
+                backend="simple",
+                validation_mode="raise",
+                allow_random_policy=False,
+            )
+            manifest_path = Path(tmp) / "manifest.json"
+            self.assertTrue(manifest_path.exists())
+            with open(manifest_path, "r", encoding="utf-8") as f:
+                manifest = json.load(f)
+            missing = self.REQUIRED_MANIFEST_KEYS - set(manifest.keys())
+            self.assertEqual(missing, set(), f"Manifest missing keys: {missing}")
+            self.assertEqual(manifest["method"], "lstm_frozen")
+            self.assertEqual(manifest["seed"], 7)
+            self.assertEqual(manifest["metrics_schema_version"], "6f.1")
+            self.assertFalse(manifest["allow_random_policy"])
 
 
 if __name__ == "__main__":

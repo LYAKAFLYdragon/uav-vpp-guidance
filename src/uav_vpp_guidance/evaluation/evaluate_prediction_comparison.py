@@ -1,28 +1,36 @@
 """
 Prediction comparison evaluation runner.
 
-Compares No-Prediction, CV-Prediction, and CA-Prediction policies
-on the same scenarios and seeds.
+Formal Stage 6F ablation comparison of five methods:
+    no_prediction, cv_prediction, ca_prediction, lstm_frozen, gru_frozen.
+
+Each method MUST declare a PPO policy checkpoint in the experiment config.
+The comparison script loads those checkpoints and evaluates all methods on
+identical scenarios and seeds.
+
+IMPORTANT:
+- Formal evaluation requires method checkpoints. Missing checkpoints raise.
+- Use --allow-random-policy ONLY for smoke / debug.
+- Stage 6F full ablation should NEVER use --allow-random-policy.
 
 Supports:
-- Random scenario sampling (default)
 - Fixed scenario evaluation (--scenarios favorable neutral ...)
-- Loading trained checkpoints (--checkpoint)
-- Per-scenario breakdown statistics
+- Loading trained checkpoints (per-method config)
+- Per-method and per-scenario breakdown statistics
+- Policy metadata provenance in JSON and CSV outputs
 
 Usage:
-    # Evaluate with random scenarios (no checkpoint, random policy)
+    # Formal evaluation (requires all method checkpoints)
     python -m uav_vpp_guidance.evaluation.evaluate_prediction_comparison \
         --config config/experiment/evaluate_vpp_prediction_comparison.yaml \
-        --backend simple --episodes 10 --seeds 0 1 2
+        --backend simple --episodes 50 --seeds 0 1 2 \
+        --scenarios favorable neutral disadvantage challenging
 
-    # Evaluate fixed scenarios with checkpoint
+    # Smoke / debug only: allow random policy fallback
     python -m uav_vpp_guidance.evaluation.evaluate_prediction_comparison \
         --config config/experiment/evaluate_vpp_prediction_comparison.yaml \
-        --checkpoint outputs/experiments/vpp_ppo_cv_prediction/checkpoints/best.pt \
-        --backend simple --episodes 10 --seeds 0 1 2 \
-        --scenarios favorable neutral disadvantage challenging \
-        --save-trajectories
+        --backend simple --episodes 1 --seeds 0 \
+        --allow-random-policy
 """
 
 import argparse
@@ -467,21 +475,21 @@ def main():
         # Resolve predictor checkpoint path for metadata
         predictor_ckpt = method_override.get("trajectory_prediction", {}).get("checkpoint_path")
 
+        requested_policy_ckpt = method_ckpt
+        loaded_policy_ckpt = None
         policy_type = "random_policy"
-        policy_ckpt_path = None
-        if method_ckpt is not None:
-            ckpt_path = method_ckpt
-            policy_ckpt_path = ckpt_path
-            if not os.path.exists(ckpt_path):
-                msg = f"Checkpoint not found for method '{method_name}': {ckpt_path}"
+        if requested_policy_ckpt is not None:
+            if os.path.exists(requested_policy_ckpt):
+                loaded_policy_ckpt = requested_policy_ckpt
+                policy_type = "trained_ppo"
+            else:
+                msg = f"Checkpoint not found for method '{method_name}': {requested_policy_ckpt}"
                 if args.allow_random_policy:
                     print(f"  WARNING: {msg}, using random policy")
                     policy_type = "random_policy"
                 else:
                     print(f"  ERROR: {msg}. Use --allow-random-policy to fall back to random policy.")
                     sys.exit(1)
-            else:
-                policy_type = "trained_ppo"
 
         try:
             env = CloseRangeTrackingEnv(method_config)
@@ -503,8 +511,8 @@ def main():
         agent = PPOAgent(obs_dim=obs_dim, action_dim=action_dim, config=method_config, device=device)
 
         if policy_type == "trained_ppo":
-            agent.load(policy_ckpt_path)
-            print(f"  Loaded checkpoint from {policy_ckpt_path}")
+            agent.load(loaded_policy_ckpt)
+            print(f"  Loaded checkpoint from {loaded_policy_ckpt}")
 
         metrics = evaluate_method(
             env, agent, method_config, method_name,
@@ -516,9 +524,13 @@ def main():
         )
         # Attach policy metadata
         metrics["policy_type"] = policy_type
-        metrics["policy_checkpoint_path"] = policy_ckpt_path
+        metrics["requested_policy_checkpoint_path"] = requested_policy_ckpt
+        metrics["loaded_policy_checkpoint_path"] = loaded_policy_ckpt
         metrics["predictor_checkpoint_path"] = predictor_ckpt
         metrics["allow_random_policy"] = args.allow_random_policy
+        metrics["validation_mode"] = args.validation_mode
+        metrics["backend"] = args.backend
+        metrics["config_path"] = args.config
         metrics["method_name"] = method_name
         all_method_metrics.append(metrics)
 
@@ -548,11 +560,17 @@ def main():
     # Save CSV (overall only; per-scenario in JSON)
     csv_path = os.path.join(output_dir, "prediction_metrics.csv")
     scalar_keys = [
-        "method", "scenario", "seed", "episodes",
+        "method", "method_name", "scenario", "seed", "episodes",
+        "policy_type", "requested_policy_checkpoint_path", "loaded_policy_checkpoint_path",
+        "predictor_checkpoint_path", "allow_random_policy", "validation_mode", "backend", "config_path",
         "instant_success_rate", "score_win_rate", "mean_return",
         "mean_final_range_m", "mean_final_ata_deg",
         "prediction_rmse_m", "prediction_fallback_rate",
         "timeout_rate", "crash_rate", "out_of_bounds_rate",
+        "mean_env_prediction_error_m", "median_env_prediction_error_m",
+        "mean_offline_aligned_error_m", "median_offline_aligned_error_m",
+        "unknown_fallback_phase_count", "missing_fallback_phase_count",
+        "configured_current_target_fallback_count",
     ]
     with open(csv_path, "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=scalar_keys)
@@ -571,13 +589,16 @@ def main():
                 writer = csv.DictWriter(f, fieldnames=["scenario"] + scalar_keys[1:])
                 writer.writeheader()
                 for sc_name, sc_metrics in per_scenario.items():
-                    row = {
-                        "scenario": sc_name,
-                        "seed": "all",
-                        "episodes": sc_metrics.get("num_episodes", ""),
-                    }
-                    for k in scalar_keys[3:]:
-                        row[k] = sc_metrics.get(k, sc_metrics.get(k.replace("instant_", "").replace("prediction_", "mean_prediction_"), ""))
+                    row = {"scenario": sc_name}
+                    for k in scalar_keys[1:]:
+                        if k == "scenario":
+                            continue
+                        if k == "seed":
+                            row[k] = "all"
+                        elif k == "episodes":
+                            row[k] = sc_metrics.get("num_episodes", "")
+                        else:
+                            row[k] = sc_metrics.get(k, sc_metrics.get(k.replace("instant_", "").replace("prediction_", "mean_prediction_"), ""))
                     writer.writerow(row)
             print(f"Scenario CSV saved to: {scenario_csv}")
 

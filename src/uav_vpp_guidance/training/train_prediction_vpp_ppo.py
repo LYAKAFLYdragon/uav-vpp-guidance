@@ -255,8 +255,10 @@ def train_ppo(config, output_dir, smoke=False):
         "mean_range", "final_range", "final_ata",
         "prediction_valid_rate", "fallback_rate", "post_warmup_fallback_rate",
         "warmup_fallback_rate", "runtime_fallback_rate",
-        "predictor_init_failed_count", "mean_prediction_error_m",
-        "median_prediction_error_m", "prediction_error_count",
+        "predictor_init_failed_count", "unknown_fallback_phase_count",
+        "missing_fallback_phase_count", "configured_current_target_fallback_count",
+        "mean_prediction_error_m", "median_prediction_error_m",
+        "prediction_error_count",
     ]
     update_fieldnames = [
         "step", "update_num", "policy_loss", "value_loss", "entropy",
@@ -268,8 +270,10 @@ def train_ppo(config, output_dir, smoke=False):
         "mean_final_range_m", "mean_final_ata_deg",
         "prediction_valid_rate", "fallback_rate", "post_warmup_fallback_rate",
         "warmup_fallback_rate", "runtime_fallback_rate",
-        "predictor_init_failed_count", "mean_prediction_error_m",
-        "median_prediction_error_m", "prediction_error_count",
+        "predictor_init_failed_count", "unknown_fallback_phase_count",
+        "missing_fallback_phase_count", "configured_current_target_fallback_count",
+        "mean_prediction_error_m", "median_prediction_error_m",
+        "prediction_error_count",
     ]
 
     with open(episode_log_path, "w", newline="", encoding="utf-8") as f_ep:
@@ -364,6 +368,9 @@ def train_ppo(config, output_dir, smoke=False):
                                 "warmup_fallback_rate": round(health_rates["warmup_fallback_rate"], 4),
                                 "runtime_fallback_rate": round(health_rates["runtime_fallback_rate"], 4),
                                 "predictor_init_failed_count": health_rates["predictor_init_failed_count"],
+                                "unknown_fallback_phase_count": health_rates["unknown_fallback_phase_count"],
+                                "missing_fallback_phase_count": health_rates["missing_fallback_phase_count"],
+                                "configured_current_target_fallback_count": health_rates["configured_current_target_fallback_count"],
                                 "mean_prediction_error_m": round(health_rates["mean_prediction_error_m"], 4) if np.isfinite(health_rates["mean_prediction_error_m"]) else np.nan,
                                 "median_prediction_error_m": round(health_rates["median_prediction_error_m"], 4) if np.isfinite(health_rates["median_prediction_error_m"]) else np.nan,
                                 "prediction_error_count": health_rates["prediction_error_count"],
@@ -445,6 +452,9 @@ def train_ppo(config, output_dir, smoke=False):
                             "warmup_fallback_rate": eval_metrics.get("warmup_fallback_rate", np.nan),
                             "runtime_fallback_rate": eval_metrics.get("runtime_fallback_rate", np.nan),
                             "predictor_init_failed_count": eval_metrics.get("predictor_init_failed_count", 0),
+                            "unknown_fallback_phase_count": eval_metrics.get("unknown_fallback_phase_count", 0),
+                            "missing_fallback_phase_count": eval_metrics.get("missing_fallback_phase_count", 0),
+                            "configured_current_target_fallback_count": eval_metrics.get("configured_current_target_fallback_count", 0),
                             "mean_prediction_error_m": eval_metrics.get("mean_prediction_error_m", np.nan),
                             "median_prediction_error_m": eval_metrics.get("median_prediction_error_m", np.nan),
                             "prediction_error_count": eval_metrics.get("prediction_error_count", 0),
@@ -502,6 +512,9 @@ def train_ppo(config, output_dir, smoke=False):
                         "warmup_fallback_rate": round(health_rates["warmup_fallback_rate"], 4),
                         "runtime_fallback_rate": round(health_rates["runtime_fallback_rate"], 4),
                         "predictor_init_failed_count": health_rates["predictor_init_failed_count"],
+                        "unknown_fallback_phase_count": health_rates["unknown_fallback_phase_count"],
+                        "missing_fallback_phase_count": health_rates["missing_fallback_phase_count"],
+                        "configured_current_target_fallback_count": health_rates["configured_current_target_fallback_count"],
                         "mean_prediction_error_m": round(health_rates["mean_prediction_error_m"], 4) if np.isfinite(health_rates["mean_prediction_error_m"]) else np.nan,
                         "median_prediction_error_m": round(health_rates["median_prediction_error_m"], 4) if np.isfinite(health_rates["median_prediction_error_m"]) else np.nan,
                         "prediction_error_count": health_rates["prediction_error_count"],
@@ -550,6 +563,9 @@ def train_ppo(config, output_dir, smoke=False):
             "warmup_fallback_rate": None,
             "runtime_fallback_rate": None,
             "predictor_init_failed": init_failed_count > 0,
+            "unknown_fallback_phase_count": 0,
+            "missing_fallback_phase_count": 0,
+            "configured_current_target_fallback_count": 0,
             "mean_prediction_error_m": None,
             "median_prediction_error_m": None,
             "prediction_error_count": 0,
@@ -558,6 +574,9 @@ def train_ppo(config, output_dir, smoke=False):
         post_warmup_fallback_rates = []
         warmup_fallback_rates = []
         runtime_fallback_rates = []
+        unknown_fallback_phase_counts = []
+        missing_fallback_phase_counts = []
+        configured_current_target_fallback_counts = []
         mean_pred_errors = []
         median_pred_errors = []
         pred_error_counts = []
@@ -572,6 +591,12 @@ def train_ppo(config, output_dir, smoke=False):
                             warmup_fallback_rates.append(float(row["warmup_fallback_rate"]))
                         if row.get("runtime_fallback_rate"):
                             runtime_fallback_rates.append(float(row["runtime_fallback_rate"]))
+                        if row.get("unknown_fallback_phase_count"):
+                            unknown_fallback_phase_counts.append(int(row["unknown_fallback_phase_count"]))
+                        if row.get("missing_fallback_phase_count"):
+                            missing_fallback_phase_counts.append(int(row["missing_fallback_phase_count"]))
+                        if row.get("configured_current_target_fallback_count"):
+                            configured_current_target_fallback_counts.append(int(row["configured_current_target_fallback_count"]))
                         val = row.get("mean_prediction_error_m")
                         if val and val.lower() != "nan":
                             mean_pred_errors.append(float(val))
@@ -588,6 +613,12 @@ def train_ppo(config, output_dir, smoke=False):
             smoke_summary["warmup_fallback_rate"] = float(np.mean(warmup_fallback_rates))
         if runtime_fallback_rates:
             smoke_summary["runtime_fallback_rate"] = float(np.mean(runtime_fallback_rates))
+        if unknown_fallback_phase_counts:
+            smoke_summary["unknown_fallback_phase_count"] = int(np.sum(unknown_fallback_phase_counts))
+        if missing_fallback_phase_counts:
+            smoke_summary["missing_fallback_phase_count"] = int(np.sum(missing_fallback_phase_counts))
+        if configured_current_target_fallback_counts:
+            smoke_summary["configured_current_target_fallback_count"] = int(np.sum(configured_current_target_fallback_counts))
         if mean_pred_errors:
             smoke_summary["mean_prediction_error_m"] = float(np.mean(mean_pred_errors))
         if median_pred_errors:

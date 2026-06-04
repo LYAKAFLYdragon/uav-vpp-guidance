@@ -202,6 +202,9 @@ def evaluate_policy(env, agent, config, num_episodes=10, seeds=None, save_trajec
         "warmup_fallback_rate": _safe_mean([e["warmup_fallback_rate"] for e in all_episodes]),
         "runtime_fallback_rate": _safe_mean([e["runtime_fallback_rate"] for e in all_episodes]),
         "predictor_init_failed_count": sum(e["predictor_init_failed_count"] for e in all_episodes),
+        "unknown_fallback_phase_count": sum(e["unknown_fallback_phase_count"] for e in all_episodes),
+        "missing_fallback_phase_count": sum(e["missing_fallback_phase_count"] for e in all_episodes),
+        "configured_current_target_fallback_count": sum(e["configured_current_target_fallback_count"] for e in all_episodes),
         "mean_prediction_error_m": _safe_mean([e["mean_prediction_error_m"] for e in all_episodes]),
         "median_prediction_error_m": _safe_mean([e["median_prediction_error_m"] for e in all_episodes]),
         "prediction_error_count": sum(e["prediction_error_count"] for e in all_episodes),
@@ -298,8 +301,10 @@ def main():
         "mean_length", "mean_final_range_m", "mean_final_ata_deg", "mean_min_range_m",
         "prediction_valid_rate", "fallback_rate", "post_warmup_fallback_rate",
         "warmup_fallback_rate", "runtime_fallback_rate",
-        "predictor_init_failed_count", "mean_prediction_error_m",
-        "median_prediction_error_m", "prediction_error_count",
+        "predictor_init_failed_count", "unknown_fallback_phase_count",
+        "missing_fallback_phase_count", "configured_current_target_fallback_count",
+        "mean_prediction_error_m", "median_prediction_error_m",
+        "prediction_error_count",
     ]
     with open(csv_path, "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=scalar_keys)

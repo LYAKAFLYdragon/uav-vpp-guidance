@@ -47,17 +47,13 @@ class PredictorHealthAccumulator:
                 self.runtime_fallback_steps += 1
             elif phase == "configured_current_target":
                 self.configured_current_target_fallback_count += 1
-                self.runtime_fallback_steps += 1
             elif phase == "unknown":
                 self.unknown_fallback_phase_count += 1
-                self.runtime_fallback_steps += 1
             elif phase is None:
                 self.missing_fallback_phase_count += 1
-                self.runtime_fallback_steps += 1
             else:
                 # Any other unrecognized phase
                 self.unknown_fallback_phase_count += 1
-                self.runtime_fallback_steps += 1
             if phase != "warmup":
                 self.post_warmup_fallback_steps += 1
         if info.get("predictor_init_failed", False):

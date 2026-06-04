@@ -30,7 +30,7 @@ from uav_vpp_guidance.utils.seed import set_seed
 from uav_vpp_guidance.envs.tracking_env import CloseRangeTrackingEnv
 from uav_vpp_guidance.agents.ppo_agent import PPOAgent
 from uav_vpp_guidance.trajectory_prediction._telemetry import PredictorHealthAccumulator
-from uav_vpp_guidance.trajectory_prediction.config_validator import validate_tp_config
+from uav_vpp_guidance.trajectory_prediction.config_validator import validate_full_config
 
 
 def load_experiment_config(config_path):
@@ -637,13 +637,12 @@ def main():
     print(f"Anchor mode: {anchor_mode}")
     print(f"Trajectory prediction: {'enabled' if tp_enabled else 'disabled'} ({predictor_type})")
 
-    if tp_enabled:
-        on_unknown = "warn" if args.smoke else "raise"
-        try:
-            validate_tp_config(tp_cfg, on_unknown=on_unknown)
-        except ValueError as exc:
-            print(f"ERROR: trajectory_prediction config validation failed: {exc}")
-            sys.exit(1)
+    on_unknown = "warn" if args.smoke else "raise"
+    try:
+        validate_full_config(config, on_unknown=on_unknown)
+    except ValueError as exc:
+        print(f"ERROR: Full config validation failed: {exc}")
+        sys.exit(1)
 
     train_ppo(config, output_dir, smoke=args.smoke)
 

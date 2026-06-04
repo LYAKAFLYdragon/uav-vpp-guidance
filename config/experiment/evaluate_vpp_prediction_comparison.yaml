@@ -1,6 +1,11 @@
-# Stage 6A: Prediction Comparison Evaluation Configuration
+# Stage 6F: Prediction Comparison Evaluation Configuration
 #
-# Unified comparison of No-Prediction, CV-Prediction, and CA-Prediction.
+# Unified comparison of five ablation methods:
+#   no_prediction, CV, CA, LSTM-frozen, GRU-frozen.
+#
+# Each method MUST declare:
+#   - checkpoint: the PPO policy checkpoint trained for that method
+#   - trajectory_prediction.checkpoint_path: neural predictor checkpoint (LSTM/GRU only)
 
 includes:
   - ../env.yaml
@@ -36,6 +41,7 @@ env:
 methods:
   no_prediction:
     name: no_prediction
+    checkpoint: outputs/experiments/no_prediction_vpp_ppo/checkpoints/best.pt
     trajectory_prediction:
       enabled: false
     virtual_point:
@@ -48,6 +54,7 @@ methods:
 
   cv_prediction:
     name: cv_prediction
+    checkpoint: outputs/experiments/vpp_ppo_cv_prediction/checkpoints/best.pt
     trajectory_prediction:
       enabled: true
       predictor_type: constant_velocity
@@ -70,6 +77,7 @@ methods:
 
   ca_prediction:
     name: ca_prediction
+    checkpoint: outputs/experiments/vpp_ppo_ca_prediction/checkpoints/best.pt
     trajectory_prediction:
       enabled: true
       predictor_type: constant_acceleration
@@ -92,12 +100,13 @@ methods:
 
   lstm_frozen:
     name: lstm_frozen
+    checkpoint: outputs/experiments/vpp_ppo_lstm_frozen/checkpoints/best.pt
     trajectory_prediction:
       enabled: true
       predictor_type: lstm
       strict_predictor_init: true
       checkpoint_strict: true
-      checkpoint_path: outputs/experiments/vpp_ppo_lstm/checkpoints/best.pt
+      checkpoint_path: outputs/trajectory_prediction/best_model.pt
       freeze_predictor_during_rl: true
       prediction:
         lookahead_time_s: 1.0
@@ -117,12 +126,13 @@ methods:
 
   gru_frozen:
     name: gru_frozen
+    checkpoint: outputs/experiments/vpp_ppo_gru_frozen/checkpoints/best.pt
     trajectory_prediction:
       enabled: true
       predictor_type: gru
       strict_predictor_init: true
       checkpoint_strict: true
-      checkpoint_path: outputs/experiments/vpp_ppo_gru/checkpoints/best.pt
+      checkpoint_path: outputs/trajectory_prediction/best_model_gru.pt
       freeze_predictor_during_rl: true
       prediction:
         lookahead_time_s: 1.0

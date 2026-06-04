@@ -35,6 +35,8 @@ import numpy as np
 
 import warnings
 
+import copy
+
 from uav_vpp_guidance.utils.config import load_yaml_config, merge_config
 from uav_vpp_guidance.utils.seed import set_seed
 from uav_vpp_guidance.envs.tracking_env import CloseRangeTrackingEnv
@@ -234,6 +236,9 @@ def evaluate_single_episode(env, agent, config, scenario=None, seed=0, save_traj
         "runtime_fallback_rate": rates["runtime_fallback_rate"],
         "post_warmup_fallback_rate": rates["post_warmup_fallback_rate"],
         "predictor_init_failed_count": health_acc.predictor_init_failed_steps,
+        "unknown_fallback_phase_count": health_acc.unknown_fallback_phase_count,
+        "missing_fallback_phase_count": health_acc.missing_fallback_phase_count,
+        "configured_current_target_fallback_count": health_acc.configured_current_target_fallback_count,
         # Env-tracked prediction error (canonical, delayed alignment)
         "mean_env_prediction_error_m": float(np.mean(env_prediction_errors)) if env_prediction_errors else np.nan,
         "median_env_prediction_error_m": float(np.median(env_prediction_errors)) if env_prediction_errors else np.nan,
@@ -295,6 +300,9 @@ def aggregate_metrics(episodes):
         "mean_runtime_fallback_rate": safe_mean([e["runtime_fallback_rate"] for e in episodes]),
         "mean_post_warmup_fallback_rate": safe_mean([e["post_warmup_fallback_rate"] for e in episodes]),
         "predictor_init_failed_count": sum(e["predictor_init_failed_count"] for e in episodes),
+        "unknown_fallback_phase_count": sum(e["unknown_fallback_phase_count"] for e in episodes),
+        "missing_fallback_phase_count": sum(e["missing_fallback_phase_count"] for e in episodes),
+        "configured_current_target_fallback_count": sum(e["configured_current_target_fallback_count"] for e in episodes),
         "mean_prediction_error_m": safe_mean([e["mean_prediction_error_m"] for e in episodes]),
         "median_prediction_error_m": safe_mean([e["median_prediction_error_m"] for e in episodes]),
         "mean_env_prediction_error_m": safe_mean([e["mean_env_prediction_error_m"] for e in episodes]),
@@ -388,6 +396,8 @@ def main():
     parser.add_argument("--output-dir", type=str, default=None, help="Output directory override")
     parser.add_argument("--allow-random-policy", action="store_true",
                         help="Allow fallback to random policy when checkpoint is missing")
+    parser.add_argument("--validation-mode", type=str, default="raise", choices=["raise", "warn"],
+                        help="Config validation mode: raise (default) or warn")
     args = parser.parse_args()
 
     config = load_experiment_config(args.config)
@@ -434,13 +444,44 @@ def main():
 
     for method_name, method_override in methods_cfg.items():
         print(f"\n=== Evaluating method: {method_name} ===")
-        method_config = merge_config(dict(config), method_override)
+        method_config = merge_config(copy.deepcopy(config), copy.deepcopy(method_override))
 
         # Validate merged method config (cross-component + tp sub-config)
         try:
-            validate_full_config(method_config, on_unknown="warn")
+            validate_full_config(method_config, on_unknown=args.validation_mode)
         except ValueError as exc:
-            print(f"  WARNING: Method config validation failed: {exc}")
+            print(f"  ERROR: Method config validation failed: {exc}")
+            sys.exit(1)
+
+        # Enforce checkpoint declaration for formal comparison
+        method_ckpt = method_ckpt_overrides.get(
+            method_name, method_override.get("checkpoint", args.checkpoint)
+        )
+        if method_ckpt is None and not args.allow_random_policy:
+            print(
+                f"  ERROR: Method '{method_name}' has no checkpoint declared. "
+                f"Add 'checkpoint' to the method config or use --allow-random-policy."
+            )
+            sys.exit(1)
+
+        # Resolve predictor checkpoint path for metadata
+        predictor_ckpt = method_override.get("trajectory_prediction", {}).get("checkpoint_path")
+
+        policy_type = "random_policy"
+        policy_ckpt_path = None
+        if method_ckpt is not None:
+            ckpt_path = method_ckpt
+            policy_ckpt_path = ckpt_path
+            if not os.path.exists(ckpt_path):
+                msg = f"Checkpoint not found for method '{method_name}': {ckpt_path}"
+                if args.allow_random_policy:
+                    print(f"  WARNING: {msg}, using random policy")
+                    policy_type = "random_policy"
+                else:
+                    print(f"  ERROR: {msg}. Use --allow-random-policy to fall back to random policy.")
+                    sys.exit(1)
+            else:
+                policy_type = "trained_ppo"
 
         try:
             env = CloseRangeTrackingEnv(method_config)
@@ -461,21 +502,9 @@ def main():
         device = "cpu"
         agent = PPOAgent(obs_dim=obs_dim, action_dim=action_dim, config=method_config, device=device)
 
-        # Load checkpoint: CLI override > config override > global arg > none
-        method_ckpt = method_ckpt_overrides.get(method_name, method_override.get("checkpoint", args.checkpoint))
-        if method_ckpt is not None:
-            ckpt_path = method_ckpt
-            if not os.path.exists(ckpt_path):
-                msg = f"Checkpoint not found for method '{method_name}': {ckpt_path}"
-                if args.allow_random_policy:
-                    print(f"  WARNING: {msg}, using random policy")
-                else:
-                    print(f"  ERROR: {msg}. Use --allow-random-policy to fall back to random policy.")
-                    env.close()
-                    sys.exit(1)
-            else:
-                agent.load(ckpt_path)
-                print(f"  Loaded checkpoint from {ckpt_path}")
+        if policy_type == "trained_ppo":
+            agent.load(policy_ckpt_path)
+            print(f"  Loaded checkpoint from {policy_ckpt_path}")
 
         metrics = evaluate_method(
             env, agent, method_config, method_name,
@@ -485,6 +514,12 @@ def main():
             save_trajectories=args.save_trajectories,
             output_dir=output_dir,
         )
+        # Attach policy metadata
+        metrics["policy_type"] = policy_type
+        metrics["policy_checkpoint_path"] = policy_ckpt_path
+        metrics["predictor_checkpoint_path"] = predictor_ckpt
+        metrics["allow_random_policy"] = args.allow_random_policy
+        metrics["method_name"] = method_name
         all_method_metrics.append(metrics)
 
         env.close()

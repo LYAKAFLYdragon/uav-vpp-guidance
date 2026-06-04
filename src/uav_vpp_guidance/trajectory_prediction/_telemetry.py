@@ -22,6 +22,9 @@ class PredictorHealthAccumulator:
         self.runtime_fallback_steps = 0
         self.post_warmup_fallback_steps = 0
         self.predictor_init_failed_steps = 0
+        self.unknown_fallback_phase_count = 0
+        self.missing_fallback_phase_count = 0
+        self.configured_current_target_fallback_count = 0
         self.prediction_errors = []
         self.prediction_error_count = 0
 
@@ -42,8 +45,18 @@ class PredictorHealthAccumulator:
                 self.warmup_fallback_steps += 1
             elif phase == "runtime_failure":
                 self.runtime_fallback_steps += 1
+            elif phase == "configured_current_target":
+                self.configured_current_target_fallback_count += 1
+                self.runtime_fallback_steps += 1
+            elif phase == "unknown":
+                self.unknown_fallback_phase_count += 1
+                self.runtime_fallback_steps += 1
+            elif phase is None:
+                self.missing_fallback_phase_count += 1
+                self.runtime_fallback_steps += 1
             else:
-                # Any non-warmup fallback (including configured_current_target, unknown, None)
+                # Any other unrecognized phase
+                self.unknown_fallback_phase_count += 1
                 self.runtime_fallback_steps += 1
             if phase != "warmup":
                 self.post_warmup_fallback_steps += 1
@@ -66,6 +79,9 @@ class PredictorHealthAccumulator:
             "runtime_fallback_rate": self.runtime_fallback_steps / ep_len,
             "post_warmup_fallback_rate": self.post_warmup_fallback_steps / ep_len,
             "predictor_init_failed_count": self.predictor_init_failed_steps,
+            "unknown_fallback_phase_count": self.unknown_fallback_phase_count,
+            "missing_fallback_phase_count": self.missing_fallback_phase_count,
+            "configured_current_target_fallback_count": self.configured_current_target_fallback_count,
             "mean_prediction_error_m": mean_err,
             "median_prediction_error_m": median_err,
             "prediction_error_count": self.prediction_error_count,

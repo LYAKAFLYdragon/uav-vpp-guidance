@@ -322,6 +322,7 @@ class CloseRangeTrackingEnv:
             "predictor_init_failed": self._predictor_init_failed,
             "predictor_type": None,
             "prediction_valid": False,
+            "prediction_fallback": False,
             "prediction_fallback_reason": None,
             "prediction_fallback_mode": None,
             "prediction_fallback_model": None,
@@ -372,6 +373,7 @@ class CloseRangeTrackingEnv:
                 prediction_info["prediction_valid"] = not pred_info.get(
                     "fallback", False
                 )
+                prediction_info["prediction_fallback"] = bool(pred_info.get("fallback", False))
                 prediction_info["prediction_fallback_reason"] = pred_info.get(
                     "fallback_reason"
                 )
@@ -405,6 +407,7 @@ class CloseRangeTrackingEnv:
             if prediction_info["prediction_fallback_reason"] is None:
                 prediction_info["prediction_fallback_reason"] = "fallback_to_current_target"
                 prediction_info["prediction_fallback_phase"] = "configured_current_target"
+            prediction_info["prediction_fallback"] = True
             anchor_mode = "current_target"
 
         vp_result = self.virtual_point_generator.action_to_virtual_point(
@@ -508,6 +511,7 @@ class CloseRangeTrackingEnv:
             "predictor_init_failed": prediction_info["predictor_init_failed"],
             "predictor_type": prediction_info["predictor_type"],
             "prediction_valid": prediction_info["prediction_valid"],
+            "prediction_fallback": prediction_info["prediction_fallback"],
             "prediction_fallback_reason": prediction_info["prediction_fallback_reason"],
             "prediction_fallback_mode": prediction_info["prediction_fallback_mode"],
             "prediction_fallback_model": prediction_info["prediction_fallback_model"],

@@ -39,7 +39,8 @@ from uav_vpp_guidance.utils.config import load_yaml_config, merge_config
 from uav_vpp_guidance.utils.seed import set_seed
 from uav_vpp_guidance.envs.tracking_env import CloseRangeTrackingEnv
 from uav_vpp_guidance.agents.ppo_agent import PPOAgent
-from uav_vpp_guidance.trajectory_prediction.config_validator import validate_tp_config
+from uav_vpp_guidance.trajectory_prediction.config_validator import validate_tp_config, validate_full_config
+from uav_vpp_guidance.trajectory_prediction._telemetry import PredictorHealthAccumulator
 
 
 def load_experiment_config(config_path):
@@ -74,14 +75,8 @@ def evaluate_single_episode(env, agent, config, scenario=None, seed=0, save_traj
     final_ata = 0.0
     reason = "timeout"
     trajectory = []
-    prediction_enabled_count = 0
-    prediction_valid_count = 0
-    prediction_fallback_count = 0
-    warmup_fallback_count = 0
-    runtime_fallback_count = 0
-    post_warmup_fallback_count = 0
-    predictor_init_failed_count = 0
-    prediction_errors = []
+    health_acc = PredictorHealthAccumulator()
+    prediction_enabled_steps = 0
     virtual_point_shifts = []
     anchor_shifts = []
     time_to_first_advantage = None
@@ -89,11 +84,12 @@ def evaluate_single_episode(env, agent, config, scenario=None, seed=0, save_traj
     ego_score_sum = 0.0
     target_score_sum = 0.0
 
-    # 离线 prediction error 对齐记录
-    # 每个元素: (step, predicted_target_pos, true_target_pos)
-    prediction_records = []
+    # Env-tracked prediction errors (delayed alignment via PredictionErrorTracker)
+    env_prediction_errors = []
 
-    # 预测时间窗口（用于离线对齐）
+    # Offline aligned prediction error records
+    # Each element: (step, predicted_target_pos, true_target_pos)
+    prediction_records = []
     lookahead_time_s = env.config.get("trajectory_prediction", {}).get("prediction", {}).get("lookahead_time_s", 1.0)
     high_level_dt = env.env_config.get("high_level_dt", 0.2)
     horizon_steps = max(1, int(round(lookahead_time_s / high_level_dt)))
@@ -105,6 +101,9 @@ def evaluate_single_episode(env, agent, config, scenario=None, seed=0, save_traj
         obs, reward, terminated, truncated, info = env.step(action)
         ep_reward += reward
         ep_length += 1
+        if info.get("prediction_enabled", False):
+            prediction_enabled_steps += 1
+        health_acc.step(info)
 
         rel_state = obs.get("relative_state", {})
         range_m = rel_state.get("range_m", 0.0)
@@ -121,28 +120,12 @@ def evaluate_single_episode(env, agent, config, scenario=None, seed=0, save_traj
         target_score_sum += target_score
         if ego_score > target_score:
             if time_to_first_advantage is None:
-                time_to_first_advantage = step * env.env_config.get("high_level_dt", 0.2)
+                time_to_first_advantage = step * high_level_dt
             advantage_hold_steps += 1
-
-        if info.get("prediction_enabled"):
-            prediction_enabled_count += 1
-            if info.get("prediction_valid"):
-                prediction_valid_count += 1
-            if info.get("prediction_fallback_reason"):
-                prediction_fallback_count += 1
-                phase = info.get("prediction_fallback_phase")
-                if phase == "warmup":
-                    warmup_fallback_count += 1
-                elif phase == "runtime_failure":
-                    runtime_fallback_count += 1
-                if phase != "warmup":
-                    post_warmup_fallback_count += 1
-            if info.get("predictor_init_failed", False):
-                predictor_init_failed_count += 1
 
         pred_error = info.get("prediction_error_m", np.nan)
         if np.isfinite(pred_error):
-            prediction_errors.append(pred_error)
+            env_prediction_errors.append(pred_error)
 
         target_pos = info.get("target_state", {}).get("position_m")
         if target_pos is None:
@@ -154,7 +137,6 @@ def evaluate_single_episode(env, agent, config, scenario=None, seed=0, save_traj
         pred_target_pos = info.get("predicted_target_position")
         if target_pos is not None and pred_target_pos is not None:
             anchor_shifts.append(float(np.linalg.norm(np.asarray(pred_target_pos) - np.asarray(target_pos))))
-            # 记录用于离线 prediction error 对齐
             prediction_records.append((
                 step,
                 np.asarray(pred_target_pos, dtype=np.float64),
@@ -173,14 +155,16 @@ def evaluate_single_episode(env, agent, config, scenario=None, seed=0, save_traj
 
             trajectory.append({
                 "step": step,
-                "time": step * env.env_config.get("high_level_dt", 0.2),
+                "time": step * high_level_dt,
                 "backend": env._backend,
                 "method": method_name,
                 "predictor_type": info.get("predictor_type", ""),
                 "prediction_enabled": int(info.get("prediction_enabled", False)),
                 "prediction_valid": int(info.get("prediction_valid", False)),
+                "prediction_fallback": int(info.get("prediction_fallback", False)),
                 "prediction_fallback_reason": info.get("prediction_fallback_reason", ""),
-                "prediction_horizon_s": env.config.get("trajectory_prediction", {}).get("prediction", {}).get("lookahead_time_s", 1.0),
+                "prediction_fallback_phase": info.get("prediction_fallback_phase", ""),
+                "prediction_horizon_s": lookahead_time_s,
                 "target_x": float(target_pos_arr[0]) if len(target_pos_arr) > 0 else np.nan,
                 "target_y": float(target_pos_arr[1]) if len(target_pos_arr) > 1 else np.nan,
                 "target_z": float(target_pos_arr[2]) if len(target_pos_arr) > 2 else np.nan,
@@ -215,22 +199,18 @@ def evaluate_single_episode(env, agent, config, scenario=None, seed=0, save_traj
             reason = info.get("reason", "unknown")
             break
 
-    # ---- 离线 prediction error 对齐 ----
-    # step t 的 predicted_target_position 应与 step t + horizon_steps 的真实 target_position 对齐
+    # ---- Offline aligned prediction error ----
     aligned_errors = []
     for i, (step_t, pred_pos, _) in enumerate(prediction_records):
         aligned_step = step_t + horizon_steps
-        # 在 prediction_records 中查找 aligned_step 对应的 true_target_pos
         for j in range(i, len(prediction_records)):
             if prediction_records[j][0] == aligned_step:
                 true_pos = prediction_records[j][2]
                 err = float(np.linalg.norm(pred_pos - true_pos))
                 aligned_errors.append(err)
                 break
-    # 如果有离线对齐误差，优先使用；否则保留 info 中的原始值（通常为 NaN）
-    if aligned_errors:
-        prediction_errors = aligned_errors
 
+    rates = health_acc.rates(ep_length)
     return {
         "seed": seed,
         "scenario": scenario.get("name", "random") if isinstance(scenario, dict) else "random",
@@ -246,20 +226,36 @@ def evaluate_single_episode(env, agent, config, scenario=None, seed=0, save_traj
         "is_timeout": reason == "timeout",
         "is_out_of_bounds": reason == "out_of_bounds",
         "score_win": ego_score_sum > target_score_sum,
-        "prediction_enabled_rate": prediction_enabled_count / max(1, ep_length),
-        "prediction_valid_rate": prediction_valid_count / max(1, ep_length),
-        "prediction_fallback_rate": prediction_fallback_count / max(1, ep_length),
-        "warmup_fallback_rate": warmup_fallback_count / max(1, ep_length),
-        "runtime_fallback_rate": runtime_fallback_count / max(1, ep_length),
-        "post_warmup_fallback_rate": post_warmup_fallback_count / max(1, ep_length),
-        "predictor_init_failed_count": predictor_init_failed_count,
-        "mean_prediction_error_m": float(np.mean(prediction_errors)) if prediction_errors else np.nan,
-        "median_prediction_error_m": float(np.median(prediction_errors)) if prediction_errors else np.nan,
-        "prediction_error_count": len(prediction_errors),
+        # Telemetry
+        "prediction_enabled_rate": prediction_enabled_steps / max(1, ep_length),
+        "prediction_valid_rate": rates["prediction_valid_rate"],
+        "prediction_fallback_rate": rates["fallback_rate"],
+        "warmup_fallback_rate": rates["warmup_fallback_rate"],
+        "runtime_fallback_rate": rates["runtime_fallback_rate"],
+        "post_warmup_fallback_rate": rates["post_warmup_fallback_rate"],
+        "predictor_init_failed_count": health_acc.predictor_init_failed_steps,
+        # Env-tracked prediction error (canonical, delayed alignment)
+        "mean_env_prediction_error_m": float(np.mean(env_prediction_errors)) if env_prediction_errors else np.nan,
+        "median_env_prediction_error_m": float(np.median(env_prediction_errors)) if env_prediction_errors else np.nan,
+        "env_prediction_error_count": len(env_prediction_errors),
+        # Offline aligned prediction error (separate metric)
+        "mean_offline_aligned_error_m": float(np.mean(aligned_errors)) if aligned_errors else np.nan,
+        "median_offline_aligned_error_m": float(np.median(aligned_errors)) if aligned_errors else np.nan,
+        "offline_aligned_error_count": len(aligned_errors),
+        # Legacy unified alias (prefer env-tracked if available, else offline)
+        "mean_prediction_error_m": (
+            float(np.mean(env_prediction_errors)) if env_prediction_errors
+            else float(np.mean(aligned_errors)) if aligned_errors else np.nan
+        ),
+        "median_prediction_error_m": (
+            float(np.median(env_prediction_errors)) if env_prediction_errors
+            else float(np.median(aligned_errors)) if aligned_errors else np.nan
+        ),
+        "prediction_error_count": len(env_prediction_errors) if env_prediction_errors else len(aligned_errors),
         "mean_virtual_point_shift_m": float(np.mean(virtual_point_shifts)) if virtual_point_shifts else np.nan,
         "mean_anchor_shift_m": float(np.mean(anchor_shifts)) if anchor_shifts else np.nan,
         "time_to_first_advantage_s": time_to_first_advantage if time_to_first_advantage is not None else np.nan,
-        "advantage_hold_time_s": advantage_hold_steps * env.env_config.get("high_level_dt", 0.2),
+        "advantage_hold_time_s": advantage_hold_steps * high_level_dt,
     }, trajectory
 
 
@@ -301,6 +297,10 @@ def aggregate_metrics(episodes):
         "predictor_init_failed_count": sum(e["predictor_init_failed_count"] for e in episodes),
         "mean_prediction_error_m": safe_mean([e["mean_prediction_error_m"] for e in episodes]),
         "median_prediction_error_m": safe_mean([e["median_prediction_error_m"] for e in episodes]),
+        "mean_env_prediction_error_m": safe_mean([e["mean_env_prediction_error_m"] for e in episodes]),
+        "median_env_prediction_error_m": safe_mean([e["median_env_prediction_error_m"] for e in episodes]),
+        "mean_offline_aligned_error_m": safe_mean([e["mean_offline_aligned_error_m"] for e in episodes]),
+        "median_offline_aligned_error_m": safe_mean([e["median_offline_aligned_error_m"] for e in episodes]),
         "mean_virtual_point_shift_m": safe_mean([e["mean_virtual_point_shift_m"] for e in episodes]),
         "mean_anchor_shift_m": safe_mean([e["mean_anchor_shift_m"] for e in episodes]),
         "mean_time_to_first_advantage_s": safe_mean([e["time_to_first_advantage_s"] for e in episodes]),
@@ -386,6 +386,8 @@ def main():
                         help="Fixed scenario names to evaluate (e.g. favorable neutral disadvantage challenging)")
     parser.add_argument("--save-trajectories", action="store_true", help="Save per-episode trajectory CSVs")
     parser.add_argument("--output-dir", type=str, default=None, help="Output directory override")
+    parser.add_argument("--allow-random-policy", action="store_true",
+                        help="Allow fallback to random policy when checkpoint is missing")
     args = parser.parse_args()
 
     config = load_experiment_config(args.config)
@@ -416,14 +418,6 @@ def main():
     if args.checkpoint:
         print(f"Checkpoint: {args.checkpoint}")
 
-    # Validate trajectory_prediction config if present
-    tp_cfg = config.get("trajectory_prediction", {})
-    if tp_cfg.get("enabled", False):
-        try:
-            validate_tp_config(tp_cfg, on_unknown="warn")
-        except ValueError as exc:
-            print(f"WARNING: trajectory_prediction config invalid: {exc}")
-
     # Parse per-method checkpoint overrides
     method_ckpt_overrides = {}
     for mk in args.method_checkpoint:
@@ -442,7 +436,22 @@ def main():
         print(f"\n=== Evaluating method: {method_name} ===")
         method_config = merge_config(dict(config), method_override)
 
-        env = CloseRangeTrackingEnv(method_config)
+        # Validate merged method config (cross-component + tp sub-config)
+        try:
+            validate_full_config(method_config, on_unknown="warn")
+        except ValueError as exc:
+            print(f"  WARNING: Method config validation failed: {exc}")
+
+        try:
+            env = CloseRangeTrackingEnv(method_config)
+        except RuntimeError as exc:
+            msg = f"Environment creation failed for method '{method_name}': {exc}"
+            if args.allow_random_policy:
+                print(f"  WARNING: {msg}, skipping method")
+                continue
+            else:
+                print(f"  ERROR: {msg}. Use --allow-random-policy to skip methods with initialization failures.")
+                sys.exit(1)
         print(f"  Environment backend: {env._backend}")
 
         sample_obs = env.reset(seed=0)
@@ -457,7 +466,13 @@ def main():
         if method_ckpt is not None:
             ckpt_path = method_ckpt
             if not os.path.exists(ckpt_path):
-                print(f"  WARNING: Checkpoint not found: {ckpt_path}, using random policy")
+                msg = f"Checkpoint not found for method '{method_name}': {ckpt_path}"
+                if args.allow_random_policy:
+                    print(f"  WARNING: {msg}, using random policy")
+                else:
+                    print(f"  ERROR: {msg}. Use --allow-random-policy to fall back to random policy.")
+                    env.close()
+                    sys.exit(1)
             else:
                 agent.load(ckpt_path)
                 print(f"  Loaded checkpoint from {ckpt_path}")

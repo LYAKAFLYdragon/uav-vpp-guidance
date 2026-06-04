@@ -90,6 +90,56 @@ methods:
       d_vert_range: [-500.0, 500.0]
       smoothing_alpha: 0.3
 
+  lstm_frozen:
+    name: lstm_frozen
+    trajectory_prediction:
+      enabled: true
+      predictor_type: lstm
+      strict_predictor_init: true
+      checkpoint_strict: true
+      checkpoint_path: outputs/experiments/vpp_ppo_lstm/checkpoints/best.pt
+      freeze_predictor_during_rl: true
+      prediction:
+        lookahead_time_s: 1.0
+        output_mode: absolute_position
+        fallback_mode: constant_velocity
+      history:
+        history_len: 5
+        padding_mode: repeat_first
+    virtual_point:
+      anchor_mode: predicted_target
+      return_info: true
+      action_dim: 3
+      d_long_range: [-1500.0, 1500.0]
+      d_lat_range: [-800.0, 800.0]
+      d_vert_range: [-500.0, 500.0]
+      smoothing_alpha: 0.3
+
+  gru_frozen:
+    name: gru_frozen
+    trajectory_prediction:
+      enabled: true
+      predictor_type: gru
+      strict_predictor_init: true
+      checkpoint_strict: true
+      checkpoint_path: outputs/experiments/vpp_ppo_gru/checkpoints/best.pt
+      freeze_predictor_during_rl: true
+      prediction:
+        lookahead_time_s: 1.0
+        output_mode: absolute_position
+        fallback_mode: constant_velocity
+      history:
+        history_len: 5
+        padding_mode: repeat_first
+    virtual_point:
+      anchor_mode: predicted_target
+      return_info: true
+      action_dim: 3
+      d_long_range: [-1500.0, 1500.0]
+      d_lat_range: [-800.0, 800.0]
+      d_vert_range: [-500.0, 500.0]
+      smoothing_alpha: 0.3
+
 guidance:
   mode: los_rate
   use_gain_adapter: false

@@ -31,12 +31,19 @@ class PredictorHealthAccumulator:
             return
         if info.get("prediction_valid", False):
             self.pred_valid_steps += 1
-        if info.get("fallback", False) or info.get("prediction_fallback_reason") is not None:
+        # Prefer explicit prediction_fallback bool; fall back to legacy signals
+        is_fallback = info.get("prediction_fallback", False)
+        if not is_fallback and (info.get("fallback", False) or info.get("prediction_fallback_reason") is not None):
+            is_fallback = True
+        if is_fallback:
             self.fallback_steps += 1
             phase = info.get("prediction_fallback_phase")
             if phase == "warmup":
                 self.warmup_fallback_steps += 1
             elif phase == "runtime_failure":
+                self.runtime_fallback_steps += 1
+            else:
+                # Any non-warmup fallback (including configured_current_target, unknown, None)
                 self.runtime_fallback_steps += 1
             if phase != "warmup":
                 self.post_warmup_fallback_steps += 1

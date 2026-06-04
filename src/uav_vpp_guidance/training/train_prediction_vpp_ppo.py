@@ -266,6 +266,10 @@ def train_ppo(config, output_dir, smoke=False):
         "step", "num_episodes", "mean_return", "std_return",
         "success_rate", "crash_rate", "out_of_bounds_rate", "timeout_rate",
         "mean_final_range_m", "mean_final_ata_deg",
+        "prediction_valid_rate", "fallback_rate", "post_warmup_fallback_rate",
+        "warmup_fallback_rate", "runtime_fallback_rate",
+        "predictor_init_failed_count", "mean_prediction_error_m",
+        "median_prediction_error_m", "prediction_error_count",
     ]
 
     with open(episode_log_path, "w", newline="", encoding="utf-8") as f_ep:
@@ -435,6 +439,15 @@ def train_ppo(config, output_dir, smoke=False):
                             "timeout_rate": eval_metrics["timeout_rate"],
                             "mean_final_range_m": eval_metrics["mean_final_range_m"],
                             "mean_final_ata_deg": eval_metrics["mean_final_ata_deg"],
+                            "prediction_valid_rate": eval_metrics.get("prediction_valid_rate", np.nan),
+                            "fallback_rate": eval_metrics.get("fallback_rate", np.nan),
+                            "post_warmup_fallback_rate": eval_metrics.get("post_warmup_fallback_rate", np.nan),
+                            "warmup_fallback_rate": eval_metrics.get("warmup_fallback_rate", np.nan),
+                            "runtime_fallback_rate": eval_metrics.get("runtime_fallback_rate", np.nan),
+                            "predictor_init_failed_count": eval_metrics.get("predictor_init_failed_count", 0),
+                            "mean_prediction_error_m": eval_metrics.get("mean_prediction_error_m", np.nan),
+                            "median_prediction_error_m": eval_metrics.get("median_prediction_error_m", np.nan),
+                            "prediction_error_count": eval_metrics.get("prediction_error_count", 0),
                         }
                         eval_writer.writerow(eval_row)
                         f_eval.flush()

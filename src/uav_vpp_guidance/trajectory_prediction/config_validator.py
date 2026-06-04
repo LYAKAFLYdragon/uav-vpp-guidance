@@ -76,6 +76,12 @@ def validate_tp_config(config: dict, on_unknown: Literal["warn", "raise"] = "war
     if ckpt_strict is not None and not isinstance(ckpt_strict, bool):
         errors.append(f"checkpoint_strict must be bool, got {type(ckpt_strict).__name__}")
 
+    # Cross-config check: anchor_mode consistency
+    enabled = config.get("enabled", False)
+    if enabled and predictor_type in ("constant_velocity", "constant_acceleration", "lstm", "gru"):
+        # For full-config validation, caller can pass virtual_point_anchor_mode
+        pass
+
     # Unknown key check
     known_top = {
         "enabled", "predictor_type", "checkpoint_path", "strict_predictor_init",
@@ -93,5 +99,41 @@ def validate_tp_config(config: dict, on_unknown: Literal["warn", "raise"] = "war
 
     if errors:
         raise ValueError("trajectory_prediction config validation failed:\n" + "\n".join(errors))
+
+    return errors
+
+
+def validate_full_config(config: dict, on_unknown: Literal["warn", "raise"] = "warn") -> list:
+    """Validate the full experiment config including cross-component consistency.
+
+    Checks:
+        - trajectory_prediction.enabled=True => virtual_point.anchor_mode == "predicted_target"
+        - trajectory_prediction.enabled=False => virtual_point.anchor_mode == "current_target"
+    """
+    errors = []
+    tp_cfg = config.get("trajectory_prediction", {})
+    vp_cfg = config.get("virtual_point", {})
+    anchor_mode = vp_cfg.get("anchor_mode")
+    tp_enabled = tp_cfg.get("enabled", False)
+
+    if tp_enabled and anchor_mode is not None and anchor_mode != "predicted_target":
+        errors.append(
+            'trajectory_prediction.enabled=True requires virtual_point.anchor_mode="predicted_target", '
+            f"got {anchor_mode!r}"
+        )
+    if not tp_enabled and anchor_mode is not None and anchor_mode != "current_target":
+        errors.append(
+            'trajectory_prediction.enabled=False requires virtual_point.anchor_mode="current_target", '
+            f"got {anchor_mode!r}"
+        )
+
+    # Validate trajectory_prediction sub-config
+    try:
+        validate_tp_config(tp_cfg, on_unknown=on_unknown)
+    except ValueError as exc:
+        errors.append(str(exc))
+
+    if errors:
+        raise ValueError("Full config validation failed:\n" + "\n".join(errors))
 
     return errors

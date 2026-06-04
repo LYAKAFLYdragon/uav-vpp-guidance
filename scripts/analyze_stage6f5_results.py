@@ -32,6 +32,7 @@ import numpy as np
 import pandas as pd
 
 METRICS_SCHEMA_VERSION = "6f.2"
+EXPERIMENT_SUITE_VERSION = "6f.5"
 
 
 def load_cross_seed_summary(path: Path) -> dict:
@@ -42,17 +43,28 @@ def load_cross_seed_summary(path: Path) -> dict:
     return {}
 
 
-def discover_training_seeds(raw_root: Path) -> list:
+def discover_training_seeds(raw_root: Path, expected_seeds: list = None) -> list:
     if not raw_root.exists():
         return []
     seeds = []
+    extras = []
     for d in raw_root.iterdir():
         if d.is_dir() and d.name.startswith("train_seed"):
             if (d / "prediction_metrics.json").exists():
                 try:
-                    seeds.append(int(d.name.replace("train_seed", "")))
+                    seed_val = int(d.name.replace("train_seed", ""))
+                    if expected_seeds is not None and seed_val not in expected_seeds:
+                        extras.append(seed_val)
+                    else:
+                        seeds.append(seed_val)
                 except ValueError:
                     pass
+    if extras:
+        print(f"WARNING: Found unexpected training seed directories: {sorted(extras)}. Ignoring them.")
+    if expected_seeds is not None:
+        missing = [s for s in expected_seeds if s not in seeds]
+        if missing:
+            raise ValueError(f"Missing expected training seeds: {missing}. Found: {sorted(seeds)}")
     return sorted(seeds)
 
 
@@ -229,7 +241,8 @@ def render_analysis_md(
     lines.append("")
     suite = experiment_plan.get("suite", "unknown")
     lines.append(f"**Suite**: {suite}")
-    lines.append(f"**Schema Version**: {METRICS_SCHEMA_VERSION}")
+    lines.append(f"**Metrics Schema Version**: {METRICS_SCHEMA_VERSION}")
+    lines.append(f"**Experiment Suite Version**: {EXPERIMENT_SUITE_VERSION}")
     lines.append("")
 
     # Overall summary
@@ -316,6 +329,10 @@ def main():
                         help="Root directory containing train_seed*/ subdirs and experiment_plan.json")
     parser.add_argument("--output", type=str, required=True,
                         help="Output directory for analysis artifacts")
+    parser.add_argument("--expected-training-seeds", type=int, nargs="+", default=None,
+                        help="Expected training seeds (default: read from experiment_plan.json)")
+    parser.add_argument("--expected-evaluation-seeds", type=int, nargs="+", default=None,
+                        help="Expected evaluation seeds (default: read from experiment_plan.json)")
     args = parser.parse_args()
 
     input_root = Path(args.input)
@@ -329,7 +346,15 @@ def main():
         with open(plan_path, "r", encoding="utf-8") as f:
             experiment_plan = json.load(f)
 
-    seeds = discover_training_seeds(input_root)
+    expected_training_seeds = args.expected_training_seeds
+    if expected_training_seeds is None and experiment_plan.get("training_seeds"):
+        expected_training_seeds = experiment_plan["training_seeds"]
+
+    expected_evaluation_seeds = args.expected_evaluation_seeds
+    if expected_evaluation_seeds is None and experiment_plan.get("evaluation_seeds"):
+        expected_evaluation_seeds = experiment_plan["evaluation_seeds"]
+
+    seeds = discover_training_seeds(input_root, expected_seeds=expected_training_seeds)
     if not seeds:
         print(f"WARNING: No train_seed*/prediction_metrics.json found in {input_root}")
         # Create empty dataframes for dry-run compatibility

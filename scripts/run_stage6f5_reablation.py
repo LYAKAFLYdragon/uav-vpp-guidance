@@ -79,6 +79,7 @@ SUITES = {
 }
 
 METRICS_SCHEMA_VERSION = "6f.2"
+EXPERIMENT_SUITE_VERSION = "6f.5"
 
 
 def get_git_info():
@@ -147,6 +148,7 @@ def write_manifest(
         "validation_mode": validation_mode,
         "allow_random_policy": allow_random_policy,
         "metrics_schema_version": METRICS_SCHEMA_VERSION,
+        "experiment_suite_version": EXPERIMENT_SUITE_VERSION,
     }
     manifest_path = os.path.join(output_dir, "manifest.json")
     with open(manifest_path, "w", encoding="utf-8") as f:
@@ -182,11 +184,50 @@ def write_experiment_plan(
         "allow_random_policy": False,
         "comparison_config": comparison_config,
         "metrics_schema_version": METRICS_SCHEMA_VERSION,
+        "experiment_suite_version": EXPERIMENT_SUITE_VERSION,
     }
     plan_path = os.path.join(output_dir, "experiment_plan.json")
     with open(plan_path, "w", encoding="utf-8") as f:
         json.dump(plan, f, indent=2, ensure_ascii=False)
     print(f"Experiment plan saved to {plan_path}")
+
+
+def validate_experiment_plan_for_resume(plan_path: str, suite_name: str, training_seeds: list, evaluation_seeds: list, episodes_per_scenario: int, comparison_config: str) -> list:
+    """Validate existing experiment_plan.json matches current run parameters."""
+    mismatches = []
+    if not os.path.exists(plan_path):
+        mismatches.append(f"experiment_plan.json not found at {plan_path}")
+        return mismatches
+    with open(plan_path, "r", encoding="utf-8") as f:
+        plan = json.load(f)
+    if plan.get("suite") != suite_name:
+        mismatches.append(f"suite: plan={plan.get('suite')} expected={suite_name}")
+    plan_training_seeds = plan.get("training_seeds", [])
+    if set(plan_training_seeds) != set(training_seeds):
+        mismatches.append(f"training_seeds: plan={plan_training_seeds} expected={training_seeds}")
+    plan_eval_seeds = plan.get("evaluation_seeds", [])
+    if set(plan_eval_seeds) != set(evaluation_seeds):
+        mismatches.append(f"evaluation_seeds: plan={plan_eval_seeds} expected={evaluation_seeds}")
+    if plan.get("episodes_per_scenario") != episodes_per_scenario:
+        mismatches.append(f"episodes_per_scenario: plan={plan.get('episodes_per_scenario')} expected={episodes_per_scenario}")
+    plan_config = plan.get("comparison_config", "")
+    if plan_config and os.path.exists(plan_config) and os.path.exists(comparison_config):
+        if compute_file_hash(plan_config) != compute_file_hash(comparison_config):
+            mismatches.append(f"comparison_config hash mismatch")
+    elif plan.get("comparison_config") != comparison_config:
+        mismatches.append(f"comparison_config: plan={plan.get('comparison_config')} expected={comparison_config}")
+    if plan.get("experiment_suite_version") != EXPERIMENT_SUITE_VERSION:
+        mismatches.append(f"experiment_suite_version: plan={plan.get('experiment_suite_version')} expected={EXPERIMENT_SUITE_VERSION}")
+    return mismatches
+
+
+def backup_stale_outputs(comparison_output_dir: str):
+    """Backup any existing train_seed* directories in the output root."""
+    if not os.path.exists(comparison_output_dir):
+        return
+    for item in os.listdir(comparison_output_dir):
+        if item.startswith("train_seed") and os.path.isdir(os.path.join(comparison_output_dir, item)):
+            backup_existing(os.path.join(comparison_output_dir, item))
 
 
 def run_training(method: dict, seed: int, smoke: bool, dry_run: bool, resume: bool, force_resume: bool = False) -> bool:
@@ -375,6 +416,8 @@ def main():
                         help="Episodes per scenario for formal evaluation (default: 25)")
     parser.add_argument("--force-resume", action="store_true",
                         help="Override manifest mismatch when using --resume")
+    parser.add_argument("--no-stale-backup", action="store_true",
+                        help="Skip backing up stale train_seed* outputs (use with caution)")
     args = parser.parse_args()
 
     suite = SUITES[args.suite]
@@ -402,6 +445,28 @@ def main():
 
     if args.smoke:
         print("[SMOKE] Running reduced training and evaluation.")
+
+    # Validate / backup stale outputs
+    plan_path = os.path.join(comparison_output_dir, "experiment_plan.json")
+    if args.resume and os.path.exists(plan_path):
+        resume_mismatches = validate_experiment_plan_for_resume(
+            plan_path=plan_path,
+            suite_name=args.suite,
+            training_seeds=args.training_seeds,
+            evaluation_seeds=args.evaluation_seeds,
+            episodes_per_scenario=args.episodes_per_scenario,
+            comparison_config=comparison_config,
+        )
+        if resume_mismatches:
+            print(f"WARNING: Resume validation failed for {plan_path}:")
+            for mm in resume_mismatches:
+                print(f"  - {mm}")
+            if not args.force_resume:
+                print("ERROR: Use --force-resume to override, or re-run without --resume.")
+                sys.exit(1)
+            print("  --force-resume set; continuing despite mismatches.")
+    elif not args.dry_run and not args.no_stale_backup and not args.resume:
+        backup_stale_outputs(comparison_output_dir)
 
     formal = not args.smoke
     write_experiment_plan(

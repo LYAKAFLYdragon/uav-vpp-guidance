@@ -34,6 +34,8 @@ from uav_vpp_guidance.utils.config import load_yaml_config, merge_config
 from uav_vpp_guidance.utils.seed import set_seed
 from uav_vpp_guidance.envs.tracking_env import CloseRangeTrackingEnv
 from uav_vpp_guidance.agents.ppo_agent import PPOAgent
+from uav_vpp_guidance.trajectory_prediction._telemetry import PredictorHealthAccumulator
+from uav_vpp_guidance.trajectory_prediction.config_validator import validate_tp_config
 
 
 def load_experiment_config(config_path):
@@ -88,15 +90,7 @@ def evaluate_policy(env, agent, config, num_episodes=10, seeds=None, save_trajec
             final_ata = 0.0
             reason = "timeout"
             trajectory = []
-            # Predictor health counters
-            ep_pred_valid_steps = 0
-            ep_fallback_steps = 0
-            ep_warmup_fallback_steps = 0
-            ep_runtime_fallback_steps = 0
-            ep_post_warmup_fallback_steps = 0
-            ep_predictor_init_failed_steps = 0
-            ep_prediction_errors = []
-            ep_prediction_error_count = 0
+            health = PredictorHealthAccumulator()
 
             for step in range(env.max_steps):
                 obs_vec = obs["observation_vector"]
@@ -143,30 +137,12 @@ def evaluate_policy(env, agent, config, num_episodes=10, seeds=None, save_trajec
                     })
 
                 # Collect predictor health per step
-                if info.get("prediction_enabled", False):
-                    if info.get("prediction_valid", False):
-                        ep_pred_valid_steps += 1
-                    if info.get("fallback", False) or info.get("prediction_fallback_reason") is not None:
-                        ep_fallback_steps += 1
-                        phase = info.get("prediction_fallback_phase")
-                        if phase == "warmup":
-                            ep_warmup_fallback_steps += 1
-                        elif phase == "runtime_failure":
-                            ep_runtime_fallback_steps += 1
-                        if phase != "warmup":
-                            ep_post_warmup_fallback_steps += 1
-                    if info.get("predictor_init_failed", False):
-                        ep_predictor_init_failed_steps += 1
-                    pred_err = info.get("prediction_error_m", np.nan)
-                    if np.isfinite(pred_err):
-                        ep_prediction_errors.append(float(pred_err))
-                        ep_prediction_error_count += 1
+                health.step(info)
 
                 if terminated or truncated:
                     reason = info.get("reason", "unknown")
                     break
 
-            ep_len = max(1, ep_length)
             ep_result = {
                 "episode": ep,
                 "seed": seed,
@@ -181,16 +157,8 @@ def evaluate_policy(env, agent, config, num_episodes=10, seeds=None, save_trajec
                 "is_crash": reason == "crash",
                 "is_timeout": reason == "timeout",
                 "is_out_of_bounds": reason == "out_of_bounds",
-                "prediction_valid_rate": ep_pred_valid_steps / ep_len,
-                "fallback_rate": ep_fallback_steps / ep_len,
-                "post_warmup_fallback_rate": ep_post_warmup_fallback_steps / ep_len,
-                "warmup_fallback_rate": ep_warmup_fallback_steps / ep_len,
-                "runtime_fallback_rate": ep_runtime_fallback_steps / ep_len,
-                "predictor_init_failed_count": ep_predictor_init_failed_steps,
-                "mean_prediction_error_m": float(np.mean(ep_prediction_errors)) if ep_prediction_errors else np.nan,
-                "median_prediction_error_m": float(np.median(ep_prediction_errors)) if ep_prediction_errors else np.nan,
-                "prediction_error_count": ep_prediction_error_count,
             }
+            ep_result.update(health.rates(ep_length))
             seed_episodes.append(ep_result)
             all_episodes.append(ep_result)
 
@@ -264,10 +232,16 @@ def main():
     config["env"]["backend"] = args.backend
     config["env"]["use_jsbsim"] = (args.backend == "jsbsim")
 
-    # Ensure trajectory prediction is disabled
-    if config.get("trajectory_prediction", {}).get("enabled", False):
-        print("WARNING: trajectory_prediction.enabled is True! Forcing to False.")
-        config["trajectory_prediction"]["enabled"] = False
+    # Validate trajectory prediction config if present
+    tp_cfg = config.get("trajectory_prediction", {})
+    if tp_cfg.get("enabled", False):
+        try:
+            validate_tp_config(tp_cfg, on_unknown="warn")
+        except ValueError as exc:
+            print(f"WARNING: trajectory_prediction config invalid: {exc}")
+    else:
+        # no-prediction baseline: keep consistent column structure by inserting NaN defaults
+        pass
 
     exp_name = config.get("experiment", {}).get("name", "no_prediction_vpp_ppo")
     if args.output_dir is not None:

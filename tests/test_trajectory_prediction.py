@@ -377,3 +377,163 @@ class TestConfigValidator:
         from uav_vpp_guidance.trajectory_prediction.config_validator import validate_tp_config
         with pytest.raises(ValueError, match="Unknown"):
             validate_tp_config({"unkown_key_xyz": 123}, on_unknown="raise")
+
+
+# ---------------------------------------------------------------------------
+# Telemetry contract end-to-end test
+# ---------------------------------------------------------------------------
+
+class TestTelemetryContract:
+    def test_env_info_contains_all_telemetry_fields(self, tmpdir):
+        """CloseRangeTrackingEnv with LSTM predictor must output complete telemetry in info."""
+        import os, torch
+        from uav_vpp_guidance.trajectory_prediction.lstm_predictor import LSTMTrajectoryPredictor
+        from uav_vpp_guidance.envs.tracking_env import CloseRangeTrackingEnv
+
+        dummy_model = LSTMTrajectoryPredictor(
+            input_dim=16, hidden_dim=32, num_layers=1, dropout=0.0
+        )
+        ckpt_path = os.path.join(str(tmpdir), "lstm_dummy.pt")
+        torch.save(dummy_model.state_dict(), ckpt_path)
+
+        config = {
+            "experiment": {"name": "test_telemetry", "seed": 42, "output_root": str(tmpdir)},
+            "env": {
+                "use_jsbsim": False,
+                "decision_freq": 5,
+                "sim_freq": 60,
+                "max_high_level_steps": 512,
+                "success_range_m": 900.0,
+                "success_ata_deg": 25.0,
+                "success_hold_time_s": 0.2,
+                "hysteresis_range_m": 950.0,
+                "hysteresis_ata_deg": 30.0,
+                "min_altitude_m": 500.0,
+                "max_altitude_m": 15000.0,
+                "max_range_m": 8000.0,
+                "target_mode": "constant_velocity",
+            },
+            "virtual_point": {
+                "anchor_mode": "predicted_target",
+                "action_dim": 3,
+                "d_long_range": [-1500.0, 1500.0],
+                "d_lat_range": [-800.0, 800.0],
+                "d_vert_range": [-500.0, 500.0],
+                "smoothing_alpha": 0.3,
+            },
+            "trajectory_prediction": {
+                "enabled": True,
+                "predictor_type": "lstm",
+                "checkpoint_path": ckpt_path,
+                "freeze_predictor_during_rl": True,
+                "strict_predictor_init": True,
+                "device": "cpu",
+                "allow_device_fallback": True,
+                "prediction": {
+                    "lookahead_time_s": 1.0,
+                    "output_mode": "relative_displacement",
+                    "fallback_mode": "constant_velocity",
+                },
+                "history": {"history_len": 5, "padding_mode": "repeat_first"},
+                "model": {
+                    "input_dim": 16,
+                    "hidden_dim": 32,
+                    "num_layers": 1,
+                    "dropout": 0.0,
+                    "predict_variance": False,
+                },
+                "integration": {"anchor_mode": "predicted_target"},
+                "normalization": {
+                    "position_scale_m": 1000.0,
+                    "velocity_scale_mps": 300.0,
+                    "overload_scale": 9.0,
+                },
+            },
+            "limits": {
+                "nz_min": -2.0,
+                "nz_max": 7.0,
+                "roll_rate_min": -1.5,
+                "roll_rate_max": 1.5,
+                "throttle_min": 0.0,
+                "throttle_max": 1.0,
+            },
+            "reward": {
+                "w_range": 0.5,
+                "w_angle": 0.8,
+                "w_energy": 0.2,
+                "w_safety": 2.0,
+                "w_saturation": 1.0,
+                "w_smooth": 0.1,
+                "terminal_success": 200.0,
+                "terminal_failure": -200.0,
+                "terminal_crash": -300.0,
+                "min_altitude_m": 500.0,
+            },
+            "guidance": {
+                "mode": "los_rate",
+                "use_gain_adapter": False,
+                "gains": {
+                    "k_los": 1.0,
+                    "k_pos": 0.5,
+                    "k_damp": 0.2,
+                    "k_roll": 1.0,
+                    "k_speed": 0.2,
+                    "alpha_filter": 0.3,
+                },
+            },
+        }
+
+        env = CloseRangeTrackingEnv(config)
+        env.reset(seed=0)
+
+        # Step enough times to fill neural predictor buffer (history_len=5) + allow predictions to mature
+        info = {}
+        for _ in range(20):
+            _, _, terminated, truncated, info = env.step(np.zeros(3))
+            if terminated or truncated:
+                break
+
+        required_fields = [
+            "prediction_enabled",
+            "predictor_init_failed",
+            "predictor_type",
+            "prediction_valid",
+            "prediction_fallback_reason",
+            "prediction_fallback_mode",
+            "prediction_fallback_model",
+            "prediction_fallback_phase",
+            "predicted_target_position",
+            "prediction_error_m",
+            "latest_prediction_error_m",
+            "mean_prediction_error_m",
+            "median_prediction_error_m",
+            "prediction_error_count",
+        ]
+        for field in required_fields:
+            assert field in info, f"Missing telemetry field: {field}"
+
+        assert info["predictor_init_failed"] is False
+        assert info["prediction_enabled"] is True
+        env.close()
+
+    def test_predictor_health_accumulator_rates(self):
+        """PredictorHealthAccumulator must correctly classify warmup vs runtime fallback."""
+        from uav_vpp_guidance.trajectory_prediction._telemetry import PredictorHealthAccumulator
+        health = PredictorHealthAccumulator()
+        # 3 warmup steps
+        for _ in range(3):
+            health.step({"prediction_enabled": True, "prediction_valid": False,
+                         "prediction_fallback_phase": "warmup", "prediction_fallback_reason": "buffer not ready"})
+        # 2 runtime failure steps
+        for _ in range(2):
+            health.step({"prediction_enabled": True, "prediction_valid": False,
+                         "prediction_fallback_phase": "runtime_failure", "prediction_fallback_reason": "model error"})
+        # 5 valid steps
+        for _ in range(5):
+            health.step({"prediction_enabled": True, "prediction_valid": True})
+        rates = health.rates(10)
+        assert rates["prediction_valid_rate"] == 0.5
+        assert rates["fallback_rate"] == 0.5
+        assert rates["warmup_fallback_rate"] == 0.3
+        assert rates["runtime_fallback_rate"] == 0.2
+        assert rates["post_warmup_fallback_rate"] == 0.2

@@ -478,6 +478,14 @@ See `docs/legacy_mapping.md` and `legacy_notes/files_to_migrate.md` for detailed
 - [x] Checkpoint reproducibility manifest (`checkpoint_manifest.example.yaml`) + verify script
 - [x] Trajectory prediction config validator (`validate_tp_config`)
 
+### Phase 6E.3 (Completed): Telemetry Contract Reconciliation + Evaluation Isolation
+- [x] `PredictionErrorTracker` fully wired into `tracking_env.step()` with `latest_prediction_error_m`, `mean_prediction_error_m`, `median_prediction_error_m`, `prediction_error_count`
+- [x] `fallback_phase` / `fallback_mode` / `fallback_model` propagated from adapter → env info → train/eval scripts via shared `PredictorHealthAccumulator`
+- [x] `train_prediction_vpp_ppo.py` uses independent `eval_env` in `run_evaluation()` to prevent training state pollution
+- [x] `median_prediction_error_m` added to episode log, smoke_summary, and evaluation outputs
+- [x] `validate_tp_config` called in training/evaluation entry points (`on_unknown="warn"` for smoke, `"raise"` for full training)
+- [x] Checkpoint manifest example uses placeholder git commit; verify script supports `--allow-placeholder-example`
+
 ### Phase 6F (In Progress): Frozen Neural Predictor PPO Smoke + Full Ablation
 - [x] `train_vpp_ppo_lstm_frozen.yaml` config
 - [x] `train_vpp_ppo_gru_frozen.yaml` config

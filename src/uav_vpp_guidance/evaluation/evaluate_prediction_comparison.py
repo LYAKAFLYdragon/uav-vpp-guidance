@@ -33,10 +33,13 @@ import sys
 
 import numpy as np
 
+import warnings
+
 from uav_vpp_guidance.utils.config import load_yaml_config, merge_config
 from uav_vpp_guidance.utils.seed import set_seed
 from uav_vpp_guidance.envs.tracking_env import CloseRangeTrackingEnv
 from uav_vpp_guidance.agents.ppo_agent import PPOAgent
+from uav_vpp_guidance.trajectory_prediction.config_validator import validate_tp_config
 
 
 def load_experiment_config(config_path):
@@ -252,6 +255,7 @@ def evaluate_single_episode(env, agent, config, scenario=None, seed=0, save_traj
         "predictor_init_failed_count": predictor_init_failed_count,
         "mean_prediction_error_m": float(np.mean(prediction_errors)) if prediction_errors else np.nan,
         "median_prediction_error_m": float(np.median(prediction_errors)) if prediction_errors else np.nan,
+        "prediction_error_count": len(prediction_errors),
         "mean_virtual_point_shift_m": float(np.mean(virtual_point_shifts)) if virtual_point_shifts else np.nan,
         "mean_anchor_shift_m": float(np.mean(anchor_shifts)) if anchor_shifts else np.nan,
         "time_to_first_advantage_s": time_to_first_advantage if time_to_first_advantage is not None else np.nan,
@@ -411,6 +415,14 @@ def main():
         print(f"Scenarios: {args.scenarios}")
     if args.checkpoint:
         print(f"Checkpoint: {args.checkpoint}")
+
+    # Validate trajectory_prediction config if present
+    tp_cfg = config.get("trajectory_prediction", {})
+    if tp_cfg.get("enabled", False):
+        try:
+            validate_tp_config(tp_cfg, on_unknown="warn")
+        except ValueError as exc:
+            print(f"WARNING: trajectory_prediction config invalid: {exc}")
 
     # Parse per-method checkpoint overrides
     method_ckpt_overrides = {}

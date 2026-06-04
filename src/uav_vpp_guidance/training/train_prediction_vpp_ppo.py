@@ -29,6 +29,8 @@ from uav_vpp_guidance.utils.config import load_yaml_config, merge_config
 from uav_vpp_guidance.utils.seed import set_seed
 from uav_vpp_guidance.envs.tracking_env import CloseRangeTrackingEnv
 from uav_vpp_guidance.agents.ppo_agent import PPOAgent
+from uav_vpp_guidance.trajectory_prediction._telemetry import PredictorHealthAccumulator
+from uav_vpp_guidance.trajectory_prediction.config_validator import validate_tp_config
 
 
 def load_experiment_config(config_path):
@@ -52,9 +54,12 @@ def sample_scenario(config, rng):
     return scenarios[name]
 
 
-def run_evaluation(env, agent, config, num_episodes=10, seeds=None, save_trajectories=False, output_dir=None):
+def run_evaluation(agent, config, num_episodes=10, seeds=None, save_trajectories=False, output_dir=None):
     """
-    Evaluate a trained policy.
+    Evaluate a trained policy in a *fresh* environment instance.
+
+    Uses an independent CloseRangeTrackingEnv so that evaluation does not
+    mutate the training env's internal state (step counters, buffers, etc.).
 
     Returns:
         dict: Aggregated evaluation metrics.
@@ -62,13 +67,16 @@ def run_evaluation(env, agent, config, num_episodes=10, seeds=None, save_traject
     if seeds is None:
         seeds = [0, 1, 2]
 
+    # Create a separate eval env to avoid polluting training state
+    eval_env = CloseRangeTrackingEnv(config)
+
     all_episodes = []
     for seed in seeds:
         for ep in range(num_episodes):
             ep_seed = seed * 10000 + ep
             rng = np.random.default_rng(ep_seed)
             scenario = sample_scenario(config, rng)
-            obs = env.reset(scenario=scenario, seed=ep_seed)
+            obs = eval_env.reset(scenario=scenario, seed=ep_seed)
 
             ep_reward = 0.0
             ep_length = 0
@@ -77,14 +85,16 @@ def run_evaluation(env, agent, config, num_episodes=10, seeds=None, save_traject
             final_ata = 0.0
             reason = "timeout"
             trajectory = []
+            health = PredictorHealthAccumulator()
 
-            for step in range(env.max_steps):
+            for step in range(eval_env.max_steps):
                 obs_vec = obs["observation_vector"]
                 action = agent.get_deterministic_action(obs_vec)
 
-                obs, reward, terminated, truncated, info = env.step(action)
+                obs, reward, terminated, truncated, info = eval_env.step(action)
                 ep_reward += reward
                 ep_length += 1
+                health.step(info)
 
                 rel_state = obs.get("relative_state", {})
                 range_m = rel_state.get("range_m", 0.0)
@@ -96,7 +106,7 @@ def run_evaluation(env, agent, config, num_episodes=10, seeds=None, save_traject
                 if save_trajectories and output_dir is not None:
                     trajectory.append({
                         "step": step,
-                        "time": step * env.env_config.get("high_level_dt", 0.2),
+                        "time": step * eval_env.env_config.get("high_level_dt", 0.2),
                         "range_m": range_m,
                         "ata_deg": ata_deg,
                         "reward": reward,
@@ -123,6 +133,7 @@ def run_evaluation(env, agent, config, num_episodes=10, seeds=None, save_traject
                 "is_timeout": reason == "timeout",
                 "is_out_of_bounds": reason == "out_of_bounds",
             }
+            ep_result.update(health.rates(ep_length))
             all_episodes.append(ep_result)
 
             if save_trajectories and output_dir is not None and trajectory:
@@ -134,6 +145,8 @@ def run_evaluation(env, agent, config, num_episodes=10, seeds=None, save_traject
                     writer.writeheader()
                     writer.writerows(trajectory)
 
+    eval_env.close()
+
     returns = [e["return"] for e in all_episodes]
     lengths = [e["length"] for e in all_episodes]
     success_count = sum(1 for e in all_episodes if e["is_success"])
@@ -142,6 +155,10 @@ def run_evaluation(env, agent, config, num_episodes=10, seeds=None, save_traject
     timeout_count = sum(1 for e in all_episodes if e["is_timeout"])
     final_ranges = [e["final_range_m"] for e in all_episodes]
     final_atas = [e["final_ata_deg"] for e in all_episodes]
+
+    def _safe_mean(vals):
+        clean = [v for v in vals if np.isfinite(v)]
+        return float(np.mean(clean)) if clean else np.nan
 
     return {
         "num_episodes": len(all_episodes),
@@ -154,6 +171,14 @@ def run_evaluation(env, agent, config, num_episodes=10, seeds=None, save_traject
         "timeout_rate": timeout_count / max(1, len(all_episodes)),
         "mean_final_range_m": float(np.mean(final_ranges)) if final_ranges else 0.0,
         "mean_final_ata_deg": float(np.mean(final_atas)) if final_atas else 0.0,
+        "prediction_valid_rate": _safe_mean([e["prediction_valid_rate"] for e in all_episodes]),
+        "fallback_rate": _safe_mean([e["fallback_rate"] for e in all_episodes]),
+        "post_warmup_fallback_rate": _safe_mean([e["post_warmup_fallback_rate"] for e in all_episodes]),
+        "warmup_fallback_rate": _safe_mean([e["warmup_fallback_rate"] for e in all_episodes]),
+        "runtime_fallback_rate": _safe_mean([e["runtime_fallback_rate"] for e in all_episodes]),
+        "mean_prediction_error_m": _safe_mean([e["mean_prediction_error_m"] for e in all_episodes]),
+        "median_prediction_error_m": _safe_mean([e["median_prediction_error_m"] for e in all_episodes]),
+        "prediction_error_count": sum(e["prediction_error_count"] for e in all_episodes),
     }
 
 
@@ -230,7 +255,8 @@ def train_ppo(config, output_dir, smoke=False):
         "mean_range", "final_range", "final_ata",
         "prediction_valid_rate", "fallback_rate", "post_warmup_fallback_rate",
         "warmup_fallback_rate", "runtime_fallback_rate",
-        "predictor_init_failed_count", "mean_prediction_error_m", "prediction_error_count",
+        "predictor_init_failed_count", "mean_prediction_error_m",
+        "median_prediction_error_m", "prediction_error_count",
     ]
     update_fieldnames = [
         "step", "update_num", "policy_loss", "value_loss", "entropy",
@@ -266,14 +292,7 @@ def train_ppo(config, output_dir, smoke=False):
                 episode_oob = False
                 episode_timeout = False
                 episode_score_win = False
-                episode_pred_valid_steps = 0
-                episode_fallback_steps = 0
-                episode_warmup_fallback_steps = 0
-                episode_runtime_fallback_steps = 0
-                episode_post_warmup_fallback_steps = 0
-                episode_predictor_init_failed_steps = 0
-                episode_prediction_errors = []
-                episode_prediction_error_count = 0
+                episode_health = PredictorHealthAccumulator()
 
                 start_time = time.time()
                 update_num = 0
@@ -295,25 +314,7 @@ def train_ppo(config, output_dir, smoke=False):
                         episode_ranges.append(range_m)
 
                         # Predictor observability
-                        if info.get("prediction_enabled", False):
-                            if info.get("prediction_valid", False):
-                                episode_pred_valid_steps += 1
-                            if info.get("fallback", False) or info.get("prediction_fallback_reason") is not None:
-                                episode_fallback_steps += 1
-                                phase = info.get("prediction_fallback_phase")
-                                if phase == "warmup":
-                                    episode_warmup_fallback_steps += 1
-                                elif phase == "runtime_failure":
-                                    episode_runtime_fallback_steps += 1
-                                # post_warmup = any fallback after warmup
-                                if phase != "warmup":
-                                    episode_post_warmup_fallback_steps += 1
-                            if info.get("predictor_init_failed", False):
-                                episode_predictor_init_failed_steps += 1
-                            pred_err = info.get("prediction_error_m", np.nan)
-                            if np.isfinite(pred_err):
-                                episode_prediction_errors.append(float(pred_err))
-                                episode_prediction_error_count += 1
+                        episode_health.step(info)
 
                         # Update last stored transition with actual reward and done
                         agent.buffer.rewards[agent.buffer.ptr - 1] = float(reward)
@@ -337,13 +338,7 @@ def train_ppo(config, output_dir, smoke=False):
                             final_ata = float(np.rad2deg(rel_state.get("ata_rad", 0.0)))
                             mean_range = float(np.mean(episode_ranges)) if episode_ranges else 0.0
 
-                            ep_len = max(1, episode_length)
-                            prediction_valid_rate = episode_pred_valid_steps / ep_len
-                            fallback_rate = episode_fallback_steps / ep_len
-                            warmup_fallback_rate = episode_warmup_fallback_steps / ep_len
-                            runtime_fallback_rate = episode_runtime_fallback_steps / ep_len
-                            post_warmup_fallback_rate = episode_post_warmup_fallback_steps / ep_len
-                            mean_pred_error = float(np.mean(episode_prediction_errors)) if episode_prediction_errors else np.nan
+                            health_rates = episode_health.rates(episode_length)
 
                             # Log episode stats immediately
                             ep_row = {
@@ -359,14 +354,15 @@ def train_ppo(config, output_dir, smoke=False):
                                 "mean_range": mean_range,
                                 "final_range": final_range,
                                 "final_ata": final_ata,
-                                "prediction_valid_rate": round(prediction_valid_rate, 4),
-                                "fallback_rate": round(fallback_rate, 4),
-                                "post_warmup_fallback_rate": round(post_warmup_fallback_rate, 4),
-                                "warmup_fallback_rate": round(warmup_fallback_rate, 4),
-                                "runtime_fallback_rate": round(runtime_fallback_rate, 4),
-                                "predictor_init_failed_count": episode_predictor_init_failed_steps,
-                                "mean_prediction_error_m": round(mean_pred_error, 4) if np.isfinite(mean_pred_error) else np.nan,
-                                "prediction_error_count": episode_prediction_error_count,
+                                "prediction_valid_rate": round(health_rates["prediction_valid_rate"], 4),
+                                "fallback_rate": round(health_rates["fallback_rate"], 4),
+                                "post_warmup_fallback_rate": round(health_rates["post_warmup_fallback_rate"], 4),
+                                "warmup_fallback_rate": round(health_rates["warmup_fallback_rate"], 4),
+                                "runtime_fallback_rate": round(health_rates["runtime_fallback_rate"], 4),
+                                "predictor_init_failed_count": health_rates["predictor_init_failed_count"],
+                                "mean_prediction_error_m": round(health_rates["mean_prediction_error_m"], 4) if np.isfinite(health_rates["mean_prediction_error_m"]) else np.nan,
+                                "median_prediction_error_m": round(health_rates["median_prediction_error_m"], 4) if np.isfinite(health_rates["median_prediction_error_m"]) else np.nan,
+                                "prediction_error_count": health_rates["prediction_error_count"],
                             }
                             ep_writer.writerow(ep_row)
                             f_ep.flush()
@@ -375,14 +371,7 @@ def train_ppo(config, output_dir, smoke=False):
                             episode_return = 0.0
                             episode_length = 0
                             episode_ranges = []
-                            episode_pred_valid_steps = 0
-                            episode_fallback_steps = 0
-                            episode_warmup_fallback_steps = 0
-                            episode_runtime_fallback_steps = 0
-                            episode_post_warmup_fallback_steps = 0
-                            episode_predictor_init_failed_steps = 0
-                            episode_prediction_errors = []
-                            episode_prediction_error_count = 0
+                            episode_health.reset()
 
                             # Reset environment
                             scenario = sample_scenario(config, rng)
@@ -429,7 +418,7 @@ def train_ppo(config, output_dir, smoke=False):
                         print(f"\n--- Evaluation at step {global_step} ---")
                         eval_cfg = config.get("evaluation", {})
                         eval_metrics = run_evaluation(
-                            env, agent, config,
+                            agent, config,
                             num_episodes=eval_cfg.get("eval_episodes", 10),
                             seeds=eval_cfg.get("seeds", [0, 1, 2]),
                             save_trajectories=eval_cfg.get("save_trajectories", False),
@@ -480,13 +469,7 @@ def train_ppo(config, output_dir, smoke=False):
 
                 # Flush partial episode metrics if training ended mid-episode
                 if episode_length > 0:
-                    ep_len = max(1, episode_length)
-                    prediction_valid_rate = episode_pred_valid_steps / ep_len
-                    fallback_rate = episode_fallback_steps / ep_len
-                    warmup_fallback_rate = episode_warmup_fallback_steps / ep_len
-                    runtime_fallback_rate = episode_runtime_fallback_steps / ep_len
-                    post_warmup_fallback_rate = episode_post_warmup_fallback_steps / ep_len
-                    mean_pred_error = float(np.mean(episode_prediction_errors)) if episode_prediction_errors else np.nan
+                    health_rates = episode_health.rates(episode_length)
                     ep_row = {
                         "step": global_step,
                         "episode": episode_count + 1,
@@ -500,14 +483,15 @@ def train_ppo(config, output_dir, smoke=False):
                         "mean_range": float(np.mean(episode_ranges)) if episode_ranges else 0.0,
                         "final_range": episode_ranges[-1] if episode_ranges else 0.0,
                         "final_ata": 0.0,
-                        "prediction_valid_rate": round(prediction_valid_rate, 4),
-                        "fallback_rate": round(fallback_rate, 4),
-                        "post_warmup_fallback_rate": round(post_warmup_fallback_rate, 4),
-                        "warmup_fallback_rate": round(warmup_fallback_rate, 4),
-                        "runtime_fallback_rate": round(runtime_fallback_rate, 4),
-                        "predictor_init_failed_count": episode_predictor_init_failed_steps,
-                        "mean_prediction_error_m": round(mean_pred_error, 4) if np.isfinite(mean_pred_error) else np.nan,
-                        "prediction_error_count": episode_prediction_error_count,
+                        "prediction_valid_rate": round(health_rates["prediction_valid_rate"], 4),
+                        "fallback_rate": round(health_rates["fallback_rate"], 4),
+                        "post_warmup_fallback_rate": round(health_rates["post_warmup_fallback_rate"], 4),
+                        "warmup_fallback_rate": round(health_rates["warmup_fallback_rate"], 4),
+                        "runtime_fallback_rate": round(health_rates["runtime_fallback_rate"], 4),
+                        "predictor_init_failed_count": health_rates["predictor_init_failed_count"],
+                        "mean_prediction_error_m": round(health_rates["mean_prediction_error_m"], 4) if np.isfinite(health_rates["mean_prediction_error_m"]) else np.nan,
+                        "median_prediction_error_m": round(health_rates["median_prediction_error_m"], 4) if np.isfinite(health_rates["median_prediction_error_m"]) else np.nan,
+                        "prediction_error_count": health_rates["prediction_error_count"],
                     }
                     ep_writer.writerow(ep_row)
                     f_ep.flush()
@@ -554,6 +538,7 @@ def train_ppo(config, output_dir, smoke=False):
             "runtime_fallback_rate": None,
             "predictor_init_failed": init_failed_count > 0,
             "mean_prediction_error_m": None,
+            "median_prediction_error_m": None,
             "prediction_error_count": 0,
         }
         # Aggregate additional fields from episode log
@@ -561,6 +546,7 @@ def train_ppo(config, output_dir, smoke=False):
         warmup_fallback_rates = []
         runtime_fallback_rates = []
         mean_pred_errors = []
+        median_pred_errors = []
         pred_error_counts = []
         if os.path.exists(episode_log_path):
             try:
@@ -576,6 +562,9 @@ def train_ppo(config, output_dir, smoke=False):
                         val = row.get("mean_prediction_error_m")
                         if val and val.lower() != "nan":
                             mean_pred_errors.append(float(val))
+                        val2 = row.get("median_prediction_error_m")
+                        if val2 and val2.lower() != "nan":
+                            median_pred_errors.append(float(val2))
                         if row.get("prediction_error_count"):
                             pred_error_counts.append(int(row["prediction_error_count"]))
             except Exception:
@@ -588,6 +577,8 @@ def train_ppo(config, output_dir, smoke=False):
             smoke_summary["runtime_fallback_rate"] = float(np.mean(runtime_fallback_rates))
         if mean_pred_errors:
             smoke_summary["mean_prediction_error_m"] = float(np.mean(mean_pred_errors))
+        if median_pred_errors:
+            smoke_summary["median_prediction_error_m"] = float(np.mean(median_pred_errors))
         if pred_error_counts:
             smoke_summary["prediction_error_count"] = int(np.sum(pred_error_counts))
         smoke_path = os.path.join(log_dir, "smoke_summary.json")
@@ -626,11 +617,20 @@ def main():
     print(f"Output dir: {output_dir}")
     print(f"Seed: {seed}")
 
-    tp_enabled = config.get("trajectory_prediction", {}).get("enabled", False)
-    predictor_type = config.get("trajectory_prediction", {}).get("predictor_type", "none")
+    tp_cfg = config.get("trajectory_prediction", {})
+    tp_enabled = tp_cfg.get("enabled", False)
+    predictor_type = tp_cfg.get("predictor_type", "none")
     anchor_mode = config.get("virtual_point", {}).get("anchor_mode", "current_target")
     print(f"Anchor mode: {anchor_mode}")
     print(f"Trajectory prediction: {'enabled' if tp_enabled else 'disabled'} ({predictor_type})")
+
+    if tp_enabled:
+        on_unknown = "warn" if args.smoke else "raise"
+        try:
+            validate_tp_config(tp_cfg, on_unknown=on_unknown)
+        except ValueError as exc:
+            print(f"ERROR: trajectory_prediction config validation failed: {exc}")
+            sys.exit(1)
 
     train_ppo(config, output_dir, smoke=args.smoke)
 

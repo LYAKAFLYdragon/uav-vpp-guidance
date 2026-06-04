@@ -27,7 +27,7 @@ def compute_sha256(path: str) -> str:
     return h.hexdigest()
 
 
-def verify_entry(entry: dict, root_dir: str = ".") -> list:
+def verify_entry(entry: dict, root_dir: str = ".", allow_placeholder: bool = False) -> list:
     errors = []
     ckpt = entry.get("checkpoint_path", "")
     ckpt_full = os.path.join(root_dir, ckpt)
@@ -37,11 +37,18 @@ def verify_entry(entry: dict, root_dir: str = ".") -> list:
         return errors
 
     if not os.path.exists(ckpt_full):
-        errors.append(f"Checkpoint not found: {ckpt_full}")
-        return errors
+        if allow_placeholder:
+            # Example manifest may reference not-yet-trained checkpoints
+            pass
+        else:
+            errors.append(f"Checkpoint not found: {ckpt_full}")
+            return errors
 
     expected_sha = entry.get("sha256", "")
-    if expected_sha and "placeholder" not in expected_sha.lower():
+    is_placeholder = expected_sha and "placeholder" in expected_sha.lower()
+    if is_placeholder and allow_placeholder:
+        pass
+    elif expected_sha and not is_placeholder and os.path.exists(ckpt_full):
         actual_sha = compute_sha256(ckpt_full)
         if actual_sha != expected_sha:
             errors.append(
@@ -49,9 +56,10 @@ def verify_entry(entry: dict, root_dir: str = ".") -> list:
             )
 
     # Heuristic: check file size > 0
-    size = os.path.getsize(ckpt_full)
-    if size == 0:
-        errors.append(f"Checkpoint file is empty: {ckpt_full}")
+    if os.path.exists(ckpt_full):
+        size = os.path.getsize(ckpt_full)
+        if size == 0:
+            errors.append(f"Checkpoint file is empty: {ckpt_full}")
 
     return errors
 
@@ -60,6 +68,8 @@ def main():
     parser = argparse.ArgumentParser(description="Verify checkpoint manifest")
     parser.add_argument("--manifest", type=str, required=True, help="Path to manifest YAML")
     parser.add_argument("--root", type=str, default=".", help="Project root directory")
+    parser.add_argument("--allow-placeholder-example", action="store_true",
+                        help="Allow placeholder sha256 and missing checkpoint files (for example manifest)")
     args = parser.parse_args()
 
     if not os.path.exists(args.manifest):
@@ -79,7 +89,7 @@ def main():
         model_type = entry.get("model_type", "unknown")
         ckpt = entry.get("checkpoint_path", "")
         print(f"\n[{i+1}/{len(entries)}] {model_type}: {ckpt}")
-        errs = verify_entry(entry, root_dir=args.root)
+        errs = verify_entry(entry, root_dir=args.root, allow_placeholder=args.allow_placeholder_example)
         if errs:
             all_ok = False
             for e in errs:

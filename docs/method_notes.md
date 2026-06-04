@@ -223,3 +223,68 @@ Use `validate_tp_config(config, on_unknown="warn")` to catch:
 - Invalid `device` string
 - Non-bool `checkpoint_strict`
 - Unknown keys (warn or raise depending on `on_unknown`)
+
+
+## Stage 6E.3: Telemetry Contract Reconciliation + Evaluation Isolation
+
+### Why Training and Evaluation Must Use Separate Env Instances
+
+`run_evaluation()` previously received the *same* `CloseRangeTrackingEnv` instance used for training. This caused:
+- `env.reset()` during evaluation clearing the training episode's predictor buffer and step counters.
+- `env.step()` during evaluation advancing `current_step`, polluting the training loop's termination logic.
+- Post-evaluation `obs` inconsistency: the training loop resumed with an observation from a different scenario.
+
+Fix: `run_evaluation()` now creates a fresh `eval_env = CloseRangeTrackingEnv(config)` internally and closes it after evaluation. The training env's state is completely isolated.
+
+### Telemetry Contract Between Adapter / Env / Train / Eval
+
+The contract is enforced via `PredictorHealthAccumulator` (shared utility in `_telemetry.py`):
+
+1. **Adapter** (`predictor_adapter.py`):
+   - On success: `info = {fallback: False, fallback_phase: None, fallback_mode: None, fallback_model: None, ...}`
+   - On failure: `info = {fallback: True, fallback_phase: "warmup"|"runtime_failure", fallback_mode: ..., fallback_model: ..., fallback_reason: ...}`
+
+2. **Env** (`tracking_env.py`):
+   - Reads `pred_info` from adapter and maps to `info["prediction_fallback_phase"]`, `info["prediction_fallback_mode"]`, `info["prediction_fallback_model"]`.
+   - Runs `PredictionErrorTracker` to produce `info["latest_prediction_error_m"]`, `info["mean_prediction_error_m"]`, `info["median_prediction_error_m"]`, `info["prediction_error_count"]`.
+   - Backward-compatible alias: `info["prediction_error_m"] = info["latest_prediction_error_m"]`.
+
+3. **Train / Eval scripts**:
+   - Call `health.step(info)` per step.
+   - Call `health.rates(episode_length)` at episode end to get all per-episode rates.
+   - This guarantees train/eval/comparison scripts agree on counter semantics.
+
+### Prediction Error Field Aliases
+
+| Field | Meaning | When Available |
+|-------|---------|----------------|
+| `prediction_error_m` | Alias for `latest_prediction_error_m` | After first matured prediction |
+| `latest_prediction_error_m` | Most recent matured error | After first matured prediction |
+| `mean_prediction_error_m` | Mean over all matured errors in episode | After first matured prediction |
+| `median_prediction_error_m` | Median over all matured errors in episode | After first matured prediction |
+| `prediction_error_count` | Number of matured evaluations | After first matured prediction |
+
+### Required smoke_summary.json Schema
+
+A valid smoke summary MUST contain at minimum:
+```json
+{
+  "predictor_type": "lstm|gru|constant_velocity|...",
+  "prediction_enabled": true|false,
+  "prediction_valid_rate": float,
+  "fallback_rate": float,
+  "post_warmup_fallback_rate": float,
+  "warmup_fallback_rate": float,
+  "runtime_fallback_rate": float,
+  "predictor_init_failed": false,
+  "mean_prediction_error_m": float,
+  "median_prediction_error_m": float,
+  "prediction_error_count": int
+}
+```
+
+### Config Validation Policy for Stage 6F
+
+- **Smoke / legacy**: `on_unknown="warn"` — warns about unknown keys but does not block.
+- **Full training (≥200k steps)**: `on_unknown="raise"` — any unknown key or invalid value raises `ValueError` before training starts, preventing silent misconfiguration.
+- For LSTM/GRU with `strict_predictor_init=true`, `checkpoint_path` must exist or fail fast.

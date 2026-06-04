@@ -12,7 +12,7 @@ entries:
     sha256: "placeholder_replace_with_actual_sha256"
     training_config:
       config_path: config/experiment/train_vpp_ppo_lstm_frozen.yaml
-      git_commit: "36ae1cd"
+      git_commit: "<git_commit_used_to_train_predictor>"
       seed: 0
     dataset:
       generation_command: "python -m uav_vpp_guidance.trajectory_prediction.train_pipeline --config config/trajectory_prediction.yaml"
@@ -36,7 +36,7 @@ entries:
     sha256: "placeholder_replace_with_actual_sha256"
     training_config:
       config_path: config/experiment/train_vpp_ppo_gru_frozen.yaml
-      git_commit: "36ae1cd"
+      git_commit: "<git_commit_used_to_train_predictor>"
       seed: 0
     dataset:
       generation_command: "python -m uav_vpp_guidance.trajectory_prediction.train_pipeline --config config/trajectory_prediction.yaml --model gru"

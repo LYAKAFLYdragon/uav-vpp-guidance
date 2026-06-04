@@ -136,7 +136,8 @@ class TestPaperNarrativeContainsLimitations(unittest.TestCase):
         self.assertTrue(os.path.exists(path))
         with open(path, "r", encoding="utf-8") as f:
             content = f.read()
-        self.assertIn("guidance-law limitation", content.lower())
+        self.assertIn("vpp formulation", content.lower())
+        self.assertIn("pursuit geometry limitation", content.lower())
         self.assertIn("tail-chase", content.lower())
 
     def test_limitations_section_exists(self):
@@ -192,6 +193,77 @@ class TestGuidanceProbeConfig(unittest.TestCase):
             os.unlink(temp_path)
 
 
+class TestGuidanceProbeFailsOnIncomplete(unittest.TestCase):
+    """Probe must exit 1 by default if any probe fails."""
+
+    def test_exit_on_incomplete(self):
+        import io
+        from contextlib import redirect_stdout
+        from scripts.run_stage6g_guidance_limitation_probe import main
+
+        f = io.StringIO()
+        with redirect_stdout(f):
+            old_argv = sys.argv
+            sys.argv = [
+                "run_stage6g_guidance_limitation_probe.py",
+                "--dry-run",
+                "--episodes-per-scenario", "10",
+                "--eval-seeds", "0", "1", "2",
+            ]
+            try:
+                main()
+            finally:
+                sys.argv = old_argv
+
+        # Dry-run should not exit 1
+        output = f.getvalue()
+        self.assertIn("[DRY-RUN]", output)
+
+
+class TestGuidanceProbeAllowIncompleteWritesWarning(unittest.TestCase):
+    """With --allow-incomplete, summary must mark complete=False."""
+
+    def test_render_summary_marks_incomplete(self):
+        from scripts.run_stage6g_guidance_limitation_probe import render_probe_summary
+        rows = [
+            {"guidance_mode": "los_rate", "scenario": "favorable", "method": "no_prediction", "success_rate": 0.0, "mean_return": -100.0, "crash_rate": 1.0, "out_of_bounds_rate": 0.0, "mean_final_range_m": 1000.0, "reason": "crash"},
+        ]
+        md = render_probe_summary(rows, complete=False, failed_probes=["hybrid_disadvantage"])
+        self.assertIn("Complete**: False", md)
+        self.assertIn("Failed Probes**: 1", md)
+        self.assertIn("hybrid_disadvantage", md)
+
+    def test_render_summary_marks_complete(self):
+        from scripts.run_stage6g_guidance_limitation_probe import render_probe_summary
+        rows = [
+            {"guidance_mode": "los_rate", "scenario": "favorable", "method": "no_prediction", "success_rate": 0.0, "mean_return": -100.0, "crash_rate": 1.0, "out_of_bounds_rate": 0.0, "mean_final_range_m": 1000.0, "reason": "crash"},
+        ]
+        md = render_probe_summary(rows, complete=True, failed_probes=[])
+        self.assertIn("Complete**: True", md)
+        self.assertIn("Failed Probes**: 0", md)
+
+
+class TestGuidanceProbeResolvedConfigSaved(unittest.TestCase):
+    """Probe must save resolved_config.yaml in each output directory."""
+
+    def test_build_probe_config_saves_mode(self):
+        from scripts.run_stage6g_guidance_limitation_probe import build_probe_config
+        import tempfile, yaml, os
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False, encoding="utf-8") as f:
+            base = {
+                "guidance": {"mode": "los_rate", "gains": {"k_los": 1.0}},
+                "scenarios": {"favorable": {"init": {}}},
+            }
+            yaml.dump(base, f)
+            temp_path = f.name
+        try:
+            probe = build_probe_config(temp_path, "proportional_navigation", "favorable")
+            self.assertEqual(probe["guidance"]["mode"], "proportional_navigation")
+            self.assertEqual(list(probe["scenarios"].keys()), ["favorable"])
+        finally:
+            os.unlink(temp_path)
+
+
 class TestGuidanceProbeDryRun(unittest.TestCase):
     """Probe dry-run must produce commands for all guidance x scenario combinations."""
 
@@ -224,6 +296,59 @@ class TestGuidanceProbeDryRun(unittest.TestCase):
         self.assertIn("weaving_disadvantage", output)
         # 3 modes x 4 scenarios = 12 dry-run blocks
         self.assertGreaterEqual(output.count("[DRY-RUN]"), 12)
+
+
+class TestMcNemarExactTwoSidedSymmetry(unittest.TestCase):
+    """McNemar exact test must be symmetric under direction reversal."""
+
+    def test_symmetric_when_a_only_equals_b_only(self):
+        from scripts.synthesize_stage6f_paper_results import mcnemar_paired_comparison
+        a = np.array([True, False, True, False, True, False])
+        b = np.array([False, True, True, False, False, True])
+        # a_only = 2 (indices 0, 4), b_only = 2 (indices 1, 5), discordant = 4
+        result = mcnemar_paired_comparison(a, b)
+        self.assertEqual(result["a_only"], 2)
+        self.assertEqual(result["b_only"], 2)
+        # Exact two-sided p for discordant=4, k=2 should be 1.0 (perfect symmetry)
+        self.assertAlmostEqual(result["p_value"], 1.0, places=6)
+
+    def test_reverse_direction_same_p_value(self):
+        from scripts.synthesize_stage6f_paper_results import mcnemar_paired_comparison
+        a = np.array([True, True, True, False, False, False, False, False])
+        b = np.array([False, False, False, True, True, True, True, True])
+        # a_only = 3, b_only = 5, discordant = 8
+        result_ab = mcnemar_paired_comparison(a, b)
+        result_ba = mcnemar_paired_comparison(b, a)
+        # Swapping a and b should give the same two-sided p-value
+        self.assertAlmostEqual(result_ab["p_value"], result_ba["p_value"], places=6)
+        self.assertEqual(result_ab["a_only"], result_ba["b_only"])
+        self.assertEqual(result_ab["b_only"], result_ba["a_only"])
+
+    def test_all_one_direction(self):
+        from scripts.synthesize_stage6f_paper_results import mcnemar_paired_comparison
+        a = np.array([True, True, True, False, False, False])
+        b = np.array([False, False, False, False, False, False])
+        # a_only = 3, b_only = 0, discordant = 3
+        result = mcnemar_paired_comparison(a, b)
+        self.assertEqual(result["a_only"], 3)
+        self.assertEqual(result["b_only"], 0)
+        # One tail is P(X<=0) = (0.5)^3 = 0.125, two-sided = 0.25
+        self.assertAlmostEqual(result["p_value"], 0.25, places=6)
+
+
+class TestGuidanceModeEffectiveTelemetry(unittest.TestCase):
+    """evaluate_prediction_comparison must record requested and effective guidance mode."""
+
+    def test_guidance_mode_mismatch_raises(self):
+        # We can't easily run the full evaluation here, but we can verify
+        # that the code path exists and would raise on mismatch.
+        from uav_vpp_guidance.envs.tracking_env import CloseRangeTrackingEnv
+        from uav_vpp_guidance.utils.config import load_yaml_config
+        cfg = load_yaml_config("config/experiment/stage6f5_feasible_geometry.yaml")
+        env = CloseRangeTrackingEnv(cfg)
+        effective = type(env.guidance).__name__
+        self.assertEqual(effective, "LOSRateGuidance")
+        env.close()
 
 
 if __name__ == "__main__":

@@ -560,6 +560,21 @@ def main():
             training_seed=args.training_seed,
         )
         # Attach policy metadata and seed info
+        # Guidance mode telemetry for auditability
+        requested_guidance_mode = method_config.get("guidance", {}).get("mode", "unknown")
+        effective_guidance_mode = type(env.guidance).__name__
+        guidance_mode_map = {
+            "LOSRateGuidance": "los_rate",
+            "ProportionalNavigationGuidance": "proportional_navigation",
+            "HybridGuidance": "hybrid",
+        }
+        effective_guidance_mode = guidance_mode_map.get(effective_guidance_mode, effective_guidance_mode)
+        if requested_guidance_mode != effective_guidance_mode:
+            raise RuntimeError(
+                f"Guidance mode mismatch for {method_name}: "
+                f"requested={requested_guidance_mode}, effective={effective_guidance_mode}"
+            )
+
         metrics["policy_type"] = policy_type
         metrics["requested_policy_checkpoint_path"] = requested_policy_ckpt
         metrics["loaded_policy_checkpoint_path"] = loaded_policy_ckpt
@@ -572,6 +587,8 @@ def main():
         metrics["method_name"] = method_name
         metrics["training_seed"] = args.training_seed
         metrics["evaluation_seeds"] = args.seeds
+        metrics["requested_guidance_mode"] = requested_guidance_mode
+        metrics["effective_guidance_mode"] = effective_guidance_mode
         all_method_metrics.append(metrics)
 
         env.close()

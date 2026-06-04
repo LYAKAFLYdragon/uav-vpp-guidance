@@ -22,8 +22,6 @@ import json
 import os
 import subprocess
 import sys
-import tempfile
-import time
 from pathlib import Path
 
 import yaml
@@ -74,7 +72,7 @@ def save_yaml(path: str, data: dict):
 
 
 def build_probe_config(base_config_path: str, guidance_mode: str, scenario_name: str) -> dict:
-    """Load base config and override guidance mode + scenario subset."""
+    """Load base config and override guidance mode + scenario subset + methods subset."""
     cfg = load_yaml(base_config_path)
     # Override guidance mode
     if "guidance" not in cfg:
@@ -86,6 +84,11 @@ def build_probe_config(base_config_path: str, guidance_mode: str, scenario_name:
         cfg["scenarios"] = {scenario_name: scenarios[scenario_name]}
     else:
         raise ValueError(f"Scenario {scenario_name} not found in {base_config_path}")
+    # Keep only the two probe methods in config
+    if "methods" in cfg:
+        wanted = {m["name"] for m in METHODS}
+        filtered = {k: v for k, v in cfg["methods"].items() if k in wanted}
+        cfg["methods"] = filtered
     return cfg
 
 
@@ -102,14 +105,18 @@ def run_probe(
     print(f"Probe: guidance={guidance_mode} | scenario={scenario_name}")
     print(f"{'='*60}")
 
-    # Build temporary config
+    # Build resolved config and save to output dir
     probe_cfg = build_probe_config(base_config_path, guidance_mode, scenario_name)
-    with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False, encoding="utf-8") as f:
-        temp_config_path = f.name
-        save_yaml(temp_config_path, probe_cfg)
-
     output_dir = os.path.join(OUTPUT_ROOT, f"{guidance_mode}_{scenario_name}")
     os.makedirs(output_dir, exist_ok=True)
+    resolved_config_path = os.path.join(output_dir, "resolved_config.yaml")
+    save_yaml(resolved_config_path, probe_cfg)
+
+    # Verify resolved config matches requested mode
+    resolved_mode = probe_cfg.get("guidance", {}).get("mode", "unknown")
+    if resolved_mode != guidance_mode:
+        print(f"  ERROR: Resolved config guidance mode mismatch: {resolved_mode} != {guidance_mode}")
+        return False
 
     method_overrides = []
     for method in METHODS:
@@ -122,7 +129,7 @@ def run_probe(
         sys.executable,
         "-m",
         "uav_vpp_guidance.evaluation.evaluate_prediction_comparison",
-        "--config", temp_config_path,
+        "--config", resolved_config_path,
         "--backend", "simple",
         "--training-seed", "0",
         "--episodes-per-scenario", str(episodes_per_scenario),
@@ -136,11 +143,9 @@ def run_probe(
 
     if dry_run:
         print(f"  [DRY-RUN] {' '.join(cmd)}")
-        os.unlink(temp_config_path)
         return True
 
     result = subprocess.run(cmd, cwd=os.getcwd())
-    os.unlink(temp_config_path)
 
     if result.returncode != 0:
         print(f"ERROR: Probe failed for {guidance_mode} / {scenario_name}")
@@ -177,11 +182,16 @@ def aggregate_results() -> dict:
     return rows
 
 
-def render_probe_summary(rows: list) -> str:
+def render_probe_summary(rows: list, complete: bool, failed_probes: list) -> str:
     import pandas as pd
     df = pd.DataFrame(rows)
     lines = []
     lines.append("# Stage 6G Guidance-Law Limitation Probe Summary")
+    lines.append("")
+    lines.append(f"**Complete**: {complete}")
+    lines.append(f"**Failed Probes**: {len(failed_probes)}")
+    if failed_probes:
+        lines.append(f"**Failed List**: {failed_probes}")
     lines.append("")
 
     if df.empty:
@@ -254,6 +264,8 @@ def render_probe_summary(rows: list) -> str:
 def main():
     parser = argparse.ArgumentParser(description="Stage 6G Guidance-Law Limitation Probe")
     parser.add_argument("--dry-run", action="store_true", help="Print commands without executing")
+    parser.add_argument("--allow-incomplete", action="store_true",
+                        help="Allow aggregation even if some probes fail")
     parser.add_argument("--episodes-per-scenario", type=int, default=10)
     parser.add_argument("--eval-seeds", type=int, nargs="+", default=[0, 1, 2])
     args = parser.parse_args()
@@ -266,10 +278,12 @@ def main():
     print(f"Methods: {[m['name'] for m in METHODS]}")
     print(f"Episodes per scenario: {args.episodes_per_scenario}")
     print(f"Eval seeds: {args.eval_seeds}")
+    print(f"Allow incomplete: {args.allow_incomplete}")
     print(f"Dry-run: {args.dry_run}")
     print("")
 
     overall_ok = []
+    failed_probes = []
     for guidance_mode in GUIDANCE_MODES:
         for scenario_name, sc_cfg in SCENARIO_CONFIGS.items():
             ok = run_probe(
@@ -281,17 +295,24 @@ def main():
                 dry_run=args.dry_run,
             )
             overall_ok.append(ok)
+            if not ok:
+                failed_probes.append(f"{guidance_mode}_{scenario_name}")
 
     if args.dry_run:
         print("\n[DRY-RUN] All probe commands prepared.")
         return
 
-    if not all(overall_ok):
-        print("\nSome probes failed. Summary may be incomplete.")
+    complete = all(overall_ok)
+    if not complete:
+        print(f"\nFAILED PROBES ({len(failed_probes)}): {failed_probes}")
+        if not args.allow_incomplete:
+            print("ERROR: Use --allow-incomplete to generate partial summary, or fix failures.")
+            sys.exit(1)
+        print("WARNING: --allow-incomplete set; generating partial summary.")
 
     # Aggregate and save summary
     rows = aggregate_results()
-    summary_md = render_probe_summary(rows)
+    summary_md = render_probe_summary(rows, complete=complete, failed_probes=failed_probes)
     summary_path = os.path.join(OUTPUT_ROOT, "guidance_probe.md")
     with open(summary_path, "w", encoding="utf-8") as f:
         f.write(summary_md)

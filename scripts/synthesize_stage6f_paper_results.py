@@ -289,7 +289,12 @@ def paired_bootstrap_paired_diff_ci(a_values: np.ndarray, b_values: np.ndarray, 
 
 
 def mcnemar_paired_comparison(a_success: np.ndarray, b_success: np.ndarray) -> dict:
-    """McNemar-style exact test for paired binary outcomes."""
+    """McNemar-style exact two-sided test for paired binary outcomes.
+
+    Uses the exact binomial test on discordant pairs.
+    Two-sided p-value = 2 * min(P(X <= min(a_only, b_only)), P(X >= max(a_only, b_only)))
+    For exact symmetry, we compute the smaller tail and double it.
+    """
     if len(a_success) == 0 or len(b_success) == 0 or len(a_success) != len(b_success):
         return {"n": 0, "a_only": 0, "b_only": 0, "both": 0, "neither": 0, "p_value": np.nan}
     a_only = int(np.sum((a_success == True) & (b_success == False)))
@@ -302,10 +307,11 @@ def mcnemar_paired_comparison(a_success: np.ndarray, b_success: np.ndarray) -> d
         p_value = 1.0
     else:
         from math import comb
-        p_value = 0.0
-        for k in range(b_only, discordant + 1):
-            p_value += comb(discordant, k) * (0.5 ** discordant)
-        p_value = min(p_value * 2, 1.0)  # two-sided
+        k = min(a_only, b_only)
+        p_one_tail = 0.0
+        for i in range(0, k + 1):
+            p_one_tail += comb(discordant, i) * (0.5 ** discordant)
+        p_value = min(p_one_tail * 2, 1.0)
     return {
         "n": len(a_success),
         "a_only": a_only,
@@ -464,7 +470,7 @@ def build_claims_checklist(stats: dict, tables: dict) -> list:
     if not dead_table.empty:
         dead_zero = (dead_table["success_rate"] == 0.0).all()
     claims.append({
-        "claim": "Tail-chase and stern-conversion geometries remain unsolved for all methods under the current LOS-rate guidance formulation.",
+        "claim": "Tail-chase and stern-conversion geometries remain unsolved for all methods; the dead zone is a VPP formulation / pursuit geometry limitation, not specific to LOS-rate guidance.",
         "evidence": "All methods show 0% success in favorable/disadvantage/weaving_pursuit/weaving_disadvantage." if dead_zero else "Mixed results in dead-zone scenarios.",
         "statistically_supported": True,
         "practically_meaningful": True,

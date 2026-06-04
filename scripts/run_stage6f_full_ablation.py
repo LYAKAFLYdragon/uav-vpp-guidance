@@ -173,7 +173,7 @@ def write_experiment_plan(
     print(f"Experiment plan saved to {plan_path}")
 
 
-def run_training(method: dict, seed: int, smoke: bool, dry_run: bool, resume: bool) -> bool:
+def run_training(method: dict, seed: int, smoke: bool, dry_run: bool, resume: bool, force_resume: bool = False) -> bool:
     """Run full training for a single method and training seed."""
     name = method["name"]
     config_path = method["train_config"]
@@ -189,6 +189,30 @@ def run_training(method: dict, seed: int, smoke: bool, dry_run: bool, resume: bo
 
     if resume and os.path.exists(checkpoint_path):
         print(f"  Checkpoint already exists: {checkpoint_path}")
+        manifest_path = os.path.join(output_dir, "manifest.json")
+        if os.path.exists(manifest_path):
+            with open(manifest_path, "r", encoding="utf-8") as f:
+                manifest = json.load(f)
+            mismatches = []
+            if manifest.get("method") != name:
+                mismatches.append(f"method: manifest={manifest.get('method')} expected={name}")
+            if manifest.get("seed") != seed:
+                mismatches.append(f"seed: manifest={manifest.get('seed')} expected={seed}")
+            current_config_hash = compute_file_hash(config_path)
+            if manifest.get("config_hash") != current_config_hash:
+                mismatches.append(f"config_hash: manifest={manifest.get('config_hash')} expected={current_config_hash}")
+            if manifest.get("metrics_schema_version") != METRICS_SCHEMA_VERSION:
+                mismatches.append(f"schema_version: manifest={manifest.get('metrics_schema_version')} expected={METRICS_SCHEMA_VERSION}")
+            if mismatches:
+                print(f"  WARNING: Manifest mismatch detected:")
+                for mm in mismatches:
+                    print(f"    - {mm}")
+                if not force_resume:
+                    print(f"  ERROR: Use --force-resume to override, or re-run without --resume.")
+                    return False
+                print(f"  --force-resume set; continuing despite mismatches.")
+        else:
+            print(f"  WARNING: No manifest found at {manifest_path}; cannot validate provenance.")
         print(f"  Skipping training (--resume).")
         return True
 
@@ -324,11 +348,16 @@ def main():
     parser.add_argument("--comparison-output-dir", type=str,
                         default="outputs/tables/stage6f_full_ablation",
                         help="Root output directory for comparison evaluations")
+    parser.add_argument("--seeds", type=int, nargs="+", default=None,
+                        help="Deprecated alias for --training-seeds")
+    parser.add_argument("--force-resume", action="store_true",
+                        help="Override manifest mismatch when using --resume")
     args = parser.parse_args()
 
     # Backward compatibility: --seeds is alias for --training-seeds
-    if "--seeds" in sys.argv:
+    if args.seeds is not None:
         print("WARNING: --seeds is deprecated; use --training-seeds for training seeds and --evaluation-seeds for evaluation seeds.")
+        args.training_seeds = args.seeds
 
     print("Stage 6F Full Ablation Pipeline")
     print(f"Methods: {[m['name'] for m in METHODS]}")
@@ -363,6 +392,7 @@ def main():
                 smoke=args.smoke,
                 dry_run=args.dry_run,
                 resume=args.resume,
+                force_resume=args.force_resume,
             )
             training_successes.append((method["name"], seed, ok))
             if not ok and not args.dry_run:

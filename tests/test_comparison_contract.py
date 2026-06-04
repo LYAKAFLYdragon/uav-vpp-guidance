@@ -944,5 +944,292 @@ class TestTwoLevelAggregation(unittest.TestCase):
         self.assertEqual(len(warnings), 3)
 
 
+class TestDeprecatedSeedsAlias(unittest.TestCase):
+    """--seeds must map to --training-seeds for backward compatibility."""
+
+    def test_seeds_alias_sets_training_seeds(self):
+        import io
+        from contextlib import redirect_stdout
+        from scripts.run_stage6f_full_ablation import main as runner_main
+
+        f = io.StringIO()
+        with redirect_stdout(f):
+            old_argv = sys.argv
+            sys.argv = ["run_stage6f_full_ablation.py", "--dry-run", "--seeds", "5", "6", "--evaluation-seeds", "0"]
+            try:
+                runner_main()
+            finally:
+                sys.argv = old_argv
+
+        output = f.getvalue()
+        self.assertIn("WARNING: --seeds is deprecated", output)
+        self.assertIn("Training seeds: [5, 6]", output)
+
+    def test_seeds_alias_does_not_override_explicit_training_seeds(self):
+        import io
+        from contextlib import redirect_stdout
+        from scripts.run_stage6f_full_ablation import main as runner_main
+
+        f = io.StringIO()
+        with redirect_stdout(f):
+            old_argv = sys.argv
+            # If both are given, --seeds should win (last writer wins in argparse)
+            sys.argv = ["run_stage6f_full_ablation.py", "--dry-run", "--training-seeds", "1", "2", "--seeds", "7", "--evaluation-seeds", "0"]
+            try:
+                runner_main()
+            finally:
+                sys.argv = old_argv
+
+        output = f.getvalue()
+        self.assertIn("WARNING: --seeds is deprecated", output)
+        # seeds=7 should override training-seeds
+        self.assertIn("Training seeds: [7]", output)
+
+
+class TestResumeManifestGuard(unittest.TestCase):
+    """--resume must validate manifest.json before skipping training."""
+
+    def test_resume_fails_on_manifest_mismatch(self):
+        from scripts.run_stage6f_full_ablation import run_training, compute_file_hash
+        import tempfile
+        import os
+
+        with tempfile.TemporaryDirectory() as tmp:
+            method = {
+                "name": "no_prediction",
+                "train_config": "config/experiment/train_no_prediction_vpp_ppo.yaml",
+                "output_dir": os.path.join(tmp, "no_prediction_vpp_ppo"),
+            }
+            output_dir = f"{method['output_dir']}_seed0"
+            os.makedirs(os.path.join(output_dir, "checkpoints"), exist_ok=True)
+            open(os.path.join(output_dir, "checkpoints", "best.pt"), "w").write("fake")
+
+            # Write manifest with wrong config_hash
+            manifest = {
+                "method": "no_prediction",
+                "seed": 0,
+                "config_hash": "wronghash",
+                "metrics_schema_version": "6f.2",
+            }
+            with open(os.path.join(output_dir, "manifest.json"), "w", encoding="utf-8") as f:
+                json.dump(manifest, f)
+
+            ok = run_training(method, 0, smoke=False, dry_run=False, resume=True, force_resume=False)
+            self.assertFalse(ok, "Should fail when manifest config_hash mismatches")
+
+    def test_resume_succeeds_with_force_resume(self):
+        from scripts.run_stage6f_full_ablation import run_training
+        import tempfile
+        import os
+
+        with tempfile.TemporaryDirectory() as tmp:
+            method = {
+                "name": "no_prediction",
+                "train_config": "config/experiment/train_no_prediction_vpp_ppo.yaml",
+                "output_dir": os.path.join(tmp, "no_prediction_vpp_ppo"),
+            }
+            output_dir = f"{method['output_dir']}_seed0"
+            os.makedirs(os.path.join(output_dir, "checkpoints"), exist_ok=True)
+            open(os.path.join(output_dir, "checkpoints", "best.pt"), "w").write("fake")
+
+            manifest = {
+                "method": "no_prediction",
+                "seed": 0,
+                "config_hash": "wronghash",
+                "metrics_schema_version": "6f.2",
+            }
+            with open(os.path.join(output_dir, "manifest.json"), "w", encoding="utf-8") as f:
+                json.dump(manifest, f)
+
+            ok = run_training(method, 0, smoke=False, dry_run=False, resume=True, force_resume=True)
+            self.assertTrue(ok, "Should succeed with --force-resume despite mismatch")
+
+    def test_resume_succeeds_when_manifest_matches(self):
+        from scripts.run_stage6f_full_ablation import run_training, compute_file_hash
+        import tempfile
+        import os
+
+        with tempfile.TemporaryDirectory() as tmp:
+            method = {
+                "name": "no_prediction",
+                "train_config": "config/experiment/train_no_prediction_vpp_ppo.yaml",
+                "output_dir": os.path.join(tmp, "no_prediction_vpp_ppo"),
+            }
+            output_dir = f"{method['output_dir']}_seed0"
+            os.makedirs(os.path.join(output_dir, "checkpoints"), exist_ok=True)
+            open(os.path.join(output_dir, "checkpoints", "best.pt"), "w").write("fake")
+
+            real_hash = compute_file_hash(method["train_config"])
+            manifest = {
+                "method": "no_prediction",
+                "seed": 0,
+                "config_hash": real_hash,
+                "metrics_schema_version": "6f.2",
+            }
+            with open(os.path.join(output_dir, "manifest.json"), "w", encoding="utf-8") as f:
+                json.dump(manifest, f)
+
+            ok = run_training(method, 0, smoke=False, dry_run=False, resume=True, force_resume=False)
+            self.assertTrue(ok, "Should succeed when manifest matches")
+
+    def test_resume_warns_when_manifest_missing(self):
+        from scripts.run_stage6f_full_ablation import run_training
+        import tempfile
+        import os
+
+        with tempfile.TemporaryDirectory() as tmp:
+            method = {
+                "name": "no_prediction",
+                "train_config": "config/experiment/train_no_prediction_vpp_ppo.yaml",
+                "output_dir": os.path.join(tmp, "no_prediction_vpp_ppo"),
+            }
+            output_dir = f"{method['output_dir']}_seed0"
+            os.makedirs(os.path.join(output_dir, "checkpoints"), exist_ok=True)
+            open(os.path.join(output_dir, "checkpoints", "best.pt"), "w").write("fake")
+            # No manifest.json
+
+            ok = run_training(method, 0, smoke=False, dry_run=False, resume=True, force_resume=False)
+            self.assertTrue(ok, "Should succeed but warn when manifest is missing")
+
+
+class TestStage6FDiagnosisReport(unittest.TestCase):
+    """Diagnosis script must produce all expected output artifacts."""
+
+    def test_diagnosis_produces_all_artifacts(self):
+        from scripts.analyze_stage6f_results import (
+            build_method_summary,
+            build_scenario_summary,
+            build_seed_summary,
+            build_failure_cases,
+            compute_cv_ca_diagnosis,
+            render_diagnosis_md,
+        )
+        import tempfile
+
+        cross_data = {
+            "experiment_plan": {
+                "git_commit": "abc123",
+                "branch": "test",
+                "timestamp": "2026-06-01T00:00:00Z",
+            },
+            "methods": [
+                {
+                    "method": "no_prediction",
+                    "num_training_seeds": 3,
+                    "num_episodes_per_training_seed": 300,
+                    "scenario_balance_ok": True,
+                    "invalid_for_paper": False,
+                    "instant_success_rate_mean": 0.2,
+                    "instant_success_rate_std": 0.05,
+                    "instant_success_rate_ci95": 0.06,
+                    "mean_return_mean": -300.0,
+                    "mean_return_std": 50.0,
+                    "mean_final_range_m_mean": 7000.0,
+                    "mean_final_ata_deg_mean": 100.0,
+                    "prediction_valid_rate_mean": 0.0,
+                    "runtime_fallback_rate_mean": 0.0,
+                    "post_warmup_fallback_rate_mean": 0.0,
+                    "mean_env_prediction_error_m_mean": np.nan,
+                    "mean_offline_aligned_error_m_mean": np.nan,
+                    "unknown_fallback_phase_count_mean": 0.0,
+                    "missing_fallback_phase_count_mean": 0.0,
+                    "configured_current_target_fallback_count_mean": 0.0,
+                    "predictor_init_failed_count_mean": 0.0,
+                },
+                {
+                    "method": "cv_prediction",
+                    "num_training_seeds": 3,
+                    "num_episodes_per_training_seed": 300,
+                    "scenario_balance_ok": True,
+                    "invalid_for_paper": False,
+                    "instant_success_rate_mean": 0.1,
+                    "instant_success_rate_std": 0.03,
+                    "instant_success_rate_ci95": 0.04,
+                    "mean_return_mean": -350.0,
+                    "mean_return_std": 40.0,
+                    "mean_final_range_m_mean": 7500.0,
+                    "mean_final_ata_deg_mean": 110.0,
+                    "prediction_valid_rate_mean": 1.0,
+                    "runtime_fallback_rate_mean": 0.0,
+                    "post_warmup_fallback_rate_mean": 0.0,
+                    "mean_env_prediction_error_m_mean": 40.5,
+                    "mean_offline_aligned_error_m_mean": 2500.0,
+                    "unknown_fallback_phase_count_mean": 0.0,
+                    "missing_fallback_phase_count_mean": 0.0,
+                    "configured_current_target_fallback_count_mean": 0.0,
+                    "predictor_init_failed_count_mean": 0.0,
+                },
+            ],
+            "per_training_seed": {
+                "no_prediction": [
+                    {"training_seed": 0, "num_episodes": 300, "instant_success_rate": 0.25, "mean_return": -280.0, "mean_final_range_m": 6800.0, "mean_final_ata_deg": 95.0, "prediction_valid_rate": 0.0, "runtime_fallback_rate": 0.0},
+                    {"training_seed": 1, "num_episodes": 300, "instant_success_rate": 0.15, "mean_return": -320.0, "mean_final_range_m": 7200.0, "mean_final_ata_deg": 105.0, "prediction_valid_rate": 0.0, "runtime_fallback_rate": 0.0},
+                    {"training_seed": 2, "num_episodes": 300, "instant_success_rate": 0.20, "mean_return": -300.0, "mean_final_range_m": 7000.0, "mean_final_ata_deg": 100.0, "prediction_valid_rate": 0.0, "runtime_fallback_rate": 0.0},
+                ],
+                "cv_prediction": [
+                    {"training_seed": 0, "num_episodes": 300, "instant_success_rate": 0.12, "mean_return": -340.0, "mean_final_range_m": 7400.0, "mean_final_ata_deg": 108.0, "prediction_valid_rate": 1.0, "runtime_fallback_rate": 0.0},
+                    {"training_seed": 1, "num_episodes": 300, "instant_success_rate": 0.08, "mean_return": -360.0, "mean_final_range_m": 7600.0, "mean_final_ata_deg": 112.0, "prediction_valid_rate": 1.0, "runtime_fallback_rate": 0.0},
+                    {"training_seed": 2, "num_episodes": 300, "instant_success_rate": 0.10, "mean_return": -350.0, "mean_final_range_m": 7500.0, "mean_final_ata_deg": 110.0, "prediction_valid_rate": 1.0, "runtime_fallback_rate": 0.0},
+                ],
+            },
+        }
+
+        method_summary = build_method_summary(cross_data)
+        self.assertEqual(len(method_summary), 2)
+        self.assertIn("cv_prediction", method_summary["method"].tolist())
+
+        scenario_summary = build_scenario_summary(cross_data, Path("/nonexistent"))
+        # Empty because raw_root doesn't exist
+        self.assertTrue(scenario_summary.empty)
+
+        seed_summary = build_seed_summary(cross_data)
+        self.assertEqual(len(seed_summary), 6)  # 2 methods × 3 seeds
+        cv_seeds = seed_summary[seed_summary["method"] == "cv_prediction"]
+        self.assertEqual(len(cv_seeds), 3)
+
+        failure_cases = build_failure_cases(cross_data, Path("/nonexistent"), top_n=5)
+        self.assertTrue(failure_cases.empty)
+
+        cv_ca_diag = compute_cv_ca_diagnosis(method_summary)
+        self.assertEqual(len(cv_ca_diag), 1)
+        self.assertTrue(cv_ca_diag[0]["cv_ca_underperform_baseline"])
+
+        md = render_diagnosis_md(method_summary, scenario_summary, seed_summary, failure_cases, cv_ca_diag, cross_data)
+        self.assertIn("Overall Method Ranking", md)
+        self.assertIn("cv_prediction success rate", md)
+        self.assertIn("Audit Summary", md)
+
+    def test_seed_outlier_detection(self):
+        from scripts.analyze_stage6f_results import build_seed_summary
+
+        cross_data = {
+            "per_training_seed": {
+                "method_a": [
+                    {"training_seed": 0, "num_episodes": 100, "instant_success_rate": 0.80, "mean_return": 10.0},
+                    {"training_seed": 1, "num_episodes": 100, "instant_success_rate": 0.80, "mean_return": 10.0},
+                    {"training_seed": 2, "num_episodes": 100, "instant_success_rate": 0.80, "mean_return": 10.0},
+                    {"training_seed": 3, "num_episodes": 100, "instant_success_rate": 0.80, "mean_return": 10.0},
+                    {"training_seed": 4, "num_episodes": 100, "instant_success_rate": 0.80, "mean_return": 10.0},
+                    {"training_seed": 5, "num_episodes": 100, "instant_success_rate": 0.05, "mean_return": -50.0},
+                ],
+            },
+        }
+        seed_summary = build_seed_summary(cross_data)
+        outliers = seed_summary[seed_summary["seed_outlier"] == True]
+        self.assertEqual(len(outliers), 1)
+        self.assertEqual(outliers.iloc[0]["training_seed"], 5)
+
+    def test_cv_ca_diagnosis_no_baseline(self):
+        from scripts.analyze_stage6f_results import compute_cv_ca_diagnosis
+        import pandas as pd
+
+        df = pd.DataFrame([
+            {"method": "cv_prediction", "success_rate_mean": 0.5},
+            {"method": "ca_prediction", "success_rate_mean": 0.6},
+        ])
+        diag = compute_cv_ca_diagnosis(df)
+        self.assertEqual(len(diag), 0)
+
+
 if __name__ == "__main__":
     unittest.main()

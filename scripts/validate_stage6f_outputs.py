@@ -119,8 +119,14 @@ def validate(args) -> bool:
                 all_ok &= ok(f"{prefix} invalid_for_paper is False")
 
             # scenario_balance_ok
-            if m.get("scenario_balance_ok") is not True:
-                all_ok &= fail(f"{prefix} scenario_balance_ok != True")
+            balance_ok = m.get("scenario_balance_ok")
+            if balance_ok is not True:
+                # Fallback: compute from actual episode counts
+                counts = m.get("scenario_episode_count", {})
+                if counts and len(set(counts.values())) == 1:
+                    all_ok &= ok(f"{prefix} scenario_balance_ok inferred True (counts: {counts})")
+                else:
+                    all_ok &= fail(f"{prefix} scenario_balance_ok != True and counts unbalanced: {counts}")
             else:
                 all_ok &= ok(f"{prefix} scenario_balance_ok == True")
 

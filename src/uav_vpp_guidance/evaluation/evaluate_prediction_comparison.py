@@ -394,7 +394,9 @@ def evaluate_method(env, agent, config, method_name, num_episodes=10, seeds=None
     # Scenario balance check
     if scenarios:
         scenario_counts = {name: len(eps) for name, eps in per_scenario_episodes.items()}
-        expected = num_episodes // len(scenarios)
+        # num_episodes is per eval seed; account for total across all seeds
+        total_episodes = num_episodes * len(seeds)
+        expected = total_episodes // len(scenarios)
         balance_ok = all(c == expected for c in scenario_counts.values())
         overall["scenario_episode_count"] = scenario_counts
         overall["episodes_per_scenario"] = expected

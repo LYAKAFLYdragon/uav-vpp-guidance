@@ -226,7 +226,7 @@ def build_seed_stability(df: pd.DataFrame) -> pd.DataFrame:
                 "n_episodes": len(tdf),
                 "success_rate": tdf["is_success"].mean(),
                 "mean_return": tdf["return"].mean(),
-                "std_return": tdf["return"].std(ddof=0),
+                "std_return": tdf["return"].std(ddof=1),
                 "min_return": tdf["return"].min(),
                 "max_return": tdf["return"].max(),
                 "n_success": tdf["is_success"].sum(),
@@ -248,13 +248,13 @@ def compute_stability_metrics(seed_df: pd.DataFrame) -> pd.DataFrame:
             "method": method,
             "n_seeds": len(mdf),
             "success_rate_mean": np.mean(srs),
-            "success_rate_std": np.std(srs, ddof=0),
+            "success_rate_std": np.std(srs, ddof=1),
             "success_rate_min": np.min(srs),
             "success_rate_max": np.max(srs),
             "success_rate_range": np.max(srs) - np.min(srs),
             "mean_return_mean": np.mean(rets),
-            "mean_return_std": np.std(rets, ddof=0),
-            "coefficient_of_variation": np.std(rets, ddof=0) / abs(np.mean(rets)) if np.mean(rets) != 0 else np.nan,
+            "mean_return_std": np.std(rets, ddof=1),
+            "coefficient_of_variation": np.std(rets, ddof=1) / abs(np.mean(rets)) if np.mean(rets) != 0 else np.nan,
         })
     return pd.DataFrame(rows)
 
@@ -401,7 +401,7 @@ def render_paper_tables_tex(cross_data: dict, scenario_df: pd.DataFrame, seed_df
     lines = []
     lines.append(r"\begin{table}[ht]")
     lines.append(r"\centering")
-    lines.append(r"\caption{Stage 6F Ablation: Overall Method Comparison (Cross-Seed Mean$\pm$Std)}")
+    lines.append(r"\caption{Stage 6F Ablation: Overall Method Comparison (Cross-Seed Mean$\pm$Sample Std, $n{=}3$ training seeds)}")
     lines.append(r"\label{tab:stage6f_overall}")
     lines.append(r"\begin{tabular}{lcccc}")
     lines.append(r"\hline")
@@ -427,7 +427,7 @@ def render_paper_tables_tex(cross_data: dict, scenario_df: pd.DataFrame, seed_df
 
     lines.append(r"\begin{table}[ht]")
     lines.append(r"\centering")
-    lines.append(r"\caption{Stage 6F Ablation: Per-Scenario Success Rate (\%)}")
+    lines.append(r"\caption{Stage 6F Ablation: Per-Scenario Success Rate (\%) ($n{=}3$ training seeds)}")
     lines.append(r"\label{tab:stage6f_scenario}")
     scenarios = sorted(scenario_df["scenario"].unique())
     methods = sorted(scenario_df["method"].unique())
@@ -449,7 +449,7 @@ def render_paper_tables_tex(cross_data: dict, scenario_df: pd.DataFrame, seed_df
 
     lines.append(r"\begin{table}[ht]")
     lines.append(r"\centering")
-    lines.append(r"\caption{Stage 6F Ablation: Cross-Seed Stability Metrics}")
+    lines.append(r"\caption{Stage 6F Ablation: Cross-Seed Stability Metrics ($n{=}3$ training seeds)}")
     lines.append(r"\label{tab:stage6f_stability}")
     lines.append(r"\begin{tabular}{lcccc}")
     lines.append(r"\hline")

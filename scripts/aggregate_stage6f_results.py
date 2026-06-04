@@ -111,7 +111,7 @@ def _safe_mean(vals):
 
 def _safe_std(vals):
     clean = [v for v in vals if np.isfinite(v)]
-    return float(np.std(clean, ddof=0)) if clean else np.nan
+    return float(np.std(clean, ddof=1)) if len(clean) >= 2 else np.nan
 
 
 def _safe_ci95(vals):

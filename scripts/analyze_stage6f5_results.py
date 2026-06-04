@@ -175,8 +175,20 @@ def build_neural_vs_classical(df: pd.DataFrame) -> pd.DataFrame:
 def build_target_accel_correlation(df: pd.DataFrame, experiment_plan: dict) -> pd.DataFrame:
     """For maneuvering target, correlate target acceleration RMS with prediction error."""
     # target_acceleration_rms is in scenario metadata, not episode data
-    # We approximate by grouping scenario-level metadata with episode-level errors
-    scenarios_meta = experiment_plan.get("scenarios", {})
+    # Experiment plan may store scenarios as list of names; read full metadata from config if needed
+    scenarios_meta = {}
+    raw_scenarios = experiment_plan.get("scenarios", {})
+    if isinstance(raw_scenarios, dict):
+        scenarios_meta = raw_scenarios
+    elif isinstance(raw_scenarios, list):
+        # Try to load from comparison config
+        config_path = experiment_plan.get("comparison_config", "")
+        if config_path and os.path.exists(config_path):
+            import yaml
+            with open(config_path, "r", encoding="utf-8") as f:
+                cfg = yaml.safe_load(f)
+            scenarios_meta = cfg.get("scenarios", {})
+
     if not scenarios_meta:
         return pd.DataFrame()
 
@@ -184,7 +196,11 @@ def build_target_accel_correlation(df: pd.DataFrame, experiment_plan: dict) -> p
     for method in sorted(df["method"].unique()):
         for scenario in sorted(df["scenario"].unique()):
             sdf = df[(df["method"] == method) & (df["scenario"] == scenario)]
-            sc_meta = scenarios_meta.get(scenario, {}).get("metadata", {})
+            sc_data = scenarios_meta.get(scenario, {})
+            if isinstance(sc_data, dict):
+                sc_meta = sc_data.get("metadata", {})
+            else:
+                sc_meta = {}
             target_accel_rms = sc_meta.get("target_acceleration_rms")
             if len(sdf) == 0 or target_accel_rms is None:
                 continue

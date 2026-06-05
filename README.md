@@ -50,7 +50,8 @@ experiments/                ← Git-ignored: weights, checkpoints, results
 | 6E | ✅ Complete | 4 geometry scenarios, 1.1M steps, high capture rate, low error | `scripts/run_stage6e_paper_safe.py` |
 | 6F | ✅ Complete | Paper-safe benchmark, McNemar exact, cross-seed, synthesis table | `scripts/run_stage6f_paper_safe_benchmark.py` |
 | 6G.1 | ✅ Complete | Guidance-law limitation probe (hardened, smoke passed, full run completed, 720 episodes, 12 cells, McNemar exact) | `scripts/run_stage6g_guidance_limitation_probe.py` |
-| 6G.2 | 📝 Planned | Failure root-cause attribution: oracle VPP, rule-based policy, terminal protection ablation, geometry feasibility | `docs/stage6g2_failure_root_cause_plan.md` |
+| 6G.2 | ✅ Complete | Failure root-cause attribution: validator, McNemar pairing, telemetry schema, analyzer scripts | `scripts/validate_stage6g_probe_outputs.py` |
+| 6G.3 | 🧪 In progress | Oracle & terminal-protection feasibility gate: smoke probes, new anchor modes, telemetry contract | `docs/stage6g3_oracle_terminal_feasibility_gate.md` |
 | 6H | ⏳ Not started | Bilevel gain optimization | — |
 | 6I | ⏳ Not started | Alternating bilevel training | — |
 | 7A | ⏳ Not started | JSBSim/F-16 validation | — |

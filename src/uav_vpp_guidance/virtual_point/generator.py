@@ -63,7 +63,7 @@ class VirtualPointGenerator:
                 前 3 维映射为 [Δx, Δy, Δz]（纵向、横向、垂直偏移）。
             own_state (dict): Own aircraft state.
             target_state (dict): Target aircraft state.
-            anchor_mode (str): 锚点模式，"current_target" / "constant_velocity" / "predicted_target"。
+            anchor_mode (str): 锚点模式，"current_target" / "constant_velocity" / "predicted_target" / "oracle_future_position" / "rule_based_pursuit"。
             lookahead_time_s (float): 前瞻时间（用于 constant_velocity 模式）。
             trajectory_predictor_adapter (TrajectoryPredictorAdapter, optional):
                 轨迹预测适配器（用于 predicted_target 模式，向后兼容）。
@@ -101,6 +101,29 @@ class VirtualPointGenerator:
             prediction_info = {
                 "anchor_mode": "constant_velocity",
                 "lookahead_time_s": lookahead_time_s,
+            }
+
+        elif anchor_mode == "oracle_future_position":
+            # Oracle: perfect future-position prediction using true velocity
+            anchor_pos = self._constant_velocity_prediction(
+                target_state, lookahead_time_s
+            )
+            pred_var = None
+            prediction_info = {
+                "anchor_mode": "oracle_future_position",
+                "lookahead_time_s": lookahead_time_s,
+            }
+
+        elif anchor_mode == "rule_based_pursuit":
+            # Rule-based pure pursuit with fixed lead distance
+            lead_distance_m = getattr(self, "lead_distance_m", 500.0)
+            anchor_pos = self._rule_based_pursuit_anchor(
+                own_state, target_state, lead_distance_m
+            )
+            pred_var = None
+            prediction_info = {
+                "anchor_mode": "rule_based_pursuit",
+                "lead_distance_m": lead_distance_m,
             }
 
         elif anchor_mode == "predicted_target":
@@ -149,6 +172,38 @@ class VirtualPointGenerator:
         """将 [-1, 1] 映射到 [min, max]。"""
         min_val, max_val = range_limits
         return 0.5 * (val + 1.0) * (max_val - min_val) + min_val
+
+    @staticmethod
+    def _get_own_position(own_state):
+        """从 own_state 中提取位置。支持 position_neu, position_m, position。"""
+        pos = own_state.get("position_neu")
+        if pos is None:
+            pos = own_state.get("position_m")
+        if pos is None:
+            pos = own_state.get("position")
+        if pos is None:
+            raise ValueError(
+                "own_state must contain 'position_neu', 'position_m', or 'position'"
+            )
+        arr = np.asarray(pos, dtype=np.float64)
+        if arr.shape != (3,):
+            raise ValueError(
+                f"Own position must be a 3-element vector, got shape {arr.shape}"
+            )
+        return arr
+
+    @staticmethod
+    def _rule_based_pursuit_anchor(own_state, target_state, lead_distance_m: float):
+        """纯追踪法则：沿 LOS 方向在目标前方放置固定距离的锚点。"""
+        own_pos = VirtualPointGenerator._get_own_position(own_state)
+        target_pos = VirtualPointGenerator._get_target_position(target_state)
+        los = target_pos - own_pos
+        distance = np.linalg.norm(los)
+        if distance < 1e-6:
+            los_unit = np.array([1.0, 0.0, 0.0], dtype=np.float64)
+        else:
+            los_unit = los / distance
+        return target_pos + los_unit * lead_distance_m
 
     @staticmethod
     def _get_target_position(target_state):

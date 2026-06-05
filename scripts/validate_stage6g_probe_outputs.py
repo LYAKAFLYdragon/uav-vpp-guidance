@@ -213,7 +213,7 @@ def validate(args) -> Tuple[bool, Dict]:
                     effective or inferred_guidance or "",
                     ep.get("training_seed", -1),
                     ep.get("evaluation_seed", ep.get("eval_seed", -1)),
-                    ep.get("episode_index", -1),
+                    ep.get("episode_index", ep.get("episode_seed", -1)),
                 )
                 if ep_key in episode_key_set:
                     duplicate_keys.append(f"{cell_name}: {ep_key}")

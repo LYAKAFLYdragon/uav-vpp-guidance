@@ -486,17 +486,35 @@ def save_pairwise_mcnemar(output_dir: Path, rows: List[dict]) -> None:
         # Write empty CSV with headers so artifact contract is always satisfied
         with open(path, "w", newline="", encoding="utf-8") as f:
             writer = csv.DictWriter(f, fieldnames=[
-                "scenario", "method", "comparison", "n_pairs",
-                "a_success_b_failure", "a_failure_b_success", "mcnemar_exact_p",
-                "a_success_rate", "b_success_rate",
+                "a_failure_b_success", "a_success_b_failure", "a_success_rate",
+                "b_success_rate", "comparison", "grouping_key", "grouping_value",
+                "mcnemar_exact_p", "n_pairs", "scenario",
             ])
             writer.writeheader()
         print(f"Pairwise McNemar (empty) saved to {path}")
         return
+
+    # Normalize rows: unify method vs guidance_mode comparisons under common schema
+    normalized = []
+    all_keys = set()
+    for r in rows:
+        nr = dict(r)
+        if "method" in nr and "guidance_mode" not in nr:
+            nr["grouping_key"] = "method"
+            nr["grouping_value"] = nr.pop("method")
+        elif "guidance_mode" in nr and "method" not in nr:
+            nr["grouping_key"] = "guidance_mode"
+            nr["grouping_value"] = nr.pop("guidance_mode")
+        else:
+            nr["grouping_key"] = ""
+            nr["grouping_value"] = ""
+        normalized.append(nr)
+        all_keys.update(nr.keys())
+
     with open(path, "w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=rows[0].keys())
+        writer = csv.DictWriter(f, fieldnames=sorted(all_keys))
         writer.writeheader()
-        writer.writerows(rows)
+        writer.writerows(normalized)
     print(f"Pairwise McNemar saved to {path}")
 
 

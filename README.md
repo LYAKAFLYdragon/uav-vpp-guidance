@@ -53,7 +53,9 @@ experiments/                ← Git-ignored: weights, checkpoints, results
 | 6G.2 | ✅ Complete | Failure root-cause attribution: validator, McNemar pairing, telemetry schema, analyzer scripts | `scripts/validate_stage6g_probe_outputs.py` |
 | 6G.3 | ✅ Complete | Oracle & terminal-protection feasibility gate: smoke probes, new anchor modes, telemetry contract | `docs/stage6g3_oracle_terminal_feasibility_gate.md` |
 | 6G.4 | ✅ Complete | Oracle smoke execution & per-step telemetry completion; root-cause decomposition | `docs/stage6g4_oracle_smoke_and_telemetry.md` |
-| 6G.5A | 🧪 In progress | Wide geometry sweep smoke runner; baseline geometric feasibility probe | `scripts/run_stage6g5_geometry_smoke.py` |
+| 6G.5A | ✅ Complete | Wide geometry sweep smoke runner; 40 points, 120 episodes, 0% success, no feasible candidates | `scripts/run_stage6g5_geometry_smoke.py` |
+| 6G.5B | ✅ Complete | Direct-track / pure-PN probe; 40 points, 360 episodes, pure PN found 9 successes on 3 geometries | `scripts/run_stage6g5b_direct_track_smoke.py` |
+| 6G.5C | 🧪 In Progress | Pure-PN candidate confirmation & VPP failure diagnosis; cross-seed stability for pt20/pt29/pt38 | `scripts/run_stage6g5c_candidate_confirmation.py` |
 | 6H | ⏳ Blocked | Bilevel gain optimization — gated until feasible geometry identified | — |
 | 6I | ⏳ Blocked | Alternating bilevel training — gated until 6H unblocked | — |
 | 7A | ⏳ Pending | JSBSim/F-16 validation — pending feasible subset confirmation from 6G.5A | — |
@@ -111,24 +113,6 @@ python scripts/run_stage6g_guidance_limitation_probe.py --output-dir outputs/sta
 **Time**: ~4–5 hours (720 episodes total: 2 methods × 3 guidance × 4 scenarios × 10 episodes × 3 seeds).
 
 **Expected output**: Same artifacts as smoke, with full statistical power.
-
-### 5.5 Run existing Stage 6F benchmark
-
-```bash
-python scripts/run_stage6f_paper_safe_benchmark.py
-```
-
-### 5.6 Synthesize Stage 6F results
-
-```bash
-python scripts/synthesize_stage6f.py
-```
-
-### 5.7 Train a policy (example)
-
-```bash
-python scripts/train_paper_safe.py
-```
 
 ### 5.5 Validate Stage 6G probe outputs
 
@@ -402,4 +386,4 @@ uav-vpp-guidance/
 
 ---
 
-*Last updated: 2026-06-05 | Stage 6G.5A in progress | Bilevel blocked | Wide geometry smoke pending real execution*
+*Last updated: 2026-06-05 | Active research branch: `feature/los-guidance-deep-hardening` | Stage 6G.5C in progress | Bilevel blocked until gain-sensitive feasible geometry confirmed*

@@ -1,8 +1,8 @@
 # Stage 6G.5B: Direct-Track / Pure-PN Probe Plan
 
-> **Status**: Design-only. Not implemented until Stage 6G.5A geometry smoke identifies a feasible region.
+> **Status**: In Progress. Required because Stage 6G.5A found **no feasible VPP geometry candidates** (40 points, 120 episodes, 0% success).
 >
-> **Blocked by**: `bilevel_unblocked_candidate == true` from `run_stage6g5_geometry_smoke.py`.
+> **Rationale**: If direct-track / pure-PN also fails, the limitation is likely in the guidance/control stack or simple backend envelope, not the VPP abstraction itself.
 
 ---
 
@@ -14,13 +14,15 @@ Current architecture:
 Policy → VPP offset (Δp) → Guidance law (LOS-rate/PN/hybrid) → Command (Nz, roll rate, throttle)
 ```
 
-If the VPP abstraction itself is harmful in tail-chase (e.g., adds unnecessary offset noise, destabilizes the terminal phase), a **pure guidance-law** approach might succeed where the VPP policy fails:
+Stage 6G.5A showed 0% success across 40 sampled wide-geometry points. The open question is:
 
-- **Pure PN**: Track target directly with proportional navigation, no VPP offset.
-- **Pure pursuit**: Always point velocity vector at the instantaneous target position.
-- **Pure LOS-rate**: No virtual point; use line-of-sight geometry directly.
+> **Is the failure caused by the VPP abstraction (policy offset noise, destabilization), or by the underlying guidance-law / backend envelope?**
 
-This probe evaluates whether bypassing the VPP layer rescues tail-chase feasibility.
+To answer this, we bypass the VPP layer entirely and test pure guidance-law variants:
+
+- **Direct target LOS-rate**: No VPP offset; virtual point = target current position.
+- **Pure PN without VPP**: Direct proportional navigation on target position.
+- **Pure pursuit**: Velocity vector always points at target.
 
 ---
 
@@ -54,12 +56,14 @@ else:
 
 ### 2.3 Runner Extension
 
-`scripts/run_stage6g5_geometry_smoke.py` (or a dedicated `run_stage6g5b_direct_track_smoke.py`) should:
+`scripts/run_stage6g5b_direct_track_smoke.py` should:
 
-1. Load the same geometry grid as Stage 6G.5A.
-2. Set `guidance.direct_track_mode: true` in the resolved config.
-3. Run the same sampled points with `no_prediction` method.
-4. Compare success rates: VPP vs. direct-track.
+1. Load the same geometry points as Stage 6G.5A (from CSV/JSON or regenerate with same seed).
+2. Run multiple variants side-by-side:
+   - `vpp_trained_ppo`: Baseline with checkpoint.
+   - `direct_target_los`: `direct_track_mode=true` + LOS-rate.
+   - `pure_pn_no_vpp`: `direct_track_mode=true` + PN.
+3. Compare success rates and output `direct_track_vs_vpp_comparison.csv`.
 
 ---
 
@@ -68,12 +72,20 @@ else:
 | Outcome | Interpretation | Next Step |
 |---|---|---|
 | Direct-track success > 20%, VPP success ≈ 0% | VPP abstraction is harmful in tail-chase | Redesign VPP policy or bypass in tail-chase geometries |
-| Direct-track success ≈ VPP success ≈ 0% | Limitation is geometric/guidance-law, not VPP-specific | Proceed to wider geometry sweep or guidance redesign (§5 of Stage 6G.5 plan) |
-| Direct-track success < VPP success | VPP abstraction helps; gains or geometry are the real bottleneck | Focus on bilevel gain optimization once feasible geometry is found |
+| Direct-track success ≈ VPP success ≈ 0% | Limitation is geometric/guidance-law or backend envelope, not VPP-specific | Proceed to wider geometry sweep (Stage 6G.5A-Wide+) or guidance architecture redesign |
+| Direct-track success < VPP success | VPP abstraction helps; failure is elsewhere | Investigate geometry boundary or backend constraints |
 
 ---
 
-## 4. Caveats
+## 4. Paper-Safe Wording
+
+- ✅ "No feasible candidates were found in the tested Stage 6G.5A 40-point geometry sample."
+- ❌ Do **not** claim "tail-chase is universally infeasible" — the sample is a subset of 324 combinations.
+- ✅ "Direct-track probe Stage 6G.5B evaluates whether the VPP layer contributes to the observed failure."
+
+---
+
+## 5. Caveats
 
 - `direct_track_mode` is only meaningful when `anchor_mode == current_target`. If prediction is enabled, "direct track" on a predicted anchor is still a form of VPP.
 - This probe does **not** replace a proper PN guidance-law implementation; it is a minimal bypass to test the VPP hypothesis.
@@ -81,9 +93,9 @@ else:
 
 ---
 
-## 5. Acceptance Criteria for Implementation
+## 6. Acceptance Criteria for Implementation
 
-- [ ] `guidance.direct_track_mode` config parsed without error.
-- [ ] `tracking_env.py` respects the flag and skips policy action → offset conversion.
-- [ ] Smoke runner produces `direct_track_vs_vpp_comparison.csv`.
-- [ ] Unit test confirms `direct_track_mode=true` yields `virtual_point == target_position` (within tolerance).
+- [x] `guidance.direct_track_mode` config parsed without error.
+- [x] `tracking_env.py` respects the flag and skips policy action → offset conversion.
+- [x] Smoke runner produces `direct_track_vs_vpp_comparison.csv`.
+- [x] Unit test confirms `direct_track_mode=true` yields `virtual_point == target_position` (within tolerance).

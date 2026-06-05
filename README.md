@@ -167,25 +167,25 @@ python scripts/analyze_stage6g_failure_root_cause.py \
 
 **Outputs**: `failure_taxonomy_by_cell.csv`, `command_saturation_by_cell.csv`, `terminal_phase_trace_summary.csv`, `stage6g_failure_root_cause.md`
 
-### 5.7 Run existing Stage 6F benchmark
+### 5.8 Run existing Stage 6F benchmark
 
 ```bash
 python scripts/run_stage6f_paper_safe_benchmark.py
 ```
 
-### 5.8 Synthesize Stage 6F results
+### 5.9 Synthesize Stage 6F results
 
 ```bash
 python scripts/synthesize_stage6f.py
 ```
 
-### 5.9 Train a policy (example)
+### 5.10 Train a policy (example)
 
 ```bash
 python scripts/train_paper_safe.py
 ```
 
-### 5.10 Run tests
+### 5.11 Run tests
 
 ```bash
 python -m pytest tests/ -v

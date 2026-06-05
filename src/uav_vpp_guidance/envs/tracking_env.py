@@ -417,16 +417,26 @@ class CloseRangeTrackingEnv:
             prediction_info["prediction_fallback"] = True
             anchor_mode = "current_target"
 
-        vp_result = self.virtual_point_generator.action_to_virtual_point(
-            action,
-            own_state,
-            target_for_vp,
-            anchor_mode=anchor_mode,
-            trajectory_predictor_adapter=None,  # generator 不直接调用 predictor
-            predicted_target_position=predicted_target_pos,
-            return_info=True,
-        )
-        virtual_point, vp_info = vp_result
+        # Direct-track mode: bypass VPP offset, track anchor directly
+        if self.config.get("guidance", {}).get("direct_track_mode", False):
+            virtual_point = {"position_neu": np.asarray(target_for_vp["position_neu"], dtype=np.float64)}
+            vp_info = {
+                "virtual_point": virtual_point["position_neu"],
+                "anchor_mode": anchor_mode,
+                "direct_track_mode": True,
+                "action_applied": False,
+            }
+        else:
+            vp_result = self.virtual_point_generator.action_to_virtual_point(
+                action,
+                own_state,
+                target_for_vp,
+                anchor_mode=anchor_mode,
+                trajectory_predictor_adapter=None,  # generator 不直接调用 predictor
+                predicted_target_position=predicted_target_pos,
+                return_info=True,
+            )
+            virtual_point, vp_info = vp_result
 
         # 5. Guidance command generation
         raw_command = self.guidance.compute_command(

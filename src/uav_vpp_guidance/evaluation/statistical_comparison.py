@@ -6,12 +6,14 @@ Provides:
 - bootstrap confidence interval
 - paired delta by scenario/seed
 - Pairwise comparisons: no_prediction vs cv_prediction, etc.
+- McNemar exact two-sided p-value
 
-No external dependencies beyond numpy.
+No external dependencies beyond numpy and scipy.
 """
 
 import numpy as np
 from typing import List, Dict, Tuple, Optional
+from scipy.stats import binomtest
 
 
 def mean_std(values: List[float]) -> Tuple[float, float]:
@@ -164,3 +166,19 @@ def compare_per_scenario(method_metrics: Dict[str, Dict],
         }
 
     return {"scenario": scenario_name, "metric": metric_key, "values": results, "deltas": deltas}
+
+
+def mcnemar_exact_pvalue(b: int, c: int) -> float:
+    """Exact two-sided McNemar p-value for discordant paired outcomes.
+
+    b: A success, B failure
+    c: A failure, B success
+    """
+    b = int(b)
+    c = int(c)
+    if b < 0 or c < 0:
+        raise ValueError("b and c must be non-negative")
+    n = b + c
+    if n == 0:
+        return 1.0
+    return float(binomtest(k=min(b, c), n=n, p=0.5, alternative="two-sided").pvalue)

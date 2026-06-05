@@ -356,6 +356,13 @@ class CloseRangeTrackingEnv:
         if target_pos is None:
             target_pos = target_state.get("position_neu")
         target_for_vp = {"position_neu": np.asarray(target_pos)}
+        # 传递速度信息，供 constant_velocity / oracle / rule_based 模式使用
+        target_vel = target_state.get("velocity_vector_mps")
+        if target_vel is not None:
+            target_for_vp["velocity_vector_mps"] = np.asarray(target_vel, dtype=np.float64)
+        target_vel_alt = target_state.get("velocity")
+        if target_vel_alt is not None:
+            target_for_vp["velocity"] = np.asarray(target_vel_alt, dtype=np.float64)
 
         # 若 anchor_mode=predicted_target，获取预测位置
         predicted_target_pos = None
@@ -401,8 +408,8 @@ class CloseRangeTrackingEnv:
                 prediction_info["prediction_fallback_reason"] = f"predict_failed: {exc}"
                 prediction_info["prediction_fallback_phase"] = "runtime_failure"
 
-        # 若预测不可用，回退到 current_target
-        if predicted_target_pos is None:
+        # 若预测不可用，回退到 current_target（仅对 predicted_target 模式）
+        if anchor_mode == "predicted_target" and predicted_target_pos is None:
             predicted_target_pos = target_for_vp["position_neu"]
             if prediction_info["prediction_fallback_reason"] is None:
                 prediction_info["prediction_fallback_reason"] = "fallback_to_current_target"

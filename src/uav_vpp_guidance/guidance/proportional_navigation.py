@@ -50,6 +50,7 @@ class ProportionalNavigationGuidance:
         self.dt = float(params.get("dt", 0.2))
         if self.dt <= 0.0:
             raise ValueError(f"dt must be positive, got {self.dt}")
+        self.mode = "proportional_navigation"
 
         # Internal state for LOS rate filtering
         self._prev_los_vec: Optional[np.ndarray] = None

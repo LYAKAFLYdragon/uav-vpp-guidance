@@ -107,6 +107,7 @@ class LOSRateGuidance:
             raise ValueError(
                 f"speed_error_scale_mps must be positive, got {self.speed_error_scale_mps}"
             )
+        self.mode = "los_rate"
         if self.epsilon <= 0.0:
             raise ValueError(f"epsilon must be positive, got {self.epsilon}")
         if self.capture_radius_m < 0.0:

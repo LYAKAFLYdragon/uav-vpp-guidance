@@ -39,7 +39,8 @@ class HybridGuidance:
         self.params = config.get("params", {})
         self.gains = config.get("gains", {})
 
-        self.mode = str(self.params.get("hybrid_mode", "range")).lower()
+        self.hybrid_mode = str(self.params.get("hybrid_mode", "range")).lower()
+        self.mode = "hybrid"
         self.range_threshold_m = float(self.params.get("range_threshold_m", 3000.0))
         self.blend_transition_m = float(self.params.get("blend_transition_m", 1000.0))
         self.energy_speed_threshold_mps = float(
@@ -101,21 +102,21 @@ class HybridGuidance:
         range_m = float(np.linalg.norm(rel_pos))
 
         # Determine active law / blend factor
-        if self.mode == "range":
+        if self.hybrid_mode == "range":
             cmd = self._range_mode(
                 own_state, target_state, virtual_point, gains, range_m
             )
-        elif self.mode == "energy":
+        elif self.hybrid_mode == "energy":
             cmd = self._energy_mode(
                 own_state, target_state, virtual_point, gains, range_m
             )
-        elif self.mode == "blended":
+        elif self.hybrid_mode == "blended":
             cmd = self._blended_mode(
                 own_state, target_state, virtual_point, gains, range_m
             )
         else:
             logger.warning(
-                f"Unknown hybrid_mode '{self.mode}', falling back to range mode"
+                f"Unknown hybrid_mode '{self.hybrid_mode}', falling back to range mode"
             )
             cmd = self._range_mode(
                 own_state, target_state, virtual_point, gains, range_m

@@ -562,13 +562,17 @@ def main():
         # Attach policy metadata and seed info
         # Guidance mode telemetry for auditability
         requested_guidance_mode = method_config.get("guidance", {}).get("mode", "unknown")
-        effective_guidance_mode = type(env.guidance).__name__
-        guidance_mode_map = {
-            "LOSRateGuidance": "los_rate",
-            "ProportionalNavigationGuidance": "proportional_navigation",
-            "HybridGuidance": "hybrid",
-        }
-        effective_guidance_mode = guidance_mode_map.get(effective_guidance_mode, effective_guidance_mode)
+        # Prefer the new .mode attribute on guidance law instances (added in Stage 6G.1)
+        effective_guidance_mode = getattr(env.guidance, "mode", None)
+        if effective_guidance_mode is None:
+            # Fallback to class-name mapping for backward compatibility
+            effective_guidance_mode = type(env.guidance).__name__
+            guidance_mode_map = {
+                "LOSRateGuidance": "los_rate",
+                "ProportionalNavigationGuidance": "proportional_navigation",
+                "HybridGuidance": "hybrid",
+            }
+            effective_guidance_mode = guidance_mode_map.get(effective_guidance_mode, effective_guidance_mode)
         if requested_guidance_mode != effective_guidance_mode:
             raise RuntimeError(
                 f"Guidance mode mismatch for {method_name}: "

@@ -209,6 +209,7 @@ def evaluate_single_episode(env, agent, config, scenario=None, seed=0, save_traj
             own_s = info.get("own_state", {})
             target_s = info.get("target_state", {})
             own_pos = own_s.get("position_m", own_s.get("position_neu", np.full(3, np.nan)))
+            own_vel = own_s.get("velocity_vector_mps", own_s.get("velocity_ned", np.full(3, np.nan)))
             target_pos_arr = target_s.get("position_m", target_s.get("position_neu", np.full(3, np.nan)))
             target_vel = target_s.get("velocity_vector_mps", target_s.get("velocity_ned", np.full(3, np.nan)))
             pred_target = info.get("predicted_target_position", [np.nan, np.nan, np.nan])
@@ -244,13 +245,21 @@ def evaluate_single_episode(env, agent, config, scenario=None, seed=0, save_traj
                 "ego_x": float(own_pos[0]) if len(own_pos) > 0 else np.nan,
                 "ego_y": float(own_pos[1]) if len(own_pos) > 1 else np.nan,
                 "ego_z": float(own_pos[2]) if len(own_pos) > 2 else np.nan,
+                "altitude_m": float(own_pos[2]) if len(own_pos) > 2 else np.nan,
                 "range_m": range_m,
                 "ata_deg": ata_deg,
                 "aspect_deg": aa_deg,
                 "los_rate": rel_state.get("range_rate_mps", np.nan),
+                "relative_speed_mps": float(np.linalg.norm(np.asarray(own_vel))) if own_vel is not None else np.nan,
                 "nz_cmd": info.get("nz_cmd", np.nan),
                 "roll_rate_cmd": info.get("roll_rate_cmd", np.nan),
                 "throttle_cmd": info.get("throttle_cmd", np.nan),
+                "raw_nz_cmd": raw_cmd.get("nz_cmd", np.nan) if raw_cmd else np.nan,
+                "raw_roll_rate_cmd": raw_cmd.get("roll_rate_cmd", np.nan) if raw_cmd else np.nan,
+                "raw_throttle_cmd": raw_cmd.get("throttle_cmd", np.nan) if raw_cmd else np.nan,
+                "nz_saturated": int(abs(info.get("nz_cmd", np.nan) - raw_cmd.get("nz_cmd", np.nan)) > 1e-6) if raw_cmd and np.isfinite(info.get("nz_cmd", np.nan)) else 0,
+                "roll_rate_saturated": int(abs(info.get("roll_rate_cmd", np.nan) - raw_cmd.get("roll_rate_cmd", np.nan)) > 1e-6) if raw_cmd and np.isfinite(info.get("roll_rate_cmd", np.nan)) else 0,
+                "throttle_saturated": int(abs(info.get("throttle_cmd", np.nan) - raw_cmd.get("throttle_cmd", np.nan)) > 1e-6) if raw_cmd and np.isfinite(info.get("throttle_cmd", np.nan)) else 0,
                 "ego_score": info.get("ego_score", np.nan),
                 "target_score": info.get("target_score", np.nan),
                 "done": int(terminated or truncated),
@@ -277,7 +286,12 @@ def evaluate_single_episode(env, agent, config, scenario=None, seed=0, save_traj
     # Compute command saturation / modification statistics
     def _sat_rate(filtered_vals, raw_vals, vmin, vmax, eps=1e-6):
         if not filtered_vals:
-            return np.nan
+            return {
+                "saturation_rate": np.nan,
+                "modification_rate": np.nan,
+                "max": np.nan,
+                "mean": np.nan,
+            }
         # Saturation: filtered value is at the limit boundary
         boundary_count = sum(1 for v in filtered_vals if v <= vmin + eps or v >= vmax - eps)
         # Modification: raw vs filtered differ (captures clip, energy comp, terminal protection, coordination)

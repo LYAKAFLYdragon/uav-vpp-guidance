@@ -236,6 +236,33 @@ def run_terminal_control_ablation(config_path, output_dir, episodes=2, seeds=Non
         print(f"\n-- Variant: {variant_name} --")
         variant_config = merge_config(copy.deepcopy(config), copy.deepcopy(override))
         env, agent, method_config = _make_env_agent(variant_config, method_name, method_override)
+
+        # Extract effective runtime flags for verification
+        effective_flags = {
+            "guidance_mode": getattr(env.guidance, "mode", type(env.guidance).__name__),
+            "capture_radius_m": getattr(env.guidance, "capture_radius_m", None),
+            "enable_internal_clip": getattr(env.guidance, "enable_internal_clip", None),
+            "enable_internal_filter": getattr(env.guidance, "enable_internal_filter", None),
+        }
+        if env.command_post_processor is not None:
+            cpp = env.command_post_processor
+            effective_flags.update({
+                "post_process_enabled": True,
+                "enable_terminal_protection": getattr(cpp, "enable_terminal_protection", None),
+                "terminal_range_m": getattr(cpp, "terminal_range_m", None),
+                "enable_energy_compensation": getattr(cpp, "enable_energy_comp", None),
+                "enable_load_roll_coordination": getattr(cpp, "enable_load_roll_coord", None),
+                "nz_min": getattr(cpp, "nz_min", None),
+                "nz_max": getattr(cpp, "nz_max", None),
+                "roll_rate_min": getattr(cpp, "roll_rate_min", None),
+                "roll_rate_max": getattr(cpp, "roll_rate_max", None),
+            })
+        else:
+            effective_flags["post_process_enabled"] = False
+
+        # Log flags for auditability
+        print(f"  Effective flags: {effective_flags}")
+
         metrics = evaluate_method(
             env, agent, method_config, method_name,
             num_episodes=episodes, seeds=seeds,
@@ -248,6 +275,10 @@ def run_terminal_control_ablation(config_path, output_dir, episodes=2, seeds=Non
             "overall_oob_rate": metrics.get("out_of_bounds_rate"),
             "overall_timeout_rate": metrics.get("timeout_rate"),
             "per_scenario": _method_success_breakdown(metrics),
+            "requested_config": {
+                "guidance": variant_config.get("guidance", {}),
+            },
+            "effective_runtime_flags": effective_flags,
         }
         print(f"  Success: {metrics['success_rate']:.2%} | Crash: {metrics['crash_rate']:.2%} | OOB: {metrics['out_of_bounds_rate']:.2%}")
 

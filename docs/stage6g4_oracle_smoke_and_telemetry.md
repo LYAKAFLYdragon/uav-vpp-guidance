@@ -46,7 +46,7 @@ python scripts/run_stage6g4_smoke_probes.py --oracle --episodes 2 --seeds 0
 - Crash rate: **50.00%**
 - OOB rate: **50.00%**
 
-**Interpretation**: Perfect prediction (oracle_future_position using true target velocity) does **not** improve success. The tail-chase failure is **not a prediction error bottleneck**.
+**Interpretation**: True-velocity CV oracle (`target_pos + target_vel * lookahead_time_s`) did **not** improve success in the tested scenarios. This suggests that **prediction error under constant-velocity assumption is not the sole bottleneck**. Note: this is a one-step true-velocity oracle, not a full future-ground-truth oracle; if the target maneuvers, positional error still exists.
 
 ---
 
@@ -62,7 +62,7 @@ python scripts/run_stage6g4_smoke_probes.py --rule-based --episodes 2 --seeds 0
 - rule_based_pursuit_500m: Success **0.00%**, Crash **50.00%**
 - rule_based_pursuit_1000m: Success **0.00%**, Crash **50.00%**
 
-**Interpretation**: Pure geometric pursuit with fixed lead distance also fails. The learned PPO policy is **not the root cause**. The failure lies deeper in the guidance/control chain or in geometric infeasibility.
+**Interpretation**: Pure geometric pursuit with fixed lead distance also yielded 0% success. This suggests the **learned PPO policy is unlikely to be the sole root cause** in the tested scenarios. The failure lies deeper in the guidance/control chain or in geometric infeasibility, pending wider sweep verification.
 
 ---
 
@@ -83,7 +83,7 @@ python scripts/run_stage6g4_smoke_probes.py --terminal --episodes 2 --seeds 0
 | no_energy_comp | 0.00% | 50.00% | 50.00% |
 | no_load_roll_coord | 0.00% | 50.00% | 50.00% |
 
-**Interpretation**: Disabling capture radius, terminal protection, post-processing, energy compensation, or load-roll coordination does **not** improve success. The failure is **not caused by any of these protective/limiting mechanisms**.
+**Interpretation**: Disabling capture radius, terminal protection, post-processing, energy compensation, or load-roll coordination did **not** improve success in the tested smoke scenarios. This suggests these mechanisms are **unlikely to be the primary cause** of failure. **Caveat**: effective-runtime-flag verification is now implemented; all variants show numerically different runtime flags, so "no change in outcome" is a valid observation, not a config-drift artifact.
 
 ---
 
@@ -102,9 +102,9 @@ python scripts/run_stage6g4_smoke_probes.py --geometry --episodes 1 --seeds 0
 
 **Result**: **0/16 success** (all crash).
 
-**Interpretation**: Within the tested parameter envelope, **no combination of initial conditions produced success**. This suggests either:
-1. The feasible region lies outside the tested grid (e.g., ego_speed >> target_speed, or very large initial range)
-2. Tail-chase is fundamentally infeasible under the current guidance architecture (LOS-rate + VPP + simple backend)
+**Interpretation**: Within the tested small parameter envelope (range 400–800 m, ego_speed 150–200 m/s, target_speed 150–180 m/s, altitude_diff −500–0 m), **no combination produced success**. This supports:
+1. The feasible region, if it exists, likely lies **outside this small envelope**.
+2. Tail-chase may be fundamentally infeasible under the current guidance architecture, but this claim requires a **wider sweep** before it can be considered paper-safe.
 
 ---
 
@@ -112,13 +112,13 @@ python scripts/run_stage6g4_smoke_probes.py --geometry --episodes 1 --seeds 0
 
 | Hypothesis | Evidence | Verdict |
 |---|---|---|
-| Prediction error causes failure | Oracle (perfect prediction) still 0% | ❌ Rejected |
+| Prediction error causes failure | True-velocity CV oracle still 0% | ⚠️ Not rescued by CV oracle; full future-ground-truth oracle pending |
 | Learned policy causes failure | Rule-based (bypass policy) still 0% | ❌ Rejected |
-| Terminal protection causes failure | All ablation variants still 0% | ❌ Rejected |
-| Geometry infeasible in tested grid | 16/16 grid points crash | ⚠️ Partially supported |
+| Terminal protection causes failure | All ablation variants still 0% (with verified runtime flags) | ⚠️ Not rescued by disabling protection; primary cause likely elsewhere |
+| Geometry infeasible in tested small grid | 16/16 grid points crash | ⚠️ Supported within envelope; wider sweep needed for general claim |
 | Guidance-law architecture limitation | All guidance laws (6G.1) + all probes (6G.4) fail | ✅ Supported |
 
-**Current best explanation**: The tail-chase / stern-conversion scenario is **geometrically infeasible under the current guidance architecture** (LOS-rate/PN/hybrid + VPP + simple backend + current success criteria: range ≤ 900 m, ATA ≤ 25°). The failure is not specific to prediction quality, policy learning, or terminal protection.
+**Current best explanation**: The tail-chase / stern-conversion scenario appears **difficult or infeasible under the current guidance architecture** (LOS-rate/PN/hybrid + VPP + simple backend + current success criteria: range ≤ 900 m, ATA ≤ 25°) within the tested parameter envelope. The failure was not rescued by true-velocity CV oracle, rule-based pursuit, or terminal-control ablation. However, a **wider geometry sweep and/or guidance redesign** is required before claiming fundamental infeasibility.
 
 ---
 
@@ -130,7 +130,7 @@ python scripts/run_stage6g4_smoke_probes.py --geometry --episodes 1 --seeds 0
 | GRU > LSTM in weaving_headon | ❌ Not paper-safe |
 | CA vs CV practically negligible | ❌ Not paper-safe |
 | Tail-chase failure not LOS-rate-specific | ✅ Paper-safe (within Stage 6G.1 scope) |
-| Tail-chase root cause identified | ⚠️ Partial — guidance architecture / geometric infeasibility most likely; needs wider geometry sweep or guidance redesign to confirm |
+| Tail-chase root cause identified | ⚠️ Partial — guidance architecture / geometric infeasibility most likely within tested envelope; wider sweep or guidance redesign required for confirmation |
 | PN/hybrid ineffective for tail-chase | ❌ Not paper-safe (only tested under current stack) |
 
 ---

@@ -295,5 +295,161 @@ class TestSmokeProbeOutputs(unittest.TestCase):
                 continue
 
 
+class TestAblationFlagsEffective(unittest.TestCase):
+    """Verify terminal control ablation variants produce different runtime flags."""
+
+    def _make_env(self, guidance_overrides=None):
+        config = {
+            "scenarios": {
+                "test": {
+                    "max_range_m": 5000,
+                    "ego": {"position_m": [0, 0, 1000], "velocity_mps": 150},
+                    "target": {"position_m": [2000, 0, 1000], "velocity_mps": 150},
+                }
+            },
+            "virtual_point": {
+                "anchor_mode": "current_target",
+                "d_long": [-100, 100],
+                "d_lat": [-100, 100],
+                "d_vert": [-50, 50],
+            },
+            "guidance": {
+                "mode": "los_rate",
+                "params": {"capture_radius_m": 50.0},
+                "post_process": {
+                    "enabled": True,
+                    "enable_terminal_protection": True,
+                    "enable_energy_compensation": True,
+                    "enable_load_roll_coordination": True,
+                },
+            },
+            "limits": {"nz_min": -2.0, "nz_max": 7.0, "roll_rate_min": -1.5, "roll_rate_max": 1.5,
+                       "throttle_min": 0.0, "throttle_max": 1.0},
+        }
+        if guidance_overrides:
+            config["guidance"] = {**config.get("guidance", {}), **guidance_overrides}
+        from uav_vpp_guidance.envs.tracking_env import CloseRangeTrackingEnv
+        return CloseRangeTrackingEnv(config)
+
+    def test_baseline_has_post_process_enabled(self):
+        env = self._make_env()
+        self.assertIsNotNone(env.command_post_processor)
+        self.assertTrue(env.command_post_processor.enable_terminal_protection)
+        self.assertTrue(env.command_post_processor.enable_energy_comp)
+        self.assertTrue(env.command_post_processor.enable_load_roll_coord)
+        env.close()
+
+    def test_no_post_process_disables_processor(self):
+        env = self._make_env({"post_process": {"enabled": False}})
+        self.assertIsNone(env.command_post_processor)
+        env.close()
+
+    def test_no_terminal_protection_changes_flag(self):
+        env = self._make_env({"post_process": {"enabled": True, "enable_terminal_protection": False}})
+        self.assertIsNotNone(env.command_post_processor)
+        self.assertFalse(env.command_post_processor.enable_terminal_protection)
+        env.close()
+
+    def test_no_energy_comp_changes_flag(self):
+        env = self._make_env({"post_process": {"enabled": True, "enable_energy_compensation": False}})
+        self.assertIsNotNone(env.command_post_processor)
+        self.assertFalse(env.command_post_processor.enable_energy_comp)
+        env.close()
+
+    def test_no_load_roll_coord_changes_flag(self):
+        env = self._make_env({"post_process": {"enabled": True, "enable_load_roll_coordination": False}})
+        self.assertIsNotNone(env.command_post_processor)
+        self.assertFalse(env.command_post_processor.enable_load_roll_coord)
+        env.close()
+
+    def test_capture_radius_zero_changes_value(self):
+        env = self._make_env({"params": {"capture_radius_m": 0.0}})
+        self.assertEqual(env.guidance.capture_radius_m, 0.0)
+        env.close()
+
+    def test_rule_based_lead_distance_changes_vpp(self):
+        gen = VirtualPointGenerator({"lead_distance_m": 1000.0, "d_long_range": [-100, 100],
+                                     "d_lat_range": [-100, 100], "d_vert_range": [-50, 50]})
+        own_state = {"position_neu": np.array([0.0, 0.0, 5000.0])}
+        target_state = {"position_neu": np.array([1000.0, 0.0, 5000.0])}
+        vp_500, _ = gen.action_to_virtual_point(np.zeros(3), own_state, target_state,
+                                                 anchor_mode="rule_based_pursuit", return_info=True)
+        gen2 = VirtualPointGenerator({"lead_distance_m": 2000.0, "d_long_range": [-100, 100],
+                                      "d_lat_range": [-100, 100], "d_vert_range": [-50, 50]})
+        vp_2000, _ = gen2.action_to_virtual_point(np.zeros(3), own_state, target_state,
+                                                   anchor_mode="rule_based_pursuit", return_info=True)
+        # VPP x should increase with lead distance
+        self.assertGreater(vp_2000["position"][0], vp_500["position"][0])
+
+    def test_oracle_mode_does_not_fallback(self):
+        from uav_vpp_guidance.envs.tracking_env import CloseRangeTrackingEnv
+        config = {
+            "scenarios": {
+                "test": {
+                    "max_range_m": 5000,
+                    "ego": {"position_m": [0, 0, 1000], "velocity_mps": 150},
+                    "target": {"position_m": [2000, 0, 1000], "velocity_mps": 150},
+                }
+            },
+            "virtual_point": {
+                "anchor_mode": "oracle_future_position",
+                "d_long": [-100, 100],
+                "d_lat": [-100, 100],
+                "d_vert": [-50, 50],
+            },
+            "guidance": {"mode": "los_rate"},
+            "limits": {"max_nz": 6.0, "max_roll_rate": 30.0},
+        }
+        env = CloseRangeTrackingEnv(config)
+        env.reset(scenario="test")
+        obs, reward, terminated, truncated, info = env.step(np.zeros(5))
+        self.assertEqual(info["anchor_mode"], "oracle_future_position")
+        env.close()
+
+
+class TestTrajectoryFieldsExtended(unittest.TestCase):
+    """Verify per-step trajectory CSV contains extended telemetry fields."""
+
+    def test_trajectory_contains_altitude_and_raw_commands(self):
+        from uav_vpp_guidance.evaluation.evaluate_prediction_comparison import evaluate_single_episode
+        config = {
+            "scenarios": {
+                "test": {
+                    "max_range_m": 5000,
+                    "ego": {"position_m": [0, 0, 1000], "velocity_mps": 150},
+                    "target": {"position_m": [2000, 0, 1000], "velocity_mps": 150},
+                }
+            },
+            "virtual_point": {
+                "anchor_mode": "current_target",
+                "d_long": [-100, 100],
+                "d_lat": [-100, 100],
+                "d_vert": [-50, 50],
+            },
+            "guidance": {"mode": "los_rate"},
+            "limits": {"nz_min": -2.0, "nz_max": 7.0, "roll_rate_min": -1.5, "roll_rate_max": 1.5,
+                       "throttle_min": 0.0, "throttle_max": 1.0},
+        }
+        env = CloseRangeTrackingEnv(config)
+        agent = PPOAgent(
+            obs_dim=int(env.reset(seed=0)["observation_vector"].shape[0]),
+            action_dim=3,
+            config=config,
+            device="cpu",
+        )
+        ep_result, traj = evaluate_single_episode(env, agent, config, scenario="test", seed=0, save_trajectory=True)
+        env.close()
+        self.assertTrue(len(traj) > 0)
+        step = traj[0]
+        self.assertIn("altitude_m", step)
+        self.assertIn("relative_speed_mps", step)
+        self.assertIn("raw_nz_cmd", step)
+        self.assertIn("raw_roll_rate_cmd", step)
+        self.assertIn("raw_throttle_cmd", step)
+        self.assertIn("nz_saturated", step)
+        self.assertIn("roll_rate_saturated", step)
+        self.assertIn("throttle_saturated", step)
+
+
 if __name__ == "__main__":
     unittest.main()

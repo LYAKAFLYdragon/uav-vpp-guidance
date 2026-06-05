@@ -66,9 +66,9 @@ experiments/                ← Git-ignored: weights, checkpoints, results
 | Neural prediction improves feasible-geometry tracking over classical/no prediction baselines | ✅ Paper-safe | Supported by Stage 6F synthesis; scope limited to tested scenarios. |
 | GRU is strictly better than LSTM in weaving_headon | ❌ Not paper-safe | Cross-seed strict consistency insufficient. |
 | CA and CV are practically equivalent | ❌ Not paper-safe | Observed differences are small but not enough for a formal claim. |
-| Tail-chase failure is a guidance-law limitation | ❌ Not paper-safe | Full Stage 6G.1 (720 eps): all guidance laws show 0% success. Stage 6G.4 smoke: oracle, rule-based, terminal ablation all 0% success → not prediction/policy/protection specific. Likely geometric infeasibility under current control chain. |
+| Tail-chase failure is a guidance-law limitation | ❌ Not paper-safe | Full Stage 6G.1 (720 eps): all guidance laws show 0% success. Stage 6G.4 smoke: true-velocity CV oracle, rule-based pursuit, and terminal-control ablation all 0% success in tested scenarios. No feasible boundary found in small geometry envelope. Wider sweep or guidance redesign needed before claiming infeasibility. |
 | PN/hybrid resolves tail-chase failure | ❌ Not paper-safe | Full Stage 6G.1: PN and hybrid also show 0% success in all tested scenarios. |
-| Tail-chase remains infeasible across guidance laws | ✅ Paper-safe (within tested scenarios) | Full Stage 6G.1: 0% success across all 3 guidance laws × 4 scenarios × 2 methods × 3 seeds. Stage 6G.4: oracle/rule-based/terminal-ablation/geometry-sweep all 0% success in smoke. |
+| Tail-chase remains infeasible across guidance laws | ✅ Paper-safe (within tested scenarios) | Full Stage 6G.1: 0% success across all 3 guidance laws × 4 scenarios × 2 methods × 3 seeds. Stage 6G.4: true-velocity CV oracle, rule-based pursuit, terminal-control ablation, and small geometry sweep all 0% success in smoke. |
 
 > **Paper-safe rule**: A claim is `✅` only if supported by the full experimental matrix, statistical significance, and cross-seed consistency. `⏳` means the probe is running but not yet conclusive. `❌` means the data does not support the claim.
 

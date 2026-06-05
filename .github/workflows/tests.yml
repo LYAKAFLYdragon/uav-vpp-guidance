@@ -31,11 +31,17 @@ jobs:
 
       - name: Check Python syntax
         run: |
-          python -m compileall src/uav_vpp_guidance tests
+          python -m compileall src/uav_vpp_guidance tests scripts
 
       - name: Run pytest
         run: |
           pytest tests/ -v --tb=short
+
+      - name: Critical scripts CLI smoke
+        run: |
+          python scripts/run_stage6g_guidance_limitation_probe.py --help
+          python scripts/run_stage6g4_smoke_probes.py --help
+          python scripts/run_stage6g_guidance_limitation_probe.py --dry-run --output-dir /tmp/stage6g_probe_dryrun
 
       - name: Check TOML/YAML syntax
         run: |

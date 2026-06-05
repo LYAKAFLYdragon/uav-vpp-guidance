@@ -2,6 +2,13 @@
 
 Stage 6G.5A: Supports aspect-angle-based target placement and derived
 geometry metadata (closure rate, TTC, feasibility heuristics).
+
+Contract note:
+    In Stage 6G.5A ``aspect_angle_deg`` simultaneously determines:
+        1. The LOS bearing from ownship to target.
+        2. The target aircraft heading.
+    This is a smoke-level simplification. Stage 6G.5B may decouple
+    ``los_bearing_deg`` from ``target_heading_deg``.
 """
 
 import math
@@ -55,7 +62,7 @@ def build_geometry_scenario(
 
 
 def compute_geometry_metadata(params: Dict) -> Dict:
-    """Derive secondary geometry metrics from raw parameters.
+    """Derive secondary geometry metrics from raw parameters using vector projection.
 
     Parameters expected in *params*:
         - ego_speed_mps
@@ -68,15 +75,26 @@ def compute_geometry_metadata(params: Dict) -> Dict:
     aspect_rad = math.radians(float(params["aspect_angle_deg"]))
     rng = float(params["initial_range_m"])
 
-    # Closure rate along the initial LOS
-    closure = ego - tgt * math.cos(aspect_rad)
-    ttc = rng / max(closure, 1.0)
+    # LOS unit vector from ownship to target
+    los_unit = np.array([math.cos(aspect_rad), math.sin(aspect_rad)], dtype=float)
 
-    # Crude feasibility heuristic: positive closure and enough time within max steps
-    feasible = closure > 0.0 and ttc < 100.0
+    # Velocity vectors in NE plane
+    own_vel = np.array([ego, 0.0], dtype=float)  # own heading = 0 deg
+    tgt_vel = np.array([tgt * math.cos(aspect_rad), tgt * math.sin(aspect_rad)], dtype=float)
+
+    # Range rate = projection of relative velocity onto LOS
+    rel_vel = tgt_vel - own_vel
+    range_rate = float(np.dot(rel_vel, los_unit))  # positive if target moving away
+    closure_rate = -range_rate  # positive if closing
+
+    ttc = rng / max(closure_rate, 1.0)
+
+    # Feasibility heuristic: positive closure and enough time within max steps (~100 s)
+    feasible = closure_rate > 0.0 and ttc < 100.0
 
     return {
-        "closure_rate_mps": round(closure, 2),
+        "closure_rate_mps": round(closure_rate, 2),
+        "range_rate_mps": round(range_rate, 2),
         "estimated_time_to_capture_s": round(ttc, 2),
         "expected_feasible_flag": feasible,
     }

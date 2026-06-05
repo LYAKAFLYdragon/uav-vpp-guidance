@@ -6,6 +6,9 @@ Samples 30–50 points from a 324-combo geometry grid to test whether any
 tail-chase / stern-conversion configuration is feasible before committing
 to full sweep or bilevel gain optimization.
 
+Scope:
+    no_prediction baseline only. Predictor-policy feasibility requires Stage 6G.5B.
+
 Usage:
     python scripts/run_stage6g5_geometry_smoke.py --dry-run
     python scripts/run_stage6g5_geometry_smoke.py --sample-size 40 --sampling-method random
@@ -48,6 +51,7 @@ def run_geometry_smoke(
     episodes_per_point: int = 3,
     eval_seeds=None,
     dry_run: bool = False,
+    allow_random_policy: bool = False,
 ):
     if eval_seeds is None:
         eval_seeds = [0]
@@ -74,6 +78,20 @@ def run_geometry_smoke(
         entry = {**pt, **meta}
         points_with_meta.append(entry)
 
+    method_name = "no_prediction"
+    method_override = base_config.get("methods", {}).get(method_name, {})
+    ckpt = method_override.get("checkpoint")
+
+    # Determine policy type for audit trail
+    if dry_run:
+        policy_type = "dry_run (no policy loaded)"
+    elif ckpt and os.path.exists(ckpt):
+        policy_type = "loaded_checkpoint"
+    elif allow_random_policy:
+        policy_type = "random_policy (explicitly allowed)"
+    else:
+        policy_type = "missing_checkpoint"
+
     # Save plan / points
     plan = {
         "experiment_name": base_config.get("experiment", {}).get("name", "stage6g5_wide_geometry_smoke"),
@@ -87,6 +105,14 @@ def run_geometry_smoke(
         "sampled_points_count": len(sampled_points),
         "timestamp": time.strftime("%Y%m%d_%H%M%S"),
         "dry_run": dry_run,
+        "allow_random_policy": allow_random_policy,
+        "policy_type": policy_type,
+        "loaded_policy_checkpoint_path": str(ckpt) if ckpt else None,
+        "methods_evaluated": [method_name],
+        "scope_note": (
+            "Stage 6G.5A smoke tests baseline geometric feasibility only; "
+            "predictor-policy feasibility requires Stage 6G.5B."
+        ),
     }
 
     plan_path = output_path / "geometry_smoke_plan.json"
@@ -110,6 +136,7 @@ def run_geometry_smoke(
     resolved_config["experiment"]["episodes_per_point"] = episodes_per_point
     resolved_config["experiment"]["eval_seeds"] = eval_seeds
     resolved_config["experiment"]["dry_run"] = dry_run
+    resolved_config["experiment"]["allow_random_policy"] = allow_random_policy
 
     resolved_path = output_path / "resolved_config.yaml"
     with open(resolved_path, "w", encoding="utf-8") as f:
@@ -123,7 +150,11 @@ def run_geometry_smoke(
         print(f"Eval seeds: {eval_seeds}")
         print("No simulation executed.")
 
-        # Write dry-run summary markdown
+        # Write stable output files even in dry-run
+        _write_empty_csv(output_path / "geometry_smoke_summary.csv", ["params", "success_rate", "success_count", "total"])
+        _write_empty_csv(output_path / "feasible_candidates.csv", ["params", "success_rate", "success_count", "total"])
+        _write_empty_csv(output_path / "failed_points.csv", ["params", "success_rate", "success_count", "total"])
+
         summary_md = _render_summary_md(plan, points_with_meta, evaluated_count=0, successes=[])
         md_path = output_path / "geometry_smoke_summary.md"
         with open(md_path, "w", encoding="utf-8") as f:
@@ -135,9 +166,15 @@ def run_geometry_smoke(
     # Real execution (not required for dry-run validation)
     # ------------------------------------------------------------------
     print("\n=== Stage 6G.5A: Geometry Smoke Execution ===")
+
+    # Policy loading contract: fail fast unless --allow-random-policy
+    if not (ckpt and os.path.exists(ckpt)) and not allow_random_policy:
+        raise FileNotFoundError(
+            f"Checkpoint missing for method '{method_name}': {ckpt}\n"
+            "Use --allow-random-policy to proceed with a random policy (not recommended for real smoke)."
+        )
+
     all_episodes = []
-    method_name = "no_prediction"
-    method_override = base_config.get("methods", {}).get(method_name, {})
 
     # Import heavy deps only when needed
     from uav_vpp_guidance.evaluation.evaluate_prediction_comparison import (
@@ -153,26 +190,20 @@ def run_geometry_smoke(
     config["env"]["backend"] = "simple"
     config["env"]["use_jsbsim"] = False
 
-    # Attempt to create env+agent once; checkpoint missing is non-fatal for smoke
-    try:
-        method_config = merge_config(copy.deepcopy(config), copy.deepcopy(method_override))
-        env = CloseRangeTrackingEnv(method_config)
-        sample_obs = env.reset(seed=0)
-        obs_dim = int(sample_obs["observation_vector"].shape[0])
-        action_dim = int(method_config.get("policy", {}).get("action_dim", 3))
-        agent = PPOAgent(obs_dim=obs_dim, action_dim=action_dim, config=method_config, device="cpu")
-        ckpt = method_override.get("checkpoint")
-        if ckpt and os.path.exists(ckpt):
-            agent.load(ckpt)
-            print(f"  Loaded checkpoint: {ckpt}")
-        else:
-            print(f"  WARNING: checkpoint missing ({ckpt}), using random policy")
-    except Exception as exc:
-        print(f"  ERROR: env/agent setup failed: {exc}")
-        env = None
-        agent = None
+    method_config = merge_config(copy.deepcopy(config), copy.deepcopy(method_override))
+    env = CloseRangeTrackingEnv(method_config)
+    sample_obs = env.reset(seed=0)
+    obs_dim = int(sample_obs["observation_vector"].shape[0])
+    action_dim = int(method_config.get("policy", {}).get("action_dim", 3))
+    agent = PPOAgent(obs_dim=obs_dim, action_dim=action_dim, config=method_config, device="cpu")
 
-    for pt in points_with_meta:
+    if ckpt and os.path.exists(ckpt):
+        agent.load(ckpt)
+        print(f"  Loaded checkpoint: {ckpt}")
+    else:
+        print(f"  WARNING: checkpoint missing ({ckpt}), using random policy (explicitly allowed)")
+
+    for pt_idx, pt in enumerate(points_with_meta):
         scenario = build_geometry_scenario(
             pt["initial_range_m"],
             pt["ego_speed_mps"],
@@ -186,37 +217,35 @@ def run_geometry_smoke(
         })
 
         for ev_seed in eval_seeds:
-            if env is None:
-                # Record a placeholder failure when env setup failed
-                all_episodes.append({
-                    "geometry_params": pt,
-                    "evaluation_seed": ev_seed,
-                    "is_success": False,
-                    "reason": "env_setup_failed",
-                })
-                continue
-            set_seed(ev_seed)
-            try:
-                ep_result, _ = evaluate_single_episode(
-                    env, agent, method_config, scenario=scenario, seed=ev_seed,
-                    save_trajectory=False, method_name=method_name,
-                )
-                ep_result["geometry_params"] = pt
-                ep_result["evaluation_seed"] = ev_seed
-                all_episodes.append(ep_result)
-                status = "SUCCESS" if ep_result["is_success"] else ep_result.get("reason", "FAIL")
-                print(f"  {scenario['name']} | seed={ev_seed} | {status}")
-            except Exception as exc:
-                print(f"  {scenario['name']} | seed={ev_seed} | EXCEPTION: {exc}")
-                all_episodes.append({
-                    "geometry_params": pt,
-                    "evaluation_seed": ev_seed,
-                    "is_success": False,
-                    "reason": f"exception:{exc}",
-                })
+            for ep_idx in range(episodes_per_point):
+                episode_seed = ev_seed * 100000 + pt_idx * 1000 + ep_idx
+                set_seed(episode_seed)
+                try:
+                    ep_result, _ = evaluate_single_episode(
+                        env, agent, method_config, scenario=scenario, seed=episode_seed,
+                        save_trajectory=False, method_name=method_name,
+                    )
+                    ep_result["point_index"] = pt_idx
+                    ep_result["episode_index"] = ep_idx
+                    ep_result["evaluation_seed"] = ev_seed
+                    ep_result["episode_seed"] = episode_seed
+                    ep_result["geometry_params"] = pt
+                    all_episodes.append(ep_result)
+                    status = "SUCCESS" if ep_result["is_success"] else ep_result.get("reason", "FAIL")
+                    print(f"  {scenario['name']} | ev={ev_seed} ep={ep_idx} | {status}")
+                except Exception as exc:
+                    print(f"  {scenario['name']} | ev={ev_seed} ep={ep_idx} | EXCEPTION: {exc}")
+                    all_episodes.append({
+                        "point_index": pt_idx,
+                        "episode_index": ep_idx,
+                        "evaluation_seed": ev_seed,
+                        "episode_seed": episode_seed,
+                        "geometry_params": pt,
+                        "is_success": False,
+                        "reason": f"exception:{exc}",
+                    })
 
-    if env is not None:
-        env.close()
+    env.close()
 
     # Aggregate
     success_by_point = {}
@@ -230,7 +259,7 @@ def run_geometry_smoke(
         if ep.get("is_success"):
             success_by_point[key]["success"] += 1
 
-    evaluated_count = len(sampled_points) * len(eval_seeds) * episodes_per_point
+    evaluated_count = len(all_episodes)
     successes = [
         {
             "params": v["params"],
@@ -281,6 +310,17 @@ def run_geometry_smoke(
 
 
 # ------------------------------------------------------------------
+# Helpers
+# ------------------------------------------------------------------
+
+def _write_empty_csv(path: Path, fieldnames: list):
+    """Write a CSV with headers only (stable output for dry-run)."""
+    with open(path, "w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer.writeheader()
+
+
+# ------------------------------------------------------------------
 # Markdown summary renderer
 # ------------------------------------------------------------------
 
@@ -310,6 +350,8 @@ def _render_summary_md(plan, points_with_meta, evaluated_count, successes):
         f"- **Sampled points**: {plan['sampled_points_count']}",
         f"- **Sampling method**: {plan['sampling_method']}",
         f"- **Evaluated episodes**: {evaluated_count}",
+        f"- **Methods evaluated**: {plan['methods_evaluated']}",
+        f"- **Scope note**: {plan['scope_note']}",
         f"- **Any success >20%**: {any_success}",
         f"- **Best success rate**: {best['success_rate']*100:.1f}%" if best else "- **Best success rate**: N/A",
         f"- **Best geometry**: {best['params']}" if best else "- **Best geometry**: N/A",
@@ -336,6 +378,7 @@ def main():
     parser.add_argument("--episodes-per-point", type=int, default=3)
     parser.add_argument("--eval-seeds", type=int, nargs="+", default=[0])
     parser.add_argument("--dry-run", action="store_true", help="Print plan and save metadata without running episodes")
+    parser.add_argument("--allow-random-policy", action="store_true", help="Allow random policy when checkpoint is missing (not recommended for real smoke)")
     parser.add_argument("--output-dir", type=str, default="outputs/stage6g5_geometry_smoke")
     args = parser.parse_args()
 
@@ -348,6 +391,7 @@ def main():
         episodes_per_point=args.episodes_per_point,
         eval_seeds=args.eval_seeds,
         dry_run=args.dry_run,
+        allow_random_policy=args.allow_random_policy,
     )
 
 

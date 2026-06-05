@@ -417,8 +417,11 @@ class CloseRangeTrackingEnv:
             prediction_info["prediction_fallback"] = True
             anchor_mode = "current_target"
 
+        # Determine direct-track request from config (telemetry)
+        direct_track_mode_requested = self.config.get("guidance", {}).get("direct_track_mode", False)
+
         # Direct-track mode: bypass VPP offset, track anchor directly
-        if self.config.get("guidance", {}).get("direct_track_mode", False):
+        if direct_track_mode_requested:
             virtual_point = {"position_neu": np.asarray(target_for_vp["position_neu"], dtype=np.float64)}
             vp_info = {
                 "virtual_point": virtual_point["position_neu"],
@@ -426,6 +429,8 @@ class CloseRangeTrackingEnv:
                 "direct_track_mode": True,
                 "action_applied": False,
             }
+            direct_track_mode_effective = True
+            virtual_point_source = "direct_track"
         else:
             vp_result = self.virtual_point_generator.action_to_virtual_point(
                 action,
@@ -437,6 +442,8 @@ class CloseRangeTrackingEnv:
                 return_info=True,
             )
             virtual_point, vp_info = vp_result
+            direct_track_mode_effective = False
+            virtual_point_source = "vpp_policy"
 
         # 5. Guidance command generation
         raw_command = self.guidance.compute_command(
@@ -503,9 +510,17 @@ class CloseRangeTrackingEnv:
         # 11. 获取观察（post-step）
         obs = self._get_observation()
 
+        # Serialize virtual_point for info (convert ndarrays → lists)
+        def _serialize_vp(vp):
+            if isinstance(vp, dict):
+                return {k: (v.tolist() if isinstance(v, np.ndarray) else v) for k, v in vp.items()}
+            elif isinstance(vp, np.ndarray):
+                return vp.tolist()
+            return vp
+
         # 组装 info
         info = {
-            "virtual_point": virtual_point,
+            "virtual_point": _serialize_vp(virtual_point),
             "guidance_command": filtered_command,
             "raw_command": raw_command,
             "reward_terms": reward_terms,
@@ -539,6 +554,9 @@ class CloseRangeTrackingEnv:
             "mean_prediction_error_m": prediction_info["mean_prediction_error_m"],
             "median_prediction_error_m": prediction_info["median_prediction_error_m"],
             "prediction_error_count": prediction_info["prediction_error_count"],
+            "direct_track_mode_requested": direct_track_mode_requested,
+            "direct_track_mode_effective": direct_track_mode_effective,
+            "virtual_point_source": virtual_point_source,
         }
         info.update(actuator_info)
         info.update(term_info)

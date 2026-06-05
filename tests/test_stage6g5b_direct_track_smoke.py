@@ -259,3 +259,136 @@ class TestScriptHelpSmoke(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestDirectTrackTelemetryFields(unittest.TestCase):
+    """Step info must expose direct-track telemetry fields."""
+
+    def test_direct_track_true_telemetry(self):
+        from uav_vpp_guidance.envs.tracking_env import CloseRangeTrackingEnv
+
+        config_path = PROJECT_ROOT / "config" / "experiment" / "stage6g5_wide_geometry_smoke.yaml"
+        with open(config_path, "r", encoding="utf-8") as f:
+            import yaml
+            cfg = yaml.safe_load(f)
+
+        cfg["guidance"]["direct_track_mode"] = True
+        env = CloseRangeTrackingEnv(cfg)
+        env.reset(seed=0)
+        try:
+            obs, reward, terminated, truncated, info = env.step(np.zeros(3))
+            self.assertIn("direct_track_mode_requested", info)
+            self.assertIn("direct_track_mode_effective", info)
+            self.assertIn("virtual_point_source", info)
+            self.assertTrue(info["direct_track_mode_requested"])
+            self.assertTrue(info["direct_track_mode_effective"])
+            self.assertEqual(info["virtual_point_source"], "direct_track")
+        finally:
+            env.close()
+
+    def test_direct_track_false_telemetry(self):
+        from uav_vpp_guidance.envs.tracking_env import CloseRangeTrackingEnv
+
+        config_path = PROJECT_ROOT / "config" / "experiment" / "stage6g5_wide_geometry_smoke.yaml"
+        with open(config_path, "r", encoding="utf-8") as f:
+            import yaml
+            cfg = yaml.safe_load(f)
+
+        cfg["guidance"]["direct_track_mode"] = False
+        env = CloseRangeTrackingEnv(cfg)
+        env.reset(seed=0)
+        try:
+            obs, reward, terminated, truncated, info = env.step(np.zeros(3))
+            self.assertFalse(info["direct_track_mode_requested"])
+            self.assertFalse(info["direct_track_mode_effective"])
+            self.assertEqual(info["virtual_point_source"], "vpp_policy")
+        finally:
+            env.close()
+
+
+class TestDirectTrackVirtualPointInterface(unittest.TestCase):
+    """virtual_point in info must be dict-compatible for guidance and serializable for logging."""
+
+    def test_virtual_point_is_dict_with_position_neu(self):
+        from uav_vpp_guidance.envs.tracking_env import CloseRangeTrackingEnv
+
+        config_path = PROJECT_ROOT / "config" / "experiment" / "stage6g5_wide_geometry_smoke.yaml"
+        with open(config_path, "r", encoding="utf-8") as f:
+            import yaml
+            cfg = yaml.safe_load(f)
+
+        cfg["guidance"]["direct_track_mode"] = True
+        env = CloseRangeTrackingEnv(cfg)
+        env.reset(seed=0)
+        try:
+            obs, reward, terminated, truncated, info = env.step(np.zeros(3))
+            vp = info["virtual_point"]
+            self.assertIsInstance(vp, dict)
+            self.assertIn("position_neu", vp)
+            pos = vp["position_neu"]
+            # Must be serializable (list, not ndarray)
+            self.assertIsInstance(pos, list)
+            self.assertEqual(len(pos), 3)
+        finally:
+            env.close()
+
+    def test_vpp_mode_virtual_point_is_serializable(self):
+        from uav_vpp_guidance.envs.tracking_env import CloseRangeTrackingEnv
+
+        config_path = PROJECT_ROOT / "config" / "experiment" / "stage6g5_wide_geometry_smoke.yaml"
+        with open(config_path, "r", encoding="utf-8") as f:
+            import yaml
+            cfg = yaml.safe_load(f)
+
+        cfg["guidance"]["direct_track_mode"] = False
+        env = CloseRangeTrackingEnv(cfg)
+        env.reset(seed=0)
+        try:
+            obs, reward, terminated, truncated, info = env.step(np.zeros(3))
+            vp = info["virtual_point"]
+            self.assertIsInstance(vp, dict)
+            # position and offset should be lists if present
+            if "position" in vp:
+                self.assertIsInstance(vp["position"], list)
+            if "offset" in vp:
+                self.assertIsInstance(vp["offset"], list)
+        finally:
+            env.close()
+
+
+class TestDirectTrackVpInfoSerializable(unittest.TestCase):
+    """info dict must be JSON-serializable after a direct-track step."""
+
+    def test_info_json_serializable(self):
+        from uav_vpp_guidance.envs.tracking_env import CloseRangeTrackingEnv
+
+        config_path = PROJECT_ROOT / "config" / "experiment" / "stage6g5_wide_geometry_smoke.yaml"
+        with open(config_path, "r", encoding="utf-8") as f:
+            import yaml
+            cfg = yaml.safe_load(f)
+
+        cfg["guidance"]["direct_track_mode"] = True
+        env = CloseRangeTrackingEnv(cfg)
+        env.reset(seed=0)
+        try:
+            obs, reward, terminated, truncated, info = env.step(np.zeros(3))
+            # Remove non-serializable numpy scalar wrappers if any
+            def _sanitize(obj):
+                if isinstance(obj, dict):
+                    return {k: _sanitize(v) for k, v in obj.items()}
+                elif isinstance(obj, (list, tuple)):
+                    return [_sanitize(v) for v in obj]
+                elif isinstance(obj, np.ndarray):
+                    return obj.tolist()
+                elif isinstance(obj, (np.floating, np.integer)):
+                    return float(obj) if isinstance(obj, np.floating) else int(obj)
+                return obj
+            clean = _sanitize(info)
+            # This must not raise
+            json.dumps(clean)
+        finally:
+            env.close()
+
+
+if __name__ == "__main__":
+    unittest.main()

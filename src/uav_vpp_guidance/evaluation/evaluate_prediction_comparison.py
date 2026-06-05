@@ -214,7 +214,7 @@ def evaluate_single_episode(env, agent, config, scenario=None, seed=0, save_traj
             target_vel = target_s.get("velocity_vector_mps", target_s.get("velocity_ned", np.full(3, np.nan)))
             pred_target = info.get("predicted_target_position", [np.nan, np.nan, np.nan])
             vp = info.get("virtual_point", {})
-            vp_pos_arr = vp.get("position", np.full(3, np.nan))
+            vp_pos_arr = vp.get("position", vp.get("position_neu", np.full(3, np.nan)))
 
             trajectory.append({
                 "step": step,

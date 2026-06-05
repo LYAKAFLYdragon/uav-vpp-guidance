@@ -99,3 +99,50 @@ else:
 - [x] `tracking_env.py` respects the flag and skips policy action → offset conversion.
 - [x] Smoke runner produces `direct_track_vs_vpp_comparison.csv`.
 - [x] Unit test confirms `direct_track_mode=true` yields `virtual_point == target_position` (within tolerance).
+
+
+## 7. Stage 6G.5C Results: Candidate Confirmation & VPP Failure Diagnosis
+
+### 7.1 Execution
+
+- **Candidate points**: pt20, pt29, pt38 (from 6G.5B pure-PN successes)
+- **Episodes**: 450 (3 points × 5 variants × 3 seeds × 10 episodes)
+- **Variants tested**:
+  1. vpp_trained_ppo_los (baseline)
+  2. direct_target_los (no VPP, LOS-rate)
+  3. pure_pn_no_vpp (no VPP, PN)
+  4. hybrid_no_vpp (no VPP, hybrid)
+  5. vpp_policy_pn_guidance (VPP, PN)
+
+### 7.2 Results
+
+| Variant | Success Rate | Crash Rate | Mean Min Range (m) |
+|---|---|---|---|
+| vpp_trained_ppo_los | 0% | 100% | 1710 |
+| direct_target_los | 0% | 100% | 1684 |
+| **pure_pn_no_vpp** | **100%** | **0%** | **11.0** |
+| hybrid_no_vpp | 0% | 100% | 1640 |
+| vpp_policy_pn_guidance | 0% | 100% | 1334 |
+
+### 7.3 Interpretation
+
+| Finding | Conclusion |
+|---|---|
+| pure_pn_no_vpp = 100% cross-seed stable | Tail-chase IS feasible in this narrow high-energy geometry subset under pure PN |
+| direct_target_los = 0% | LOS-rate guidance is a primary bottleneck, independent of VPP |
+| vpp_policy_pn_guidance = 0% | VPP offset/policy anchor is harmful even when paired with PN |
+| hybrid_no_vpp = 0% | Hybrid switching/blending does not rescue tail-chase |
+
+### 7.4 Decision Gate
+
+- **Bilevel remains BLOCKED** — no VPP-based variant shows success.
+- **Next step**: Stage 6G.5D — PN/VPP mechanism redesign or mode-switch probe.
+  - Option A: Automatic mode-switch to pure PN when aspect ≈ 0° and range < threshold.
+  - Option B: Tail-chase-specific VPP offset constraints (clip offset magnitude, enforce forward bias).
+  - Option C: Train a new VPP policy with PN guidance instead of LOS-rate.
+
+### 7.5 Paper-Safe Claims
+
+- ✅ "In the tested high-energy tail-chase subset (ego 340 m/s, range 2000 m, aspect 0°), pure proportional navigation without VPP achieved 100% cross-seed success, while all VPP-based and LOS-rate variants achieved 0% success."
+- ❌ Do not claim "tail-chase is universally feasible under PN" — only 3 geometries tested.
+- ❌ Do not claim "VPP is always harmful" — harm observed only in the tested tail-chase subset.

@@ -1,0 +1,22 @@
+{
+  "experiment_name": "stage6g5_wide_geometry_smoke",
+  "config_path": "config/experiment/stage6g5_wide_geometry_smoke.yaml",
+  "sample_size": 40,
+  "sampling_method": "random",
+  "seed": 0,
+  "episodes_per_point": 3,
+  "eval_seeds": [
+    0
+  ],
+  "total_grid_size": 324,
+  "sampled_points_count": 40,
+  "timestamp": "20260605_224921",
+  "dry_run": false,
+  "allow_random_policy": false,
+  "policy_type": "trained_ppo",
+  "loaded_policy_checkpoint_path": "outputs/experiments/no_prediction_vpp_ppo_seed0/checkpoints/best.pt",
+  "methods_evaluated": [
+    "no_prediction"
+  ],
+  "scope_note": "Stage 6G.5A smoke tests baseline geometric feasibility only; predictor-policy feasibility requires Stage 6G.5B."
+}

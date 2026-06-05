@@ -84,11 +84,11 @@ def run_geometry_smoke(
 
     # Determine policy type for audit trail
     if dry_run:
-        policy_type = "dry_run (no policy loaded)"
+        policy_type = "dry_run"
     elif ckpt and os.path.exists(ckpt):
-        policy_type = "loaded_checkpoint"
+        policy_type = "trained_ppo"
     elif allow_random_policy:
-        policy_type = "random_policy (explicitly allowed)"
+        policy_type = "random_policy"
     else:
         policy_type = "missing_checkpoint"
 

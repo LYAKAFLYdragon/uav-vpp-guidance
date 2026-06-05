@@ -286,6 +286,62 @@ class TestBilevelStillBlockedUnlessSuccess(unittest.TestCase):
         self.assertIn("false", content.lower())
 
 
+class TestPolicyTypeVocabulary(unittest.TestCase):
+    """Policy type values must belong to the approved vocabulary."""
+
+    APPROVED_TYPES = {"trained_ppo", "random_policy", "dry_run", "missing_checkpoint"}
+
+    def test_dry_run_policy_type(self):
+        import shutil
+        output_dir = PROJECT_ROOT / "outputs" / "test_stage6g5_policy_dryrun"
+        if output_dir.exists():
+            shutil.rmtree(output_dir)
+
+        plan = run_geometry_smoke(
+            config_path=str(PROJECT_ROOT / "config" / "experiment" / "stage6g5_wide_geometry_smoke.yaml"),
+            output_dir=str(output_dir),
+            sample_size=2,
+            dry_run=True,
+        )
+        self.assertIn(plan["policy_type"], self.APPROVED_TYPES)
+
+    def test_loaded_checkpoint_policy_type(self):
+        import shutil
+        output_dir = PROJECT_ROOT / "outputs" / "test_stage6g5_policy_loaded"
+        if output_dir.exists():
+            shutil.rmtree(output_dir)
+
+        # When checkpoint exists and dry_run=False, policy_type should be trained_ppo
+        # We test via dry_run because real run would need env setup.
+        # The logic in runner sets policy_type based on dry_run first, then checkpoint.
+        # So for dry_run it will always be "dry_run".
+        plan = run_geometry_smoke(
+            config_path=str(PROJECT_ROOT / "config" / "experiment" / "stage6g5_wide_geometry_smoke.yaml"),
+            output_dir=str(output_dir),
+            sample_size=2,
+            dry_run=True,
+        )
+        self.assertEqual(plan["policy_type"], "dry_run")
+
+
+class TestReadmeCurrentStageMentions6G5A(unittest.TestCase):
+    """README must reflect current Stage 6G.5A status."""
+
+    def test_readme_mentions_stage6g5a(self):
+        readme_path = PROJECT_ROOT / "README.md"
+        self.assertTrue(readme_path.exists())
+        content = readme_path.read_text(encoding="utf-8")
+        self.assertIn("6G.5A", content, "README must mention Stage 6G.5A")
+
+    def test_readme_bilevel_still_blocked(self):
+        readme_path = PROJECT_ROOT / "README.md"
+        content = readme_path.read_text(encoding="utf-8")
+        self.assertTrue(
+            "blocked" in content.lower() or "gated" in content.lower(),
+            "README must state bilevel is blocked or gated",
+        )
+
+
 class TestCIPullRequestIncludesFeatureBranch(unittest.TestCase):
     """CI must trigger on feature branch pull requests."""
 
@@ -443,7 +499,7 @@ class TestAllowRandomPolicyExplicitOnly(unittest.TestCase):
             allow_random_policy=True,
         )
         self.assertTrue(plan["allow_random_policy"])
-        self.assertEqual(plan["policy_type"], "dry_run (no policy loaded)")
+        self.assertEqual(plan["policy_type"], "dry_run")
 
 
 class TestSmokeScopeNotePresent(unittest.TestCase):

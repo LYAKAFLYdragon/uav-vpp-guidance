@@ -74,6 +74,11 @@ limits:
   throttle_min: 0.0
   throttle_max: 1.0
 
+# Policy architecture must match the trained checkpoint
+policy:
+  hidden_sizes: [128, 128]
+  activation: tanh
+
 # Full parameter grid (interpreted by runner; smoke sampling reduces to 30–50 points)
 geometry_grid:
   initial_range_m: [1200, 2000, 3200]

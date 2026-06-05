@@ -52,10 +52,11 @@ experiments/                ← Git-ignored: weights, checkpoints, results
 | 6G.1 | ✅ Complete | Guidance-law limitation probe (hardened, smoke passed, full run completed, 720 episodes, 12 cells, McNemar exact) | `scripts/run_stage6g_guidance_limitation_probe.py` |
 | 6G.2 | ✅ Complete | Failure root-cause attribution: validator, McNemar pairing, telemetry schema, analyzer scripts | `scripts/validate_stage6g_probe_outputs.py` |
 | 6G.3 | ✅ Complete | Oracle & terminal-protection feasibility gate: smoke probes, new anchor modes, telemetry contract | `docs/stage6g3_oracle_terminal_feasibility_gate.md` |
-| 6G.4 | 🧪 In progress | Oracle smoke execution & per-step telemetry completion; root-cause decomposition | `docs/stage6g4_oracle_smoke_and_telemetry.md` |
-| 6H | ⏳ Not started | Bilevel gain optimization | — |
-| 6I | ⏳ Not started | Alternating bilevel training | — |
-| 7A | ⏳ Not started | JSBSim/F-16 validation | — |
+| 6G.4 | ✅ Complete | Oracle smoke execution & per-step telemetry completion; root-cause decomposition | `docs/stage6g4_oracle_smoke_and_telemetry.md` |
+| 6G.5A | 🧪 In progress | Wide geometry sweep smoke runner; baseline geometric feasibility probe | `scripts/run_stage6g5_geometry_smoke.py` |
+| 6H | ⏳ Blocked | Bilevel gain optimization — gated until feasible geometry identified | — |
+| 6I | ⏳ Blocked | Alternating bilevel training — gated until 6H unblocked | — |
+| 7A | ⏳ Pending | JSBSim/F-16 validation — pending feasible subset confirmation from 6G.5A | — |
 
 ---
 
@@ -401,4 +402,4 @@ uav-vpp-guidance/
 
 ---
 
-*Last updated: 2026-06-05 | Stage 6G.1 in progress | Full probe executing*
+*Last updated: 2026-06-05 | Stage 6G.5A in progress | Bilevel blocked | Wide geometry smoke pending real execution*

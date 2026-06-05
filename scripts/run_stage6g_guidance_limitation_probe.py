@@ -387,59 +387,96 @@ def compute_pairwise_mcnemar(episodes: List[dict]) -> List[dict]:
     df = pd.DataFrame(episodes)
     rows = []
 
-    # Define comparison pairs
-    pairs = [
-        ("no_prediction", "gru_frozen"),
-    ]
-    # Also compare guidance modes within each scenario x method
+    # Collect unique guidance-mode pairs per scenario x method cell
+    cell_pairs = set()
     for scenario in df["scenario"].unique():
         for method in df["method"].unique():
             sub = df[(df["scenario"] == scenario) & (df["method"] == method)]
-            modes = sub["effective_guidance_mode"].unique()
-            if len(modes) >= 2:
-                for i in range(len(modes)):
-                    for j in range(i + 1, len(modes)):
-                        pairs.append((modes[i], modes[j]))
+            modes = sorted(sub["effective_guidance_mode"].unique())
+            for i in range(len(modes)):
+                for j in range(i + 1, len(modes)):
+                    cell_pairs.add((scenario, method, modes[i], modes[j]))
 
-    # Compute for each pair within each scenario
+    # Also compare methods within each scenario x guidance cell
+    method_pairs = set()
     for scenario in df["scenario"].unique():
-        for method in df["method"].unique():
-            for a_name, b_name in pairs:
-                a = df[
-                    (df["scenario"] == scenario)
-                    & (df["method"] == method)
-                    & (df["effective_guidance_mode"] == a_name)
-                ]
-                b = df[
-                    (df["scenario"] == scenario)
-                    & (df["method"] == method)
-                    & (df["effective_guidance_mode"] == b_name)
-                ]
-                if len(a) == 0 or len(b) == 0:
-                    continue
-                # Pair by evaluation_seed and episode_index (within scenario)
-                # Since episodes are aligned by seed and episode order, use positional index
-                n = min(len(a), len(b))
-                a_succ = a["is_success"].iloc[:n].values.astype(bool)
-                b_succ = b["is_success"].iloc[:n].values.astype(bool)
-                # Discordant counts
-                b_disc = int(np.sum(a_succ & ~b_succ))  # A success, B failure
-                c_disc = int(np.sum(~a_succ & b_succ))  # A failure, B success
-                try:
-                    p_val = mcnemar_exact_pvalue(b_disc, c_disc)
-                except Exception as exc:
-                    p_val = np.nan
-                rows.append({
-                    "scenario": scenario,
-                    "method": method,
-                    "comparison": f"{a_name}_vs_{b_name}",
-                    "n_pairs": n,
-                    "a_success_b_failure": b_disc,
-                    "a_failure_b_success": c_disc,
-                    "mcnemar_exact_p": p_val,
-                    "a_success_rate": a_succ.mean(),
-                    "b_success_rate": b_succ.mean(),
-                })
+        for guidance in df["effective_guidance_mode"].unique():
+            sub = df[(df["scenario"] == scenario) & (df["effective_guidance_mode"] == guidance)]
+            methods = sorted(sub["method"].unique())
+            for i in range(len(methods)):
+                for j in range(i + 1, len(methods)):
+                    method_pairs.add((scenario, guidance, methods[i], methods[j]))
+
+    # Compute for guidance-mode comparisons
+    for scenario, method, a_name, b_name in cell_pairs:
+        a = df[
+            (df["scenario"] == scenario)
+            & (df["method"] == method)
+            & (df["effective_guidance_mode"] == a_name)
+        ]
+        b = df[
+            (df["scenario"] == scenario)
+            & (df["method"] == method)
+            & (df["effective_guidance_mode"] == b_name)
+        ]
+        if len(a) == 0 or len(b) == 0:
+            continue
+        n = min(len(a), len(b))
+        a_succ = a["is_success"].iloc[:n].values.astype(bool)
+        b_succ = b["is_success"].iloc[:n].values.astype(bool)
+        b_disc = int(np.sum(a_succ & ~b_succ))
+        c_disc = int(np.sum(~a_succ & b_succ))
+        try:
+            p_val = mcnemar_exact_pvalue(b_disc, c_disc)
+        except Exception as exc:
+            p_val = np.nan
+        rows.append({
+            "scenario": scenario,
+            "method": method,
+            "comparison": f"{a_name}_vs_{b_name}",
+            "n_pairs": n,
+            "a_success_b_failure": b_disc,
+            "a_failure_b_success": c_disc,
+            "mcnemar_exact_p": p_val,
+            "a_success_rate": a_succ.mean(),
+            "b_success_rate": b_succ.mean(),
+        })
+
+    # Compute for method comparisons
+    for scenario, guidance, a_name, b_name in method_pairs:
+        a = df[
+            (df["scenario"] == scenario)
+            & (df["effective_guidance_mode"] == guidance)
+            & (df["method"] == a_name)
+        ]
+        b = df[
+            (df["scenario"] == scenario)
+            & (df["effective_guidance_mode"] == guidance)
+            & (df["method"] == b_name)
+        ]
+        if len(a) == 0 or len(b) == 0:
+            continue
+        n = min(len(a), len(b))
+        a_succ = a["is_success"].iloc[:n].values.astype(bool)
+        b_succ = b["is_success"].iloc[:n].values.astype(bool)
+        b_disc = int(np.sum(a_succ & ~b_succ))
+        c_disc = int(np.sum(~a_succ & b_succ))
+        try:
+            p_val = mcnemar_exact_pvalue(b_disc, c_disc)
+        except Exception as exc:
+            p_val = np.nan
+        rows.append({
+            "scenario": scenario,
+            "guidance_mode": guidance,
+            "comparison": f"{a_name}_vs_{b_name}",
+            "n_pairs": n,
+            "a_success_b_failure": b_disc,
+            "a_failure_b_success": c_disc,
+            "mcnemar_exact_p": p_val,
+            "a_success_rate": a_succ.mean(),
+            "b_success_rate": b_succ.mean(),
+        })
+
     return rows
 
 

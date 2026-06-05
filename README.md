@@ -1,523 +1,343 @@
-# uav-vpp-guidance
+# UAV VPP Guidance
 
-UAV Virtual Pursuit Point Guidance with LOS-rate Guidance and Strategy-Gain Bilevel Optimization
+A research codebase for exploring guidance-law limitations in neural virtual-pursuit-point (VPP) pursuit-evasion.
 
-## Project Goal
+---
 
-This project aims to build a reproducible, extensible, and paper-ready engineering framework for close-range UAV dynamic tracking, featuring:
+## 1. Research Objective
 
-- **Virtual Pursuit Point (VPP) policy**: A learned policy outputs normalized parameters that define a virtual pursuit point relative to the target aircraft.
-- **LOS-rate guidance law**: Generate normal overload and roll-rate commands based on line-of-sight angular rate.
-- **Proportional Navigation (True 3D PN)**: Classical PN guidance with filtered LOS-rate estimation for terminal-phase stability.
-- **Hybrid Guidance**: Automatic switching or continuous blending between geometric LOS-rate and PN based on engagement range / energy state.
-- **Command Post-Processor**: Final saturation, terminal-phase protection, load-roll coordination, and energy compensation before actuator mapping.
-- **Regret-minimized strategy-gain bilevel optimization**: Alternating optimization of the pursuit policy (strategy) and the guidance gains.
-- **Target trajectory prediction**: Predict the target's future position (`f_ψ`) so the VPP anchor shifts from the current position to the predicted future position.
+Determine when neural prediction improves aircraft tracking in pursuit-evasion, and when guidance-law limitations dominate. The project is organized into progressive stages (6E → 6F → 6G → 6H → 6I → 7A), with each stage producing **paper-safe evidence** and **runnable artifacts**.
 
-## Relationship with Legacy Project
+---
 
-- **Legacy project path**: `E:\CloseAirCombat_control`
-- The legacy project is used **only as a reference library**.
-- **No new research code will be added to the legacy project.**
-- Historical experiment results, ACMI files, CSVs, PNGs, and temporary scripts are **not migrated** into this repository.
+## 2. System Architecture
 
-> ⚠️ **Important**: Smoke-test results (short training runs with 512 steps) and random-policy evaluations **must not be cited as final performance conclusions** in the paper. All quantitative claims require full multi-seed training (≥200k steps) and statistical comparison across scenarios.
+```text
+config/experiment/          ← Stage configs (frozen, immutable per release)
+  stage6f5_feasible_geometry.yaml
+  stage6f5_maneuvering_target.yaml
 
-## Directory Structure
+src/uav_vpp_guidance/
+  environment/              ← Simple backend (flat-earth, point-mass, 6-DOF)
+  guidance/
+    los_rate_guidance.py      ← LOS-rate guidance with VPP
+    proportional_navigation.py  ← Proportional navigation
+    hybrid_guidance.py        ← Hysteresis + blended switch
+  evaluation/
+    evaluate_prediction_comparison.py  ← Main benchmark harness
+    statistical_comparison.py          ← McNemar, bootstrap, CI
+  prediction/
+    gru_predictor.py          ← Frozen GRU predictor
+    lstm_predictor.py         ← Frozen LSTM predictor
+
+scripts/
+  run_stage6g_guidance_limitation_probe.py  ← Stage 6G: guidance-law probe
+  run_stage6f_paper_safe_benchmark.py       ← Stage 6F: prediction benchmark
+  synthesize_stage6f.py                     ← Stage 6F: synthesis + report
+  train_paper_safe.py                       ← Policy training
+
+experiments/                ← Git-ignored: weights, checkpoints, results
+  stage6f5_*/
+  stage6g_*/
+```
+
+---
+
+## 3. Current Evidence Status
+
+| Stage | Status | Evidence | Runnable |
+|---|---|---|---|
+| 6E | ✅ Complete | 4 geometry scenarios, 1.1M steps, high capture rate, low error | `scripts/run_stage6e_paper_safe.py` |
+| 6F | ✅ Complete | Paper-safe benchmark, McNemar exact, cross-seed, synthesis table | `scripts/run_stage6f_paper_safe_benchmark.py` |
+| 6G.1 | ✅ Complete | Guidance-law limitation probe (hardened, smoke passed, full run completed, 720 episodes, 12 cells, McNemar exact) | `scripts/run_stage6g_guidance_limitation_probe.py` |
+| 6H | ⏳ Not started | Bilevel gain optimization | — |
+| 6I | ⏳ Not started | Alternating bilevel training | — |
+| 7A | ⏳ Not started | JSBSim/F-16 validation | — |
+
+---
+
+## 4. Paper-Safe Claims
+
+| Claim | Status | Reason |
+|---|---|---|
+| Neural prediction improves feasible-geometry tracking over classical/no prediction baselines | ✅ Paper-safe | Supported by Stage 6F synthesis; scope limited to tested scenarios. |
+| GRU is strictly better than LSTM in weaving_headon | ❌ Not paper-safe | Cross-seed strict consistency insufficient. |
+| CA and CV are practically equivalent | ❌ Not paper-safe | Observed differences are small but not enough for a formal claim. |
+| Tail-chase failure is a guidance-law limitation | ❌ Not paper-safe | Full Stage 6G.1 (720 eps): all guidance laws show 0% success. Failure is not LOS-rate specific. |
+| PN/hybrid resolves tail-chase failure | ❌ Not paper-safe | Full Stage 6G.1: PN and hybrid also show 0% success in all tested scenarios. |
+| Tail-chase remains infeasible across guidance laws | ✅ Paper-safe (within tested scenarios) | Full Stage 6G.1: 0% success across all 3 guidance laws × 4 scenarios × 2 methods × 3 seeds. |
+
+> **Paper-safe rule**: A claim is `✅` only if supported by the full experimental matrix, statistical significance, and cross-seed consistency. `⏳` means the probe is running but not yet conclusive. `❌` means the data does not support the claim.
+
+---
+
+## 5. Quick Start: Actually Runnable Commands
+
+### 5.1 Install
+
+```bash
+pip install -r requirements.txt
+# Or: pip install -e .
+```
+
+### 5.2 Dry-run the Stage 6G probe (no simulation)
+
+```bash
+python scripts/run_stage6g_guidance_limitation_probe.py --dry-run --output-dir outputs/stage6g_probe/dryrun
+```
+
+**Expected output**: `resolved_config.yaml`, `run_manifest.json`, and a printed plan matrix.
+
+### 5.3 Smoke test the Stage 6G probe (1 episode, 1 seed, fast)
+
+```bash
+python scripts/run_stage6g_guidance_limitation_probe.py --smoke --output-dir outputs/stage6g_probe/smoke
+```
+
+**Expected output**: All 12 probe cells (3 guidance × 4 scenarios) run 1 episode each, producing `raw_episodes.csv`, `scenario_method_summary.csv`, `pairwise_mcnemar.csv`, `paper_safe_claims.md`, `README_result_block.md`.
+
+**Time**: ~4–5 minutes.
+
+### 5.4 Full Stage 6G probe (10 episodes × 3 seeds)
+
+```bash
+python scripts/run_stage6g_guidance_limitation_probe.py --output-dir outputs/stage6g_probe/full
+```
+
+**Time**: ~4–5 hours (720 episodes total: 2 methods × 3 guidance × 4 scenarios × 10 episodes × 3 seeds).
+
+**Expected output**: Same artifacts as smoke, with full statistical power.
+
+### 5.5 Run existing Stage 6F benchmark
+
+```bash
+python scripts/run_stage6f_paper_safe_benchmark.py
+```
+
+### 5.6 Synthesize Stage 6F results
+
+```bash
+python scripts/synthesize_stage6f.py
+```
+
+### 5.7 Train a policy (example)
+
+```bash
+python scripts/train_paper_safe.py
+```
+
+### 5.8 Run tests
+
+```bash
+python -m pytest tests/ -v
+```
+
+---
+
+## 6. Stage 6G Guidance-Law Limitation Probe
+
+### 6.1 Research Question
+
+Is the tail-chase / stern-conversion dead zone observed in Stage 6E a **guidance-law limitation** (LOS-rate specific) or a **geometric/physics infeasibility** (any guidance law would fail)?
+
+### 6.2 Experimental Matrix
+
+| Guidance | Scenarios | Methods | Episodes | Seeds |
+|---|---|---|---|---|
+| LOS-rate | favorable, disadvantage, weaving_pursuit, weaving_disadvantage | no_prediction, gru_frozen | 10 | 0, 1, 2 |
+| Proportional Navigation | (same) | (same) | 10 | 0, 1, 2 |
+| Hybrid | (same) | (same) | 10 | 0, 1, 2 |
+
+**Total**: 3 guidance × 4 scenarios × 2 methods × 10 episodes × 3 seeds = **720 episodes**
+
+### 6.3 Output Artifacts
+
+```
+<run_id>/
+  resolved_config.yaml          ← Final effective config (paths, modes, seeds)
+  run_manifest.json             ← Audit: start/end, git commit, hostname, status
+  raw_episodes.csv              ← One row per episode (scenario, method, guidance, success, ...)
+  scenario_method_summary.csv   ← Aggregated: success_rate, crash_rate, capture_time, miss distance
+  pairwise_mcnemar.csv          ← Exact McNemar p: no_pred vs gru_frozen, los vs PN, los vs hybrid
+  paper_safe_claims.md          ← Claim status table (Yes / No / Pending) with reasons
+  README_result_block.md        ← Copy-paste ready block for embedding in README
+  run.log                       ← Full execution log
+```
+
+### 6.4 Statistical Method
+
+- **Primary comparison**: Exact two-sided McNemar test (`scipy.stats.binomtest`) for paired discordant outcomes.
+- **Significance threshold**: `p < 0.05` for claiming a difference between methods or guidance laws.
+- **No p-value-only claims**: A claim requires the full matrix + cross-seed consistency + physical interpretability.
+
+### 6.5 Interpretation Rules
+
+| Pattern | Interpretation | Claim Status |
+|---|---|---|
+| All guidance laws show 0% success in a scenario | Geometrically infeasible | "Yes — infeasible" |
+| LOS-rate fails, PN/hybrid succeed | LOS-rate limitation | "Yes — guidance limitation" |
+| Partial success under LOS-rate | Scenario-dependent | "Mixed" |
+| No significant difference (McNemar p > 0.05) | No evidence for difference | "Pending / No evidence" |
+
+### 6.6 How to Embed Results
+
+After a full run, copy `README_result_block.md` into Section 6 of this README, replacing the placeholder below.
+
+> **Latest Stage 6G result**: `Status: incomplete` (full run in progress)
+>
+> See `outputs/stage6g_guidance_limitation_probe/full_run/<run_id>/README_result_block.md`
+
+---
+
+## 7. Final Bilevel Roadmap
+
+The goal is a **bilevel optimization system** where an outer loop optimizes guidance gains (or switching thresholds) while a neural network optimizes pursuit strategy. The roadmap below lists gates with **acceptance criteria**.
+
+| Gate | Name | Acceptance Criteria | Status |
+|---|---|---|---|
+| **6G.1** | Probe hardening + guidance limitation execution | Stage 6G outputs complete artifacts; paper-safe claims are no longer `Pending` or explicitly remain `Pending` | 🔄 In Progress |
+| **6G.2** | Guidance-law limitation analysis | Determination: tail-chase failure is LOS-rate limitation, geometric infeasibility, or policy/predictor limitation | ⏳ Pending |
+| **6H.0** | Gain-only CEM implementation | `CEMGainOptimizer` has unit tests, score contract, reproducible experiment output | ⏳ Not started |
+| **6H.1** | Fixed-policy gain optimization | Frozen VPP policy, optimize guidance gains, multi-seed comparison of fixed vs optimized | ⏳ Not started |
+| **6I.0** | Alternating bilevel training | Strategy step and gain step have explicit schedule, checkpoint, and rollback strategy | ⏳ Not started |
+| **6I.1** | Regret and stability audit | Report regret, success, stability, and failure roots | ⏳ Not started |
+| **7A** | JSBSim/F-16 validation | Simple backend conclusions transfer to 6DOF backend | ⏳ Not started |
+| **7B** | Paper release package | Frozen configs, seeds, CSVs, figures, summary, commit hash, environment file | ⏳ Not started |
+
+### 7.1 Minimal Bilevel Architecture (Target)
+
+```
+┌─────────────────────────────────────┐
+│        Bilevel Optimizer            │
+│  ┌─────────────────────────────┐    │
+│  │  Outer: Gain Optimizer (CEM) │   │
+│  │  - Switches: range, energy   │   │
+│  │  - Thresholds: range, speed   │   │
+│  └─────────────────────────────┘   │
+│              ↓                      │
+│  ┌─────────────────────────────┐    │
+│  │  Inner: VPP Policy (PPO)    │   │
+│  │  - Frozen during gain step  │   │
+│  └─────────────────────────────┘    │
+└─────────────────────────────────────┘
+```
+
+### 7.2 Score Contract (6H.0)
+
+The CEM optimizer must produce a **score** that is:
+- **Deterministic**: Same seed → same score (within floating-point tolerance)
+- **Monotonic**: Higher score = better tracking
+- **Decomposable**: Score = success_rate × mean_return + stability_penalty
+
+### 7.3 Alternating Schedule (6I.0)
+
+```
+Epoch 1–20:   Train policy (gain frozen)
+Epoch 21–30:  Optimize gains (policy frozen)
+Epoch 31–50:  Train policy (gain frozen)
+Epoch 51–60:  Optimize gains (policy frozen)
+...
+Rollback: If score drops > 10% for 3 consecutive epochs, revert to last checkpoint.
+```
+
+---
+
+## 8. Reproducibility and Artifact Contract
+
+### 8.1 Git-ignored vs. Committed
+
+```text
+# Git-ignored (never commit)
+experiments/              ← Checkpoints, weights, large result files
+outputs/                  ← Probe outputs (except summary copies in docs/results/)
+*.pt                      ← Model weights
+*.ckpt                    ← Checkpoints
+
+# Committed (always in repo)
+config/                   ← Frozen experiment configs
+docs/                     ← Documentation, paper-safe claims, roadmaps
+tests/                    ← Test suite
+scripts/                  ← Runnable scripts
+```
+
+### 8.2 Result Archiving
+
+After a full Stage 6G run, copy the lightweight summary to `docs/results/`:
+
+```bash
+cp outputs/stage6g_guidance_limitation_probe/full_run/<run_id>/paper_safe_claims.md \
+   docs/results/stage6g_paper_safe_claims.md
+
+cp outputs/stage6g_guidance_limitation_probe/full_run/<run_id>/README_result_block.md \
+   docs/results/stage6g_readme_result_block.md
+
+cp outputs/stage6g_guidance_limitation_probe/full_run/<run_id>/scenario_method_summary.csv \
+   docs/results/stage6g_scenario_method_summary.csv
+```
+
+### 8.3 Environment File
+
+```bash
+pip freeze > requirements.txt
+# Commit requirements.txt before any release run
+```
+
+---
+
+## 9. Repository Structure
 
 ```
 uav-vpp-guidance/
-├── config/                 # YAML configuration files
-│   ├── env.yaml            # Simulation and environment settings
-│   ├── ppo.yaml            # PPO hyperparameters
-│   ├── guidance.yaml       # Guidance law and virtual point parameters
-│   ├── gain_space.yaml     # Gain search space and optimizer settings
-│   ├── reward.yaml         # Reward weights
-│   ├── trajectory_prediction.yaml  # Target trajectory prediction settings
-│   └── experiment/         # Experiment-specific configs
-├── src/uav_vpp_guidance/   # Main Python package
-│   ├── envs/               # JSBSim wrapper, tracking env, scenarios
-│   ├── flight_control/     # Low-level controller, command filter/limiter
-│   ├── virtual_point/      # VPP generation, pursuit priors, smoothing
-│   ├── guidance/           # LOS-rate guidance, PN, hybrid, command post-processor, gain config
-│   ├── trajectory_prediction/  # Target trajectory prediction (LSTM/GRU/Transformer)
-│   ├── agents/             # PPO/SAC agents, networks, replay buffer
-│   ├── gain_optimizer/     # CEM, PBT, regret, bilevel trainer
-│   ├── training/           # Training entry points
-│   ├── evaluation/         # Monte Carlo, metrics, ablation
-│   └── utils/              # Config, seed, logger, checkpoint, plotting
-├── scripts/                # PowerShell launch scripts
-├── tests/                  # Unit tests
-├── experiments/            # Experiment output folders (gitignored subdirs)
-├── outputs/                # Global output folder (gitignored)
-├── docs/                   # Documentation
-└── legacy_notes/           # Migration notes
+├── config/
+│   ├── experiment/               ← Stage configs (immutable per release)
+│   ├── training/
+│   └── environment/
+├── docs/
+│   ├── stage6g_guidance_limitation_probe.md   ← Probe documentation
+│   ├── bilevel_final_roadmap.md               ← Bilevel roadmap
+│   └── results/                               ← Archived summaries
+├── experiments/
+│   ├── no_prediction_vpp_ppo_seed0/
+│   ├── vpp_ppo_gru_frozen_seed0/
+│   └── vpp_ppo_lstm_frozen_seed0/
+├── outputs/                    ← Git-ignored: probe outputs, logs
+├── scripts/
+│   ├── run_stage6g_guidance_limitation_probe.py
+│   ├── run_stage6f_paper_safe_benchmark.py
+│   ├── synthesize_stage6f.py
+│   └── train_paper_safe.py
+├── src/
+│   └── uav_vpp_guidance/
+│       ├── environment/
+│       ├── guidance/
+│       ├── evaluation/
+│       ├── prediction/
+│       └── utils/
+├── tests/
+│   ├── test_stage6g_guidance_probe.py
+│   ├── test_stage6g_artifact_contract.py
+│   ├── test_statistical_comparison.py
+│   ├── test_los_rate_guidance.py
+│   ├── test_proportional_navigation.py
+│   ├── test_hybrid_guidance.py
+│   └── ...
+├── requirements.txt
+├── setup.py
+└── README.md                    ← This file
 ```
 
-## Quick Start
+---
 
-Install in editable mode:
+## 10. Legacy Project Boundary
 
-```powershell
-pip install -e .
-```
+> **⚠️ Important**: This is a research project focused on **understanding neural guidance limitations**, not a production missile guidance system. Do not use for real-world safety-critical applications without extensive validation.
 
-Verify import:
+**Scope boundaries**:
+- Simple backend (flat-earth, point-mass) → JSBSim validation required for real-world claims (Stage 7A)
+- No sensor noise, communication delay, or actuator dynamics
+- Evaluation scenarios are synthetic and may not represent all real-world engagement geometries
+- Guidance laws are simplified (no 3D engagement, no autopilot lag)
 
-```powershell
-python -c "import uav_vpp_guidance; print('ok')"
-```
+---
 
-### Guidance Mode Selection
-
-Select the guidance law via `guidance.mode` in your config:
-
-```yaml
-guidance:
-  mode: los_rate          # "los_rate" | "proportional_navigation" | "hybrid"
-  gains:
-    k_los: 1.0
-    k_roll: 1.0
-    k_speed: 0.2
-  params:
-    distance_scale_m: 2000.0
-    navigation_constant: 3.0
-    hybrid_mode: range      # "range" | "energy" | "blended"
-    range_threshold_m: 3000.0
-```
-
-### Capture Radius Mechanism
-
-When the own aircraft approaches the Virtual Pursuit Point (distance < `capture_radius_m`, default 50 m), the guidance law automatically blends commands toward a safe hold state to avoid the distance singularity:
-
-- `roll_rate_cmd` is attenuated linearly to 0 as distance → 0.
-- `nz_cmd` blends toward `base_nz` (typically 1.0 g, level flight).
-- Throttle remains on speed-hold logic.
-
-Configure in `guidance.yaml`:
-
-```yaml
-guidance:
-  params:
-    capture_radius_m: 50.0
-    enable_internal_clip: true
-    enable_internal_filter: false
-```
-
-**Trade-offs**: Larger capture radius produces smoother terminal behavior but may delay fine-positioning. Smaller radius preserves responsiveness but increases numerical risk near the singularity.
-
-Enable optional command post-processing:
-
-```yaml
-guidance:
-  post_process:
-    enabled: true
-    enable_terminal_protection: true
-    terminal_range_m: 500.0
-    enable_energy_compensation: false
-    enable_load_roll_coordination: false
-```
-
-### Console Scripts
-
-After `pip install -e .`, the following entry points are available:
-
-```powershell
-# Training
-uav-vpp-train-fixed-gain
-uav-vpp-train-gain-only
-uav-vpp-train-bilevel
-uav-vpp-train-no-prediction
-uav-vpp-train-no-prediction-ppo
-uav-vpp-train-prediction-ppo
-
-# Evaluation
-uav-vpp-eval-no-prediction
-uav-vpp-eval-prediction-comparison
-uav-vpp-eval-stage6b
-```
-
-### Minimal Run Commands
-
-Train VPP policy with fixed gains:
-
-```powershell
-.\scripts\train_fixed_gain.ps1
-```
-
-Freeze policy and optimize gains only:
-
-```powershell
-.\scripts\train_gain_only.ps1
-```
-
-Run proposed bilevel training:
-
-```powershell
-.\scripts\train_bilevel.ps1
-```
-
-Run Monte Carlo evaluation:
-
-```powershell
-.\scripts\eval_monte_carlo.ps1
-```
-
-Run Stage 6B benchmark (smoke test):
-
-```powershell
-.\scripts\run_stage6b_simple_benchmark.ps1 -Smoke
-# or
-python -m uav_vpp_guidance.evaluation.run_stage6b_simple_benchmark `
-    --config config/experiment/benchmark_simple_prediction_comparison.yaml --smoke
-```
-
-## No-Prediction VPP Baseline
-
-**No-Prediction VPP Baseline** is a runnable baseline that closes the full RL loop without trajectory prediction:
-
-- `trajectory_prediction.enabled=false`
-- `virtual_point.anchor_mode=current_target`
-- No LSTM/GRU/KF/IMM predictors involved
-- Validates the VPP autonomous decision framework itself
-
-### Smoke Rollout
-
-```powershell
-python -m uav_vpp_guidance.training.train_no_prediction_vpp `
-    --config config/experiment/no_prediction_vpp.yaml --smoke
-```
-
-### Evaluation
-
-```powershell
-python -m uav_vpp_guidance.evaluation.evaluate_no_prediction `
-    --config config/experiment/no_prediction_vpp.yaml
-```
-
-### Rule-Based Baseline
-
-```powershell
-python -m uav_vpp_guidance.evaluation.evaluate_no_prediction `
-    --config config/experiment/rule_based_pursuit_baseline.yaml `
-    --rule-mode pure_pursuit
-```
-
-See [docs/no_prediction_vpp_baseline.md](docs/no_prediction_vpp_baseline.md) for details.
-
-## No-Prediction VPP PPO Training
-
-Trains a PPO policy to autonomously output virtual pursuit point offsets Δp:
-
-```powershell
-# Smoke test
-python -m uav_vpp_guidance.training.train_no_prediction_vpp_ppo `
-    --config config/experiment/train_no_prediction_vpp_ppo.yaml --smoke
-
-# Full training
-python -m uav_vpp_guidance.training.train_no_prediction_vpp_ppo `
-    --config config/experiment/train_no_prediction_vpp_ppo.yaml
-```
-
-### Policy Evaluation
-
-```powershell
-# Simple backend
-python -m uav_vpp_guidance.evaluation.evaluate_policy `
-    --config config/experiment/train_no_prediction_vpp_ppo.yaml `
-    --checkpoint outputs/experiments/no_prediction_vpp_ppo/checkpoints/best.pt `
-    --backend simple --episodes 10 --seeds 0 1 2 --save-trajectories
-
-# JSBSim backend
-python -m uav_vpp_guidance.evaluation.evaluate_policy `
-    --config config/experiment/train_no_prediction_vpp_ppo.yaml `
-    --checkpoint outputs/experiments/no_prediction_vpp_ppo/checkpoints/best.pt `
-    --backend jsbsim --episodes 2 --seeds 0 --save-trajectories
-```
-
-### Training Curves
-
-```powershell
-python -m uav_vpp_guidance.visualization.plot_training_curves `
-    --log-dir outputs/experiments/no_prediction_vpp_ppo/logs `
-    --output outputs/experiments/no_prediction_vpp_ppo/figures
-```
-
-See [docs/no_prediction_vpp_ppo_training.md](docs/no_prediction_vpp_ppo_training.md) for details.
-
-## Stage 6A: Classical CV/CA Prediction VPP Integration
-
-Extends the No-Prediction baseline with Constant Velocity (CV) and Constant Acceleration (CA) trajectory predictors. The virtual pursuit point anchor shifts from `current_target` to `predicted_target`:
-
-```
-Pos_Virtual = Pos_Target_Pred + Δp
-```
-
-### Training
-
-```powershell
-# CV Prediction
-python -m uav_vpp_guidance.training.train_prediction_vpp_ppo `
-    --config config/experiment/train_vpp_ppo_cv.yaml --smoke
-
-# CA Prediction
-python -m uav_vpp_guidance.training.train_prediction_vpp_ppo `
-    --config config/experiment/train_vpp_ppo_ca.yaml --smoke
-```
-
-### Prediction Comparison Evaluation
-
-```powershell
-python -m uav_vpp_guidance.evaluation.evaluate_prediction_comparison `
-    --config config/experiment/evaluate_vpp_prediction_comparison.yaml `
-    --backend simple --episodes 10 --seeds 0 1 2 --save-trajectories
-```
-
-### Prediction Comparison Plots
-
-```powershell
-python -m uav_vpp_guidance.visualization.plot_prediction_comparison `
-    --metrics outputs/tables/prediction_comparison/simple/prediction_metrics.csv `
-    --trajectories outputs/trajectories/prediction_comparison/simple `
-    --output outputs/figures/prediction_comparison/simple
-```
-
-See [docs/classical_prediction_vpp_integration.md](docs/classical_prediction_vpp_integration.md) for details.
-
-## Stage 6D–6F: Neural Predictor (LSTM/GRU) Integration
-
-Extends the VPP framework with pre-trained neural trajectory predictors:
-
-### Coordinate Convention
-
-All trajectory prediction internal logic uses **NEU** (North-East-Up) exclusively:
-- `velocity_ned=[vn, ve, vd]` is converted to NEU `[vn, ve, -vd]` via `coordinate_utils.py`.
-- This fixes the previous bug where CV/CA predictors using NED velocity with NEU position would subtract vertical speed incorrectly.
-
-### Strict Predictor Initialization
-
-Neural predictors with a configured `checkpoint_path` default to `strict_predictor_init=True`:
-- Missing or corrupted checkpoints raise `RuntimeError` before training starts.
-- Prevents silent fallback to untrained random weights.
-
-### Fallback Semantics
-
-`TrajectoryPredictorAdapter` supports configurable `fallback_mode`:
-- `constant_velocity`: Physics baseline extrapolation.
-- `constant_acceleration`: Physics baseline with acceleration estimate.
-- `current_target`: Return current target position (no extrapolation).
-- `none`: Re-raise exception instead of swallowing.
-
-### Smoke Training
-
-```powershell
-# Frozen LSTM predictor
-python -m uav_vpp_guidance.training.train_prediction_vpp_ppo `
-    --config config/experiment/train_vpp_ppo_lstm_frozen.yaml --smoke
-
-# Frozen GRU predictor
-python -m uav_vpp_guidance.training.train_prediction_vpp_ppo `
-    --config config/experiment/train_vpp_ppo_gru_frozen.yaml --smoke
-```
-
-### Evaluation
-
-```powershell
-# LSTM evaluation
-python -m uav_vpp_guidance.evaluation.evaluate_policy `
-    --config config/experiment/evaluate_vpp_lstm_prediction.yaml `
-    --checkpoint outputs/experiments/vpp_ppo_lstm_frozen/checkpoints/best.pt `
-    --backend simple --episodes 10 --seeds 0 1 2 --save-trajectories
-
-# GRU evaluation
-python -m uav_vpp_guidance.evaluation.evaluate_policy `
-    --config config/experiment/evaluate_vpp_gru_prediction.yaml `
-    --checkpoint outputs/experiments/vpp_ppo_gru_frozen/checkpoints/best.pt `
-    --backend simple --episodes 10 --seeds 0 1 2 --save-trajectories
-```
-
-### Predictor Health Metrics
-
-During PPO training, the episode log tracks:
-- `prediction_valid_rate`: fraction of steps with valid neural prediction.
-- `fallback_rate`: fraction of steps where fallback was activated.
-- `predictor_init_failed_count`: steps where predictor initialization failed.
-
-The smoke summary JSON includes:
-- `predictor_type`, `prediction_enabled`
-- `prediction_valid_rate`, `fallback_rate`
-- `predictor_init_failed`
-
-## Trajectory Prediction Module
-
-The trajectory prediction module (`trajectory_prediction/`) upgrades the VPP anchor from the target's **current position** to the target's **predicted future position**:
-
-```
-Pos_Virtual = Pos_T_pred + Δp
-```
-
-### Supported Predictors
-
-| Model | Description | Status |
-|---|---|---|
-| `ConstantVelocityPredictor` | Physics baseline: `Pos + Vel * T` | ✅ |
-| `LSTMTrajectoryPredictor` | Stacked LSTM + MLP head | ✅ Complete (offline training + online integration) |
-| `GRUTrajectoryPredictor` | Stacked GRU + MLP head | ✅ Complete (offline training + online integration) |
-| Transformer | Temporal attention encoder | 🔜 Interface reserved |
-
-### Anchor Modes
-
-- `current_target`: VPP anchored at target current position (legacy behavior).
-- `constant_velocity`: VPP anchored at `Pos_T + Vel * T_lookahead`.
-- `predicted_target`: VPP anchored at model-predicted future position.
-
-### Configuration
-
-See `config/trajectory_prediction.yaml` for hyperparameters:
-- `history_len`: past frames used for prediction (default 10).
-- `lookahead_time_s`: prediction horizon (default 1.0 s).
-- `model.type`: `lstm`, `gru`, or future `transformer`.
-
-## Experiment Naming Convention
-
-| ID | Name | Description |
-|---|---|---|
-| 001 | baseline_fixed_gain | Fixed gains, no virtual point |
-| 002 | fixed_gain_vpp | Fixed gains with virtual pursuit point |
-| 003 | gain_only | Frozen VPP policy + CEM gain optimization |
-| 004 | bilevel | Proposed strategy-gain bilevel optimization |
-| 005 | ablation | Ablation studies (no regret, no gain obs, no safety penalty) |
-
-## Current Migration Status
-
-See `docs/legacy_mapping.md` and `legacy_notes/files_to_migrate.md` for detailed migration plans.
-
-### Phase 1 (Completed): Framework
-- [x] Clean project structure
-- [x] Core class skeletons with clear interfaces
-- [x] Configuration system (YAML)
-- [x] Unit test skeletons
-- [x] Legacy mapping documentation
-
-### Phase 2 (Completed): P1 Core Migration
-- [x] JSBSim minimal closed-loop wrapper
-- [x] Fixed-gain pursuit baseline (env skeleton)
-- [x] Virtual pursuit point generator (interface)
-
-### Phase 3 (Completed): Trajectory Prediction
-- [x] Trajectory prediction module framework
-- [x] Constant velocity / LSTM / GRU predictors
-- [x] Predictor adapter integrated with VPP generator
-- [x] Episode-based supervised training (Stage 6C)
-- [x] Neural predictor online integration (Stage 6D)
-- [x] Coordinate/device/fallback hardening (Stage 6E)
-- [ ] Transformer predictor
-
-### Phase 4 (Completed): No-Prediction VPP Baseline
-- [x] SimplePointMassEnv for smoke testing
-- [x] CloseRangeTrackingEnv full closed loop
-- [x] LOSRateGuidance with command limiter/filter
-- [x] RewardCalculator with range/angle/safety/saturation/smooth terms
-- [x] TerminationChecker with success/crash/timeout/out_of_bounds
-- [x] RuleBasedPursuitPolicy (pure/lag/lead)
-- [x] Smoke rollout and evaluation scripts
-- [x] All tests passing
-
-### Phase 5 (Completed): No-Prediction VPP PPO Baseline
-- [x] PPO agent with MLP Actor-Critic
-- [x] Rollout buffer with GAE
-- [x] Training loop with evaluation and checkpointing
-- [x] Policy evaluation on both simple and JSBSim backends
-- [x] Training curve plotting
-- [x] All tests passing
-
-### Phase 6A (Completed): Classical CV/CA Prediction VPP Integration
-- [x] Constant Velocity predictor baseline
-- [x] Constant Acceleration predictor baseline
-- [x] Predictor adapter with buffer update / feature build / prediction chain
-- [x] Environment prediction anchor integration (predicted_target)
-- [x] Ablation: No-Prediction vs CV vs CA on SimplePointMass
-
-### Phase 6B (Completed): Full Simple-Backend Benchmark
-- [x] Fixed-scenario benchmark (favorable / neutral / disadvantage / challenging)
-- [x] Multi-seed statistical comparison (bootstrap CI, paired delta)
-- [x] Automated summary.md generation with terminal-phase stability metrics
-- [x] Smoke vs full benchmark runner
-- [x] Command variance and limit-exceedance tracking in terminal phase
-- [ ] Full multi-seed training (≥200k steps) for paper-grade results
-
-### Phase 6C (Completed): LSTM/GRU Offline Training Pipeline
-- [x] Dataset builder from episode logs (CSV / DataFrame / dict-list)
-- [x] Sliding-window feature extraction with NEU displacement labels
-- [x] LSTM/GRU trainer with train/validate/fit/checkpoint
-- [x] Training pipeline CLI and PowerShell script
-- [x] 14 unit tests for dataset, trainer, pipeline
-
-### Phase 6D (Completed): Neural Predictor Online Integration
-- [x] LSTM/GRU predictor adapter with checkpoint loading
-- [x] `is_ready()` guard for neural predictors
-- [x] LSTM closed-loop integration test in TrackingEnv
-- [x] Frozen predictor during RL by default
-
-### Phase 6E (Completed): Coordinate-System + Device + Fallback Hardening
-- [x] Unified `coordinate_utils.py`: NED→NEU conversion for position/velocity/acceleration
-- [x] `device_utils.py`: safe CPU/CUDA resolution with fallback/strict modes
-- [x] Strict predictor initialization: missing checkpoint fails fast
-- [x] Configurable fallback modes: `constant_velocity`, `constant_acceleration`, `current_target`, `none`
-- [x] `fallback_model` / `fallback_reason` / `prediction_valid` observability in info
-- [x] `predictor_init_failed` exposed in env step info
-- [x] GRU closed-loop integration test
-
-### Phase 6E.2 (Completed): Predictor Telemetry & Reproducibility Gate
-- [x] `checkpoint_strict` canonical key with `strict_checkpoint` backward-compatible alias
-- [x] `fallback_phase` semantics: `warmup`, `runtime_failure`, `init_failure`, `configured_current_target`, `none`
-- [x] Delayed `prediction_error_m` tracker: compares predicted position at t+T against actual target position
-- [x] PPO observability aggregation: `post_warmup_fallback_rate`, `warmup_fallback_rate`, `runtime_fallback_rate`, `mean_prediction_error_m`
-- [x] Partial episode metrics flush at training end
-- [x] Evaluation scripts (`evaluate_policy.py`, `evaluate_prediction_comparison.py`) include prediction health metrics
-- [x] Checkpoint reproducibility manifest (`checkpoint_manifest.example.yaml`) + verify script
-- [x] Trajectory prediction config validator (`validate_tp_config`)
-
-### Phase 6E.3 (Completed): Telemetry Contract Reconciliation + Evaluation Isolation
-- [x] `PredictionErrorTracker` fully wired into `tracking_env.step()` with `latest_prediction_error_m`, `mean_prediction_error_m`, `median_prediction_error_m`, `prediction_error_count`
-- [x] `fallback_phase` / `fallback_mode` / `fallback_model` propagated from adapter → env info → train/eval scripts via shared `PredictorHealthAccumulator`
-- [x] `train_prediction_vpp_ppo.py` uses independent `eval_env` in `run_evaluation()` to prevent training state pollution
-- [x] `median_prediction_error_m` added to episode log, smoke_summary, and evaluation outputs
-- [x] `validate_tp_config` called in training/evaluation entry points (`on_unknown="warn"` for smoke, `"raise"` for full training)
-- [x] Checkpoint manifest example uses placeholder git commit; verify script supports `--allow-placeholder-example`
-
-### Phase 6F (In Progress): Frozen Neural Predictor PPO Smoke + Full Ablation
-- [x] `train_vpp_ppo_lstm_frozen.yaml` config
-- [x] `train_vpp_ppo_gru_frozen.yaml` config
-- [x] `evaluate_vpp_gru_prediction.yaml` config
-- [x] Predictor observability in PPO smoke training (prediction_valid_rate, fallback_rate)
-- [ ] Full multi-seed training (≥200k steps) for paper-grade results
-
-### Phase 7 (In Progress): JSBSim High-Fidelity Validation
-
-**Status**: Guidance diversity smoke-tested on JSBSim F-16. No NaN/Inf issues.
-
-Quick comparison (random policy, 3 seeds × 3 episodes):
-
-| Mode | Success | Term NZ Var | Term Roll Var | NZ Exceed | Roll Exceed |
-|------|---------|-------------|---------------|-----------|-------------|
-| los_rate | 33.3% | 0.0362 | ~0 | 0.00% | 0.00% |
-| proportional_navigation | 33.3% | 0.0717 | ~0 | 0.00% | 0.00% |
-| hybrid | 33.3% | 0.0717 | ~0 | 0.00% | 0.00% |
-
-Run full comparison (requires JSBSim backend):
-```powershell
-python scripts/eval_jsbsim_guidance_comparison.py --seeds 0 1 2 --episodes 3 --require-backend jsbsim
-```
-
-- [x] Guidance mode ablation smoke test (geometric vs PN vs hybrid)
-- [x] Terminal-phase command stability metrics on JSBSim
-- [x] LSTM/GRU predictor training and integration
-- [ ] Full JSBSim dynamics and scenario migration
-- [ ] Gain-only CEM optimization
-- [ ] Strategy-gain bilevel training
-- [ ] Terminal-phase command saturation analysis with high-fidelity actuator model
-
-> **Warning**: Smoke benchmark results are for mechanism validation only and must
-> not be presented as final paper conclusions. Full runs with sufficient seeds
-> and episodes are required for statistical claims.
+*Last updated: 2026-06-05 | Stage 6G.1 in progress | Full probe executing*

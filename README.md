@@ -51,7 +51,8 @@ experiments/                ← Git-ignored: weights, checkpoints, results
 | 6F | ✅ Complete | Paper-safe benchmark, McNemar exact, cross-seed, synthesis table | `scripts/run_stage6f_paper_safe_benchmark.py` |
 | 6G.1 | ✅ Complete | Guidance-law limitation probe (hardened, smoke passed, full run completed, 720 episodes, 12 cells, McNemar exact) | `scripts/run_stage6g_guidance_limitation_probe.py` |
 | 6G.2 | ✅ Complete | Failure root-cause attribution: validator, McNemar pairing, telemetry schema, analyzer scripts | `scripts/validate_stage6g_probe_outputs.py` |
-| 6G.3 | 🧪 In progress | Oracle & terminal-protection feasibility gate: smoke probes, new anchor modes, telemetry contract | `docs/stage6g3_oracle_terminal_feasibility_gate.md` |
+| 6G.3 | ✅ Complete | Oracle & terminal-protection feasibility gate: smoke probes, new anchor modes, telemetry contract | `docs/stage6g3_oracle_terminal_feasibility_gate.md` |
+| 6G.4 | 🧪 In progress | Oracle smoke execution & per-step telemetry completion; root-cause decomposition | `docs/stage6g4_oracle_smoke_and_telemetry.md` |
 | 6H | ⏳ Not started | Bilevel gain optimization | — |
 | 6I | ⏳ Not started | Alternating bilevel training | — |
 | 7A | ⏳ Not started | JSBSim/F-16 validation | — |
@@ -65,9 +66,9 @@ experiments/                ← Git-ignored: weights, checkpoints, results
 | Neural prediction improves feasible-geometry tracking over classical/no prediction baselines | ✅ Paper-safe | Supported by Stage 6F synthesis; scope limited to tested scenarios. |
 | GRU is strictly better than LSTM in weaving_headon | ❌ Not paper-safe | Cross-seed strict consistency insufficient. |
 | CA and CV are practically equivalent | ❌ Not paper-safe | Observed differences are small but not enough for a formal claim. |
-| Tail-chase failure is a guidance-law limitation | ❌ Not paper-safe | Full Stage 6G.1 (720 eps): all guidance laws show 0% success. Failure is not LOS-rate specific. |
+| Tail-chase failure is a guidance-law limitation | ❌ Not paper-safe | Full Stage 6G.1 (720 eps): all guidance laws show 0% success. Stage 6G.4 smoke: oracle, rule-based, terminal ablation all 0% success → not prediction/policy/protection specific. Likely geometric infeasibility under current control chain. |
 | PN/hybrid resolves tail-chase failure | ❌ Not paper-safe | Full Stage 6G.1: PN and hybrid also show 0% success in all tested scenarios. |
-| Tail-chase remains infeasible across guidance laws | ✅ Paper-safe (within tested scenarios) | Full Stage 6G.1: 0% success across all 3 guidance laws × 4 scenarios × 2 methods × 3 seeds. |
+| Tail-chase remains infeasible across guidance laws | ✅ Paper-safe (within tested scenarios) | Full Stage 6G.1: 0% success across all 3 guidance laws × 4 scenarios × 2 methods × 3 seeds. Stage 6G.4: oracle/rule-based/terminal-ablation/geometry-sweep all 0% success in smoke. |
 
 > **Paper-safe rule**: A claim is `✅` only if supported by the full experimental matrix, statistical significance, and cross-seed consistency. `⏳` means the probe is running but not yet conclusive. `❌` means the data does not support the claim.
 
@@ -148,7 +149,15 @@ python scripts/validate_stage6g_probe_outputs.py \
 
 **Outputs**: `stage6g_validation_report.md`, `stage6g_validation_summary.json`
 
-### 5.6 Analyze failure root causes
+### 5.6 Run Stage 6G.4 smoke probes (oracle, rule-based, terminal, geometry)
+
+```bash
+python scripts/run_stage6g4_smoke_probes.py --all --episodes 2 --seeds 0 --output-dir outputs/stage6g4_smoke
+```
+
+**Expected output**: Four JSON summaries (`oracle_anchor_smoke_summary.json`, `rule_based_pursuit_smoke_summary.json`, `terminal_control_ablation_smoke_summary.json`, `geometry_feasibility_smoke_summary.json`).
+
+### 5.7 Analyze failure root causes
 
 ```bash
 python scripts/analyze_stage6g_failure_root_cause.py \

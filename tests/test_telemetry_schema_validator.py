@@ -75,7 +75,7 @@ class TestRenderReport(unittest.TestCase):
         md = render_telemetry_validation_report(report)
         self.assertIn("Unavailable Categories", md)
         self.assertIn("command_saturation", md)
-        self.assertIn("per-step telemetry", md)
+        self.assertIn("command saturation aggregates not present", md)
 
     def test_report_shows_critical(self):
         eps = [{"scenario": "s1"}]  # Missing most core fields

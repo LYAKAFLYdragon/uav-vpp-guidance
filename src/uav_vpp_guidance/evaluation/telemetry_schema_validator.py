@@ -46,21 +46,26 @@ PREDICTION_FIELDS = {
 }
 
 # Fields needed for command saturation analysis
-# NOTE: These require PER-STEP telemetry, which is NOT currently emitted.
+# These are computed as episode-level aggregates from per-step telemetry
+# in evaluate_prediction_comparison.py (since Stage 6G.4).
 COMMAND_SATURATION_FIELDS = {
     "nz_cmd_max",
     "nz_cmd_mean",
     "nz_cmd_saturation_rate",
+    "nz_cmd_modification_rate",
     "roll_rate_cmd_max",
     "roll_rate_cmd_mean",
     "roll_rate_cmd_saturation_rate",
+    "roll_rate_cmd_modification_rate",
     "throttle_cmd_max",
     "throttle_cmd_mean",
     "throttle_cmd_saturation_rate",
+    "throttle_cmd_modification_rate",
 }
 
 # Fields needed for altitude / energy analysis
-# NOTE: These require PER-STEP telemetry.
+# These are computed as episode-level aggregates from per-step telemetry
+# in evaluate_prediction_comparison.py (since Stage 6G.4).
 ALTITUDE_ENERGY_FIELDS = {
     "min_altitude_m",
     "max_altitude_m",
@@ -230,11 +235,16 @@ def render_telemetry_validation_report(report: Dict) -> str:
         lines.append("## ⚠️ Unavailable Categories")
         lines.append("")
         for cat in report["unavailable_categories"]:
-            lines.append(f"- `{cat}`: **Not available** — per-step telemetry not emitted by current evaluation harness.")
+            if cat == "command_saturation":
+                lines.append(f"- `{cat}`: **Not available** — command saturation aggregates not present in episode records. "
+                    "Run evaluation with Stage 6G.4+ harness or check that limits are defined in config.")
+            elif cat == "altitude_energy":
+                lines.append(f"- `{cat}`: **Not available** — altitude/energy aggregates not present in episode records. "
+                    "Run evaluation with Stage 6G.4+ harness.")
+            else:
+                lines.append(f"- `{cat}`: **Not available**.")
         lines.append("")
-        lines.append("> These categories require per-step telemetry (nz_cmd, roll_rate_cmd, throttle, altitude, energy). "
-            "The current `evaluate_prediction_comparison.py` only emits per-episode aggregates. "
-            "Do not generate root-cause claims that depend on these fields without first adding per-step telemetry output.")
+        lines.append("> Do not generate root-cause claims that depend on unavailable fields.")
         lines.append("")
 
     return "\n".join(lines)

@@ -36,6 +36,10 @@ python scripts/run_stage6g_guidance_limitation_probe.py \
 
 **Status**: ✅ Config created, anchor mode implemented, tests pass.
 
+**Stage 6G.4 smoke result**: Rule-based pursuit (500m and 1000m lead) produced **0% success** (50% crash). Geometric direction check passed (anchor ahead of target along LOS). Failure is **not caused by the learned PPO policy**.
+
+**Stage 6G.4 smoke result**: Oracle anchor (perfect prediction) produced **0% success** (50% crash, 50% OOB). Failure is **not a prediction bottleneck**.
+
 ---
 
 ## 2. Rule-Based VPP Pursuit Probe (6G.3B)
@@ -87,7 +91,9 @@ python scripts/run_stage6g_guidance_limitation_probe.py \
     --output-dir outputs/stage6g3_protection_smoke
 ```
 
-**Status**: ✅ Base config created. Probe runner needs extension to support per-run config overrides for protection parameters.
+**Status**: ✅ Base config created and fixed for correct guidance param structure. Smoke runner supports per-run config overrides.
+
+**Stage 6G.4 smoke result**: All 6 terminal control variants (baseline, no_capture_radius, no_terminal_protection, no_post_process, no_energy_comp, no_load_roll_coord) produced **0% success** (50% crash, 50% OOB). Failure is **not caused by any protective/limiting mechanism**.
 
 ---
 
@@ -105,7 +111,9 @@ python scripts/run_stage6g_guidance_limitation_probe.py \
 - Identify feasibility boundary (e.g., tail-chase feasible if ego_speed > target_speed + 20 m/s).
 - If no combination succeeds → tail-chase is fundamentally infeasible under current guidance architecture.
 
-**Status**: ✅ Config template created. Probe runner needs extension to generate scenarios from sweep parameters.
+**Status**: ✅ Config template created. Smoke runner generates scenarios from sweep parameters.
+
+**Stage 6G.4 smoke result**: 16-point grid sweep (initial_range × ego_speed × target_speed × altitude_diff) produced **0/16 success** (all crash). No feasible boundary was found within the tested envelope.
 
 ---
 
@@ -117,12 +125,10 @@ Validates that episode data contains required fields for root-cause analysis:
 - **Core**: scenario, method, guidance_mode, seeds, success/crash/OOB/timeout, reason
 - **Terminal phase**: min_range_m, time_to_first_advantage_s, advantage_hold_time_s, VPP shift
 - **Prediction**: prediction_valid_rate, prediction_fallback_rate, mean_prediction_error_m
-- **Command saturation** (requires per-step telemetry): nz_cmd, roll_rate_cmd, throttle saturation
-- **Altitude/energy** (requires per-step telemetry): min/max/final altitude, energy proxy
+- **Command saturation**: nz_cmd_max/mean/saturation_rate/modification_rate
+- **Altitude/energy**: min/max/final altitude, altitude_loss_rate, energy_proxy
 
-**Current status**: Per-step telemetry is NOT emitted by `evaluate_prediction_comparison.py`.
-Root-cause claims that depend on command saturation or altitude/energy must be marked as
-"not available" until per-step telemetry is added.
+**Status (Stage 6G.4)**: Per-step telemetry aggregation is **now emitted** by `evaluate_prediction_comparison.py`. Command saturation and altitude/energy fields are computed as episode-level aggregates from the per-step simulation loop.
 
 ---
 
@@ -171,16 +177,17 @@ Validated against hardened full run (`run_20260605_103449`):
 | GRU > LSTM in weaving_headon | ❌ Not paper-safe | Cross-seed strict consistency insufficient |
 | CA vs CV practically negligible | ❌ Not paper-safe | No new evidence |
 | Tail-chase failure not LOS-rate-specific | ✅ Within Stage 6G.1 scope | 0% across 3 guidance laws × 4 scenarios |
-| Tail-chase root cause identified | ⏳ Pending Stage 6G.3 | Oracle, rule-based, protection, geometry probes needed |
+| Tail-chase root cause identified | ⚠️ Partial (Stage 6G.4) | Oracle, rule-based, terminal ablation all 0% success. Most likely: geometric infeasibility under current guidance architecture. Needs wider sweep or guidance redesign to confirm. |
 | PN/hybrid ineffective for tail-chase | ❌ Not paper-safe | Only tested under current VPP/policy/protection stack |
 
 ---
 
 ## Next Steps
 
-1. **Run oracle smoke probe**: Verify oracle anchor produces different VPP positions.
-2. **Run rule-based smoke probe**: Test 500m and 1000m lead distances.
-3. **Extend probe runner**: Support per-run config overrides for terminal protection params.
-4. **Add per-step telemetry**: Extend `evaluate_prediction_comparison.py` to emit nz_cmd/roll_rate/throttle/altitude per timestep.
-5. **Geometry sweep runner**: Auto-generate scenario variants from sweep parameters.
+1. **Run oracle smoke probe**: ✅ Done — 0% success.
+2. **Run rule-based smoke probe**: ✅ Done — 0% success, direction correct.
+3. **Extend probe runner**: ✅ Done — `run_stage6g4_smoke_probes.py` supports all 4 probes.
+4. **Add per-step telemetry**: ✅ Done — episode-level aggregates now emitted.
+5. **Geometry sweep runner**: ✅ Done — 16-point grid executed.
+6. **Next**: Widen geometry sweep (ego_speed >> target_speed, larger ranges) or test guidance redesign (pure PN, pure pursuit without VPP).
 6. **Bilevel decision gate**: Only enter bilevel retraining if Stage 6G.3 shows a specific failure mode (e.g., protection too conservative) that gain tuning could remedy.

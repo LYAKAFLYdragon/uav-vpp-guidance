@@ -42,6 +42,7 @@ class VirtualPointGenerator:
         self.tau_pred_range = config.get("tau_pred_range", [0.0, 3.0])
         self.speed_bias_range = config.get("speed_bias_range", [-80.0, 80.0])
         self.smoothing_alpha = config.get("smoothing_alpha", 0.3)
+        self.lead_distance_m = config.get("lead_distance_m", 500.0)
         self._prev_action = None
 
     def action_to_virtual_point(

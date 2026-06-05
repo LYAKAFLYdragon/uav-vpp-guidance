@@ -94,6 +94,24 @@ def evaluate_single_episode(env, agent, config, scenario=None, seed=0, save_traj
     ego_score_sum = 0.0
     target_score_sum = 0.0
 
+    # Per-step telemetry accumulators for command saturation, altitude, energy
+    limits = config.get("limits", {})
+    nz_min = float(limits.get("nz_min", -2.0))
+    nz_max = float(limits.get("nz_max", 7.0))
+    roll_rate_min = float(limits.get("roll_rate_min", -1.5))
+    roll_rate_max = float(limits.get("roll_rate_max", 1.5))
+    throttle_min = float(limits.get("throttle_min", 0.0))
+    throttle_max = float(limits.get("throttle_max", 1.0))
+
+    step_altitudes = []
+    step_speeds = []
+    step_nz_cmds = []
+    step_roll_rate_cmds = []
+    step_throttle_cmds = []
+    step_raw_nz_cmds = []
+    step_raw_roll_rate_cmds = []
+    step_raw_throttle_cmds = []
+
     # Env-tracked prediction errors (delayed alignment via PredictionErrorTracker)
     env_prediction_errors = []
 
@@ -114,6 +132,40 @@ def evaluate_single_episode(env, agent, config, scenario=None, seed=0, save_traj
         if info.get("prediction_enabled", False):
             prediction_enabled_steps += 1
         health_acc.step(info)
+
+        # Per-step telemetry extraction
+        own_s = info.get("own_state", {})
+        own_pos = own_s.get("position_m")
+        if own_pos is None:
+            own_pos = own_s.get("position_neu")
+        if own_pos is not None and len(own_pos) > 2:
+            step_altitudes.append(float(own_pos[2]))
+        own_vel = own_s.get("velocity_vector_mps")
+        if own_vel is None:
+            own_vel = own_s.get("velocity_ned")
+        if own_vel is not None:
+            step_speeds.append(float(np.linalg.norm(np.asarray(own_vel))))
+
+        nz_cmd = info.get("nz_cmd", np.nan)
+        roll_rate_cmd = info.get("roll_rate_cmd", np.nan)
+        throttle_cmd = info.get("throttle_cmd", np.nan)
+        if np.isfinite(nz_cmd):
+            step_nz_cmds.append(float(nz_cmd))
+        if np.isfinite(roll_rate_cmd):
+            step_roll_rate_cmds.append(float(roll_rate_cmd))
+        if np.isfinite(throttle_cmd):
+            step_throttle_cmds.append(float(throttle_cmd))
+
+        raw_cmd = info.get("raw_command", {})
+        raw_nz = raw_cmd.get("nz_cmd", np.nan)
+        raw_roll = raw_cmd.get("roll_rate_cmd", np.nan)
+        raw_throttle = raw_cmd.get("throttle_cmd", np.nan)
+        if np.isfinite(raw_nz):
+            step_raw_nz_cmds.append(float(raw_nz))
+        if np.isfinite(raw_roll):
+            step_raw_roll_rate_cmds.append(float(raw_roll))
+        if np.isfinite(raw_throttle):
+            step_raw_throttle_cmds.append(float(raw_throttle))
 
         rel_state = obs.get("relative_state", {})
         range_m = rel_state.get("range_m", 0.0)
@@ -221,6 +273,50 @@ def evaluate_single_episode(env, agent, config, scenario=None, seed=0, save_traj
                 break
 
     rates = health_acc.rates(ep_length)
+
+    # Compute command saturation / modification statistics
+    def _sat_rate(filtered_vals, raw_vals, vmin, vmax, eps=1e-6):
+        if not filtered_vals:
+            return np.nan
+        # Saturation: filtered value is at the limit boundary
+        boundary_count = sum(1 for v in filtered_vals if v <= vmin + eps or v >= vmax - eps)
+        # Modification: raw vs filtered differ (captures clip, energy comp, terminal protection, coordination)
+        mod_count = 0
+        if raw_vals and len(raw_vals) == len(filtered_vals):
+            mod_count = sum(1 for rv, fv in zip(raw_vals, filtered_vals) if abs(rv - fv) > eps)
+        return {
+            "saturation_rate": boundary_count / len(filtered_vals),
+            "modification_rate": mod_count / len(filtered_vals) if raw_vals else np.nan,
+            "max": max(filtered_vals),
+            "mean": float(np.mean(filtered_vals)),
+        }
+
+    nz_stats = _sat_rate(step_nz_cmds, step_raw_nz_cmds, nz_min, nz_max)
+    roll_stats = _sat_rate(step_roll_rate_cmds, step_raw_roll_rate_cmds, roll_rate_min, roll_rate_max)
+    throttle_stats = _sat_rate(step_throttle_cmds, step_raw_throttle_cmds, throttle_min, throttle_max)
+
+    # Altitude / energy statistics
+    altitude_stats = {}
+    if step_altitudes:
+        altitude_stats = {
+            "min_altitude_m": min(step_altitudes),
+            "max_altitude_m": max(step_altitudes),
+            "final_altitude_m": step_altitudes[-1],
+            "altitude_loss_rate": (step_altitudes[-1] - step_altitudes[0]) / max(1, ep_length) / high_level_dt,
+        }
+    else:
+        altitude_stats = {
+            "min_altitude_m": np.nan,
+            "max_altitude_m": np.nan,
+            "final_altitude_m": np.nan,
+            "altitude_loss_rate": np.nan,
+        }
+
+    energy_proxy = np.nan
+    if step_speeds and step_altitudes:
+        g = 9.80665
+        energy_proxy = step_speeds[-1] ** 2 / (2.0 * g) + step_altitudes[-1]
+
     return {
         "seed": seed,
         "scenario": scenario.get("name", "random") if isinstance(scenario, dict) else "random",
@@ -272,6 +368,21 @@ def evaluate_single_episode(env, agent, config, scenario=None, seed=0, save_traj
         "mean_anchor_shift_m": float(np.mean(anchor_shifts)) if anchor_shifts else np.nan,
         "time_to_first_advantage_s": time_to_first_advantage if time_to_first_advantage is not None else np.nan,
         "advantage_hold_time_s": advantage_hold_steps * high_level_dt,
+        # Per-step telemetry aggregates (command saturation / altitude / energy)
+        "nz_cmd_max": nz_stats["max"],
+        "nz_cmd_mean": nz_stats["mean"],
+        "nz_cmd_saturation_rate": nz_stats["saturation_rate"],
+        "nz_cmd_modification_rate": nz_stats["modification_rate"],
+        "roll_rate_cmd_max": roll_stats["max"],
+        "roll_rate_cmd_mean": roll_stats["mean"],
+        "roll_rate_cmd_saturation_rate": roll_stats["saturation_rate"],
+        "roll_rate_cmd_modification_rate": roll_stats["modification_rate"],
+        "throttle_cmd_max": throttle_stats["max"],
+        "throttle_cmd_mean": throttle_stats["mean"],
+        "throttle_cmd_saturation_rate": throttle_stats["saturation_rate"],
+        "throttle_cmd_modification_rate": throttle_stats["modification_rate"],
+        **altitude_stats,
+        "energy_proxy": energy_proxy,
     }, trajectory
 
 

@@ -1,13 +1,15 @@
-# Stage 6G.3C: Terminal Protection Ablation Probe
+# Stage 6G.3C: Terminal Control Ablation Probe
 #
 # Question: Do capture-radius blending, altitude hold, roll/nz limiters,
 # or energy compensation mask or cause the tail-chase failure?
 #
-# Variants:
-#   - default: normal protection
+# Variants (applied by smoke runner):
+#   - baseline: normal protection (this config)
 #   - no_capture_radius: capture_radius_m = 0 (disabled)
+#   - no_terminal_protection: enable_terminal_protection = false
 #   - no_post_process: post_process.enabled = false
-#   - minimal: both disabled
+#   - no_energy_comp: enable_energy_compensation = false
+#   - no_load_roll_coord: enable_load_roll_coordination = false
 
 includes:
   - ../env.yaml
@@ -63,19 +65,20 @@ guidance:
     k_roll: 1.0
     k_speed: 0.2
     alpha_filter: 0.3
-
-# Default capture radius and post-processing
-guidance_params_default:
-  capture_radius_m: 50.0
+  params:
+    capture_radius_m: 50.0
   post_process:
     enabled: true
-    terminal_protection:
-      enabled: true
-      terminal_range_m: 200.0
-    load_roll_coordination:
-      enabled: true
-    energy_compensation:
-      enabled: true
+    enable_terminal_protection: true
+    terminal_range_m: 200.0
+    terminal_nz_scale: 0.7
+    terminal_roll_scale: 0.8
+    enable_load_roll_coordination: true
+    coord_nz_threshold: 0.8
+    coord_roll_scale: 0.5
+    enable_energy_compensation: true
+    energy_k_nz: 0.05
+    energy_k_speed: 0.01
 
 limits:
   nz_min: -2.0

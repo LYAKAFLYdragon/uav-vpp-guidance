@@ -50,6 +50,7 @@ experiments/                ← Git-ignored: weights, checkpoints, results
 | 6E | ✅ Complete | 4 geometry scenarios, 1.1M steps, high capture rate, low error | `scripts/run_stage6e_paper_safe.py` |
 | 6F | ✅ Complete | Paper-safe benchmark, McNemar exact, cross-seed, synthesis table | `scripts/run_stage6f_paper_safe_benchmark.py` |
 | 6G.1 | ✅ Complete | Guidance-law limitation probe (hardened, smoke passed, full run completed, 720 episodes, 12 cells, McNemar exact) | `scripts/run_stage6g_guidance_limitation_probe.py` |
+| 6G.2 | 📝 Planned | Failure root-cause attribution: oracle VPP, rule-based policy, terminal protection ablation, geometry feasibility | `docs/stage6g2_failure_root_cause_plan.md` |
 | 6H | ⏳ Not started | Bilevel gain optimization | — |
 | 6I | ⏳ Not started | Alternating bilevel training | — |
 | 7A | ⏳ Not started | JSBSim/F-16 validation | — |
@@ -126,7 +127,55 @@ python scripts/synthesize_stage6f.py
 python scripts/train_paper_safe.py
 ```
 
-### 5.8 Run tests
+### 5.5 Validate Stage 6G probe outputs
+
+```bash
+# Validate a completed probe run
+python scripts/validate_stage6g_probe_outputs.py \
+    --input outputs/stage6g_guidance_limitation_probe/run_YYYYMMDD_HHMMSS
+
+# Validate smoke run (adjusts episode expectations)
+python scripts/validate_stage6g_probe_outputs.py \
+    --input outputs/stage6g_probe/smoke/run_YYYYMMDD_HHMMSS \
+    --smoke
+
+# Allow partial validation (missing cells)
+python scripts/validate_stage6g_probe_outputs.py \
+    --input outputs/stage6g_probe/partial/run_YYYYMMDD_HHMMSS \
+    --allow-incomplete
+```
+
+**Outputs**: `stage6g_validation_report.md`, `stage6g_validation_summary.json`
+
+### 5.6 Analyze failure root causes
+
+```bash
+python scripts/analyze_stage6g_failure_root_cause.py \
+    --input outputs/stage6g_guidance_limitation_probe/run_YYYYMMDD_HHMMSS \
+    --output outputs/stage6g_guidance_limitation_probe/analysis
+```
+
+**Outputs**: `failure_taxonomy_by_cell.csv`, `command_saturation_by_cell.csv`, `terminal_phase_trace_summary.csv`, `stage6g_failure_root_cause.md`
+
+### 5.7 Run existing Stage 6F benchmark
+
+```bash
+python scripts/run_stage6f_paper_safe_benchmark.py
+```
+
+### 5.8 Synthesize Stage 6F results
+
+```bash
+python scripts/synthesize_stage6f.py
+```
+
+### 5.9 Train a policy (example)
+
+```bash
+python scripts/train_paper_safe.py
+```
+
+### 5.10 Run tests
 
 ```bash
 python -m pytest tests/ -v

@@ -248,6 +248,8 @@ After a full run, copy `README_result_block.md` into Section 6 of this README, r
 
 ---
 
+> **Current research status**: Bilevel optimization is **gated** until Stage 6G.5 identifies at least one feasible and gain-sensitive tail-chase configuration.
+
 ## 7. Final Bilevel Roadmap
 
 The goal is a **bilevel optimization system** where an outer loop optimizes guidance gains (or switching thresholds) while a neural network optimizes pursuit strategy. The roadmap below lists gates with **acceptance criteria**.

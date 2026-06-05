@@ -91,5 +91,37 @@ class TestXfailRegistryDocumented(unittest.TestCase):
         )
 
 
+class TestCIPullRequestIncludesFeatureBranch(unittest.TestCase):
+    """CI must trigger on feature branch pull requests."""
+
+    def test_pr_branches_include_feature(self):
+        ci_path = PROJECT_ROOT / ".github" / "workflows" / "tests.yml"
+        self.assertTrue(ci_path.exists())
+        content = ci_path.read_text(encoding="utf-8")
+        # Accept either wildcard or exact branch name
+        has_wildcard = '"feature/**"' in content
+        has_exact = 'feature/los-guidance-deep-hardening' in content
+        self.assertTrue(
+            has_wildcard or has_exact,
+            "CI pull_request branches must include feature branches (stage6g5 work)",
+        )
+
+
+class TestReadmeBilevelBlockedNotice(unittest.TestCase):
+    """README must contain the bilevel gate notice."""
+
+    def test_readme_mentions_bilevel_gated(self):
+        readme_path = PROJECT_ROOT / "README.md"
+        self.assertTrue(readme_path.exists(), "README.md missing")
+        content = readme_path.read_text(encoding="utf-8")
+        self.assertIn("bilevel", content.lower(), "README must mention bilevel")
+        has_blocked = "blocked" in content.lower()
+        has_gated = "gated" in content.lower()
+        self.assertTrue(
+            has_blocked or has_gated,
+            "README must state that bilevel is blocked or gated until feasible geometry is found",
+        )
+
+
 if __name__ == "__main__":
     unittest.main()

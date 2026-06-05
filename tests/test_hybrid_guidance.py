@@ -43,7 +43,8 @@ def virtual_point_near() -> dict:
 
 
 def test_default_config(default_hybrid):
-    assert default_hybrid.mode == "range"
+    assert default_hybrid.mode == "hybrid"
+    assert default_hybrid.hybrid_mode == "range"
     assert default_hybrid.range_threshold_m == pytest.approx(3000.0)
     assert default_hybrid.blend_transition_m == pytest.approx(1000.0)
     assert default_hybrid.energy_speed_threshold_mps == pytest.approx(220.0)
@@ -60,7 +61,8 @@ def test_custom_config():
             },
         }
     )
-    assert hyb.mode == "blended"
+    assert hyb.mode == "hybrid"
+    assert hyb.hybrid_mode == "blended"
     assert hyb.range_threshold_m == pytest.approx(5000.0)
 
 

@@ -444,14 +444,47 @@ def compute_pairwise_mcnemar(episodes: List[dict]) -> List[dict]:
 
 
 def save_pairwise_mcnemar(output_dir: Path, rows: List[dict]) -> None:
-    if not rows:
-        return
     path = output_dir / "pairwise_mcnemar.csv"
+    if not rows:
+        # Write empty CSV with headers so artifact contract is always satisfied
+        with open(path, "w", newline="", encoding="utf-8") as f:
+            writer = csv.DictWriter(f, fieldnames=[
+                "scenario", "method", "comparison", "n_pairs",
+                "a_success_b_failure", "a_failure_b_success", "mcnemar_exact_p",
+                "a_success_rate", "b_success_rate",
+            ])
+            writer.writeheader()
+        print(f"Pairwise McNemar (empty) saved to {path}")
+        return
     with open(path, "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=rows[0].keys())
         writer.writeheader()
         writer.writerows(rows)
     print(f"Pairwise McNemar saved to {path}")
+
+
+def render_probe_summary(rows: List[dict], complete: bool, failed_probes: List[str]) -> str:
+    """Generate legacy probe summary markdown (for backward compatibility with tests)."""
+    lines = []
+    lines.append("# Probe Summary")
+    lines.append("")
+    lines.append(f"**Complete**: {complete}")
+    lines.append(f"**Failed Probes**: {len(failed_probes)}")
+    if failed_probes:
+        lines.append(f"Failed: {', '.join(failed_probes)}")
+    lines.append("")
+    if not rows:
+        lines.append("No data.")
+        return "\n".join(lines)
+    lines.append("| Guidance | Scenario | Method | Success | Return | Crash | OOB | Range |")
+    lines.append("|---|---|---|---:|---:|---:|---:|---:|")
+    for r in rows:
+        lines.append(
+            f"| {r.get('guidance_mode','')} | {r.get('scenario','')} | {r.get('method','')} | "
+            f"{r.get('success_rate',0):.1%} | {r.get('mean_return',0):.1f} | "
+            f"{r.get('crash_rate',0):.1%} | {r.get('out_of_bounds_rate',0):.1%} | {r.get('mean_final_range_m',0):.1f} |"
+        )
+    return "\n".join(lines)
 
 
 def render_paper_safe_claims(episodes: List[dict], complete: bool, smoke: bool) -> str:
@@ -641,6 +674,9 @@ def main():
 
     # Dry-run: write manifest and exit
     if args.dry_run:
+        for guidance_mode in args.guidance_modes:
+            for scenario_name in active_scenarios:
+                log(f"  [DRY-RUN] Planned: {guidance_mode} x {scenario_name}")
         manifest = {
             "run_id": run_id,
             "start_time": start_time,
@@ -658,7 +694,7 @@ def main():
             json.dump(manifest, f, indent=2, ensure_ascii=False)
         log("[DRY-RUN] Manifest saved. Exiting without running episodes.")
         log_file.close()
-        sys.exit(0)
+        return 0
 
     # Run probe cells
     overall_ok = []
@@ -750,8 +786,8 @@ def main():
     log(f"\nProbe complete. Status: {run_status}")
     log(f"Output directory: {output_dir}")
     log_file.close()
-    sys.exit(0 if complete else (0 if args.allow_incomplete else 1))
+    return 0 if complete else (0 if args.allow_incomplete else 1)
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

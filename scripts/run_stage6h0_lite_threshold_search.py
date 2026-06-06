@@ -490,7 +490,8 @@ def _write_summary_md(path: Path, config_results: list, sampled_configs: list, r
 
     if regression_baseline_missing:
         lines.append("⚠️ **Regression baseline file was missing.**")
-        lines.append("Threshold search requires a validated regression baseline before real runs.")
+        lines.append("Candidate and negative-control evaluations proceeded without regression checks.")
+        lines.append("To include regression checks, provide --regression-baseline-file.")
         lines.append("")
 
     if not config_results:

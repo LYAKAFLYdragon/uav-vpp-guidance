@@ -173,6 +173,7 @@ class TestReadmeStageStatusUpdated(unittest.TestCase):
     def test_stage_table_has_correct_status(self):
         readme = (PROJECT_ROOT / "README.md").read_text(encoding="utf-8")
         self.assertIn("6G.5D-R | ✅ Complete", readme)
+        self.assertIn("6H.0-R | ✅ Complete", readme)
         self.assertIn("6H.0-lite | 🧪 Ready / Preflight", readme)
         self.assertIn("6H (full) | ⏳ Gated", readme)
 

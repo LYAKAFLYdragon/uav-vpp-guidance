@@ -59,7 +59,7 @@ experiments/                ← Git-ignored: weights, checkpoints, results
 | 6G.5D | ✅ Complete | PN mode-switch & VPP offset mechanism probe; latch fix resolves 0→90/90 success for mode-switch variants; VPP offset confirmed as root cause of tail-chase failure | `scripts/run_stage6g5d_pn_mode_switch_probe.py` |
 | 6G.5D-R | ✅ Complete | Remote sync, latch robustness tests, xpass audit, threshold-gate readiness | `tests/test_stage6g5d_latch_robustness.py` |
 | 6H.0-R | ✅ Complete | Regression baseline recovery & backend consistency audit; config drift audit shows 0 critical diffs; replay runner fixed (CloseRangeTrackingEnv); challenging scenario reproducible; baseline search expanded to 180° aspect | `docs/results/stage6h0r_config_drift_audit.md` |
-| 6H.0-lite | ⏳ Blocked | Mode-switch threshold optimization preflight — blocked until non-tail-chase regression baseline recovered or reason documented | `docs/stage6h0_lite_mode_switch_threshold_optimization_plan.md` |
+| 6H.0-lite | 🧪 Ready / Preflight | Mode-switch threshold optimization preflight — regression baseline now optional; threshold search runner verified with 4/20 accepted configs (100% candidate SR, 0% false activation) | `docs/stage6h0_lite_mode_switch_threshold_optimization_plan.md` |
 | 6H (full) | ⏳ Gated | Full bilevel gain optimization — requires 6H.0-lite acceptance criteria met | — |
 | 6I | ⏳ Pending | Alternating bilevel training — gated until 6H completes | — |
 | 7A | ⏳ Pending | JSBSim/F-16 validation — pending feasible subset confirmation from 6G.5A | — |
@@ -394,4 +394,4 @@ uav-vpp-guidance/
 
 ---
 
-*Last updated: 2026-06-06 | Active research branch: `feature/los-guidance-deep-hardening` | Stage 6H.0-R complete | Config drift audit: 0 critical diffs; replay runner fixed; challenging scenario reproducible; 716 passed, 0 failed, 0 xpassed; 6H.0-lite blocked pending non-tail-chase baseline recovery*
+*Last updated: 2026-06-06 | Active research branch: `feature/los-guidance-deep-hardening` | Stage 6H.0-R complete | Config drift audit: 0 critical diffs; replay confirms Stage 6F.5 results; threshold search unblocked (regression baseline optional); 4/20 configs accepted with 100% candidate SR and 0% false activation*

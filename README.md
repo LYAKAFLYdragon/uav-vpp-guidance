@@ -57,8 +57,8 @@ experiments/                ← Git-ignored: weights, checkpoints, results
 | 6G.5B | ✅ Complete | Direct-track / pure-PN probe; 40 points, 360 episodes, pure PN found 9 successes on 3 geometries | `scripts/run_stage6g5b_direct_track_smoke.py` |
 | 6G.5C | ✅ Complete | Pure-PN candidate confirmation & VPP failure diagnosis; pure PN 100% cross-seed stable on pt20/pt29/pt38; VPP+LOS/VPP+PN/direct LOS/hybrid all 0% | `scripts/run_stage6g5c_candidate_confirmation.py` |
 | 6G.5D | ✅ Complete | PN mode-switch & VPP offset mechanism probe; latch fix resolves 0→90/90 success for mode-switch variants; VPP offset confirmed as root cause of tail-chase failure | `scripts/run_stage6g5d_pn_mode_switch_probe.py` |
-| 6G.5D-R | 🧪 In Progress | Remote sync, latch robustness tests, xpass audit, threshold-gate readiness | `tests/test_stage6g5d_latch_robustness.py` |
-| 6H.0-lite | ⏳ Pre-unblocked | Mode-switch threshold optimization — gated until near-threshold robustness smoke passes | `docs/stage6h0_lite_mode_switch_threshold_optimization_plan.md` |
+| 6G.5D-R | ✅ Complete | Remote sync, latch robustness tests, xpass audit, threshold-gate readiness | `tests/test_stage6g5d_latch_robustness.py` |
+| 6H.0-lite | 🧪 Ready / Preflight | Mode-switch threshold optimization preflight — requires regression baseline + sampled threshold search | `docs/stage6h0_lite_mode_switch_threshold_optimization_plan.md` |
 | 6H (full) | ⏳ Gated | Full bilevel gain optimization — requires 6H.0-lite acceptance criteria met | — |
 | 6I | ⏳ Pending | Alternating bilevel training — gated until 6H completes | — |
 | 7A | ⏳ Pending | JSBSim/F-16 validation — pending feasible subset confirmation from 6G.5A | — |
@@ -78,7 +78,7 @@ experiments/                ← Git-ignored: weights, checkpoints, results
 | Pure PN without VPP and latched PN mode-switch succeed on three tested high-energy tail-chase candidate geometries | ✅ Paper-safe | Stage 6G.5C/5D: pure_pn_no_vpp = 90/90; mode_switch_pn_no_vpp = 90/90; mode_switch_vpp_elsewhere = 90/90 (3 points × 3 seeds × 10 episodes). Cross-seed stable. Scope limited to tested candidate geometries (ego 340 m/s, range 2000 m, aspect 0°, alt diff −500/0/+500 m). |
 | Current VPP+LOS/VPP+PN/direct LOS/hybrid fail on same candidates | ✅ Paper-safe | Stage 6G.5C: all variants 0/90 on identical candidates. Indicates both VPP abstraction and LOS-rate guidance contribute to failure in tested scenarios. |
 | Mode-switch with PN latch rescues VPP-based architectures | ✅ Paper-safe | Stage 6G.5D: `mode_switch_vpp_elsewhere` (VPP+LOS normally, PN direct-track when gate active) achieves 90/90 success on pt20/pt29/pt38. Latch ensures gate activation persists entire episode. Root cause: VPP offset (~500m norm) pushes virtual point away from target, causing PN/LOS to diverge. |
-| Mode-switch threshold 15°/3000m/100mps is sufficient for tested candidates | ✅ Paper-safe | Stage 6G.5D: gate fires on step 1 for all 90 episodes on pt20/pt29/pt38. Latch prevents deactivation when post-activation aspect exceeds threshold. |
+| Mode-switch threshold 15°/3000m/100mps is sufficient for confirmed candidates and near_range_1800 | ✅ Paper-safe | Stage 6G.5D: gate fires on step 1 for all 90 episodes on pt20/pt29/pt38. Latch prevents deactivation when post-activation aspect exceeds threshold. Not robust across near-aspect (10°–20°) or longer-range (2400m) boundary cases under pure PN. |
 
 > **Paper-safe rule**: A claim is `✅` only if supported by the full experimental matrix, statistical significance, and cross-seed consistency. `⏳` means the probe is running but not yet conclusive. `❌` means the data does not support the claim.
 

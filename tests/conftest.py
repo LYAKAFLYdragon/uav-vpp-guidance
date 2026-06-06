@@ -1,11 +1,11 @@
 """Pytest configuration for uav-vpp-guidance test suite.
 
-Stage 6G.4R: Regression Triage & Merge Gate
-- 68 pre-existing legacy/integration failures are auto-marked xfail
-  so that CI reflects the health of actively-maintained code.
-- Baseline verification: all 68 failures reproduced on commit b246391
-  (Stage 6G.3, before Stage 6G.4 changes).
-- New failures introduced by Stage 6G.4 must be fixed, not xfailed.
+Stage 6G.5D-R: All legacy xfail markers cleared.
+- PREEXISTING_FAILURES is intentionally empty.
+- The 68 pre-existing failures from Stage 6G.4R baseline (b246391)
+  were incrementally fixed across stages 6G.4–6G.5D.
+- Audit report: docs/results/stage6g5d_xpass_audit.md
+- New failures must be fixed, not xfailed.
 """
 
 import pytest

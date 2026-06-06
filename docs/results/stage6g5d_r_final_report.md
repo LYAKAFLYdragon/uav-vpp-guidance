@@ -2,7 +2,7 @@
 
 **Date**: 2026-06-06  
 **Branch**: `feature/los-guidance-deep-hardening`  
-**Commit**: `a2c9e01`  
+**Commit**: `1d5b8c4`  
 **Tests**: 685 passed, 0 failed, 0 xpassed
 
 ---
@@ -34,8 +34,8 @@ Commit `a2c9e01` pushed to origin successfully.
 | Stage | Status |
 |---|---|
 | 6G.5D | ✅ Complete |
-| 6G.5D-R | 🧪 In Progress |
-| 6H.0-lite | ⏳ Pre-unblocked |
+| 6G.5D-R | ✅ Complete |
+| 6H.0-lite | 🧪 Ready / Preflight |
 | 6H (full) | ⏳ Gated |
 
 Last updated footer reflects: "Stage 6G.5D-R in progress | Mode-switch threshold optimization pre-unblocked; full bilevel remains gated until near-threshold robustness smoke passes"

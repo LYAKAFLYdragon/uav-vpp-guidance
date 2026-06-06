@@ -33,7 +33,7 @@ class TestThresholdGridSize(unittest.TestCase):
         total = 1
         for values in space.values():
             total *= len(values)
-        self.assertEqual(total, 1152, f"Expected 1152 configs, got {total}")
+        self.assertEqual(total, 5760, f"Expected 5760 configs (6H.1 redesign with crossing_aspect_threshold_deg=0.0), got {total}")
 
 
 class TestThresholdSamplingDeterministic(unittest.TestCase):

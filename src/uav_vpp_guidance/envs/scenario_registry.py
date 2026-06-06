@@ -68,6 +68,26 @@ class ScenarioRegistry:
     def is_registered(cls, name: str) -> bool:
         return name in cls._REGISTRY
 
+    @classmethod
+    def get_regression_suite(cls) -> List[Dict]:
+        """Return regression baseline scenarios."""
+        return list(cls.get_set("regression_baseline").values())
+
+    @classmethod
+    def get_candidate_suite(cls) -> List[Dict]:
+        """Return candidate search scenarios."""
+        return list(cls.get_set("candidate_search").values())
+
+    @classmethod
+    def get_negative_suite(cls) -> List[Dict]:
+        """Return negative control scenarios."""
+        return list(cls.get_set("negative_control").values())
+
+    @classmethod
+    def get_smoke_suite(cls) -> List[Dict]:
+        """Return smoke test scenarios."""
+        return list(cls.get_set("smoke_test").values())
+
 
 def _build_and_register(
     name: str,
@@ -268,24 +288,37 @@ def initialize_canonical_scenarios() -> None:
         target_speed_mps=200.0,
         scenario_set="candidate_search",
     )
+    # Stage 6H.1: crossing_left at 3000m is infeasible under both VPP and PN.
+    # Replaced with head_on at 2500m to maintain range-coverage diversity.
     _build_and_register(
-        "candidate_crossing_far",
-        "crossing_left",
-        initial_range_m=3000.0,
+        "candidate_head_on_medium",
+        "head_on",
+        initial_range_m=2500.0,
         ego_speed_mps=250.0,
         target_speed_mps=200.0,
         scenario_set="candidate_search",
     )
 
     # ------------------------------------------------------------------
-    # Negative controls (mode-switch should NOT activate)
+    # Negative controls
     # ------------------------------------------------------------------
+    # tail_chase: VPP fails (0%), PN rescues (100%).
+    # Mode-switch MUST fire and save this scenario.
     _build_and_register(
         "negative_tail_chase",
         "tail_chase",
         initial_range_m=2000.0,
         ego_speed_mps=340.0,
         target_speed_mps=180.0,
+        scenario_set="negative_control",
+    )
+    # Far-range crossing: gate should NOT fire (range > max threshold).
+    _build_and_register(
+        "negative_far_crossing",
+        "crossing_left",
+        initial_range_m=6000.0,
+        ego_speed_mps=250.0,
+        target_speed_mps=200.0,
         scenario_set="negative_control",
     )
     _build_and_register(

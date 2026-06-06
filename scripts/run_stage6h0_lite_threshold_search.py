@@ -67,6 +67,7 @@ from uav_vpp_guidance.utils.geometry_validator import validate_scenario_geometry
 SEARCH_SPACE = {
     "aspect_enter_threshold_deg": [10.0, 15.0, 20.0, 25.0],
     "aspect_exit_threshold_deg": [20.0, 30.0, 45.0, None],
+    "crossing_aspect_threshold_deg": [None, 0.0, 15.0, 30.0, 45.0],
     "range_enter_m": [1500.0, 2000.0, 2500.0, 3000.0],
     "closing_speed_enter_mps": [80.0, 120.0, 160.0],
     "hold_policy": ["episode_latch", "min_hold_2s", "hysteresis_exit"],
@@ -176,6 +177,7 @@ def _build_mode_switch_config(cfg):
     ms = {
         "enabled": True,
         "aspect_threshold_deg": cfg["aspect_enter_threshold_deg"],
+        "crossing_aspect_threshold_deg": cfg.get("crossing_aspect_threshold_deg"),
         "range_threshold_m": cfg["range_enter_m"],
         "closing_speed_threshold_mps": cfg["closing_speed_enter_mps"],
     }

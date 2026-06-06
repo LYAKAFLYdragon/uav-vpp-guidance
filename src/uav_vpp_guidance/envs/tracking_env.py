@@ -636,25 +636,43 @@ class CloseRangeTrackingEnv:
     def _evaluate_mode_switch_gate(self, rel_state):
         """Evaluate geometry-triggered mode-switch gate.
 
+        Stage 6H.1 redesign: supports both low-aspect (tail-chase / head-on)
+        and high-aspect (crossing) geometries via a dual-threshold design.
+
         Returns:
             tuple: (gate_active: bool, reason: str)
         """
         cfg = self._mode_switch_config
         aspect_abs_deg = abs(float(np.rad2deg(rel_state.get("aa_rad", 0.0))))
         range_m = rel_state.get("range_m", float("inf"))
-        closing_speed = abs(rel_state.get("range_rate_mps", 0.0))
+        range_rate = rel_state.get("range_rate_mps", 0.0)
+        closing_speed = abs(range_rate)
 
         aspect_thresh = cfg.get("aspect_threshold_deg", 15.0)
+        crossing_thresh = cfg.get("crossing_aspect_threshold_deg", None)
         range_thresh = cfg.get("range_threshold_m", 3000.0)
         speed_thresh = cfg.get("closing_speed_threshold_mps", 100.0)
 
-        if aspect_abs_deg > aspect_thresh:
-            return False, f"aspect_{aspect_abs_deg:.1f}_deg"
+        # Common geometry-independent conditions
         if range_m > range_thresh:
             return False, f"range_{range_m:.1f}_m"
+        # Must be genuinely closing (range decreasing), not opening
+        if range_rate > 0:
+            return False, f"opening_range_rate_{range_rate:.1f}_mps"
         if closing_speed < speed_thresh:
             return False, f"closing_speed_{closing_speed:.1f}_mps"
-        return True, "gate_active"
+
+        # Low-aspect: tail-chase or head-on (aa near 0°)
+        if aspect_abs_deg <= aspect_thresh:
+            return True, "gate_active"
+
+        # High-aspect: crossing (aa near 90°)
+        if crossing_thresh is not None:
+            crossing_deviation = abs(aspect_abs_deg - 90.0)
+            if crossing_deviation <= crossing_thresh:
+                return True, "gate_active_crossing"
+
+        return False, f"aspect_{aspect_abs_deg:.1f}_deg"
 
     def _check_done(self, own_state, target_state, rel_state):
         """

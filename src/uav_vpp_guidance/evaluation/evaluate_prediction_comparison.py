@@ -331,6 +331,9 @@ def evaluate_single_episode(env, agent, config, scenario=None, seed=0, save_traj
         g = 9.80665
         energy_proxy = step_speeds[-1] ** 2 / (2.0 * g) + step_altitudes[-1]
 
+    # Capture mode-switch telemetry from the last step
+    last_info = info if 'info' in dir() else {}
+
     return {
         "seed": seed,
         "scenario": scenario.get("name", "random") if isinstance(scenario, dict) else "random",
@@ -349,6 +352,8 @@ def evaluate_single_episode(env, agent, config, scenario=None, seed=0, save_traj
         "is_timeout": reason == "timeout",
         "is_out_of_bounds": reason == "out_of_bounds",
         "score_win": ego_score_sum > target_score_sum,
+        "mode_switch_effective": last_info.get("mode_switch_effective", False),
+        "effective_guidance_mode": last_info.get("effective_guidance_mode", "unknown"),
         # Telemetry
         "prediction_enabled_rate": prediction_enabled_steps / max(1, ep_length),
         "prediction_valid_rate": rates["prediction_valid_rate"],

@@ -108,6 +108,7 @@ class ThresholdOptimizationRunner:
                     episodes.append(result)
         finally:
             env.close()
+            del agent
         return episodes
 
     def evaluate_config(self, gate_config: Dict) -> Dict:

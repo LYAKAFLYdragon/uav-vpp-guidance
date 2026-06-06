@@ -8,6 +8,8 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
+_CKPT_PATH = Path("outputs/audit_no_pred_final/checkpoints/best.pt")
+
 from scripts.run_lhs20_threshold_optimization import (
     ASPECT_OPTIONS,
     RANGE_OPTIONS,
@@ -186,12 +188,13 @@ def _create_runner():
             base_config[k] = copy.deepcopy(v)
     return ThresholdOptimizationRunner(
         base_config=base_config,
-        checkpoint_path="outputs/audit_no_pred_final/checkpoints/best.pt",
+        checkpoint_path=str(_CKPT_PATH),
         device="cpu",
         seeds=(0, 1),
     )
 
 
+@pytest.mark.skipif(not _CKPT_PATH.exists(), reason=f"Checkpoint not found: {_CKPT_PATH}")
 class TestRunnerIntegration:
     def test_infer_obs_dim_positive(self):
         runner = _create_runner()

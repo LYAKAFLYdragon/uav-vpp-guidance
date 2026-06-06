@@ -130,19 +130,18 @@ class TestRegressionBaselineRequiredForSearch(unittest.TestCase):
             import shutil
             shutil.rmtree(output_dir)
 
-        # After 6H.0-R: missing baseline is a warning, not an error
-        result = mod.run_threshold_search(
-            output_dir=str(output_dir),
-            sample_size=2,
-            sampling_method="random",
-            seed=0,
-            dry_run=False,
-            episodes_per_point=1,
-            eval_seeds=[0],
-        )
-        self.assertTrue(output_dir.exists())
-        self.assertIn("regression_baseline_missing", result)
-        self.assertTrue(result["regression_baseline_missing"])
+        # After 6H.0-R revert: missing baseline is a hard error
+        with self.assertRaises(RuntimeError) as ctx:
+            mod.run_threshold_search(
+                output_dir=str(output_dir),
+                sample_size=2,
+                sampling_method="random",
+                seed=0,
+                dry_run=False,
+                episodes_per_point=1,
+                eval_seeds=[0],
+            )
+        self.assertIn("Regression baseline file is required", str(ctx.exception))
 
 
 class TestPaperSafeThresholdClaimScoped(unittest.TestCase):
@@ -173,7 +172,7 @@ class TestReadmeStageStatusUpdated(unittest.TestCase):
     def test_stage_table_has_correct_status(self):
         readme = (PROJECT_ROOT / "README.md").read_text(encoding="utf-8")
         self.assertIn("6G.5D-R | ✅ Complete", readme)
-        self.assertIn("6H.0-lite | 🧪 Ready / Preflight", readme)
+        self.assertIn("6H.0-lite | ⏳ Blocked", readme)
         self.assertIn("6H (full) | ⏳ Gated", readme)
 
 

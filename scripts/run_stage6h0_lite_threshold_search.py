@@ -537,7 +537,8 @@ def main():
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--candidate-geometries", type=str, nargs="+",
                         default=list(CANDIDATE_GEOMETRIES.keys()))
-    parser.add_argument("--regression-baseline-file", type=str, default=None)
+    parser.add_argument("--regression-baseline-file", type=str,
+                        default="outputs/stage6h0_regression_baseline_search/regression_baseline_candidates.csv")
     parser.add_argument("--negative-controls", type=str, nargs="+",
                         default=list(NEGATIVE_CONTROLS.keys()))
     parser.add_argument("--episodes-per-point", type=int, default=3)

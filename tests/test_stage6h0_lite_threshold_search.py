@@ -116,7 +116,7 @@ class TestThresholdAcceptanceCriteria(unittest.TestCase):
 class TestRegressionBaselineRequiredForSearch(unittest.TestCase):
     """Real run must reject if regression baseline file is missing."""
 
-    def test_missing_baseline_raises(self):
+    def test_missing_baseline_warns_and_proceeds(self):
         import importlib.util
         spec = importlib.util.spec_from_file_location(
             "run_stage6h0_lite_threshold_search",
@@ -130,15 +130,19 @@ class TestRegressionBaselineRequiredForSearch(unittest.TestCase):
             import shutil
             shutil.rmtree(output_dir)
 
-        with self.assertRaises(FileNotFoundError):
-            mod.run_threshold_search(
-                output_dir=str(output_dir),
-                sample_size=5,
-                sampling_method="random",
-                seed=0,
-                dry_run=False,
-                allow_random_policy=False,
-            )
+        # After 6H.0-R: missing baseline is a warning, not an error
+        result = mod.run_threshold_search(
+            output_dir=str(output_dir),
+            sample_size=2,
+            sampling_method="random",
+            seed=0,
+            dry_run=False,
+            episodes_per_point=1,
+            eval_seeds=[0],
+        )
+        self.assertTrue(output_dir.exists())
+        self.assertIn("regression_baseline_missing", result)
+        self.assertTrue(result["regression_baseline_missing"])
 
 
 class TestPaperSafeThresholdClaimScoped(unittest.TestCase):

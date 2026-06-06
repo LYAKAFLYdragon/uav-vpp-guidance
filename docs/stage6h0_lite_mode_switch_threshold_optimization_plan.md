@@ -1,9 +1,11 @@
 # Stage 6H.0-lite: Mode-Switch Threshold Optimization Plan
 
-**Status**: Pre-unblocked (pending near-threshold robustness smoke acceptance)  
+**Status**: Blocked pending non-tail-chase regression baseline recovery  
 **Date**: 2026-06-06  
-**Gating stage**: 6G.5D-R  
+**Gating stage**: 6H.0-R  
 **Scope**: Optimize mode-switch gate thresholds; NOT full bilevel gain optimization.
+
+> **6H.0-R Update**: Config drift audit found 0 critical diffs. Replay runner fixed to use `CloseRangeTrackingEnv`. Stage 6F `challenging` scenario reproducible (100% success). `favorable`/`neutral`/`disadvantage` fail under current checkpoint — likely checkpoint drift (`no_prediction_vpp_ppo` vs `no_prediction_vpp_ppo_seed0`). Baseline search expanded to 180° aspect; no non-tail-chase VPP success found in tested 324-grid. Threshold search remains blocked until a genuine non-tail-chase regression baseline is identified or the absence is paper-safe documented.
 
 ---
 

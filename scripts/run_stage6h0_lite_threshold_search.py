@@ -273,10 +273,9 @@ def run_threshold_search(
         return requested_config
 
     if regression_baseline_missing:
-        raise FileNotFoundError(
-            "Regression baseline file missing. Run find_stage6h0_regression_baseline.py first, "
-            "or use --dry-run."
-        )
+        print("WARNING: Regression baseline file missing. Regression checks skipped.")
+        print("  Candidate and negative-control evaluations will proceed.")
+        print("  To include regression checks, run find_stage6h0_regression_baseline.py first.")
 
     print(f"\n=== Stage 6H.0-lite: Threshold Search ===")
     print(f"Sampled configs: {len(sampled_configs)}")

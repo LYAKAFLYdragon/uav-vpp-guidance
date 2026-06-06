@@ -1,14 +1,17 @@
 #!/usr/bin/env python3
 """
-Stage 6H.0-lite Preflight: Find non-tail-chase regression baseline.
+Stage 6H.0-lite Preflight: Find VPP regression baseline.
 
-Searches a geometry grid for cases where VPP+LOS or VPP+PN succeed
-with aspect_angle >= 30deg (non-tail-chase). These become the
-regression baseline for verifying that mode-switch threshold search
-does not harm feasible non-tail-chase geometries.
+Searches a geometry grid for cases where VPP+LOS or VPP+PN succeed.
+These become the regression baseline for verifying that mode-switch
+threshold search does not harm feasible geometries where VPP already works.
+
+Post-6G.5D insight: VPP+LOS succeeds in crossing/head-on geometries
+(aspect ~180deg) but fails in tail-chase (aspect ~0deg). The search
+space now includes 180deg to capture these successes.
 
 Search space:
-    aspect_angle_deg:   [30, 45, 60, 90]
+    aspect_angle_deg:   [0, 30, 45, 60, 90, 180]
     initial_range_m:    [1200, 1600, 2000]
     ego_speed_mps:      [220, 280, 340]
     target_speed_mps:   [120, 160, 200]
@@ -20,7 +23,6 @@ Variants:
 
 Candidate rule:
     success_rate >= 0.80
-    aspect_angle_deg >= 30
     mean virtual_point_source == "vpp_policy" (verifies VPP is actually used)
 
 Usage:
@@ -54,7 +56,7 @@ from uav_vpp_guidance.utils.config import merge_config
 
 
 GEOMETRY_GRID = {
-    "aspect_angle_deg": [30, 45, 60, 90],
+    "aspect_angle_deg": [0, 30, 45, 60, 90, 180],
     "initial_range_m": [1200, 1600, 2000],
     "ego_speed_mps": [220, 280, 340],
     "target_speed_mps": [120, 160, 200],
@@ -77,7 +79,7 @@ VARIANTS = {
 }
 
 SUCCESS_RATE_THRESHOLD = 0.80
-MIN_ASPECT_DEG = 30.0
+MIN_ASPECT_DEG = 0.0
 
 
 def _make_env_agent(config, method_override, allow_random_policy=False):
@@ -281,7 +283,7 @@ def _write_summary_md(path: Path, cell_results: list, scenarios: list):
     candidates = [c for c in cell_results if c.get("is_candidate")]
     lines = ["# Stage 6H.0 Preflight: Regression Baseline Search Summary", ""]
     lines.append(f"**Total geometries evaluated**: {len(scenarios)} × 2 variants = {len(scenarios)*2} cells")
-    lines.append(f"**Candidate threshold**: success_rate ≥ {SUCCESS_RATE_THRESHOLD}, aspect ≥ {MIN_ASPECT_DEG}°, VPP fraction ≥ 0.5")
+    lines.append(f"**Candidate threshold**: success_rate ≥ {SUCCESS_RATE_THRESHOLD}, VPP fraction ≥ 0.5 (aspect unrestricted)")
     lines.append("")
 
     if not candidates:

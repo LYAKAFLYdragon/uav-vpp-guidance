@@ -2,7 +2,27 @@
 Evaluation metrics computation.
 """
 
+import warnings
+
 import numpy as np
+
+
+def _get_reason(ep):
+    """Extract termination reason from episode dict (multiple naming conventions)."""
+    for key in ("reason", "outcome", "result"):
+        val = ep.get(key)
+        if val is not None:
+            return str(val)
+    return ""
+
+
+def _get_return(ep):
+    """Extract episode return from episode dict (multiple naming conventions)."""
+    for key in ("return", "episode_return", "ep_return"):
+        val = ep.get(key)
+        if val is not None:
+            return float(val)
+    return 0.0
 
 
 def compute_success_rate(outcomes):
@@ -53,7 +73,7 @@ def compute_success_rate_with_ci(episodes, ci=0.95):
     """
     from .statistical_comparison import bootstrap_confidence_interval
 
-    outcomes = [ep.get("outcome", ep.get("result", "")) for ep in episodes]
+    outcomes = [_get_reason(ep) for ep in episodes]
     n_total = len(outcomes)
     n_success = sum(1 for o in outcomes if o == "success")
 
@@ -95,10 +115,21 @@ def aggregate_metrics_with_statistics(episodes_list, method_names):
     """
     from .statistical_comparison import paired_t_test, cohens_d, compare_methods
 
+    # Validate seed alignment across methods
+    baseline_seeds = {ep.get("seed") for ep in episodes_list[0] if ep.get("seed") is not None}
+    for i in range(1, len(episodes_list)):
+        other_seeds = {ep.get("seed") for ep in episodes_list[i] if ep.get("seed") is not None}
+        common = baseline_seeds & other_seeds
+        if len(common) < max(1, len(baseline_seeds) // 2):
+            warnings.warn(
+                f"Method {method_names[i]} has only {len(common)} common seeds with baseline",
+                stacklevel=2,
+            )
+
     per_method = []
     for episodes, name in zip(episodes_list, method_names):
-        outcomes = [ep.get("outcome", ep.get("result", "")) for ep in episodes]
-        returns = [ep.get("return", ep.get("episode_return", 0.0)) for ep in episodes]
+        outcomes = [_get_reason(ep) for ep in episodes]
+        returns = [_get_return(ep) for ep in episodes]
         sr_info = compute_success_rate_with_ci(episodes)
 
         per_method.append({
@@ -114,17 +145,18 @@ def aggregate_metrics_with_statistics(episodes_list, method_names):
         })
 
     pairwise = {}
-    baseline_name = method_names[0] if method_names else None
+    baseline_name = "no_prediction" if "no_prediction" in method_names else (method_names[0] if method_names else None)
     if baseline_name and len(method_names) > 1:
-        for i in range(1, len(method_names)):
+        baseline_idx = method_names.index(baseline_name)
+        for i in range(len(method_names)):
+            if i == baseline_idx:
+                continue
             treatment_name = method_names[i]
             key = f"{baseline_name}_vs_{treatment_name}"
 
             # Extract paired returns (assumes episodes are aligned by seed/order)
-            baseline_returns = [ep.get("return", ep.get("episode_return", 0.0))
-                                for ep in episodes_list[0]]
-            treatment_returns = [ep.get("return", ep.get("episode_return", 0.0))
-                                 for ep in episodes_list[i]]
+            baseline_returns = [_get_return(ep) for ep in episodes_list[baseline_idx]]
+            treatment_returns = [_get_return(ep) for ep in episodes_list[i]]
 
             pairwise[key] = {
                 "baseline": baseline_name,
@@ -137,4 +169,3 @@ def aggregate_metrics_with_statistics(episodes_list, method_names):
         "per_method": per_method,
         "pairwise": pairwise,
     }
-

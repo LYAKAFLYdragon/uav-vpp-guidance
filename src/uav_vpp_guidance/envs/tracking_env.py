@@ -136,6 +136,13 @@ class CloseRangeTrackingEnv:
         else:
             raise ValueError(f"Unknown guidance mode: {guidance_mode}")
 
+        # Mode-switch: store PN guidance for runtime switching
+        self._guidance_pn = None
+        self._mode_switch_config = guidance_config.get("mode_switch", {})
+        self._mode_switch_latched = False
+        if self._mode_switch_config.get("enabled", False):
+            self._guidance_pn = ProportionalNavigationGuidance(guidance_config)
+
         # Optional command post-processor (energy comp, terminal protection, etc.)
         self.command_post_processor = None
         if guidance_config.get("post_process", {}).get("enabled", False):
@@ -217,6 +224,9 @@ class CloseRangeTrackingEnv:
         self.termination_checker.reset()
         if hasattr(self.guidance, "reset"):
             self.guidance.reset()
+        if self._guidance_pn is not None and hasattr(self._guidance_pn, "reset"):
+            self._guidance_pn.reset()
+        self._mode_switch_latched = False
         self._command_filter.reset()
         if self._low_level_controller is not None:
             self._low_level_controller.reset()
@@ -420,6 +430,24 @@ class CloseRangeTrackingEnv:
         # Determine direct-track request from config (telemetry)
         direct_track_mode_requested = self.config.get("guidance", {}).get("direct_track_mode", False)
 
+        # Mode-switch gate evaluation (if enabled)
+        mode_switch_requested = self._mode_switch_config.get("enabled", False)
+        mode_switch_effective = False
+        mode_switch_reason = None
+        effective_guidance = self.guidance
+        effective_guidance_mode = self.config.get("guidance", {}).get("mode", "los_rate")
+
+        if mode_switch_requested:
+            gate_active, gate_reason = self._evaluate_mode_switch_gate(rel_state)
+            if gate_active:
+                self._mode_switch_latched = True
+            if self._mode_switch_latched:
+                mode_switch_effective = True
+                mode_switch_reason = gate_reason if gate_active else "latched"
+                direct_track_mode_requested = True  # override to bypass VPP
+                effective_guidance = self._guidance_pn
+                effective_guidance_mode = "proportional_navigation"
+
         # Direct-track mode: bypass VPP offset, track anchor directly
         if direct_track_mode_requested:
             virtual_point = {"position_neu": np.asarray(target_for_vp["position_neu"], dtype=np.float64)}
@@ -446,7 +474,7 @@ class CloseRangeTrackingEnv:
             virtual_point_source = "vpp_policy"
 
         # 5. Guidance command generation
-        raw_command = self.guidance.compute_command(
+        raw_command = effective_guidance.compute_command(
             own_state, target_state, virtual_point, self.current_gains
         )
 
@@ -557,6 +585,10 @@ class CloseRangeTrackingEnv:
             "direct_track_mode_requested": direct_track_mode_requested,
             "direct_track_mode_effective": direct_track_mode_effective,
             "virtual_point_source": virtual_point_source,
+            "mode_switch_requested": mode_switch_requested,
+            "mode_switch_effective": mode_switch_effective,
+            "mode_switch_reason": mode_switch_reason,
+            "effective_guidance_mode": effective_guidance_mode,
         }
         info.update(actuator_info)
         info.update(term_info)
@@ -600,6 +632,29 @@ class CloseRangeTrackingEnv:
 
         reward, reward_terms = self.reward_calculator.compute(info)
         return reward, reward_terms
+
+    def _evaluate_mode_switch_gate(self, rel_state):
+        """Evaluate geometry-triggered mode-switch gate.
+
+        Returns:
+            tuple: (gate_active: bool, reason: str)
+        """
+        cfg = self._mode_switch_config
+        aspect_abs_deg = abs(float(np.rad2deg(rel_state.get("aa_rad", 0.0))))
+        range_m = rel_state.get("range_m", float("inf"))
+        closing_speed = abs(rel_state.get("range_rate_mps", 0.0))
+
+        aspect_thresh = cfg.get("aspect_threshold_deg", 15.0)
+        range_thresh = cfg.get("range_threshold_m", 3000.0)
+        speed_thresh = cfg.get("closing_speed_threshold_mps", 100.0)
+
+        if aspect_abs_deg > aspect_thresh:
+            return False, f"aspect_{aspect_abs_deg:.1f}_deg"
+        if range_m > range_thresh:
+            return False, f"range_{range_m:.1f}_m"
+        if closing_speed < speed_thresh:
+            return False, f"closing_speed_{closing_speed:.1f}_mps"
+        return True, "gate_active"
 
     def _check_done(self, own_state, target_state, rel_state):
         """

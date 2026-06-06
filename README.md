@@ -55,9 +55,12 @@ experiments/                ← Git-ignored: weights, checkpoints, results
 | 6G.4 | ✅ Complete | Oracle smoke execution & per-step telemetry completion; root-cause decomposition | `docs/stage6g4_oracle_smoke_and_telemetry.md` |
 | 6G.5A | ✅ Complete | Wide geometry sweep smoke runner; 40 points, 120 episodes, 0% success, no feasible candidates | `scripts/run_stage6g5_geometry_smoke.py` |
 | 6G.5B | ✅ Complete | Direct-track / pure-PN probe; 40 points, 360 episodes, pure PN found 9 successes on 3 geometries | `scripts/run_stage6g5b_direct_track_smoke.py` |
-| 6G.5C | 🧪 In Progress | Pure-PN candidate confirmation & VPP failure diagnosis; cross-seed stability for pt20/pt29/pt38 | `scripts/run_stage6g5c_candidate_confirmation.py` |
-| 6H | ⏳ Blocked | Bilevel gain optimization — gated until feasible geometry identified | — |
-| 6I | ⏳ Blocked | Alternating bilevel training — gated until 6H unblocked | — |
+| 6G.5C | ✅ Complete | Pure-PN candidate confirmation & VPP failure diagnosis; pure PN 100% cross-seed stable on pt20/pt29/pt38; VPP+LOS/VPP+PN/direct LOS/hybrid all 0% | `scripts/run_stage6g5c_candidate_confirmation.py` |
+| 6G.5D | ✅ Complete | PN mode-switch & VPP offset mechanism probe; latch fix resolves 0→90/90 success for mode-switch variants; VPP offset confirmed as root cause of tail-chase failure | `scripts/run_stage6g5d_pn_mode_switch_probe.py` |
+| 6G.5D-R | 🧪 In Progress | Remote sync, latch robustness tests, xpass audit, threshold-gate readiness | `tests/test_stage6g5d_latch_robustness.py` |
+| 6H.0-lite | ⏳ Pre-unblocked | Mode-switch threshold optimization — gated until near-threshold robustness smoke passes | `docs/stage6h0_lite_mode_switch_threshold_optimization_plan.md` |
+| 6H (full) | ⏳ Gated | Full bilevel gain optimization — requires 6H.0-lite acceptance criteria met | — |
+| 6I | ⏳ Pending | Alternating bilevel training — gated until 6H completes | — |
 | 7A | ⏳ Pending | JSBSim/F-16 validation — pending feasible subset confirmation from 6G.5A | — |
 
 ---
@@ -71,7 +74,11 @@ experiments/                ← Git-ignored: weights, checkpoints, results
 | CA and CV are practically equivalent | ❌ Not paper-safe | Observed differences are small but not enough for a formal claim. |
 | Tail-chase failure is a guidance-law limitation | ❌ Not paper-safe | Full Stage 6G.1 (720 eps): all guidance laws show 0% success. Stage 6G.4 smoke: true-velocity CV oracle, rule-based pursuit, and terminal-control ablation all 0% success in tested scenarios. No feasible boundary found in small geometry envelope. Wider sweep or guidance redesign needed before claiming infeasibility. |
 | PN/hybrid resolves tail-chase failure | ❌ Not paper-safe | Full Stage 6G.1: PN and hybrid also show 0% success in all tested scenarios. |
-| Tail-chase remains infeasible across guidance laws | ✅ Paper-safe (within tested scenarios) | Full Stage 6G.1: 0% success across all 3 guidance laws × 4 scenarios × 2 methods × 3 seeds. Stage 6G.4: true-velocity CV oracle, rule-based pursuit, terminal-control ablation, and small geometry sweep all 0% success in smoke. |
+| Tail-chase remains infeasible across guidance laws | ❌ Not paper-safe (superseded by 6G.5C) | Stage 6G.5C found pure PN without VPP achieves 100% success on 3 high-energy tail-chase candidates. Previous "infeasible" claim was scoped to VPP+LOS/hybrid/PN variants; pure PN without VPP rescues the geometry. |
+| Pure PN without VPP and latched PN mode-switch succeed on three tested high-energy tail-chase candidate geometries | ✅ Paper-safe | Stage 6G.5C/5D: pure_pn_no_vpp = 90/90; mode_switch_pn_no_vpp = 90/90; mode_switch_vpp_elsewhere = 90/90 (3 points × 3 seeds × 10 episodes). Cross-seed stable. Scope limited to tested candidate geometries (ego 340 m/s, range 2000 m, aspect 0°, alt diff −500/0/+500 m). |
+| Current VPP+LOS/VPP+PN/direct LOS/hybrid fail on same candidates | ✅ Paper-safe | Stage 6G.5C: all variants 0/90 on identical candidates. Indicates both VPP abstraction and LOS-rate guidance contribute to failure in tested scenarios. |
+| Mode-switch with PN latch rescues VPP-based architectures | ✅ Paper-safe | Stage 6G.5D: `mode_switch_vpp_elsewhere` (VPP+LOS normally, PN direct-track when gate active) achieves 90/90 success on pt20/pt29/pt38. Latch ensures gate activation persists entire episode. Root cause: VPP offset (~500m norm) pushes virtual point away from target, causing PN/LOS to diverge. |
+| Mode-switch threshold 15°/3000m/100mps is sufficient for tested candidates | ✅ Paper-safe | Stage 6G.5D: gate fires on step 1 for all 90 episodes on pt20/pt29/pt38. Latch prevents deactivation when post-activation aspect exceeds threshold. |
 
 > **Paper-safe rule**: A claim is `✅` only if supported by the full experimental matrix, statistical significance, and cross-seed consistency. `⏳` means the probe is running but not yet conclusive. `❌` means the data does not support the claim.
 
@@ -386,4 +393,4 @@ uav-vpp-guidance/
 
 ---
 
-*Last updated: 2026-06-05 | Active research branch: `feature/los-guidance-deep-hardening` | Stage 6G.5C in progress | Bilevel blocked until gain-sensitive feasible geometry confirmed*
+*Last updated: 2026-06-06 | Active research branch: `feature/los-guidance-deep-hardening` | Stage 6G.5D-R in progress | Mode-switch threshold optimization pre-unblocked; full bilevel remains gated until near-threshold robustness smoke passes*

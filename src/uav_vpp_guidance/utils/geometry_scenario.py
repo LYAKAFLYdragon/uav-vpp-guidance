@@ -1,17 +1,30 @@
 """Geometry scenario builder for wide-envelope sweep experiments.
 
-Stage 6G.5A: Supports aspect-angle-based target placement and derived
-geometry metadata (closure rate, TTC, feasibility heuristics).
+.. deprecated::
+    Stage 6H.0-F.1
+    This module is retained for backward compatibility with Stage 6G.5A
+    grid sweep experiments.  All NEW code should use
+    ``uav_vpp_guidance.envs.geometry_scenarios.build_explicit_scenario``
+    or the ``ScenarioRegistry`` instead.
 
-Contract note:
-    In Stage 6G.5A ``aspect_angle_deg`` simultaneously determines:
-        1. The LOS bearing from ownship to target.
-        2. The target aircraft heading.
-    This is a smoke-level simplification. Stage 6G.5B may decouple
-    ``los_bearing_deg`` from ``target_heading_deg``.
+    The legacy ``aspect_angle_deg`` parameter is AMBIGUOUS:
+        - aspect=0   → tail chase (target ahead, same heading)
+        - aspect=90  → crossing (target broadside, heading 90)
+        - aspect=180 → AMBIGUOUS: could be head-on OR fleeing
+    The explicit builder eliminates this ambiguity by requiring a
+    ``scenario_type`` string.
+
+Explicit geometry families (see ``geometry_scenarios.GEOMETRY_FAMILY_DOCS``):
+    - tail_chase:     target ahead, same heading, aspect ~0
+    - head_on:        target ahead, opposite heading, aspect ~180, positive closure
+    - crossing_left:  target to left, crossing path, aspect ~90
+    - crossing_right: target to right, crossing path, aspect ~90
+    - offset_attack:  target behind with lateral offset, ego must lead-turn
+    - fleeing:        target behind, opposite heading, aspect ~180, negative closure
 """
 
 import math
+import warnings
 from itertools import product
 from typing import Dict, List
 
@@ -28,18 +41,29 @@ def build_geometry_scenario(
 ) -> Dict:
     """Build an own_init / target_init scenario fragment from geometry parameters.
 
+    .. deprecated::
+        Use ``build_explicit_scenario`` from ``geometry_scenarios`` instead.
+        This function relies on the ambiguous ``aspect_angle_deg`` convention.
+
     Args:
         initial_range_m: Initial distance between ownship and target.
         ego_speed_mps: Ownship speed.
         target_speed_mps: Target speed.
         aspect_angle_deg: Angle of target relative to ownship heading (0 = tail-chase,
             90 = broadside/crossing). Target heading equals this angle.
+            **WARNING**: aspect=180 is ambiguous (head-on vs fleeing).
         altitude_diff_m: Target altitude offset relative to ownship.
         base_altitude_m: Ownship altitude.
 
     Returns:
         dict with keys ``own_init`` and ``target_init``.
     """
+    warnings.warn(
+        "build_geometry_scenario() is deprecated. Use build_explicit_scenario() "
+        "from uav_vpp_guidance.envs.geometry_scenarios for unambiguous geometry.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     aspect_rad = math.radians(aspect_angle_deg)
 
     own_init = {

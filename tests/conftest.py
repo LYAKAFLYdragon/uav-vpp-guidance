@@ -1,5 +1,8 @@
 """Pytest configuration for uav-vpp-guidance test suite.
 
+Stage 6H.0-F: Add project root to sys.path so `from scripts.xxx import ...`
+works in tests when scripts/ lacks __init__.py.
+
 Stage 6G.5D-R: All legacy xfail markers cleared.
 - PREEXISTING_FAILURES is intentionally empty.
 - The 68 pre-existing failures from Stage 6G.4R baseline (b246391)
@@ -7,6 +10,12 @@ Stage 6G.5D-R: All legacy xfail markers cleared.
 - Audit report: docs/results/stage6g5d_xpass_audit.md
 - New failures must be fixed, not xfailed.
 """
+
+import os
+import sys
+
+# Allow `from scripts.xxx import ...` in tests
+sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 import pytest
 

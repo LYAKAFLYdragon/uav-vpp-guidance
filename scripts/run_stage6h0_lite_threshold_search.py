@@ -43,6 +43,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from uav_vpp_guidance.utils.seed import set_seed
 from uav_vpp_guidance.utils.geometry_scenario import build_geometry_scenario
+from uav_vpp_guidance.envs.geometry_scenarios import build_explicit_scenario
 from uav_vpp_guidance.evaluation.evaluate_prediction_comparison import (
     evaluate_single_episode,
     load_experiment_config,
@@ -164,6 +165,7 @@ def _load_regression_baselines(csv_path):
             if row.get("is_candidate", "").lower() in ("true", "1", "yes"):
                 baselines.append({
                     "scenario_id": row["scenario_id"],
+                    "scenario_type": row.get("scenario_type", ""),
                     "aspect_angle_deg": float(row["aspect_angle_deg"]),
                     "initial_range_m": float(row["initial_range_m"]),
                     "ego_speed_mps": float(row["ego_speed_mps"]),
@@ -206,6 +208,7 @@ def run_threshold_search(
     eval_seeds=None,
     dry_run: bool = False,
     allow_random_policy: bool = False,
+    mode: str = "exploratory",
 ):
     if eval_seeds is None:
         eval_seeds = [0]
@@ -230,6 +233,7 @@ def run_threshold_search(
 
     requested_config = {
         "experiment_name": "stage6h0_lite_threshold_search",
+        "mode": mode,
         "search_space": SEARCH_SPACE,
         "sample_size": sample_size,
         "sampling_method": sampling_method,
@@ -258,6 +262,7 @@ def run_threshold_search(
 
     if dry_run:
         print("\n=== DRY RUN ===")
+        print(f"Mode: {mode}")
         print(f"Would evaluate {len(sampled_configs)} sampled configs")
         print(f"Candidate geometries: {len(candidate_geometries)}")
         print(f"Regression baselines: {len(regression_baselines)}")
@@ -269,17 +274,22 @@ def run_threshold_search(
                          ["config_id", "candidate_success_rate", "regression_degradation_pp",
                           "false_activation_rate", "accepted"])
         _write_summary_md(output_path / "threshold_search_summary.md", [], sampled_configs,
-                          regression_baseline_missing=regression_baseline_missing)
+                          regression_baseline_missing=regression_baseline_missing, mode=mode)
         return requested_config
 
     if regression_baseline_missing:
-        raise RuntimeError(
-            "Regression baseline file is required but missing. "
-            "Stage 6H.0-lite threshold search cannot proceed without a validated "
-            "non-tail-chase VPP baseline. Run regression baseline recovery first, "
-            "or explicitly document why baseline is absent. "
-            "Use --regression-baseline-file to provide the baseline file."
-        )
+        if mode == "formal":
+            raise RuntimeError(
+                "Regression baseline file is required but missing. "
+                "Formal threshold search cannot proceed without a validated "
+                "non-tail-chase VPP baseline. Run regression baseline recovery first, "
+                "or use --mode exploratory. "
+                "Use --regression-baseline-file to provide the baseline file."
+            )
+        else:
+            print("WARNING: Regression baseline file missing. Exploratory mode continues.")
+            print("  Candidate and negative-control evaluations will proceed.")
+            print("  Results are NOT paper-safe formal threshold results.")
 
     print(f"\n=== Stage 6H.0-lite: Threshold Search ===")
     print(f"Sampled configs: {len(sampled_configs)}")
@@ -350,10 +360,17 @@ def run_threshold_search(
             baseline_success = 0
             baseline_total = 0
             for bl in regression_baselines:
-                scenario = build_geometry_scenario(
-                    bl["initial_range_m"], bl["ego_speed_mps"], bl["target_speed_mps"],
-                    bl["aspect_angle_deg"], bl["altitude_diff_m"], base_altitude_m=5000.0,
-                )
+                if bl.get("scenario_type"):
+                    scenario = build_explicit_scenario(
+                        bl["scenario_type"],
+                        bl["initial_range_m"], bl["ego_speed_mps"], bl["target_speed_mps"],
+                        altitude_diff_m=bl["altitude_diff_m"], base_altitude_m=5000.0,
+                    )
+                else:
+                    scenario = build_geometry_scenario(
+                        bl["initial_range_m"], bl["ego_speed_mps"], bl["target_speed_mps"],
+                        bl["aspect_angle_deg"], bl["altitude_diff_m"], base_altitude_m=5000.0,
+                    )
                 for ev_seed in eval_seeds:
                     for ep_idx in range(episodes_per_point):
                         episode_seed = ev_seed * 100000 + cfg_idx * 1000 + hash(bl["scenario_id"]) % 100 + ep_idx
@@ -485,16 +502,25 @@ def _write_csv_from_dicts(path: Path, rows: list, fieldnames: list):
             writer.writerow({k: r.get(k, "") for k in fieldnames})
 
 
-def _write_summary_md(path: Path, config_results: list, sampled_configs: list, regression_baseline_missing: bool = False):
+def _write_summary_md(path: Path, config_results: list, sampled_configs: list, regression_baseline_missing: bool = False, mode: str = "exploratory"):
     accepted = [r for r in config_results if r.get("accepted")]
     lines = ["# Stage 6H.0-lite: Threshold Search Summary", ""]
+    lines.append(f"**Mode**: {mode}")
     lines.append(f"**Total configs evaluated**: {len(sampled_configs)}")
     lines.append(f"**Accepted**: {len(accepted)} | **Rejected**: {len(config_results) - len(accepted)}")
     lines.append("")
 
+    if mode == "exploratory":
+        lines.append("> ⚠️ **Exploratory mode**. Results are NOT paper-safe formal threshold results.")
+        lines.append("> Formal acceptance requires `--mode formal` with a validated regression baseline.")
+        lines.append("")
+
     if regression_baseline_missing:
         lines.append("⚠️ **Regression baseline file was missing.**")
-        lines.append("Threshold search requires a validated regression baseline before real runs.")
+        if mode == "exploratory":
+            lines.append("Exploratory run proceeded without regression checks.")
+        else:
+            lines.append("Formal run requires a validated regression baseline.")
         lines.append("")
 
     if not config_results:
@@ -504,12 +530,14 @@ def _write_summary_md(path: Path, config_results: list, sampled_configs: list, r
         lines.append("")
         lines.append("All sampled configs failed at least one criterion:")
         lines.append("- candidate_success_rate ≥ 0.95")
-        lines.append("- regression_degradation ≤ 5 percentage points")
+        if mode == "formal":
+            lines.append("- regression_degradation ≤ 5 percentage points")
         lines.append("- false_activation_rate ≤ 0.05")
         lines.append("")
         lines.append("**Next step**: Adjust search space, increase sample size, or investigate why thresholds are unstable.")
     else:
-        lines.append("## ✅ Accepted Threshold Configs")
+        label = "✅ Accepted (Formal)" if mode == "formal" else "🧪 Accepted (Exploratory)"
+        lines.append(f"## {label} Threshold Configs")
         lines.append("")
         lines.append("| Config | Enter Aspect | Exit Aspect | Range | Closing Speed | Hold Policy | Fallback | Candidate SR | Degradation | False Act |")
         lines.append("|---|---|---|---|---|---|---|---|---|---|")
@@ -520,7 +548,10 @@ def _write_summary_md(path: Path, config_results: list, sampled_configs: list, r
                 f"{r['candidate_success_rate']*100:.1f}% | {r['regression_degradation_pp']:.1f}pp | {r['false_activation_rate']*100:.1f}% |"
             )
         lines.append("")
-        lines.append("These configs meet all acceptance criteria and can be used for further validation.")
+        if mode == "formal":
+            lines.append("These configs meet all formal acceptance criteria and can be locked for bilevel initialization.")
+        else:
+            lines.append("These configs meet candidate + negative-control criteria but lack formal regression validation.")
 
     lines.append("")
     lines.append("> **Paper-safe note**: Results limited to sampled configs and tested geometries. "
@@ -537,8 +568,10 @@ def main():
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--candidate-geometries", type=str, nargs="+",
                         default=list(CANDIDATE_GEOMETRIES.keys()))
-    parser.add_argument("--regression-baseline-file", type=str,
-                        default="outputs/stage6h0_regression_baseline_search/regression_baseline_candidates.csv")
+    parser.add_argument("--mode", type=str, default="exploratory",
+                        choices=["exploratory", "formal"],
+                        help="exploratory: baseline optional; formal: baseline required")
+    parser.add_argument("--regression-baseline-file", type=str, default=None)
     parser.add_argument("--negative-controls", type=str, nargs="+",
                         default=list(NEGATIVE_CONTROLS.keys()))
     parser.add_argument("--episodes-per-point", type=int, default=3)
@@ -562,6 +595,7 @@ def main():
         eval_seeds=args.eval_seeds,
         dry_run=args.dry_run,
         allow_random_policy=args.allow_random_policy,
+        mode=args.mode,
     )
 
 

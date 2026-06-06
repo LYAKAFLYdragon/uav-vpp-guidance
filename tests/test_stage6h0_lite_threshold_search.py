@@ -116,7 +116,7 @@ class TestThresholdAcceptanceCriteria(unittest.TestCase):
 class TestRegressionBaselineRequiredForSearch(unittest.TestCase):
     """Real run must reject if regression baseline file is missing."""
 
-    def test_missing_baseline_warns_and_proceeds(self):
+    def test_exploratory_mode_runs_without_baseline(self):
         import importlib.util
         spec = importlib.util.spec_from_file_location(
             "run_stage6h0_lite_threshold_search",
@@ -125,12 +125,39 @@ class TestRegressionBaselineRequiredForSearch(unittest.TestCase):
         mod = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(mod)
 
-        output_dir = PROJECT_ROOT / "outputs" / "test_stage6h0_missing_baseline"
+        output_dir = PROJECT_ROOT / "outputs" / "test_stage6h0_exploratory"
         if output_dir.exists():
             import shutil
             shutil.rmtree(output_dir)
 
-        # After 6H.0-R revert: missing baseline is a hard error
+        result = mod.run_threshold_search(
+            output_dir=str(output_dir),
+            sample_size=2,
+            sampling_method="random",
+            seed=0,
+            dry_run=False,
+            episodes_per_point=1,
+            eval_seeds=[0],
+            mode="exploratory",
+        )
+        self.assertTrue(output_dir.exists())
+        self.assertEqual(result["mode"], "exploratory")
+        self.assertTrue(result["regression_baseline_missing"])
+
+    def test_formal_mode_requires_baseline(self):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location(
+            "run_stage6h0_lite_threshold_search",
+            str(PROJECT_ROOT / "scripts" / "run_stage6h0_lite_threshold_search.py"),
+        )
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+
+        output_dir = PROJECT_ROOT / "outputs" / "test_stage6h0_formal"
+        if output_dir.exists():
+            import shutil
+            shutil.rmtree(output_dir)
+
         with self.assertRaises(RuntimeError) as ctx:
             mod.run_threshold_search(
                 output_dir=str(output_dir),
@@ -140,6 +167,7 @@ class TestRegressionBaselineRequiredForSearch(unittest.TestCase):
                 dry_run=False,
                 episodes_per_point=1,
                 eval_seeds=[0],
+                mode="formal",
             )
         self.assertIn("Regression baseline file is required", str(ctx.exception))
 

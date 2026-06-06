@@ -273,9 +273,13 @@ def run_threshold_search(
         return requested_config
 
     if regression_baseline_missing:
-        print("WARNING: Regression baseline file missing. Regression checks skipped.")
-        print("  Candidate and negative-control evaluations will proceed.")
-        print("  To include regression checks, run find_stage6h0_regression_baseline.py first.")
+        raise RuntimeError(
+            "Regression baseline file is required but missing. "
+            "Stage 6H.0-lite threshold search cannot proceed without a validated "
+            "non-tail-chase VPP baseline. Run regression baseline recovery first, "
+            "or explicitly document why baseline is absent. "
+            "Use --regression-baseline-file to provide the baseline file."
+        )
 
     print(f"\n=== Stage 6H.0-lite: Threshold Search ===")
     print(f"Sampled configs: {len(sampled_configs)}")
@@ -490,8 +494,7 @@ def _write_summary_md(path: Path, config_results: list, sampled_configs: list, r
 
     if regression_baseline_missing:
         lines.append("⚠️ **Regression baseline file was missing.**")
-        lines.append("Candidate and negative-control evaluations proceeded without regression checks.")
-        lines.append("To include regression checks, provide --regression-baseline-file.")
+        lines.append("Threshold search requires a validated regression baseline before real runs.")
         lines.append("")
 
     if not config_results:

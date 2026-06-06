@@ -153,9 +153,13 @@ def classify_geometry_family(geometry: Dict) -> str:
     if aspect <= _ASPECT_TAIL_CHASE_MAX and abs(los_from_ego) <= _ASPECT_TAIL_CHASE_MAX:
         return "tail_chase"
 
-    # Head-on vs fleeing: both have aspect near 180
+    # Head-on vs fleeing vs crossing: all can have aspect near 180
     if aspect >= _ASPECT_HEAD_ON_MIN:
+        cross_range = geometry.get("cross_range_m", 0.0)
         if closure > 0:
+            # If significant cross-range, it's a crossing even with 180 aspect
+            if cross_range > 200.0:
+                return "crossing_left" if los_from_ego > 0 else "crossing_right"
             return "head_on" if abs(los_from_ego) <= 30.0 else "crossing_right"
         else:
             return "fleeing"

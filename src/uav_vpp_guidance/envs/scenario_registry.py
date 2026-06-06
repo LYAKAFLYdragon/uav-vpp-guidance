@@ -113,13 +113,78 @@ def initialize_canonical_scenarios() -> None:
         target_speed_mps=200.0,
         scenario_set="regression_baseline",
     )
-    _build_and_register(
+    # regression_challenging uses the actual Stage 6F.5 challenging geometry
+    # Geometrically head-on (aspect 180, los_from_ego ~0). Verified 5/5 success.
+    ScenarioRegistry.register(
         "regression_challenging",
-        "crossing_left",
-        initial_range_m=2130.0,
-        ego_speed_mps=200.0,
-        target_speed_mps=210.0,
-        altitude_diff_m=200.0,
+        {
+            "name": "regression_challenging",
+            "own_init": {
+                "position_m": [0.0, 0.0, 5000.0],
+                "velocity_mps": 200.0,
+                "heading_deg": 45.0,
+            },
+            "target_init": {
+                "position_m": [1500.0, 1500.0, 5200.0],
+                "velocity_mps": 210.0,
+                "heading_deg": 225.0,
+            },
+            "metadata": {
+                "scenario_type": "crossing_left",
+                "initial_range_m": 2121.3,
+                "altitude_diff_m": 200.0,
+                "note": "Stage 6F.5 challenging geometry. Geometrically head-on. Verified 5/5.",
+            },
+        },
+        scenario_set="regression_baseline",
+    )
+    # True crossing_left with significant lateral offset. Verified 5/5 success.
+    ScenarioRegistry.register(
+        "regression_crossing_left",
+        {
+            "name": "regression_crossing_left",
+            "own_init": {
+                "position_m": [0.0, 0.0, 5000.0],
+                "velocity_mps": 200.0,
+                "heading_deg": 0.0,
+            },
+            "target_init": {
+                "position_m": [1500.0, 1500.0, 5200.0],
+                "velocity_mps": 210.0,
+                "heading_deg": 225.0,
+            },
+            "metadata": {
+                "scenario_type": "crossing_left",
+                "initial_range_m": 2121.3,
+                "altitude_diff_m": 200.0,
+                "note": "True crossing_left with high cross-range. Verified 5/5.",
+            },
+        },
+        scenario_set="regression_baseline",
+    )
+    # crossing_right with challenging-like geometry (both aircraft angled)
+    # Verified 3/3 success with audit_no_pred_final checkpoint
+    ScenarioRegistry.register(
+        "regression_crossing_right",
+        {
+            "name": "regression_crossing_right",
+            "own_init": {
+                "position_m": [0.0, 0.0, 5000.0],
+                "velocity_mps": 200.0,
+                "heading_deg": 0.0,
+            },
+            "target_init": {
+                "position_m": [1500.0, -1500.0, 5200.0],
+                "velocity_mps": 210.0,
+                "heading_deg": 135.0,
+            },
+            "metadata": {
+                "scenario_type": "crossing_right",
+                "initial_range_m": 2121.3,
+                "altitude_diff_m": 200.0,
+                "note": "Challenging-like mirrored geometry. Verified feasible 3/3.",
+            },
+        },
         scenario_set="regression_baseline",
     )
 

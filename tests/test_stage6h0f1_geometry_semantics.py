@@ -229,7 +229,9 @@ class TestScenarioRegistry(unittest.TestCase):
     def test_registry_scenarios_have_expected_families(self):
         expected = {
             "regression_neutral": "head_on",
-            "regression_challenging": "crossing_left",
+            "regression_challenging": "head_on",  # geometrically head-on (aspect 180, los_from_ego ~0)
+            "regression_crossing_left": "crossing_left",
+            "regression_crossing_right": "crossing_right",
             "smoke_tail_chase": "tail_chase",
             "smoke_head_on": "head_on",
             "smoke_crossing_left": "crossing_left",

@@ -202,9 +202,14 @@ class ProportionalNavigationGuidance:
 
     def _estimate_los_rate(self, los_unit: np.ndarray) -> np.ndarray:
         """
-        Estimate LOS rate via numerical differentiation with first-order filtering.
+        Estimate LOS rate via angle-based differentiation with first-order filtering.
 
-        Returns LOS rate vector in rad/s.
+        Uses azimuth / elevation angle differences (with wrapping) instead of
+        raw vector subtraction to avoid pi-boundary jumps, then maps the angle
+        rates back to Cartesian space so callers can continue using cross-product
+        geometry.
+
+        Returns LOS rate vector in rad/s (Cartesian).
         """
         if self._prev_los_vec is None:
             self._prev_los_vec = los_unit.copy()
@@ -212,8 +217,29 @@ class ProportionalNavigationGuidance:
             return self._filtered_los_rate
 
         dt_safe = max(self.dt, self.epsilon)
-        # Raw LOS rate as vector difference divided by dt
-        raw_rate = (los_unit - self._prev_los_vec) / dt_safe
+
+        # Previous angles
+        prev_az = np.arctan2(self._prev_los_vec[1], self._prev_los_vec[0])
+        prev_el = np.arcsin(np.clip(self._prev_los_vec[2], -1.0, 1.0))
+
+        # Current angles
+        curr_az = np.arctan2(los_unit[1], los_unit[0])
+        curr_el = np.arcsin(np.clip(los_unit[2], -1.0, 1.0))
+
+        # Wrapped angle differences
+        d_az = _normalize_angle(curr_az - prev_az)
+        d_el = curr_el - prev_el
+
+        # Map angle rates back to Cartesian using spherical tangent vectors
+        cos_az = np.cos(curr_az)
+        sin_az = np.sin(curr_az)
+        cos_el = np.cos(curr_el)
+        sin_el = np.sin(curr_el)
+
+        e_az = np.array([-sin_az * cos_el, cos_az * cos_el, 0.0], dtype=np.float64)
+        e_el = np.array([-cos_az * sin_el, -sin_az * sin_el, cos_el], dtype=np.float64)
+
+        raw_rate = (d_az * e_az + d_el * e_el) / dt_safe
         self._prev_los_vec = los_unit.copy()
 
         # First-order filter

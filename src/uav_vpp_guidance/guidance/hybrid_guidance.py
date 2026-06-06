@@ -246,11 +246,13 @@ class HybridGuidance:
             own_state, target_state, virtual_point, gains
         )
 
-        def _blend(key: str) -> float:
-            return (1.0 - w) * pn_cmd[key] + w * los_cmd[key]
+        # Blend all keys present in either command dict; missing keys default to 0.0
+        blended: Dict[str, float] = {}
+        for key in set(pn_cmd.keys()) | set(los_cmd.keys()):
+            blended[key] = (1.0 - w) * pn_cmd.get(key, 0.0) + w * los_cmd.get(key, 0.0)
 
         return {
-            "nz_cmd": float(_blend("nz_cmd")),
-            "roll_rate_cmd": float(_blend("roll_rate_cmd")),
-            "throttle_cmd": float(_blend("throttle_cmd")),
+            "nz_cmd": float(blended.get("nz_cmd", 0.0)),
+            "roll_rate_cmd": float(blended.get("roll_rate_cmd", 0.0)),
+            "throttle_cmd": float(blended.get("throttle_cmd", 0.0)),
         }

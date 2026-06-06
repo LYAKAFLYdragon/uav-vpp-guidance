@@ -298,3 +298,75 @@ def test_gain_override():
     cmd_override = pn.compute_command(own, None, vp, gains=FakeGains())
     # Higher k_roll should produce larger roll_rate_cmd magnitude
     assert abs(cmd_override["roll_rate_cmd"]) > abs(cmd_default["roll_rate_cmd"])
+
+
+# ---------------------------------------------------------------------------
+# LOS-rate boundary jump bug (Stage 6H.3-B)
+# ---------------------------------------------------------------------------
+
+
+class TestLOSEstimateBoundary:
+    def test_los_rate_crossing_pi_boundary(self):
+        """LOS azimuth crossing from 359° to 1° should not produce huge rate."""
+        pn = ProportionalNavigationGuidance({"params": {"dt": 0.2}})
+        pn._prev_los_vec = np.array([
+            np.cos(np.deg2rad(359)),
+            np.sin(np.deg2rad(359)),
+            0.0,
+        ])
+        pn._filtered_los_rate = np.zeros(3)
+        los_unit = np.array([
+            np.cos(np.deg2rad(1)),
+            np.sin(np.deg2rad(1)),
+            0.0,
+        ])
+        rate = pn._estimate_los_rate(los_unit)
+        # 2° change over 0.2s => ~0.175 rad/s, should be small
+        assert np.linalg.norm(rate[:2]) < 1.0, f"Rate too large: {rate}"
+
+    def test_los_rate_crossing_minus_pi_boundary(self):
+        """LOS azimuth crossing from -179° to +179° should not produce huge rate."""
+        pn = ProportionalNavigationGuidance({"params": {"dt": 0.2}})
+        pn._prev_los_vec = np.array([
+            np.cos(np.deg2rad(-179)),
+            np.sin(np.deg2rad(-179)),
+            0.0,
+        ])
+        pn._filtered_los_rate = np.zeros(3)
+        los_unit = np.array([
+            np.cos(np.deg2rad(179)),
+            np.sin(np.deg2rad(179)),
+            0.0,
+        ])
+        rate = pn._estimate_los_rate(los_unit)
+        assert np.linalg.norm(rate[:2]) < 1.0, f"Rate too large: {rate}"
+
+    def test_los_rate_normal_small_change(self):
+        """A normal 5° change should produce a reasonable rate."""
+        pn = ProportionalNavigationGuidance({"params": {"dt": 0.2, "los_rate_filter_alpha": 1.0}})
+        pn._prev_los_vec = np.array([
+            np.cos(np.deg2rad(10)),
+            np.sin(np.deg2rad(10)),
+            0.0,
+        ])
+        pn._filtered_los_rate = np.zeros(3)
+        los_unit = np.array([
+            np.cos(np.deg2rad(15)),
+            np.sin(np.deg2rad(15)),
+            0.0,
+        ])
+        rate = pn._estimate_los_rate(los_unit)
+        # 5° over 0.2s => ~0.436 rad/s
+        assert 0.3 < np.linalg.norm(rate[:2]) < 0.6, f"Rate unexpected: {rate}"
+
+    def test_los_rate_elevation_boundary(self):
+        """Elevation near +/- 90° should not clip violently."""
+        pn = ProportionalNavigationGuidance({"params": {"dt": 0.2}})
+        pn._prev_los_vec = np.array([0.0, 0.999, 0.044])  # el ~ 2.5°
+        pn._prev_los_vec /= np.linalg.norm(pn._prev_los_vec)
+        pn._filtered_los_rate = np.zeros(3)
+        los_unit = np.array([0.0, 0.999, 0.087])  # el ~ 5.0°
+        los_unit /= np.linalg.norm(los_unit)
+        rate = pn._estimate_los_rate(los_unit)
+        # Small elevation change => small rate
+        assert abs(rate[1]) < 0.3, f"Elevation rate too large: {rate[1]}"

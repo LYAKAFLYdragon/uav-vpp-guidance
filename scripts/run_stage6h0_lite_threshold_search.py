@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
-"""
-Stage 6H.0-lite: Mode-Switch Threshold Optimization Preflight.
+"""Stage 6H.0-lite: Mode-Switch Threshold Optimization Preflight.
 
 Samples threshold configs from a 6-D search space and evaluates them
 against candidate geometries, regression baselines, and negative controls.
+
+All scenarios originate from ScenarioRegistry exclusively.
+No legacy aspect-angle builder paths remain.
 
 Search space:
     aspect_enter_threshold_deg: [10, 15, 20, 25]
@@ -13,19 +15,21 @@ Search space:
     hold_policy:                [episode_latch, min_hold_2s, hysteresis_exit]
     fallback_mode:              [los_rate, hybrid]
 
-Default sample-size = 60 (not full 1152 grid).
-
 Usage:
     # Dry-run (no simulation)
     python scripts/run_stage6h0_lite_threshold_search.py --dry-run
 
-    # Real run with regression baseline file
+    # Smoke run (small sample, fast)
     python scripts/run_stage6h0_lite_threshold_search.py \
-        --sample-size 60 \
-        --sampling-method latin_hypercube \
-        --seed 0 \
-        --regression-baseline-file outputs/stage6h0_regression_baseline_search/regression_baseline_candidates.csv \
-        --output-dir outputs/stage6h0_lite_threshold_search
+        --sample-size 5 --sampling-method random --episodes-per-point 1 \
+        --mode exploratory --output-dir outputs/stage6h0f3_smoke
+
+    # Formal LHS60 (paper-safe)
+    python scripts/run_stage6h0_lite_threshold_search.py \
+        --sample-size 60 --sampling-method latin_hypercube --seed 0 \
+        --mode formal \
+        --regression-baseline-file outputs/stage6h0f2_formal_baseline/regression_baseline.csv \
+        --output-dir outputs/stage6h0f3_formal_lhs60
 """
 
 import argparse
@@ -42,7 +46,10 @@ import yaml
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from uav_vpp_guidance.utils.seed import set_seed
-from uav_vpp_guidance.utils.geometry_scenario import build_geometry_scenario
+from uav_vpp_guidance.envs.scenario_registry import (
+    ScenarioRegistry,
+    initialize_canonical_scenarios,
+)
 from uav_vpp_guidance.envs.geometry_scenarios import build_explicit_scenario
 from uav_vpp_guidance.evaluation.evaluate_prediction_comparison import (
     evaluate_single_episode,
@@ -51,7 +58,11 @@ from uav_vpp_guidance.evaluation.evaluate_prediction_comparison import (
 from uav_vpp_guidance.envs.tracking_env import CloseRangeTrackingEnv
 from uav_vpp_guidance.agents.ppo_agent import PPOAgent
 from uav_vpp_guidance.utils.config import merge_config
+from uav_vpp_guidance.utils.geometry_validator import validate_scenario_geometry
 
+# ---------------------------------------------------------------------------
+# Contract: no legacy builder may be imported or used in this module.
+# ---------------------------------------------------------------------------
 
 SEARCH_SPACE = {
     "aspect_enter_threshold_deg": [10.0, 15.0, 20.0, 25.0],
@@ -60,19 +71,6 @@ SEARCH_SPACE = {
     "closing_speed_enter_mps": [80.0, 120.0, 160.0],
     "hold_policy": ["episode_latch", "min_hold_2s", "hysteresis_exit"],
     "fallback_mode": ["los_rate", "hybrid"],
-}
-
-CANDIDATE_GEOMETRIES = {
-    "pt20": {"initial_range_m": 2000, "ego_speed_mps": 340, "target_speed_mps": 120, "aspect_angle_deg": 0, "altitude_diff_m": -500},
-    "pt29": {"initial_range_m": 2000, "ego_speed_mps": 340, "target_speed_mps": 200, "aspect_angle_deg": 0, "altitude_diff_m": 0},
-    "pt38": {"initial_range_m": 2000, "ego_speed_mps": 340, "target_speed_mps": 120, "aspect_angle_deg": 0, "altitude_diff_m": 500},
-    "near_range_1800": {"initial_range_m": 1800, "ego_speed_mps": 340, "target_speed_mps": 120, "aspect_angle_deg": 0, "altitude_diff_m": 0},
-}
-
-NEGATIVE_CONTROLS = {
-    "neg_aspect_60": {"initial_range_m": 2000, "ego_speed_mps": 340, "target_speed_mps": 120, "aspect_angle_deg": 60, "altitude_diff_m": 0},
-    "neg_aspect_90": {"initial_range_m": 2000, "ego_speed_mps": 340, "target_speed_mps": 120, "aspect_angle_deg": 90, "altitude_diff_m": 0},
-    "neg_low_closing": {"initial_range_m": 2000, "ego_speed_mps": 150, "target_speed_mps": 140, "aspect_angle_deg": 0, "altitude_diff_m": 0},
 }
 
 ACCEPTANCE = {
@@ -129,8 +127,6 @@ def _sample_configs(sample_size, method, seed):
         return configs
 
     if method == "latin_hypercube":
-        # Latin Hypercube: for each dim, split into sample_size bins,
-        # pick one random value per bin, then shuffle across dims.
         configs = []
         dim_samples = []
         for dim_idx, dim_values in enumerate(values):
@@ -141,7 +137,6 @@ def _sample_configs(sample_size, method, seed):
                 if len(b) > 0:
                     choices = [rng.choice(dim_values) for _ in b]
                     bin_choices.extend(choices)
-            # Pad or truncate to sample_size
             if len(bin_choices) < sample_size:
                 extra = [rng.choice(dim_values) for _ in range(sample_size - len(bin_choices))]
                 bin_choices.extend(extra)
@@ -166,13 +161,13 @@ def _load_regression_baselines(csv_path):
                 baselines.append({
                     "scenario_id": row["scenario_id"],
                     "scenario_type": row.get("scenario_type", ""),
-                    "aspect_angle_deg": float(row["aspect_angle_deg"]),
-                    "initial_range_m": float(row["initial_range_m"]),
-                    "ego_speed_mps": float(row["ego_speed_mps"]),
-                    "target_speed_mps": float(row["target_speed_mps"]),
-                    "altitude_diff_m": float(row["altitude_diff_m"]),
-                    "baseline_variant": row["variant"],
-                    "baseline_success_rate": float(row["success_rate"]),
+                    "aspect_angle_deg": float(row.get("aspect_angle_deg", 0)),
+                    "initial_range_m": float(row.get("initial_range_m", 0)),
+                    "ego_speed_mps": float(row.get("ego_speed_mps", 0)),
+                    "target_speed_mps": float(row.get("target_speed_mps", 0)),
+                    "altitude_diff_m": float(row.get("altitude_diff_m", 0)),
+                    "baseline_variant": row.get("variant", "no_prediction"),
+                    "baseline_success_rate": float(row.get("success_rate", 0)),
                 })
     return baselines
 
@@ -195,15 +190,27 @@ def _build_mode_switch_config(cfg):
     return ms
 
 
+def _scenario_from_registry(name):
+    """Load a scenario dict from ScenarioRegistry.
+
+    Returns the scenario and its validated geometry family.
+    """
+    scen = ScenarioRegistry.get(name)
+    if scen is None:
+        raise ValueError(f"Scenario '{name}' not found in ScenarioRegistry")
+    report = validate_scenario_geometry(scen)
+    return scen, report["classified_family"]
+
+
 def run_threshold_search(
     output_dir: str,
     config_path: str = "config/experiment/stage6g5_wide_geometry_smoke.yaml",
     sample_size: int = 60,
     sampling_method: str = "latin_hypercube",
     seed: int = 0,
-    candidate_geometries=None,
+    candidate_set: str = "candidate_search",
     regression_baseline_file: str = None,
-    negative_controls=None,
+    negative_set: str = "negative_control",
     episodes_per_point: int = 3,
     eval_seeds=None,
     dry_run: bool = False,
@@ -212,10 +219,16 @@ def run_threshold_search(
 ):
     if eval_seeds is None:
         eval_seeds = [0]
-    if candidate_geometries is None:
-        candidate_geometries = list(CANDIDATE_GEOMETRIES.keys())
-    if negative_controls is None:
-        negative_controls = list(NEGATIVE_CONTROLS.keys())
+
+    # Initialize registry and resolve scenario sets
+    initialize_canonical_scenarios()
+    candidate_names = ScenarioRegistry.list_names(candidate_set)
+    negative_names = ScenarioRegistry.list_names(negative_set)
+
+    if not candidate_names:
+        raise ValueError(f"Candidate set '{candidate_set}' is empty or not found in ScenarioRegistry")
+    if not negative_names:
+        raise ValueError(f"Negative set '{negative_set}' is empty or not found in ScenarioRegistry")
 
     output_path = Path(output_dir)
     output_path.mkdir(parents=True, exist_ok=True)
@@ -238,10 +251,12 @@ def run_threshold_search(
         "sample_size": sample_size,
         "sampling_method": sampling_method,
         "seed": seed,
-        "candidate_geometries": candidate_geometries,
+        "candidate_set": candidate_set,
+        "candidate_scenarios": candidate_names,
         "regression_baseline_file": regression_baseline_file,
         "regression_baseline_missing": regression_baseline_missing,
-        "negative_controls": negative_controls,
+        "negative_set": negative_set,
+        "negative_scenarios": negative_names,
         "episodes_per_point": episodes_per_point,
         "eval_seeds": eval_seeds,
         "dry_run": dry_run,
@@ -264,15 +279,25 @@ def run_threshold_search(
         print("\n=== DRY RUN ===")
         print(f"Mode: {mode}")
         print(f"Would evaluate {len(sampled_configs)} sampled configs")
-        print(f"Candidate geometries: {len(candidate_geometries)}")
+        print(f"Candidate scenarios ({candidate_set}): {len(candidate_names)}")
         print(f"Regression baselines: {len(regression_baselines)}")
-        print(f"Negative controls: {len(negative_controls)}")
+        print(f"Negative controls ({negative_set}): {len(negative_names)}")
         print("No simulation executed.")
         _write_empty_csv(output_path / "raw_episodes.csv",
-                         ["config_id", "scenario", "episode_index", "is_success", "reason"])
+                         ["config_id", "scenario_id", "geometry_family", "scenario_type",
+                          "episode_index", "is_success", "reason",
+                          "effective_guidance_mode", "mode_switch_effective"])
         _write_empty_csv(output_path / "threshold_summary.csv",
                          ["config_id", "candidate_success_rate", "regression_degradation_pp",
                           "false_activation_rate", "accepted"])
+        _write_empty_csv(output_path / "accepted_thresholds.csv",
+                         ["config_id", "aspect_enter_threshold_deg", "aspect_exit_threshold_deg",
+                          "range_enter_m", "closing_speed_enter_mps", "hold_policy", "fallback_mode",
+                          "candidate_success_rate", "regression_degradation_pp", "false_activation_rate"])
+        _write_empty_csv(output_path / "rejected_thresholds.csv",
+                         ["config_id", "aspect_enter_threshold_deg", "aspect_exit_threshold_deg",
+                          "range_enter_m", "closing_speed_enter_mps", "hold_policy", "fallback_mode",
+                          "candidate_success_rate", "regression_degradation_pp", "false_activation_rate"])
         _write_summary_md(output_path / "threshold_search_summary.md", [], sampled_configs,
                           regression_baseline_missing=regression_baseline_missing, mode=mode)
         return requested_config
@@ -292,8 +317,8 @@ def run_threshold_search(
             print("  Results are NOT paper-safe formal threshold results.")
 
     print(f"\n=== Stage 6H.0-lite: Threshold Search ===")
-    print(f"Sampled configs: {len(sampled_configs)}")
-    print(f"Candidates: {len(candidate_geometries)} | Baselines: {len(regression_baselines)} | Negatives: {len(negative_controls)}")
+    print(f"Mode: {mode} | Sampled configs: {len(sampled_configs)}")
+    print(f"Candidates: {len(candidate_names)} | Baselines: {len(regression_baselines)} | Negatives: {len(negative_names)}")
 
     config = load_experiment_config(config_path)
     config["backend"] = "simple"
@@ -321,15 +346,15 @@ def run_threshold_search(
             variant_config, method_override, allow_random_policy=allow_random_policy
         )
 
-        # Evaluate candidate geometries
+        # Evaluate candidate scenarios
         candidate_success = 0
         candidate_total = 0
-        for scen_name in candidate_geometries:
-            pt = CANDIDATE_GEOMETRIES[scen_name]
-            scenario = build_geometry_scenario(
-                pt["initial_range_m"], pt["ego_speed_mps"], pt["target_speed_mps"],
-                pt["aspect_angle_deg"], pt["altitude_diff_m"], base_altitude_m=5000.0,
-            )
+        family_success = {}
+        family_total = {}
+        for scen_name in candidate_names:
+            scenario, family = _scenario_from_registry(scen_name)
+            family_success.setdefault(family, 0)
+            family_total.setdefault(family, 0)
             for ev_seed in eval_seeds:
                 for ep_idx in range(episodes_per_point):
                     episode_seed = ev_seed * 100000 + cfg_idx * 1000 + hash(scen_name) % 100 + ep_idx
@@ -340,19 +365,27 @@ def run_threshold_search(
                             save_trajectory=False, method_name="no_prediction",
                         )
                         ep_result["config_id"] = config_id
-                        ep_result["scenario"] = scen_name
+                        ep_result["scenario_id"] = scen_name
+                        ep_result["geometry_family"] = family
                         ep_result["scenario_type"] = "candidate"
                         ep_result["episode_index"] = ep_idx
                         all_episodes.append(ep_result)
                         candidate_total += 1
+                        family_total[family] += 1
                         if ep_result.get("is_success"):
                             candidate_success += 1
+                            family_success[family] += 1
                     except Exception as exc:
                         all_episodes.append({
-                            "config_id": config_id, "scenario": scen_name, "scenario_type": "candidate",
-                            "episode_index": ep_idx, "is_success": False, "reason": f"exception:{exc}",
+                            "config_id": config_id, "scenario_id": scen_name,
+                            "geometry_family": family, "scenario_type": "candidate",
+                            "episode_index": ep_idx, "is_success": False,
+                            "reason": f"exception:{exc}",
+                            "effective_guidance_mode": "unknown",
+                            "mode_switch_effective": False,
                         })
                         candidate_total += 1
+                        family_total[family] += 1
 
         # Evaluate regression baselines
         regression_degradation_pp = 0.0
@@ -367,10 +400,11 @@ def run_threshold_search(
                         altitude_diff_m=bl["altitude_diff_m"], base_altitude_m=5000.0,
                     )
                 else:
-                    scenario = build_geometry_scenario(
-                        bl["initial_range_m"], bl["ego_speed_mps"], bl["target_speed_mps"],
-                        bl["aspect_angle_deg"], bl["altitude_diff_m"], base_altitude_m=5000.0,
+                    raise ValueError(
+                        f"Baseline {bl['scenario_id']} missing scenario_type. "
+                        "All baselines must use explicit scenario types."
                     )
+                _, family = validate_scenario_geometry(scenario), validate_scenario_geometry(scenario)["classified_family"]
                 for ev_seed in eval_seeds:
                     for ep_idx in range(episodes_per_point):
                         episode_seed = ev_seed * 100000 + cfg_idx * 1000 + hash(bl["scenario_id"]) % 100 + ep_idx
@@ -381,7 +415,8 @@ def run_threshold_search(
                                 save_trajectory=False, method_name="no_prediction",
                             )
                             ep_result["config_id"] = config_id
-                            ep_result["scenario"] = bl["scenario_id"]
+                            ep_result["scenario_id"] = bl["scenario_id"]
+                            ep_result["geometry_family"] = family
                             ep_result["scenario_type"] = "regression"
                             all_episodes.append(ep_result)
                             baseline_total += 1
@@ -389,25 +424,22 @@ def run_threshold_search(
                                 baseline_success += 1
                         except Exception as exc:
                             all_episodes.append({
-                                "config_id": config_id, "scenario": bl["scenario_id"],
-                                "scenario_type": "regression", "is_success": False,
-                                "reason": f"exception:{exc}",
+                                "config_id": config_id, "scenario_id": bl["scenario_id"],
+                                "geometry_family": family, "scenario_type": "regression",
+                                "is_success": False, "reason": f"exception:{exc}",
+                                "effective_guidance_mode": "unknown",
+                                "mode_switch_effective": False,
                             })
                             baseline_total += 1
             baseline_sr = baseline_success / max(1, baseline_total)
-            # Degradation vs average baseline success rate
             avg_baseline_sr = np.mean([b["baseline_success_rate"] for b in regression_baselines])
             regression_degradation_pp = max(0.0, (avg_baseline_sr - baseline_sr) * 100)
 
         # Evaluate negative controls
         false_activation_count = 0
         negative_total = 0
-        for scen_name in negative_controls:
-            pt = NEGATIVE_CONTROLS[scen_name]
-            scenario = build_geometry_scenario(
-                pt["initial_range_m"], pt["ego_speed_mps"], pt["target_speed_mps"],
-                pt["aspect_angle_deg"], pt["altitude_diff_m"], base_altitude_m=5000.0,
-            )
+        for scen_name in negative_names:
+            scenario, family = _scenario_from_registry(scen_name)
             for ev_seed in eval_seeds:
                 for ep_idx in range(episodes_per_point):
                     episode_seed = ev_seed * 100000 + cfg_idx * 1000 + hash(scen_name) % 100 + ep_idx
@@ -418,23 +450,34 @@ def run_threshold_search(
                             save_trajectory=False, method_name="no_prediction",
                         )
                         ep_result["config_id"] = config_id
-                        ep_result["scenario"] = scen_name
+                        ep_result["scenario_id"] = scen_name
+                        ep_result["geometry_family"] = family
                         ep_result["scenario_type"] = "negative"
                         all_episodes.append(ep_result)
                         negative_total += 1
-                        # False activation: mode_switch_effective=True on a negative control
                         if ep_result.get("mode_switch_effective", False):
                             false_activation_count += 1
                     except Exception as exc:
                         all_episodes.append({
-                            "config_id": config_id, "scenario": scen_name,
-                            "scenario_type": "negative", "is_success": False,
-                            "reason": f"exception:{exc}",
+                            "config_id": config_id, "scenario_id": scen_name,
+                            "geometry_family": family, "scenario_type": "negative",
+                            "is_success": False, "reason": f"exception:{exc}",
+                            "effective_guidance_mode": "unknown",
+                            "mode_switch_effective": False,
                         })
                         negative_total += 1
 
         false_activation_rate = false_activation_count / max(1, negative_total)
         candidate_sr = candidate_success / max(1, candidate_total)
+
+        # Per-family breakdown
+        family_breakdown = {}
+        for fam in family_total:
+            family_breakdown[fam] = {
+                "success_rate": family_success.get(fam, 0) / max(1, family_total[fam]),
+                "success_count": family_success.get(fam, 0),
+                "total": family_total[fam],
+            }
 
         accepted = (
             candidate_sr >= ACCEPTANCE["candidate_min_success_rate"]
@@ -453,18 +496,21 @@ def run_threshold_search(
             "false_activation_count": false_activation_count,
             "negative_total": negative_total,
             "accepted": accepted,
+            "family_breakdown": family_breakdown,
         })
 
         status = "ACCEPTED" if accepted else "REJECTED"
         print(f"  -> {status} | candidate={candidate_sr:.2f} degradation={regression_degradation_pp:.1f}pp false_act={false_activation_rate:.2f}")
+        for fam, info in sorted(family_breakdown.items()):
+            print(f"      {fam}: {info['success_count']}/{info['total']} = {info['success_rate']:.1%}")
 
         env.close()
 
     # Save outputs
     _write_csv_from_dicts(output_path / "raw_episodes.csv", all_episodes,
-                          ["config_id", "scenario", "scenario_type", "episode_index",
-                           "is_success", "reason", "mode_switch_effective",
-                           "effective_guidance_mode", "virtual_point_source"])
+                          ["config_id", "scenario_id", "geometry_family", "scenario_type",
+                           "episode_index", "is_success", "reason",
+                           "effective_guidance_mode", "mode_switch_effective"])
 
     _write_csv_from_dicts(output_path / "threshold_summary.csv", config_results,
                           ["config_id", "aspect_enter_threshold_deg", "aspect_exit_threshold_deg",
@@ -484,7 +530,7 @@ def run_threshold_search(
                            "candidate_success_rate", "regression_degradation_pp", "false_activation_rate"])
 
     _write_summary_md(output_path / "threshold_search_summary.md", config_results, sampled_configs,
-                      regression_baseline_missing=regression_baseline_missing)
+                      regression_baseline_missing=regression_baseline_missing, mode=mode)
     return requested_config
 
 
@@ -547,6 +593,17 @@ def _write_summary_md(path: Path, config_results: list, sampled_configs: list, r
                 f"{r['range_enter_m']}m | {r['closing_speed_enter_mps']}m/s | {r['hold_policy']} | {r['fallback_mode']} | "
                 f"{r['candidate_success_rate']*100:.1f}% | {r['regression_degradation_pp']:.1f}pp | {r['false_activation_rate']*100:.1f}% |"
             )
+        # Per-family breakdown
+        lines.append("")
+        lines.append("### Per-Family Candidate Breakdown")
+        lines.append("")
+        lines.append("| Config | Family | Success Rate | Count |")
+        lines.append("|---|---|---|---|")
+        for r in accepted:
+            for fam, info in sorted(r.get("family_breakdown", {}).items()):
+                lines.append(
+                    f"| {r['config_id']} | {fam} | {info['success_rate']*100:.1f}% | {info['success_count']}/{info['total']} |"
+                )
         lines.append("")
         if mode == "formal":
             lines.append("These configs meet all formal acceptance criteria and can be locked for bilevel initialization.")
@@ -566,14 +623,17 @@ def main():
     parser.add_argument("--sampling-method", type=str, default="latin_hypercube",
                         choices=["random", "latin_hypercube", "grid"])
     parser.add_argument("--seed", type=int, default=0)
-    parser.add_argument("--candidate-geometries", type=str, nargs="+",
-                        default=list(CANDIDATE_GEOMETRIES.keys()))
+    parser.add_argument("--candidate-set", type=str, default="candidate_search",
+                        help="ScenarioRegistry set tag for candidate scenarios")
+    parser.add_argument("--regression-set", type=str, default="regression_baseline",
+                        help="ScenarioRegistry set tag for regression baselines (used for catalog only)")
+    parser.add_argument("--negative-set", type=str, default="negative_control",
+                        help="ScenarioRegistry set tag for negative controls")
     parser.add_argument("--mode", type=str, default="exploratory",
                         choices=["exploratory", "formal"],
                         help="exploratory: baseline optional; formal: baseline required")
-    parser.add_argument("--regression-baseline-file", type=str, default=None)
-    parser.add_argument("--negative-controls", type=str, nargs="+",
-                        default=list(NEGATIVE_CONTROLS.keys()))
+    parser.add_argument("--regression-baseline-file", type=str, default=None,
+                        help="Path to regression baseline CSV (required in formal mode)")
     parser.add_argument("--episodes-per-point", type=int, default=3)
     parser.add_argument("--eval-seeds", type=int, nargs="+", default=[0])
     parser.add_argument("--dry-run", action="store_true")
@@ -588,9 +648,9 @@ def main():
         sample_size=args.sample_size,
         sampling_method=args.sampling_method,
         seed=args.seed,
-        candidate_geometries=args.candidate_geometries,
+        candidate_set=args.candidate_set,
         regression_baseline_file=args.regression_baseline_file,
-        negative_controls=args.negative_controls,
+        negative_set=args.negative_set,
         episodes_per_point=args.episodes_per_point,
         eval_seeds=args.eval_seeds,
         dry_run=args.dry_run,

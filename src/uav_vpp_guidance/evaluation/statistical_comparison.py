@@ -13,7 +13,7 @@ No external dependencies beyond numpy and scipy.
 
 import numpy as np
 from typing import List, Dict, Tuple, Optional
-from scipy.stats import binomtest
+from scipy.stats import binomtest, ttest_rel, mannwhitneyu
 
 
 def mean_std(values: List[float]) -> Tuple[float, float]:
@@ -166,6 +166,239 @@ def compare_per_scenario(method_metrics: Dict[str, Dict],
         }
 
     return {"scenario": scenario_name, "metric": metric_key, "values": results, "deltas": deltas}
+
+
+def bootstrap_confidence_interval(data: List[float],
+                                    n_bootstrap: int = 10000,
+                                    ci: float = 0.95,
+                                    random_seed: int = 42) -> Tuple[float, float, float]:
+    """
+    Bootstrap confidence interval for the mean (paper-level API).
+
+    Args:
+        data: Sample data points.
+        n_bootstrap: Number of bootstrap resamples.
+        ci: Confidence level (e.g., 0.95 for 95%% CI).
+        random_seed: Random seed for reproducibility.
+
+    Returns:
+        tuple: (mean, lower_bound, upper_bound)
+    """
+    return bootstrap_ci(data, n_bootstrap=n_bootstrap, confidence=ci, random_seed=random_seed)
+
+
+def paired_t_test(method_a_results: List[float],
+                   method_b_results: List[float]) -> Dict:
+    """
+    Paired t-test between two methods.
+
+    Args:
+        method_a_results: Results from method A (one per episode/seed).
+        method_b_results: Results from method B (paired with A).
+
+    Returns:
+        dict: {
+            't_statistic': float,
+            'p_value': float,
+            'mean_diff': float,
+            'std_diff': float,
+            'n_pairs': int,
+            'significant_at_05': bool,
+            'significant_at_01': bool,
+        }
+    """
+    pairs = [(a, b) for a, b in zip(method_a_results, method_b_results)
+             if np.isfinite(a) and np.isfinite(b)]
+    if not pairs:
+        return {
+            't_statistic': np.nan,
+            'p_value': np.nan,
+            'mean_diff': np.nan,
+            'std_diff': np.nan,
+            'n_pairs': 0,
+            'significant_at_05': False,
+            'significant_at_01': False,
+        }
+
+    a_vals = np.array([p[0] for p in pairs], dtype=np.float64)
+    b_vals = np.array([p[1] for p in pairs], dtype=np.float64)
+    diffs = b_vals - a_vals
+
+    mean_diff = float(np.mean(diffs))
+    std_diff = float(np.std(diffs, ddof=1)) if len(diffs) > 1 else 0.0
+
+    # t-test needs df > 0 (at least 2 pairs)
+    if len(diffs) < 2:
+        return {
+            't_statistic': np.nan,
+            'p_value': np.nan,
+            'mean_diff': mean_diff,
+            'std_diff': 0.0,
+            'n_pairs': len(diffs),
+            'significant_at_05': False,
+            'significant_at_01': False,
+        }
+
+    # Handle zero-variance differences (all diffs identical) to avoid scipy nan
+    if np.isclose(std_diff, 0.0, atol=1e-12):
+        if np.isclose(mean_diff, 0.0, atol=1e-12):
+            return {
+                't_statistic': 0.0,
+                'p_value': 1.0,
+                'mean_diff': 0.0,
+                'std_diff': 0.0,
+                'n_pairs': len(diffs),
+                'significant_at_05': False,
+                'significant_at_01': False,
+            }
+        else:
+            return {
+                't_statistic': float('inf') if mean_diff > 0 else float('-inf'),
+                'p_value': 0.0,
+                'mean_diff': mean_diff,
+                'std_diff': 0.0,
+                'n_pairs': len(diffs),
+                'significant_at_05': True,
+                'significant_at_01': True,
+            }
+
+    t_stat, p_val = ttest_rel(a_vals, b_vals)
+    return {
+        't_statistic': float(t_stat),
+        'p_value': float(p_val),
+        'mean_diff': mean_diff,
+        'std_diff': std_diff,
+        'n_pairs': len(diffs),
+        'significant_at_05': bool(p_val < 0.05),
+        'significant_at_01': bool(p_val < 0.01),
+    }
+
+
+def cohens_d(method_a_results: List[float],
+             method_b_results: List[float]) -> Dict:
+    """
+    Cohen's d effect size for paired samples.
+
+    Args:
+        method_a_results: Results from method A.
+        method_b_results: Results from method B (paired with A).
+
+    Returns:
+        dict: {
+            'd': float,            # Cohen's d (mean_diff / std_diff)
+            'mean_diff': float,
+            'std_diff': float,
+            'n_pairs': int,
+            'magnitude': str,      # 'negligible', 'small', 'medium', 'large'
+        }
+    """
+    pairs = [(a, b) for a, b in zip(method_a_results, method_b_results)
+             if np.isfinite(a) and np.isfinite(b)]
+    if not pairs:
+        return {
+            'd': np.nan,
+            'mean_diff': np.nan,
+            'std_diff': np.nan,
+            'n_pairs': 0,
+            'magnitude': 'unknown',
+        }
+
+    a_vals = np.array([p[0] for p in pairs], dtype=np.float64)
+    b_vals = np.array([p[1] for p in pairs], dtype=np.float64)
+    diffs = b_vals - a_vals
+
+    mean_diff = float(np.mean(diffs))
+    std_diff = float(np.std(diffs, ddof=1)) if len(diffs) > 1 else 0.0
+    n_pairs = len(diffs)
+
+    # Handle zero-variance differences to avoid division-by-zero artifacts
+    if np.isclose(std_diff, 0.0, atol=1e-12):
+        if np.isclose(mean_diff, 0.0, atol=1e-12):
+            d = 0.0
+        else:
+            d = float('inf') if mean_diff > 0 else float('-inf')
+    else:
+        d = mean_diff / std_diff
+
+    # Standard thresholds for paired Cohen's d (|d|)
+    if np.isinf(d):
+        abs_d = float('inf')
+    elif np.isfinite(d):
+        abs_d = abs(d)
+    else:
+        abs_d = 0.0
+
+    if abs_d < 0.2:
+        magnitude = 'negligible'
+    elif abs_d < 0.5:
+        magnitude = 'small'
+    elif abs_d < 0.8:
+        magnitude = 'medium'
+    else:
+        magnitude = 'large'
+
+    return {
+        'd': float(d) if np.isfinite(d) else d,
+        'mean_diff': mean_diff,
+        'std_diff': std_diff,
+        'n_pairs': n_pairs,
+        'magnitude': magnitude,
+    }
+
+
+def mann_whitney_u(method_a_results: List[float],
+                   method_b_results: List[float]) -> Dict:
+    """
+    Mann-Whitney U test (non-parametric) for two independent samples.
+
+    Args:
+        method_a_results: Results from method A.
+        method_b_results: Results from method B.
+
+    Returns:
+        dict: {
+            'u_statistic': float,
+            'p_value': float,
+            'n_a': int,
+            'n_b': int,
+            'significant_at_05': bool,
+            'significant_at_01': bool,
+        }
+    """
+    a_vals = np.array([v for v in method_a_results if np.isfinite(v)], dtype=np.float64)
+    b_vals = np.array([v for v in method_b_results if np.isfinite(v)], dtype=np.float64)
+
+    if len(a_vals) == 0 or len(b_vals) == 0:
+        return {
+            'u_statistic': np.nan,
+            'p_value': np.nan,
+            'n_a': len(a_vals),
+            'n_b': len(b_vals),
+            'significant_at_05': False,
+            'significant_at_01': False,
+        }
+
+    try:
+        u_stat, p_val = mannwhitneyu(a_vals, b_vals, alternative='two-sided')
+    except ValueError as e:
+        # All numbers are identical
+        return {
+            'u_statistic': np.nan,
+            'p_value': 1.0,
+            'n_a': len(a_vals),
+            'n_b': len(b_vals),
+            'significant_at_05': False,
+            'significant_at_01': False,
+        }
+
+    return {
+        'u_statistic': float(u_stat),
+        'p_value': float(p_val),
+        'n_a': int(len(a_vals)),
+        'n_b': int(len(b_vals)),
+        'significant_at_05': bool(p_val < 0.05),
+        'significant_at_01': bool(p_val < 0.01),
+    }
 
 
 def mcnemar_exact_pvalue(b: int, c: int) -> float:

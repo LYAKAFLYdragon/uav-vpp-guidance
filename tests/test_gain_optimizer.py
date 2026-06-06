@@ -36,12 +36,13 @@ class TestCEMGainOptimizer:
         cem = CEMGainOptimizer(space, {"candidates": 12})
         assert cem.candidates == 12
 
-    def test_sample_candidates_not_implemented(self):
+    def test_sample_candidates_returns_array(self):
         bounds = {"k_los": [0.1, 5.0]}
         space = GainSpace(bounds)
-        cem = CEMGainOptimizer(space, {})
-        with pytest.raises(NotImplementedError):
-            cem.sample_candidates()
+        cem = CEMGainOptimizer(space, {"candidates": 8})
+        candidates = cem.sample_candidates()
+        assert candidates.shape == (8, 1)
+        assert np.all(candidates >= 0.1) and np.all(candidates <= 5.0)
 
 
 class TestRegret:

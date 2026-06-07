@@ -288,6 +288,29 @@ class _JSBSimAircraft:
         v_b = self.get_property_value("velocities/v-fps") * fps_to_mps
         w_b = self.get_property_value("velocities/w-fps") * fps_to_mps
 
+        # Body rates (rad/s) and load factor (g) — useful for control diagnosis
+        try:
+            p_rps = float(self.get_property_value("velocities/p-rad_sec"))
+        except Exception:
+            p_rps = 0.0
+        try:
+            q_rps = float(self.get_property_value("velocities/q-rad_sec"))
+        except Exception:
+            q_rps = 0.0
+        try:
+            r_rps = float(self.get_property_value("velocities/r-rad_sec"))
+        except Exception:
+            r_rps = 0.0
+        try:
+            nz_g = float(self.get_property_value("accelerations/Nz"))
+        except Exception:
+            # Fallback: estimate from vertical acceleration if Nz not available
+            try:
+                az = float(self.get_property_value("accelerations/a-z-ft_sec2")) * 0.3048
+                nz_g = 1.0 + az / 9.80665
+            except Exception:
+                nz_g = 1.0
+
         # 统一别名字段，供上层模块（TerminationChecker、feature_builder 等）直接使用
         self._state = {
             "position_neu": np.array([n, e, u], dtype=np.float64),
@@ -301,6 +324,11 @@ class _JSBSimAircraft:
             "velocity_ned": np.array([vn, ve, vd], dtype=np.float64),
             "velocity_vector_mps": np.array([vn, ve, -vd], dtype=np.float64),  # NED→NEU 兼容
             "velocity_body": np.array([u_b, v_b, w_b], dtype=np.float64),
+            "body_rates_rps": np.array([p_rps, q_rps, r_rps], dtype=np.float64),
+            "p_rps": float(p_rps),
+            "q_rps": float(q_rps),
+            "r_rps": float(r_rps),
+            "nz_g": float(nz_g),
             "speed_mps": float(vt),
             "vt_mps": float(vt),
             "sim_time": self.jsbsim_exec.get_sim_time(),

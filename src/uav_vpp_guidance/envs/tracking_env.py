@@ -16,7 +16,7 @@ P4 scope: JSBSim high-fidelity bridge with unified backend interface.
 import numpy as np
 from typing import Optional, Tuple
 
-from .jsbsim_env import JSBSimEnv
+from .jsbsim_env import JSBSimEnv, neu2lla
 from .simple_point_mass_env import SimplePointMassEnv
 from .observation import compute_relative_geometry, build_observation
 from .reward import RewardCalculator
@@ -293,7 +293,9 @@ class CloseRangeTrackingEnv:
         self._simple_env.reset(own_init=own_init, target_init=target_init)
 
     def step(
-        self, action: Optional[np.ndarray] = None
+        self,
+        action: Optional[np.ndarray] = None,
+        command_override: Optional[dict] = None,
     ) -> Tuple[dict, float, bool, bool, dict]:
         """
         Execute one high-level step.
@@ -314,6 +316,9 @@ class CloseRangeTrackingEnv:
         Args:
             action (np.ndarray, optional): Policy-level action (normalized virtual pursuit point parameters).
                 Shape [3] for [Δx, Δy, Δz].
+            command_override (dict, optional): If provided, bypass the policy/VPP/guidance
+                pipeline and directly apply this command dict. Keys: nz_cmd, roll_rate_cmd,
+                throttle_cmd. Still goes through command clipping/filtering for safety.
 
         Returns:
             tuple: (observation, reward, terminated, truncated, info)
@@ -356,10 +361,11 @@ class CloseRangeTrackingEnv:
                 prediction_info["prediction_fallback_reason"] = f"update_failed: {exc}"
                 prediction_info["prediction_fallback_phase"] = "runtime_failure"
 
-        # 4. 生成虚拟追踪点
+        # 4. 生成虚拟追踪点 (or use direct command override for diagnosis)
         anchor_mode = self.config.get("virtual_point", {}).get(
             "anchor_mode", "current_target"
         )
+        use_command_override = command_override is not None
         if action is None:
             action = np.zeros(3)
         action = np.asarray(action, dtype=np.float64)
@@ -440,6 +446,11 @@ class CloseRangeTrackingEnv:
         effective_guidance = self.guidance
         effective_guidance_mode = self.config.get("guidance", {}).get("mode", "los_rate")
 
+        # Diagnosis path: bypass policy/VPP/guidance and inject a command directly
+        if use_command_override:
+            mode_switch_requested = False
+            direct_track_mode_requested = False
+
         if mode_switch_requested:
             gate_active, gate_reason = self._evaluate_mode_switch_gate(rel_state)
             if gate_active:
@@ -477,12 +488,25 @@ class CloseRangeTrackingEnv:
             virtual_point_source = "vpp_policy"
 
         # 5. Guidance command generation
-        raw_command = effective_guidance.compute_command(
-            own_state, target_state, virtual_point, self.current_gains
-        )
+        if use_command_override:
+            raw_command = dict(command_override)
+            virtual_point = {"position_neu": target_for_vp["position_neu"]}
+            vp_info = {
+                "virtual_point": virtual_point["position_neu"],
+                "anchor_mode": anchor_mode,
+                "command_override": True,
+                "action_applied": False,
+            }
+            direct_track_mode_effective = False
+            virtual_point_source = "command_override"
+            effective_guidance_mode = "command_override"
+        else:
+            raw_command = effective_guidance.compute_command(
+                own_state, target_state, virtual_point, self.current_gains
+            )
 
         # 5b. Optional command post-processing (terminal protection, energy comp, etc.)
-        if self.command_post_processor is not None:
+        if self.command_post_processor is not None and not use_command_override:
             rel_geom = compute_relative_geometry(own_state, target_state)
             raw_command = self.command_post_processor.process(
                 raw_command,
@@ -780,7 +804,11 @@ class CloseRangeTrackingEnv:
     # ------------------------------------------------------------------
 
     def _scenario_to_jsbsim_init(self, aircraft_init) -> dict:
-        """Convert scenario init (dict or object) to JSBSim init_state dict."""
+        """Convert scenario init (dict or object) to JSBSim init_state dict.
+
+        Converts NEU position_m [north, east, up] to JSBSim geodetic initial
+        conditions (long-gc-deg, lat-geod-deg, h-sl-ft) relative to the env origin.
+        """
         pos = _get_attr(aircraft_init, "position_m", np.array([0.0, 0.0, 5000.0]))
         vel_mps = _get_attr(aircraft_init, "velocity_mps", 800.0)
         heading_deg = _get_attr(aircraft_init, "heading_deg", 0.0)
@@ -795,7 +823,7 @@ class CloseRangeTrackingEnv:
         psi_deg = heading_deg
         u_fps = vel_mps / 0.3048
 
-        return {
+        result = {
             "ic/h-sl-ft": h_sl_ft,
             "ic/psi-true-deg": psi_deg,
             "ic/u-fps": u_fps,
@@ -804,6 +832,23 @@ class CloseRangeTrackingEnv:
             "ic/theta-deg": pitch_deg,
             "ic/phi-deg": roll_deg,
         }
+
+        # Convert NEU horizontal position to geodetic coordinates so scenarios
+        # with non-zero x/y are placed correctly on the JSBSim spherical earth.
+        if self.jsbsim_env is not None and len(pos) >= 2:
+            origin = getattr(self.jsbsim_env, "origin", (120.0, 60.0, 0.0))
+            lon0, lat0, alt0 = origin
+            try:
+                lon_deg, lat_deg, _alt_m = neu2lla(
+                    float(pos[0]), float(pos[1]), float(pos[2]), lon0, lat0, alt0
+                )
+                result["ic/long-gc-deg"] = float(lon_deg)
+                result["ic/lat-geod-deg"] = float(lat_deg)
+            except Exception:
+                # If pymap3d is unavailable, keep default origin position.
+                pass
+
+        return result
 
     def _scenario_to_simple_init(self, aircraft_init) -> dict:
         """Convert scenario init (dict or object) to SimplePointMassEnv init dict."""

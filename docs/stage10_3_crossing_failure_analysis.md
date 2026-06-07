@@ -113,6 +113,23 @@ No crashes, no timeouts, no actuator-hard-limit terminations.
 | **Scenario init bug** | Fix applied in Stage 10.1; head-on now 100% | **Rejected** |
 | **F-16 turn-rate/energy limit** | Required turn >> achievable turn; divergence pattern matches energy bleed | **Accepted** |
 
+### 4.5 Baseline Controller Evidence (New)
+
+To rule out policy-specific failure, three **classical baseline controllers** were evaluated on the identical crossing scenarios using the diagnosis runner (`jsbsim_diagnosis.py`):
+
+| Baseline | Method | Crossing Left | Crossing Right | Root Cause |
+|----------|--------|---------------|----------------|------------|
+| **Hold** | `hold` | ❌ OOB | ❌ OOB | `baseline_oob` |
+| **Direct PN** | `direct_pn` | ❌ OOB | ❌ Crash | `baseline_saturation` / `altitude_divergence` |
+| **Low-gain Direct** | `low_gain_direct` | ❌ OOB | ❌ OOB | `baseline_oob` |
+
+**Key observations from baseline runs**:
+- **Zero success across all baselines**: Classical guidance laws (PN, hold) also fail on crossing scenarios.
+- **Direct PN commanded extreme loads**: `nz_cmd` peaked at **14.5g** and roll rate at **3.7 rad/s** (≈ 212°/s), far exceeding F-16 structural limits. The aircraft crashed in `regression_crossing_right` due to altitude divergence under sustained high-G maneuvering.
+- **Hold controller** cannot close range at all (min_range ~820 m), confirming that passive energy management is insufficient.
+
+**Conclusion**: Crossing failure is **not** a policy-network limitation. Even optimal classical guidance (PN) cannot succeed because the F-16 airframe cannot deliver the required turn rate at the tested flight condition (5,000 m, Mach ~0.8).
+
 ---
 
 ## 5. Implications for Paper Claims
@@ -158,6 +175,7 @@ No crashes, no timeouts, no actuator-hard-limit terminations.
 | Run manifest | `.../run_manifest.json` | Provenance, git hash, config SHA |
 | Superseded run | `outputs/stage10_jsbsim_validation/` | Contains `SUPERSEDED` marker |
 | Diagnosis runner | `src/uav_vpp_guidance/evaluation/jsbsim_diagnosis.py` | Step-level telemetry + baseline controllers |
+| Baseline crossing diagnosis | `outputs/stage10_3_baseline_crossing/` | Hold/PN/low-gain direct on crossing scenarios (all fail) |
 | This analysis | `docs/stage10_3_crossing_failure_analysis.md` | Stratified evidence report |
 
 ---

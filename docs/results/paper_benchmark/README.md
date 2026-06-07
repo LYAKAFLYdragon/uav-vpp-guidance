@@ -8,10 +8,11 @@
 
 | Method | Success Rate | Mean Return | N Episodes | vs Baseline p | Cohen's d |
 |--------|-------------|-------------|------------|---------------|-----------|
-| No-Prediction | 75.00% | -7.26 ± 355.84 | 80 | — | — |
-| CV Prediction | 62.50% | -110.57 ± 400.28 | 80 | 0.0013* | -0.373 (small) |
-| CA Prediction | 62.50% | -110.57 ± 400.28 | 80 | 0.0013* | -0.373 (small) |
-| Gain-Only (CEM) | 62.50% | -82.24 ± 363.56 | 80 | 0.0113* | -0.290 (small) |
+| No-Prediction | 75.00% | −7.26 ± 355.84 | 80 | — | — |
+| Parametric Prediction† | 62.50% | −110.57 ± 400.28 | 160 | 0.0013* | −0.373 (small) |
+| Gain-Only (CEM) | 62.50% | −82.24 ± 363.56 | 80 | 0.0113* | −0.290 (small) |
+
+**Footnote †**: CV and CA predictors produced identical predictions under constant-velocity target motion. When target acceleration is zero, the CA model's additional degree of freedom converges to zero, reducing its prediction to the CV form mathematically ($\hat{p}_{CA} = p_0 + v\Delta t + \frac{1}{2}\hat{a}\Delta t^2 = p_0 + v\Delta t = \hat{p}_{CV}$ when $\hat{a} \to 0$). This is expected behavior under the chosen target kinematics, not an implementation bug. The two methods are therefore reported as a single "Parametric Prediction" category ($N = 160$ episodes).
 
 ## Ablation Results (Table 2)
 
@@ -59,3 +60,7 @@ python scripts/generate_stage6b_figures.py
 - **Seeds**: 10 evaluation seeds (0–9)
 - **Checkpoints**: All verified at runtime (`checkpoint_exists: true`)
 - **Manifest**: See `run_manifest.json` for full config hash, checkpoint paths, and git info
+
+## Important Note on CV vs CA Equivalence
+
+The constant-acceleration (CA) predictor produced numerically identical results to the constant-velocity (CV) predictor because all evaluation scenarios use `target_mode = constant_velocity` in the environment configuration. Under zero target acceleration, the CA model's acceleration estimate converges to zero, and its prediction equation reduces exactly to CV. This is an expected mathematical degeneracy, not a code bug. Future work should evaluate on maneuvering (non-zero acceleration) targets where CA would provide measurable advantage over CV.

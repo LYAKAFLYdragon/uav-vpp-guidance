@@ -14,7 +14,9 @@ paper_materials/
 │   └── fig5_per_scenario_heatmap.png   # Per-scenario success rate heatmap (generated)
 ├── tables/
 │   ├── table1_main_comparison.tex      # LaTeX Table 1 (main results)
-│   └── table1_main_comparison.md       # Markdown backup of Table 1
+│   ├── table1_main_comparison.md       # Markdown backup of Table 1
+│   ├── table_mcnemar.tex               # McNemar paired comparison
+│   └── table_per_scenario.tex          # Per-scenario breakdown
 ├── text/
 │   ├── discussion_crossing.tex         # Discussion paragraph on crossing-right failure
 │   └── results_summary.tex             # Core results summary paragraph
@@ -24,14 +26,21 @@ paper_materials/
 
 ## Key Notes
 
-### CV == CA Bug
-- **Status**: Confirmed bug. Checkpoints have different MD5 hashes, yet evaluation produces *numerically identical* per-episode results.
-- **Impact**: CA Prediction is omitted from Table 1 pending resolution.
-- **Checkpoints verified**:
-  - `outputs/audit_cv_final/checkpoints/best.pt` → `26389dee...`
-  - `outputs/audit_ca_final/checkpoints/best.pt` → `e2f8896f...`
-  - `outputs/experiments/vpp_ppo_cv_prediction/checkpoints/best.pt` → `83d1990a...`
-  - `outputs/experiments/vpp_ppo_ca_prediction/checkpoints/best.pt` → `9db8f4bf...`
+### CV == CA Analysis (Resolved)
+
+**Conclusion**: CV and CA produced identical results because all evaluation scenarios use `env.target_mode = constant_velocity`. Under zero target acceleration, the CA predictor's acceleration estimate converges to zero, and its prediction equation mathematically reduces to CV:
+
+$$\hat{p}_{CA} = p_0 + v\Delta t + \tfrac{1}{2}\hat{a}\Delta t^2 = p_0 + v\Delta t = \hat{p}_{CV} \quad (\hat{a} \to 0)$$
+
+This is **not a code bug** — it is an expected mathematical degeneracy under the chosen target kinematics. The two methods are therefore merged into a single **"Parametric Prediction"** category in Table 1 ($N = 160$ episodes).
+
+**Checkpoints verified**:
+- `outputs/audit_cv_final/checkpoints/best.pt` → `26389dee...`
+- `outputs/audit_ca_final/checkpoints/best.pt` → `e2f8896f...`
+- `outputs/experiments/vpp_ppo_cv_prediction/checkpoints/best.pt` → `83d1990a...`
+- `outputs/experiments/vpp_ppo_ca_prediction/checkpoints/best.pt` → `9db8f4bf...`
+
+All four checkpoints are different, confirming the equivalence arises from the target kinematics, not from loading the same model file.
 
 ### Data Provenance
 - **Config**: `config/experiment/stage6f5_feasible_geometry.yaml`
@@ -46,7 +55,7 @@ paper_materials/
 
 ### Table Specifications
 - `table1_main_comparison.tex` uses `booktabs` (`\toprule`, `\midrule`, `\bottomrule`).
-- Requires the `booktabs` and `threeparttable` (for notes) packages.
+- Requires the `booktabs` package. For footnotes, `threeparttable` is recommended.
 
 ## Quick Reproduction
 

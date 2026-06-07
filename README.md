@@ -96,9 +96,14 @@ experiments/                ← Git-ignored: weights, checkpoints, results
 
 ### 5.1 Install
 
+**Development install** (latest compatible versions):
 ```bash
-pip install -r requirements.txt
-# Or: pip install -e .
+pip install -e ".[dev]"
+```
+
+**Reproducible install** (exact versions used for paper experiments):
+```bash
+pip install -r requirements-lock.txt
 ```
 
 ### 5.2 Dry-run the Stage 6G probe (no simulation)

@@ -32,9 +32,9 @@ src/uav_vpp_guidance/
 
 scripts/
   run_stage6g_guidance_limitation_probe.py  ← Stage 6G: guidance-law probe
-  run_stage6f_paper_safe_benchmark.py       ← Stage 6F: prediction benchmark
-  synthesize_stage6f.py                     ← Stage 6F: synthesis + report
-  train_paper_safe.py                       ← Policy training
+  run_paper_benchmark.py                    ← Stage 6F/8B: prediction benchmark
+  synthesize_stage6f_paper_results.py       ← Stage 6F: synthesis + report
+  train_no_prediction_vpp_ppo.py            ← Policy training
 
 experiments/                ← Git-ignored: weights, checkpoints, results
   stage6f5_*/
@@ -47,8 +47,8 @@ experiments/                ← Git-ignored: weights, checkpoints, results
 
 | Stage | Status | Evidence | Runnable |
 |---|---|---|---|
-| 6E | ✅ Complete | 4 geometry scenarios, 1.1M steps, high capture rate, low error | `scripts/run_stage6e_paper_safe.py` |
-| 6F | ✅ Complete | Paper-safe benchmark, McNemar exact, cross-seed, synthesis table | `scripts/run_stage6f_paper_safe_benchmark.py` |
+| 6E | ✅ Complete | 4 geometry scenarios, 1.1M steps, high capture rate, low error | `scripts/run_paper_benchmark.py` |
+| 6F | ✅ Complete | Paper-safe benchmark, McNemar exact, cross-seed, synthesis table | `scripts/run_paper_benchmark.py` |
 | 6G.1 | ✅ Complete | Guidance-law limitation probe (hardened, smoke passed, full run completed, 720 episodes, 12 cells, McNemar exact) | `scripts/run_stage6g_guidance_limitation_probe.py` |
 | 6G.2 | ✅ Complete | Failure root-cause attribution: validator, McNemar pairing, telemetry schema, analyzer scripts | `scripts/validate_stage6g_probe_outputs.py` |
 | 6G.3 | ✅ Complete | Oracle & terminal-protection feasibility gate: smoke probes, new anchor modes, telemetry contract | `docs/stage6g3_oracle_terminal_feasibility_gate.md` |
@@ -61,7 +61,7 @@ experiments/                ← Git-ignored: weights, checkpoints, results
 | 6H.0-R | ✅ Complete | Regression baseline recovery & backend consistency audit; config drift audit shows 0 critical diffs; replay runner fixed (CloseRangeTrackingEnv); challenging scenario reproducible; baseline search expanded to 180° aspect | `docs/results/stage6h0r_config_drift_audit.md` |
 | 6H.0-lite | 🧪 Ready / Preflight | Mode-switch threshold optimization preflight — regression baseline recovered (neutral + challenging non-tail-chase); threshold search unblocked | `docs/stage6h0_lite_mode_switch_threshold_optimization_plan.md` |
 | 6H.1 | ✅ Complete | Gate redesign, threshold exploration, candidate search 100% success | `tests/test_stage6g5d_pn_mode_switch.py` |
-| 6H.2 | ✅ Complete | LHS20 threshold optimization, 8/20 PASS | `scripts/run_stage6h_lhs20_threshold_opt.py` |
+| 6H.2 | ✅ Complete | LHS20 threshold optimization, 8/20 PASS | `scripts/run_lhs20_threshold_optimization.py` |
 | 6H.3 | ✅ Complete | PN LOS-rate boundary fix, hybrid blend KeyError fix, frozen gate config | `src/uav_vpp_guidance/guidance/los_rate_guidance.py` |
 | 6I | ✅ Complete | Statistical comparison framework: bootstrap CI, paired t-test, Cohen's d, Mann-Whitney U | `tests/test_statistical_comparison.py` |
 | 7A | ✅ Complete | Gain-only CEM optimization, metrics.py field fix, CEM unit tests | `scripts/run_gain_only_cem.py` |
@@ -170,19 +170,19 @@ python scripts/analyze_stage6g_failure_root_cause.py \
 ### 5.8 Run existing Stage 6F benchmark
 
 ```bash
-python scripts/run_stage6f_paper_safe_benchmark.py
+python scripts/run_paper_benchmark.py
 ```
 
 ### 5.9 Synthesize Stage 6F results
 
 ```bash
-python scripts/synthesize_stage6f.py
+python scripts/synthesize_stage6f_paper_results.py
 ```
 
 ### 5.10 Train a policy (example)
 
 ```bash
-python scripts/train_paper_safe.py
+python -m uav_vpp_guidance.training.train_no_prediction_vpp_ppo --paper-safe
 ```
 
 ### 5.11 Dry-run bilevel training (smoke test)
@@ -414,9 +414,9 @@ uav-vpp-guidance/
 ├── outputs/                    ← Git-ignored: probe outputs, logs
 ├── scripts/
 │   ├── run_stage6g_guidance_limitation_probe.py
-│   ├── run_stage6f_paper_safe_benchmark.py
-│   ├── synthesize_stage6f.py
-│   └── train_paper_safe.py
+│   ├── run_paper_benchmark.py
+│   ├── synthesize_stage6f_paper_results.py
+│   └── train_no_prediction_vpp_ppo.py
 ├── src/
 │   └── uav_vpp_guidance/
 │       ├── environment/
@@ -451,4 +451,4 @@ uav-vpp-guidance/
 
 ---
 
-*Last updated: 2026-06-07 | Active branch: `main` | Stage 10.3 complete | 913 passed, 0 failed, 0 xpassed*
+*Last updated: 2026-06-07 | Active branch: `main` | Stage 10.3 complete | 922 passed, 0 failed, 0 xpassed*

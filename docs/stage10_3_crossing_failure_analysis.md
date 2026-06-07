@@ -130,6 +130,24 @@ To rule out policy-specific failure, three **classical baseline controllers** we
 
 **Conclusion**: Crossing failure is **not** a policy-network limitation. Even optimal classical guidance (PN) cannot succeed because the F-16 airframe cannot deliver the required turn rate at the tested flight condition (5,000 m, Mach ~0.8).
 
+### 4.6 Guidance-Law Comparison (LOS-rate vs PN vs Hybrid)
+
+To rule out guidance-law-specific failure, the same `no_prediction` PPO policy was evaluated under three different guidance modes on identical crossing scenarios:
+
+| Guidance Mode | Crossing Left | Crossing Right | Min Range (left / right) |
+|---------------|---------------|----------------|--------------------------|
+| **LOS-rate** (default) | ❌ OOB | ❌ OOB | 839 m / 739 m |
+| **Proportional Navigation** | ❌ OOB | ❌ Crash | 2,795 m / 568 m |
+| **Hybrid** | ❌ OOB | ❌ OOB | 2,795 m / 740 m |
+
+**Observations**:
+- **All three guidance laws fail** on crossing scenarios. No guidance mode rescues the geometry.
+- **PN performs worse on crossing_left**: min_range = 2,795 m (vs 839 m for LOS-rate). PN's pure pursuit geometry drives the aircraft into a wider miss distance before attempting the turn.
+- **PN crashes on crossing_right**: The aggressive pursuit commands cause altitude divergence under sustained high-G load (similar to baseline direct PN).
+- **Hybrid matches LOS-rate on crossing_right** (740 m vs 739 m) but is equally unsuccessful.
+
+**Interpretation**: The failure is **below the guidance-law layer** — it resides in the F-16 airframe's ability to generate lateral acceleration at the required rate. No guidance law can overcome a ~2× turn-rate deficit.
+
 ---
 
 ## 5. Implications for Paper Claims
@@ -176,6 +194,8 @@ To rule out policy-specific failure, three **classical baseline controllers** we
 | Superseded run | `outputs/stage10_jsbsim_validation/` | Contains `SUPERSEDED` marker |
 | Diagnosis runner | `src/uav_vpp_guidance/evaluation/jsbsim_diagnosis.py` | Step-level telemetry + baseline controllers |
 | Baseline crossing diagnosis | `outputs/stage10_3_baseline_crossing/` | Hold/PN/low-gain direct on crossing scenarios (all fail) |
+| PN crossing diagnosis | `outputs/stage10_3_pn_crossing/` | no_prediction + PN guidance on crossing (0/2) |
+| Hybrid crossing diagnosis | `outputs/stage10_3_hybrid_crossing/` | no_prediction + hybrid guidance on crossing (0/2) |
 | This analysis | `docs/stage10_3_crossing_failure_analysis.md` | Stratified evidence report |
 
 ---

@@ -19,7 +19,6 @@ backend: simple
 env:
   use_jsbsim: false
   aircraft_model: f16
-  legacy_project_root: "E:/CloseAirCombat_control"
   origin: [120.0, 60.0, 0.0]
 
   # Time stepping

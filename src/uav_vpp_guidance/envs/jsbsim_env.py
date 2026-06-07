@@ -2,8 +2,8 @@
 JSBSim flight dynamics environment wrapper.
 
 Migrated from legacy project:
-  - E:/CloseAirCombat_control/envs/JSBSim/core/simulatior.py
-  - E:/CloseAirCombat_control/envs/JSBSim/utils/utils.py
+  - <JSBSIM_ROOT>/envs/JSBSim/core/simulatior.py
+  - <JSBSIM_ROOT>/envs/JSBSim/utils/utils.py
 
 This module provides a thin wrapper around JSBSim FGFDMExec for single
 or multiple aircraft simulation. It intentionally avoids the full
@@ -109,7 +109,18 @@ class _JSBSimAircraft:
         self.dt = 1.0 / self.sim_freq
         self.origin = origin
         self.lon0, self.lat0, self.alt0 = origin
-        self.legacy_root = config.get("legacy_project_root", "E:/CloseAirCombat_control")
+        import warnings
+        self.legacy_root = (
+            os.environ.get("JSBSIM_ROOT")
+            or config.get("legacy_project_root", "")
+        )
+        if not self.legacy_root:
+            warnings.warn(
+                "JSBSIM_ROOT environment variable or legacy_project_root config "
+                "is required for JSBSim backend. Set JSBSIM_ROOT=/path/to/jsbsim "
+                "or configure legacy_project_root in config/env.yaml.",
+                stacklevel=2,
+            )
         self.jsbsim_exec = None
         self._state = {}
 
@@ -370,9 +381,29 @@ class JSBSimEnv:
         self.config = config
         self.sim_freq = config.get("sim_freq", 60)
         self.dt = 1.0 / self.sim_freq
-        self.legacy_root = config.get("legacy_project_root", "E:/CloseAirCombat_control")
+        import warnings
+        self.legacy_root = (
+            os.environ.get("JSBSIM_ROOT")
+            or config.get("legacy_project_root", "")
+        )
+        if not self.legacy_root:
+            warnings.warn(
+                "JSBSIM_ROOT environment variable or legacy_project_root config "
+                "is required for JSBSim backend. Set JSBSIM_ROOT=/path/to/jsbsim "
+                "or configure legacy_project_root in config/env.yaml.",
+                stacklevel=2,
+            )
         self.origin = config.get("origin", (120.0, 60.0, 0.0))
         self._aircraft: Dict[str, _JSBSimAircraft] = {}
+
+        # Validate data directory early so tracking_env can fallback gracefully
+        jsbsim_data_dir = os.path.join(self.legacy_root, "envs", "JSBSim", "data")
+        if not os.path.isdir(jsbsim_data_dir):
+            raise RuntimeError(
+                f"JSBSim data directory not found: {jsbsim_data_dir}. "
+                f"Set JSBSIM_ROOT environment variable or configure "
+                f"legacy_project_root in config/env.yaml."
+            )
 
     # ------------------------------------------------------------------
     # Aircraft registry

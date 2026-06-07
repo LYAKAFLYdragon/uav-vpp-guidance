@@ -2,7 +2,7 @@
 Modular reward calculator.
 
 Migrated from legacy project:
-  E:/CloseAirCombat_control/envs/JSBSim/reward_functions/*.py
+  <JSBSIM_ROOT>/envs/JSBSim/reward_functions/*.py
 
 第一版奖励项：
 - range_reward: 鼓励进入合理距离区间

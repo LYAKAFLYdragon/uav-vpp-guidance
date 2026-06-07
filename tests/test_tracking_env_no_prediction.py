@@ -2,6 +2,8 @@
 Tests for CloseRangeTrackingEnv in no-prediction mode.
 """
 
+import os
+
 import pytest
 import numpy as np
 from uav_vpp_guidance.envs.tracking_env import CloseRangeTrackingEnv
@@ -404,6 +406,8 @@ class TestScenarioPositionConversionRegression:
 
     def test_scenario_to_jsbsim_init_sets_geodetic_for_nonzero_xy(self, base_config):
         """If position_m has nonzero x or y, lon/lat must be set."""
+        if not os.environ.get("JSBSIM_ROOT"):
+            pytest.skip("JSBSIM_ROOT not set")
         try:
             import pymap3d  # noqa: F401
         except ImportError:
@@ -411,7 +415,7 @@ class TestScenarioPositionConversionRegression:
 
         base_config["env"]["use_jsbsim"] = True
         base_config["env"]["strict_backend"] = True
-        base_config["env"]["legacy_project_root"] = "E:/CloseAirCombat_control"
+        base_config["env"]["legacy_project_root"] = os.environ.get("JSBSIM_ROOT", "")
         base_config["env"]["origin"] = [120.0, 60.0, 0.0]
 
         env = CloseRangeTrackingEnv(base_config)
@@ -444,6 +448,8 @@ class TestScenarioPositionConversionRegression:
 
     def test_zero_xy_position_keeps_default_origin(self, base_config):
         """If position_m is [0,0,z], lon/lat should still be set (to origin)."""
+        if not os.environ.get("JSBSIM_ROOT"):
+            pytest.skip("JSBSIM_ROOT not set")
         try:
             import pymap3d  # noqa: F401
         except ImportError:
@@ -451,7 +457,7 @@ class TestScenarioPositionConversionRegression:
 
         base_config["env"]["use_jsbsim"] = True
         base_config["env"]["strict_backend"] = True
-        base_config["env"]["legacy_project_root"] = "E:/CloseAirCombat_control"
+        base_config["env"]["legacy_project_root"] = os.environ.get("JSBSIM_ROOT", "")
         base_config["env"]["origin"] = [120.0, 60.0, 0.0]
 
         env = CloseRangeTrackingEnv(base_config)

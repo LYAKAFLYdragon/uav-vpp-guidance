@@ -2,7 +2,7 @@
 Observation construction utilities.
 
 Migrated from legacy project:
-  E:/CloseAirCombat_control/envs/JSBSim/envs/env_wrappers.py
+  <JSBSIM_ROOT>/envs/JSBSim/envs/env_wrappers.py
 
 第一版使用简化几何计算，支持 NEU 坐标系下的相对态势特征提取。
 """

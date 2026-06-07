@@ -2,7 +2,7 @@
 Termination condition checker.
 
 Migrated from legacy project:
-  E:/CloseAirCombat_control/envs/JSBSim/termination_conditions/*.py
+  <JSBSIM_ROOT>/envs/JSBSim/termination_conditions/*.py
 
 检查成功、失败、坠毁、超时、越界等终止条件。
 """

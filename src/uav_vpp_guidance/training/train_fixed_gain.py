@@ -6,7 +6,7 @@ Usage:
         --config config/experiment/fixed_gain_vpp.yaml
 
 TODO: Implement training loop by migrating from legacy runner:
-  E:/CloseAirCombat_control/runner/jsbsim_runner.py
+  <JSBSIM_ROOT>/runner/jsbsim_runner.py
 """
 
 import argparse

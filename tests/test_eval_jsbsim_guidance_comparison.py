@@ -24,7 +24,7 @@ env:
   use_jsbsim: {str(backend == 'jsbsim').lower()}
   strict_backend: {str(strict_backend).lower()}
   aircraft_model: f16
-  legacy_project_root: "E:/CloseAirCombat_control"
+  legacy_project_root: ""
   origin: [120.0, 60.0, 0.0]
   sim_freq: 60
   decision_freq: 5

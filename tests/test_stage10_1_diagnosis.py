@@ -243,7 +243,7 @@ class TestJSBSimScenarioPositionConversion:
                 "decision_freq": 5,
                 "max_high_level_steps": 32,
                 "aircraft_model": "f16",
-                "legacy_project_root": "E:/CloseAirCombat_control",
+                "legacy_project_root": os.environ.get("JSBSIM_ROOT", ""),
                 "origin": [120.0, 60.0, 0.0],
                 "use_jsbsim": True,
             },
@@ -270,6 +270,8 @@ class TestDiagnosisRunnerSmoke:
     """Smoke test for the diagnosis runner using a minimal matrix."""
 
     def test_runner_produces_required_outputs(self, tmp_path):
+        if not os.environ.get("JSBSIM_ROOT"):
+            pytest.skip("JSBSIM_ROOT not set")
         try:
             import pymap3d  # noqa: F401
         except ImportError:
@@ -284,7 +286,7 @@ class TestDiagnosisRunnerSmoke:
                 "decision_freq": 5,
                 "max_high_level_steps": 32,
                 "aircraft_model": "f16",
-                "legacy_project_root": "E:/CloseAirCombat_control",
+                "legacy_project_root": os.environ.get("JSBSIM_ROOT", ""),
                 "origin": [120.0, 60.0, 0.0],
                 "use_jsbsim": True,
                 "success_range_m": 900.0,

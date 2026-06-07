@@ -5,6 +5,8 @@ These tests verify that the migrated minimal closed-loop structures
 initialize correctly and expose the expected interfaces.
 """
 
+import os
+
 import pytest
 from uav_vpp_guidance.envs.jsbsim_env import lla2neu, neu2lla, JSBSimEnv
 
@@ -38,9 +40,12 @@ class TestJSBSimEnv:
     """Tests for migrated JSBSimEnv."""
 
     def test_init_reads_config(self):
+        root = os.environ.get("JSBSIM_ROOT", "")
+        if not root:
+            pytest.skip("JSBSIM_ROOT not set")
         config = {
             "sim_freq": 60,
-            "legacy_project_root": "E:/CloseAirCombat_control",
+            "legacy_project_root": root,
             "origin": (120.0, 60.0, 0.0),
         }
         env = JSBSimEnv(config)
@@ -53,9 +58,12 @@ class TestJSBSimEnv:
         This test requires a valid JSBSim data directory at the legacy root.
         If JSBSim fails to load, the test is skipped.
         """
+        root = os.environ.get("JSBSIM_ROOT", "")
+        if not root:
+            pytest.skip("JSBSIM_ROOT not set")
         config = {
             "sim_freq": 60,
-            "legacy_project_root": "E:/CloseAirCombat_control",
+            "legacy_project_root": root,
         }
         env = JSBSimEnv(config)
         env.add_aircraft("own", {"model": "f16"})
@@ -74,9 +82,12 @@ class TestJSBSimEnv:
 
     def test_step_runs_simulation(self):
         """Verify that step() advances simulation time."""
+        root = os.environ.get("JSBSIM_ROOT", "")
+        if not root:
+            pytest.skip("JSBSIM_ROOT not set")
         config = {
             "sim_freq": 60,
-            "legacy_project_root": "E:/CloseAirCombat_control",
+            "legacy_project_root": root,
         }
         env = JSBSimEnv(config)
         env.add_aircraft("own", {"model": "f16"})
@@ -101,13 +112,16 @@ class TestCloseRangeTrackingEnv:
     def test_init(self):
         from uav_vpp_guidance.envs.tracking_env import CloseRangeTrackingEnv
 
+        root = os.environ.get("JSBSIM_ROOT", "")
+        if not root:
+            pytest.skip("JSBSIM_ROOT not set")
         config = {
             "env": {
                 "sim_freq": 60,
                 "decision_freq": 5,
                 "max_high_level_steps": 512,
                 "aircraft_model": "f16",
-                "legacy_project_root": "E:/CloseAirCombat_control",
+                "legacy_project_root": root,
             }
         }
         env = CloseRangeTrackingEnv(config)
@@ -134,7 +148,7 @@ class TestCloseRangeTrackingEnv:
                 "decision_freq": 5,
                 "max_high_level_steps": 512,
                 "aircraft_model": "f16",
-                "legacy_project_root": "E:/CloseAirCombat_control",
+                "legacy_project_root": os.environ.get("JSBSIM_ROOT", ""),
             }
         }
         env = CloseRangeTrackingEnv(config)

@@ -11,10 +11,11 @@ from uav_vpp_guidance.flight_control.low_level_controller import LowLevelControl
 from uav_vpp_guidance.flight_control.actuator_interface import JSBSimActuatorInterface
 
 
-_JSBSIM_DATA_DIR = os.path.join("E:/CloseAirCombat_control", "envs", "JSBSim", "data")
+_JSBSIM_ROOT = os.environ.get("JSBSIM_ROOT", "")
+_JSBSIM_DATA_DIR = os.path.join(_JSBSIM_ROOT, "envs", "JSBSim", "data") if _JSBSIM_ROOT else ""
 skip_if_no_jsbsim_data = pytest.mark.skipif(
-    not os.path.isdir(_JSBSIM_DATA_DIR),
-    reason=f"JSBSim data directory not found: {_JSBSIM_DATA_DIR}",
+    not _JSBSIM_ROOT or not os.path.isdir(_JSBSIM_DATA_DIR),
+    reason="JSBSim data directory not found. Set JSBSIM_ROOT env var.",
 )
 
 
@@ -25,7 +26,7 @@ def jsbsim_config():
         "backend": "jsbsim",
         "env": {
             "use_jsbsim": True,
-            "legacy_project_root": "E:/CloseAirCombat_control",
+            "legacy_project_root": _JSBSIM_ROOT,
             "aircraft_model": "f16",
             "decision_freq": 5,
             "sim_freq": 60,
@@ -92,8 +93,9 @@ class TestBackendSelection:
         assert env._backend == "simple"
         env.close()
 
+    @skip_if_no_jsbsim_data
     def test_backend_jsbsim_from_explicit_config(self):
-        config = {"backend": "jsbsim", "env": {"decision_freq": 5, "legacy_project_root": "E:/CloseAirCombat_control"}}
+        config = {"backend": "jsbsim", "env": {"decision_freq": 5, "legacy_project_root": _JSBSIM_ROOT}}
         env = CloseRangeTrackingEnv(config)
         assert env._backend == "jsbsim"
         env.close()

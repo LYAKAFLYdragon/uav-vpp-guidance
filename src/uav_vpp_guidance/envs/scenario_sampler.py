@@ -2,7 +2,7 @@
 Scenario sampling for initial conditions.
 
 TODO: Migrate scenario initialization logic from legacy project:
-  E:/CloseAirCombat_control/runner/jsbsim_runner.py or envs/JSBSim/__init__.py
+  <JSBSIM_ROOT>/runner/jsbsim_runner.py or envs/JSBSim/__init__.py
 """
 
 from dataclasses import dataclass

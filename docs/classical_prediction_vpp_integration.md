@@ -114,7 +114,7 @@ python -m uav_vpp_guidance.evaluation.evaluate_prediction_comparison \
   simplified environment. This is sufficient to verify the prediction mechanism,
   buffer update, feature building, and anchor translation.
 - **JSBSim high-fidelity validation** is intentionally left to a later stage.
-  The JSBSim data dependency (`E:/CloseAirCombat_control/envs/JSBSim/data`) is
+  The JSBSim data dependency (`<JSBSIM_ROOT>/envs/JSBSim/data`) is
   not available in CI, so JSBSim tests are skipped when the directory is missing.
 - **No claim of superiority**: CV/CA may or may not outperform the no-prediction
   baseline depending on scenario. The framework is designed to measure this, not

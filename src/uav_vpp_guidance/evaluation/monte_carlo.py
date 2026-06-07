@@ -25,5 +25,5 @@ def run_monte_carlo(policy, env, config):
             - mean_episode_length
     """
     # TODO: Implement Monte Carlo rollouts.
-    # Legacy reference: E:/CloseAirCombat_control/runner/ evaluation patterns.
+    # Legacy reference: <JSBSIM_ROOT>/runner/ evaluation patterns.
     raise NotImplementedError

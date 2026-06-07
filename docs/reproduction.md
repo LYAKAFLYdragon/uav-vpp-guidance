@@ -3,7 +3,7 @@
 ## Environment Setup
 
 1. Install Python 3.9+
-2. Install JSBSim (ensure `E:/CloseAirCombat_control` contains a working JSBSim installation)
+2. Install JSBSim (ensure `<JSBSIM_ROOT>` contains a working JSBSim installation)
 3. Run `pip install -e .`
 
 ## Running Experiments

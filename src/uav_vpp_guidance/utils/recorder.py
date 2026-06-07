@@ -2,7 +2,7 @@
 Flight data recording utilities (ACMI, CSV).
 
 TODO: Migrate ACMI recording from legacy project:
-  E:/CloseAirCombat_control/scripts/render/ or similar.
+  <JSBSIM_ROOT>/scripts/render/ or similar.
 
 Design principle: recording should not block or interfere with training logic.
 """

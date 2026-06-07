@@ -2,7 +2,7 @@
 Plotting utilities for training curves and evaluation figures.
 
 TODO: Migrate plotting helpers from legacy project if reusable.
-  E:/CloseAirCombat_control/get_reward_figure/ contains many ad-hoc scripts;
+  <JSBSIM_ROOT>/get_reward_figure/ contains many ad-hoc scripts;
   extract only general-purpose functions.
 """
 

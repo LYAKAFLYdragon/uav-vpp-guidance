@@ -127,6 +127,12 @@ def main():
         action="store_true",
         help="Allow missing config include files (warn instead of fail).",
     )
+    parser.add_argument(
+        "--allow-random-init",
+        action="store_true",
+        help="Allow training from random initialization when checkpoint is missing. "
+             "Results will be marked invalid_for_paper.",
+    )
     args = parser.parse_args()
 
     print(f"[Bilevel] Loading config: {args.config}")
@@ -153,6 +159,10 @@ def main():
 
     print(f"[Bilevel] Checkpoint: {checkpoint}")
     checkpoint_exists = Path(checkpoint).exists() if checkpoint else False
+    if not checkpoint_exists and not args.dry_run and not args.allow_random_init:
+        print(f"ERROR: Checkpoint not found: {checkpoint}")
+        print("Use --allow-random-init to proceed with random initialization.")
+        sys.exit(1)
     if not checkpoint_exists:
         print(f"WARNING: Checkpoint not found: {checkpoint}")
 
@@ -214,13 +224,19 @@ def main():
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     result_path = output_dir / "bilevel_results.json"
+    serialized = _serialize(results)
+    serialized["invalid_for_paper"] = not checkpoint_exists
+    serialized["checkpoint_exists"] = checkpoint_exists
+    serialized["checkpoint_path"] = checkpoint
     result_path.write_text(
-        json.dumps(_serialize(results), indent=2), encoding="utf-8"
+        json.dumps(serialized, indent=2), encoding="utf-8"
     )
     print(f"\nSaved results: {result_path}")
     print(f"Best eval SR: {results['best_success_rate']:.2%}")
     print(f"Best episode: {results['best_policy_episode']}")
     print(f"Best gains: {results['best_gains']}")
+    if not checkpoint_exists:
+        print("⚠️ INVALID FOR PAPER: checkpoint was missing, random init used")
 
 
 if __name__ == "__main__":

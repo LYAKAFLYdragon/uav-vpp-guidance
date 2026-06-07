@@ -134,6 +134,12 @@ def main():
         action="store_true",
         help="Allow missing config include files (warn instead of fail).",
     )
+    parser.add_argument(
+        "--allow-random-init",
+        action="store_true",
+        help="Allow optimization from random initialization when checkpoint is missing. "
+             "Results will be marked invalid_for_paper.",
+    )
     args = parser.parse_args()
 
     print(f"[GainOnly] Loading config: {args.config}")
@@ -159,6 +165,10 @@ def main():
 
     print(f"[GainOnly] Checkpoint: {checkpoint}")
     checkpoint_exists = Path(checkpoint).exists() if checkpoint else False
+    if not checkpoint_exists and not args.dry_run and not args.allow_random_init:
+        print(f"ERROR: Checkpoint not found: {checkpoint}")
+        print("Use --allow-random-init to proceed with random initialization.")
+        sys.exit(1)
     if not checkpoint_exists:
         print(f"WARNING: Checkpoint not found: {checkpoint}")
 
@@ -249,8 +259,12 @@ def main():
             for h in history
         ],
     }
+    serialized = _serialize(results)
+    serialized["invalid_for_paper"] = not checkpoint_exists
+    serialized["checkpoint_exists"] = checkpoint_exists
+    serialized["checkpoint_path"] = checkpoint
     result_path = output_dir / "cem_results.json"
-    result_path.write_text(json.dumps(_serialize(results), indent=2), encoding="utf-8")
+    result_path.write_text(json.dumps(serialized, indent=2), encoding="utf-8")
     print(f"\nSaved results: {result_path}")
 
     print("\n" + "=" * 50)
@@ -259,6 +273,8 @@ def main():
     print(f"Best gains: {best_gains}")
     print(f"Best score: {results['best_score']:.4f}")
     print(f"Iterations: {results['n_iterations']}")
+    if not checkpoint_exists:
+        print("⚠️ INVALID FOR PAPER: checkpoint was missing, random init used")
 
     env.close()
 

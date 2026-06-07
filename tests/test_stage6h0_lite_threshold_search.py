@@ -331,7 +331,9 @@ class TestReadmeStageStatusUpdated(unittest.TestCase):
         readme = (PROJECT_ROOT / "README.md").read_text(encoding="utf-8")
         self.assertIn("6G.5D-R | ✅ Complete", readme)
         self.assertIn("6H.0-lite | 🧪 Ready / Preflight", readme)
-        self.assertIn("6H (full) | ⏳ Gated", readme)
+        self.assertIn("6H.1 | ✅ Complete", readme)
+        self.assertIn("6I | ✅ Complete", readme)
+        self.assertIn("8B | ✅ Complete", readme)
 
 
 class TestThresholdRunnerHelpSmoke(unittest.TestCase):

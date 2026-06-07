@@ -48,11 +48,18 @@ def build_gain_space(config: dict) -> GainSpace:
     return GainSpace(gain_bounds)
 
 
+def _build_guidance_gains(gains_dict: dict) -> GuidanceGains:
+    """Filter gains_dict to only include valid GuidanceGains fields."""
+    valid_fields = set(GuidanceGains.__dataclass_fields__.keys())
+    filtered = {k: v for k, v in gains_dict.items() if k in valid_fields}
+    return GuidanceGains(**filtered)
+
+
 def make_evaluator(env: CloseRangeTrackingEnv, agent: PPOAgent, scenarios: list, seeds: tuple):
     """Create an evaluator function for CEM."""
     def evaluator(gains_dict: dict) -> float:
-        # Set gains on env
-        gains = GuidanceGains(**gains_dict)
+        # Set gains on env (filtered to valid dataclass fields)
+        gains = _build_guidance_gains(gains_dict)
         env.current_gains = gains
 
         successes = 0

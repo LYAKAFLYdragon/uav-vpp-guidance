@@ -29,6 +29,7 @@ class CEMGainOptimizer:
         self.config = config
         self.candidates = int(config.get("candidates", 12))
         self.elite_ratio = float(config.get("elite_ratio", 0.25))
+        self.rng = np.random.default_rng(config.get("random_seed", 42))
         self.mean = (gain_space.low + gain_space.high) / 2.0
         self.std = (gain_space.high - gain_space.low) / 4.0
 
@@ -38,9 +39,8 @@ class CEMGainOptimizer:
         Shape: (candidates, dim)
         Uses truncated normal: sample from N(mean, std), then clip to [low, high].
         """
-        rng = np.random.default_rng()
         # Sample from normal then clip to bounds
-        candidates = rng.normal(
+        candidates = self.rng.normal(
             loc=self.mean, scale=self.std, size=(self.candidates, len(self.mean))
         )
         return self.gain_space.clip(candidates)

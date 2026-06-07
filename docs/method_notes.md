@@ -2,12 +2,20 @@
 
 ## Virtual Pursuit Point (VPP)
 
-The policy outputs a 5-dimensional normalized action vector, mapped to:
+The policy outputs a **3-dimensional** normalized action vector, mapped to:
 - Longitudinal offset `d_long`
 - Lateral offset `d_lat`
 - Vertical offset `d_vert`
-- Prediction time `tau_pred`
-- Speed bias `speed_bias`
+
+> **Note**: The original design included a 5-dimensional action space with
+> additional parameters `tau_pred` (prediction time horizon) and `speed_bias`
+> (speed adjustment). These were deferred to future work because:
+> 1. All current experiments are built around the 3-dimensional action space.
+> 2. Expanding to 5 dimensions significantly increases the gain-space search
+>    complexity for CEM optimization.
+> 3. The 3-dimensional space is sufficient to answer the core research
+>    questions (prediction vs. no-prediction, gain optimization, bilevel
+>    co-optimization).
 
 These parameters define a virtual point relative to the target aircraft, which the own aircraft attempts to track.
 

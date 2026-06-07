@@ -1,5 +1,5 @@
 virtual_point:
-  action_dim: 5
+  action_dim: 3
   d_long_range: [-1500.0, 1500.0]
   d_lat_range: [-800.0, 800.0]
   d_vert_range: [-500.0, 500.0]

@@ -7,14 +7,16 @@ import numpy as np
 import os
 
 # Data from docs/results/stage6b/per_scenario_analysis.md
+# and docs/results/lstm_gru_benchmark/raw_episodes.csv
 # Success rates (%)
 data = np.array([
     [100, 100, 100, 100, 100, 0, 0, 100],   # no_prediction
-    [100, 100, 100, 0, 100, 0, 0, 100],     # cv_prediction
-    [100, 100, 100, 0, 100, 0, 0, 100],     # ca_prediction (identical to CV; bug)
+    [100, 100, 100, 0, 100, 0, 0, 100],     # parametric_prediction (cv/ca)
+    [100, 100, 100, 100, 100, 0, 0, 100],   # lstm_frozen
+    [100, 100, 100, 0, 100, 0, 0, 100],     # gru_frozen
 ], dtype=float)
 
-methods = ["No-Prediction", "CV Prediction", "CA Prediction"]
+methods = ["No-Prediction", "Parametric Pred.", "LSTM (Frozen)", "GRU (Frozen)"]
 
 scenario_labels = [
     "Head-on\n(Neutral)",
@@ -27,7 +29,7 @@ scenario_labels = [
     "Crossing\n(Close)",
 ]
 
-fig, ax = plt.subplots(figsize=(10, 4))
+fig, ax = plt.subplots(figsize=(11, 4.5))
 
 # Custom colormap: red (0) -> yellow (50) -> green (100)
 from matplotlib.colors import LinearSegmentedColormap

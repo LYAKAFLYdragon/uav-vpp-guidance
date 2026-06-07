@@ -65,6 +65,14 @@ METHODS = {
         "gains_path": "outputs/bilevel_training/bilevel_results.json",
         "note": "Bilevel co-optimization: PPO policy + CEM gains",
     },
+    "lstm_frozen": {
+        "checkpoint": "outputs/experiments/vpp_ppo_lstm_frozen/checkpoints/best.pt",
+        "config_method": "lstm_frozen",
+    },
+    "gru_frozen": {
+        "checkpoint": "outputs/experiments/vpp_ppo_gru_frozen/checkpoints/best.pt",
+        "config_method": "gru_frozen",
+    },
 }
 
 

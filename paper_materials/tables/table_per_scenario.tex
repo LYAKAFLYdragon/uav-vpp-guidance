@@ -2,20 +2,20 @@
 \centering
 \caption{Per-scenario success rates on feasible geometry ($10$ seeds per scenario).}
 \label{tab:per_scenario}
-\begin{tabular}{lccc}
+\begin{tabular}{lccccc}
 \toprule
-Scenario & No-Pred & Parametric Pred.$^\dagger$ & Geometry \\
+Scenario & No-Pred & Parametric$^\dagger$ & LSTM & GRU & Geometry \\
 \midrule
-regression\_neutral & 100\% & 100\% & Head-on, 2000\,m \\
-regression\_challenging & 100\% & 100\% & Crossing, 2121\,m \\
-regression\_crossing\_left & 100\% & 100\% & Crossing, left \\
-regression\_crossing\_right & \textbf{100\%} & \textbf{0\%} & Crossing, right \\
-candidate\_head\_on\_close & 100\% & 100\% & Head-on, close \\
-candidate\_head\_on\_medium & 0\% & 0\% & Head-on, medium \\
-candidate\_head\_on\_far & 0\% & 0\% & Head-on, far \\
-candidate\_crossing\_close & 100\% & 100\% & Crossing, close \\
+regression\_neutral & 100\% & 100\% & 100\% & 100\% & Head-on, 2000\,m \\
+regression\_challenging & 100\% & 100\% & 100\% & 100\% & Crossing, 2121\,m \\
+regression\_crossing\_left & 100\% & 100\% & 100\% & 100\% & Crossing, left \\
+regression\_crossing\_right & \textbf{100\%} & \textbf{0\%} & \textbf{100\%} & \textbf{0\%} & Crossing, right \\
+candidate\_head\_on\_close & 100\% & 100\% & 100\% & 100\% & Head-on, close \\
+candidate\_head\_on\_medium & 0\% & 0\% & 0\% & 0\% & Head-on, medium \\
+candidate\_head\_on\_far & 0\% & 0\% & 0\% & 0\% & Head-on, far \\
+candidate\_crossing\_close & 100\% & 100\% & 100\% & 100\% & Crossing, close \\
 \midrule
-\textbf{Overall} & \textbf{75.0\%} & \textbf{62.5\%} & --- \\
+\textbf{Overall} & \textbf{75.0\%} & \textbf{62.5\%} & \textbf{75.0\%} & \textbf{62.5\%} & --- \\
 \bottomrule
 \end{tabular}
 \begin{tablenotes}

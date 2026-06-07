@@ -109,6 +109,12 @@ def main():
     def serialize(obj):
         if isinstance(obj, np.ndarray):
             return obj.tolist()
+        if isinstance(obj, (np.floating, np.integer, np.bool_)):
+            if isinstance(obj, np.floating):
+                return float(obj)
+            if isinstance(obj, np.integer):
+                return int(obj)
+            return bool(obj)
         if isinstance(obj, dict):
             return {k: serialize(v) for k, v in obj.items()}
         if isinstance(obj, list):

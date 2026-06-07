@@ -489,6 +489,43 @@ def generate_tables(results: list, output_dir: Path):
     return md_path, csv_path
 
 
+def generate_raw_csv(results: list, output_dir: Path):
+    """Export one row per episode as raw data CSV."""
+    rows = []
+    for r in results:
+        method = r["method"]
+        for ep in r["episodes"]:
+            row = {
+                "method": method,
+                "scenario": ep.get("scenario", "unknown"),
+                "seed": ep.get("seed", -1),
+                "return": ep.get("return", 0),
+                "length": ep.get("length", 0),
+                "is_success": ep.get("is_success", False),
+                "is_crash": ep.get("is_crash", False),
+                "is_timeout": ep.get("is_timeout", False),
+                "min_range_m": ep.get("min_range_m", float("nan")),
+                "final_range_m": ep.get("final_range_m", float("nan")),
+                "final_ata_deg": ep.get("final_ata_deg", float("nan")),
+                "nz_cmd_mean": ep.get("nz_cmd_mean", float("nan")),
+                "roll_rate_cmd_mean": ep.get("roll_rate_cmd_mean", float("nan")),
+                "throttle_cmd_mean": ep.get("throttle_cmd_mean", float("nan")),
+            }
+            rows.append(row)
+    if rows:
+        import csv
+        raw_path = output_dir / "raw_episodes.csv"
+        raw_path.parent.mkdir(parents=True, exist_ok=True)
+        fieldnames = list(rows[0].keys())
+        with open(raw_path, "w", newline="", encoding="utf-8") as f:
+            writer = csv.DictWriter(f, fieldnames=fieldnames)
+            writer.writeheader()
+            writer.writerows(rows)
+        print(f"Saved: {raw_path}")
+        return raw_path
+    return None
+
+
 # ---------------------------------------------------------------------------
 # Summary and manifest
 # ---------------------------------------------------------------------------
@@ -783,6 +820,7 @@ def main():
     print("Generating figures, tables, summary, and manifest...")
     generate_figures(results, output_dir)
     generate_tables(results, output_dir)
+    generate_raw_csv(results, output_dir)
     manifest_path = generate_manifest(results, output_dir, args, start_time, end_time)
     generate_summary(results, output_dir, args.backend, args, manifest_path)
 

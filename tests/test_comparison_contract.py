@@ -566,12 +566,23 @@ class TestComparisonPolicyMetadataCSV(unittest.TestCase):
         import subprocess
         import tempfile
         import csv
+        import yaml
+        import copy
 
         with tempfile.TemporaryDirectory() as tmp:
+            # Use a temp config with a guaranteed-missing checkpoint so the test
+            # is deterministic regardless of whether real checkpoints exist.
+            config_path = Path("config/experiment/evaluate_vpp_prediction_comparison.yaml")
+            cfg = yaml.safe_load(config_path.read_text(encoding="utf-8"))
+            cfg = copy.deepcopy(cfg)
+            cfg["methods"]["no_prediction"]["checkpoint"] = str(Path(tmp) / "nonexistent.pt")
+            temp_cfg_path = Path(tmp) / "temp_config.yaml"
+            temp_cfg_path.write_text(yaml.dump(cfg), encoding="utf-8")
+
             cmd = [
                 sys.executable,
                 "-m", "uav_vpp_guidance.evaluation.evaluate_prediction_comparison",
-                "--config", "config/experiment/evaluate_vpp_prediction_comparison.yaml",
+                "--config", str(temp_cfg_path),
                 "--backend", "simple",
                 "--episodes", "1",
                 "--seeds", "0",
@@ -584,8 +595,6 @@ class TestComparisonPolicyMetadataCSV(unittest.TestCase):
                 rows = list(csv.DictReader(f))
             no_pred = next((r for r in rows if r["method"] == "no_prediction"), None)
             self.assertIsNotNone(no_pred)
-            # Since no_prediction checkpoint likely does not exist in test env,
-            # loaded_policy_checkpoint_path should be empty/None in CSV.
             self.assertEqual(no_pred["policy_type"], "random_policy")
             self.assertEqual(no_pred["loaded_policy_checkpoint_path"], "")
 

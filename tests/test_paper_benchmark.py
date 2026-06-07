@@ -376,6 +376,7 @@ class TestRunManifestArtifact:
                 "--scenarios", "regression",
                 "--methods", "no_prediction",
                 "--allow-random-smoke",
+                "--checkpoint-map", "no_prediction=nonexistent/path.pt",
                 "--output-dir", str(output_dir),
             ],
             capture_output=True,
@@ -403,10 +404,8 @@ class TestRunManifestArtifact:
         assert "method_provenance" in manifest
 
         prov = manifest["method_provenance"]["no_prediction"]
-        assert prov["checkpoint_path_final"]
-        # The benchmark config overrides the METHODS default checkpoint,
-        # so the resolved source should be config_method even in smoke.
-        assert prov["checkpoint_source"] == "config_method"
+        assert prov["checkpoint_path_final"] == "nonexistent/path.pt"
+        assert prov["checkpoint_source"] == "cli_checkpoint_map"
         assert prov["checkpoint_exists"] is False  # smoke run
 
         summary = (output_dir / "summary.md").read_text(encoding="utf-8")

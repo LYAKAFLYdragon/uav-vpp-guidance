@@ -47,6 +47,7 @@ experiments/                ← Git-ignored: weights, checkpoints, results
 
 | Stage | Status | Evidence | Runnable |
 |---|---|---|---|
+| 6B | ✅ Complete | No-Prediction vs CV vs CA core comparison; 75% vs 62.5% vs 62.5% on feasible geometry; training curves, boxplots, cross-seed stable | `scripts/run_paper_benchmark.py` |
 | 6E | ✅ Complete | 4 geometry scenarios, 1.1M steps, high capture rate, low error | `scripts/run_paper_benchmark.py` |
 | 6F | ✅ Complete | Paper-safe benchmark, McNemar exact, cross-seed, synthesis table | `scripts/run_paper_benchmark.py` |
 | 6G.1 | ✅ Complete | Guidance-law limitation probe (hardened, smoke passed, full run completed, 720 episodes, 12 cells, McNemar exact) | `scripts/run_stage6g_guidance_limitation_probe.py` |

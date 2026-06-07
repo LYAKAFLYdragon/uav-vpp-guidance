@@ -14,8 +14,12 @@ _DEFAULT_WEIGHTS = {
     "success_rate": 200.0,
     "crash_rate": -300.0,
     "saturation_rate": -50.0,
-    "command_smoothness": 10.0,
 }
+
+# Fixed bounds for min-max normalizing episode return to [0, 1].
+# These should cover the practical range of accumulated rewards.
+_RETURN_MIN = -500.0
+_RETURN_MAX = 500.0
 
 
 def _load_weights_from_config(config_path="config/gain_space.yaml"):
@@ -30,7 +34,6 @@ def _load_weights_from_config(config_path="config/gain_space.yaml"):
         "success_rate": regret.get("w_success", 200.0),
         "crash_rate": -abs(regret.get("w_crash", 300.0)),
         "saturation_rate": -abs(regret.get("w_saturation", 50.0)),
-        "command_smoothness": regret.get("w_command_smooth", 10.0),
     }
     return mapping
 
@@ -39,8 +42,10 @@ def compute_score(metrics, weights=None):
     """
     Composite score for gain evaluation.
 
-    Computes a weighted sum of evaluation metrics. Positive weights reward
-    higher values; negative weights penalize higher values (e.g. crash_rate).
+    Computes a weighted sum of evaluation metrics. The ``return`` metric is
+    min-max normalized to [0, 1] before weighting so that it is on the same
+    scale as ratio metrics (e.g. success_rate, crash_rate). The final score
+    is then linearly rescaled to the [0, 1] interval.
 
     Args:
         metrics (dict): Evaluation metrics. Expected keys include:
@@ -48,15 +53,22 @@ def compute_score(metrics, weights=None):
             - "success_rate" (float): success rate in [0, 1]
             - "crash_rate" (float): crash rate in [0, 1]
             - "saturation_rate" (float): actuator saturation rate in [0, 1]
-            - "command_smoothness" (float): command smoothness in [0, 1]
         weights (dict, optional): Score component weights. If None, loads
             defaults from ``config/gain_space.yaml``.
 
     Returns:
-        float: Scalar composite score (higher is better).
+        float: Scalar composite score in [0, 1] (higher is better).
     """
     if weights is None:
         weights = _load_weights_from_config()
+
+    # Min-max normalize return to [0, 1] so it shares the same scale as
+    # ratio metrics.
+    metrics = dict(metrics)
+    if "return" in metrics:
+        raw_return = float(metrics["return"])
+        norm_return = (raw_return - _RETURN_MIN) / (_RETURN_MAX - _RETURN_MIN)
+        metrics["return"] = float(np.clip(norm_return, 0.0, 1.0))
 
     score = 0.0
     used_keys = set()
@@ -70,6 +82,16 @@ def compute_score(metrics, weights=None):
                 f"Skipping this component.",
                 stacklevel=2,
             )
+
+    # Map raw weighted sum to [0, 1] based on the theoretical range of the
+    # actually-used weights. This makes the score interpretable regardless of
+    # the absolute weight magnitudes.
+    if used_keys:
+        max_possible = sum(max(0.0, weights[k]) for k in used_keys)
+        min_possible = sum(min(0.0, weights[k]) for k in used_keys)
+        denominator = max_possible - min_possible
+        if denominator > 0.0:
+            score = (score - min_possible) / denominator
 
     # Warn if metrics contains keys not used by weights
     unused = set(metrics.keys()) - used_keys

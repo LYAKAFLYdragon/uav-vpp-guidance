@@ -18,4 +18,3 @@ regret:
   w_success: 200.0
   w_crash: 300.0
   w_saturation: 50.0
-  w_command_smooth: 10.0

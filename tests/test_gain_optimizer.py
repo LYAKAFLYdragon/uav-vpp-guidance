@@ -62,24 +62,20 @@ class TestRegret:
             "success_rate": 0.8,
             "crash_rate": 0.1,
             "saturation_rate": 0.05,
-            "command_smoothness": 0.9,
         }
         weights = {
             "return": 1.0,
             "success_rate": 200.0,
             "crash_rate": -300.0,
             "saturation_rate": -50.0,
-            "command_smoothness": 10.0,
         }
         score = compute_score(metrics, weights=weights)
-        expected = (
-            1.0 * (-50.0)
-            + 200.0 * 0.8
-            - 300.0 * 0.1
-            - 50.0 * 0.05
-            + 10.0 * 0.9
-        )
+        # return_norm = (-50 + 500) / 1000 = 0.45
+        # raw = 1*0.45 + 200*0.8 - 300*0.1 - 50*0.05 = 127.95
+        # max = 201, min = -350, denom = 551
+        expected = (127.95 + 350.0) / 551.0
         assert score == pytest.approx(expected)
+        assert 0.0 <= score <= 1.0
 
     def test_compute_score_missing_keys(self):
         metrics = {"success_rate": 1.0, "return": 10.0}
@@ -90,8 +86,12 @@ class TestRegret:
         }
         with pytest.warns(UserWarning, match="crash_rate"):
             score = compute_score(metrics, weights=weights)
-        expected = 200.0 * 1.0 + 1.0 * 10.0
+        # return_norm = (10 + 500) / 1000 = 0.51
+        # raw = 200*1 + 1*0.51 = 200.51
+        # max = 201, min = 0, denom = 201
+        expected = 200.51 / 201.0
         assert score == pytest.approx(expected)
+        assert 0.0 <= score <= 1.0
 
     def test_compute_score_default_weights(self):
         metrics = {
@@ -99,12 +99,15 @@ class TestRegret:
             "success_rate": 1.0,
             "crash_rate": 0.0,
             "saturation_rate": 0.0,
-            "command_smoothness": 1.0,
         }
         score = compute_score(metrics, weights=None)
-        # Default weights from config/gain_space.yaml: w_success=200, w_command_smooth=10
+        # Default weights from config/gain_space.yaml: w_success=200
+        # return_norm = 0.5, raw = 0.5 + 200 = 200.5
+        # max = 201, min = -350, denom = 551
+        expected = (200.5 + 350.0) / 551.0
         assert score > 0.0
-        assert score == pytest.approx(210.0, rel=0.1)
+        assert score == pytest.approx(expected, rel=1e-3)
+        assert 0.0 <= score <= 1.0
 
     def test_compute_score_empty_metrics(self):
         with pytest.warns(UserWarning):

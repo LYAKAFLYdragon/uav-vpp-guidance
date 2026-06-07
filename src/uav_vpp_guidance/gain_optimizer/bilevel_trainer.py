@@ -53,30 +53,31 @@ class BilevelTrainer:
     def _collect_episode(self, seed: int) -> None:
         """Collect one episode of experience and store in policy buffer."""
         env = self.env_factory()
-        obs = env.reset(seed=seed)
-        done = False
+        try:
+            obs = env.reset(seed=seed)
+            done = False
 
-        while not done:
-            obs_vec = obs["observation_vector"]
-            action, log_prob, value = self.policy.select_action(
-                obs_vec, deterministic=False
-            )
-            next_obs, reward, terminated, truncated, info = env.step(action)
-            done = terminated or truncated
+            while not done:
+                obs_vec = obs["observation_vector"]
+                action, log_prob, value = self.policy.select_action(
+                    obs_vec, deterministic=False
+                )
+                next_obs, reward, terminated, truncated, info = env.step(action)
+                done = terminated or truncated
 
-            self.policy.store_transition(
-                obs_vec, action, log_prob, reward, done, value
-            )
-            obs = next_obs
+                self.policy.store_transition(
+                    obs_vec, action, log_prob, reward, done, value
+                )
+                obs = next_obs
 
-        # PPO update if buffer has enough data
-        if len(self.policy.buffer) >= self.policy.minibatch_size:
-            next_obs_vec = (
-                obs["observation_vector"] if not done else np.zeros_like(obs_vec)
-            )
-            self.policy.update(next_obs=next_obs_vec)
-
-        env.close()
+            # PPO update if buffer has enough data
+            if len(self.policy.buffer) >= self.policy.minibatch_size:
+                next_obs_vec = (
+                    obs["observation_vector"] if not done else np.zeros_like(obs_vec)
+                )
+                self.policy.update(next_obs=next_obs_vec)
+        finally:
+            env.close()
 
     def _make_gain_evaluator(self) -> Callable[[dict], float]:
         """Create an evaluator function for the inner CEM loop."""
@@ -86,25 +87,27 @@ class BilevelTrainer:
 
         def evaluator(gains_dict: dict) -> float:
             eval_env = self.env_factory()
-            filtered = self._filter_gains(gains_dict)
-            eval_env.current_gains = GuidanceGains(**filtered)
+            try:
+                filtered = self._filter_gains(gains_dict)
+                eval_env.current_gains = GuidanceGains(**filtered)
 
-            successes = 0
-            total = 0
-            for scen in self.config.get("eval_scenarios", []):
-                for seed in self.config.get("eval_seeds", [0, 1, 2]):
-                    result, _ = evaluate_single_episode(
-                        eval_env,
-                        self.policy,
-                        eval_env.config,
-                        scenario=scen,
-                        seed=seed,
-                    )
-                    if result.get("is_success", False):
-                        successes += 1
-                    total += 1
-            eval_env.close()
-            return successes / total if total > 0 else 0.0
+                successes = 0
+                total = 0
+                for scen in self.config.get("eval_scenarios", []):
+                    for seed in self.config.get("eval_seeds", [0, 1, 2]):
+                        result, _ = evaluate_single_episode(
+                            eval_env,
+                            self.policy,
+                            eval_env.config,
+                            scenario=scen,
+                            seed=seed,
+                        )
+                        if result.get("is_success", False):
+                            successes += 1
+                        total += 1
+                return successes / total if total > 0 else 0.0
+            finally:
+                eval_env.close()
 
         return evaluator
 

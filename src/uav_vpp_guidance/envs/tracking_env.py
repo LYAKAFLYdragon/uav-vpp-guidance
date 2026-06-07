@@ -872,6 +872,9 @@ class CloseRangeTrackingEnv:
         """Clean up environment resources."""
         if self.jsbsim_env is not None:
             self.jsbsim_env.close()
+        if hasattr(self, "_simple_env") and self._simple_env is not None:
+            if hasattr(self._simple_env, "close"):
+                self._simple_env.close()
 
 
 # ---------------------------------------------------------------------------

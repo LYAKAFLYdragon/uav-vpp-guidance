@@ -1,0 +1,18 @@
+\begin{table}[t]
+\centering
+\caption{Success rates of guidance methods on feasible geometry scenarios (80 episodes each, 10 evaluation seeds).}
+\label{tab:main_results}
+\begin{tabular}{lcccc}
+\toprule
+Method & Success Rate & Mean Return & $p$ vs Baseline & Cohen's $d$ \\
+\midrule
+No-Prediction & 75.00\% & $-7.26 \pm 355.84$ & --- & --- \\
+CV Prediction & 62.50\% & $-110.57 \pm 400.28$ & $0.0013^*$ & $-0.373$ (small) \\
+\bottomrule
+\end{tabular}
+\begin{tablenotes}
+\small
+\item * Statistically significant at $\alpha = 0.05$ (paired $t$-test).
+\item CA Prediction produced results numerically identical to CV Prediction; this is under investigation as a potential evaluation bug. CA is omitted pending resolution.
+\end{tablenotes}
+\end{table}

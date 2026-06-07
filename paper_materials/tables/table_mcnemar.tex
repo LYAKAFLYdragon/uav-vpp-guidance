@@ -1,0 +1,18 @@
+\begin{table}[t]
+\centering
+\caption{McNemar-like paired comparison on regression scenarios ($40$ paired episodes).}
+\label{tab:mcnemar}
+\begin{tabular}{lcccc}
+\toprule
+Comparison & Both Succeed & Both Fail & Only No-Pred & Binomial $p$ \\
+\midrule
+No-Pred vs CV & 30 & 0 & \textbf{10} & \textbf{0.0020$^*$} \\
+No-Pred vs CA & 30 & 0 & \textbf{10} & \textbf{0.0020$^*$} \\
+\bottomrule
+\end{tabular}
+\begin{tablenotes}
+\small
+\item * Significant at $\alpha = 0.05$ (exact binomial test).
+\item The $10$ diverging episodes all occur in \texttt{regression\_crossing\_right}.
+\end{tablenotes}
+\end{table}

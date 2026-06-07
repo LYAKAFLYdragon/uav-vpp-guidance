@@ -69,7 +69,7 @@ experiments/                ← Git-ignored: weights, checkpoints, results
 | 8B | ✅ Complete | Paper-ready benchmark: 4-method evaluation, figures, tables, summary.md | `scripts/run_paper_benchmark.py` |
 | 8B.1 | ✅ Complete | Remote sync & integration hardening: --dry-run, --allow-random-smoke, method metadata, training module fix | `python -m uav_vpp_guidance.training.train_bilevel --dry-run` |
 | 8C | ✅ Complete | Paper-safe readiness gate: config/gains/checkpoint metadata, unknown method hard-fail, training init semantics | `scripts/run_paper_benchmark.py` |
-| 9A | 🧪 Current | Experiment freeze & artifact contract: frozen checkpoint/gains/schema/manifest provenance | `scripts/run_paper_benchmark.py` |
+| 9A | ✅ Complete | Experiment freeze & artifact contract: frozen checkpoint/gains/schema/manifest provenance; Stage 9B and Stage 10 benchmarks executed successfully | `scripts/run_paper_benchmark.py` |
 
 ---
 
@@ -270,9 +270,9 @@ Is the tail-chase / stern-conversion dead zone observed in Stage 6E a **guidance
 
 After a full run, copy `README_result_block.md` into Section 6 of this README, replacing the placeholder below.
 
-> **Latest Stage 6G result**: `Status: incomplete` (full run in progress)
+> **Latest Stage 6G result**: `Status: complete` (probe full run completed, 720 episodes, 12 cells, McNemar exact p-values computed). See `docs/stage6g_guidance_limitation_probe.md` for detailed results.
 >
-> See `outputs/stage6g_guidance_limitation_probe/full_run/<run_id>/README_result_block.md`
+> **Latest Stage 10 result**: `Status: complete` (corrected benchmark). Head-on 100% success (20/20), crossing 0% success (0/20). Full analysis in `docs/stage10_3_crossing_failure_analysis.md`.
 
 ---
 
@@ -291,7 +291,7 @@ The goal is a **bilevel optimization system** where an outer loop optimizes guid
 | **6I.0** | Alternating bilevel training | Strategy step and gain step have explicit schedule, checkpoint, and rollback strategy | ✅ Complete |
 | **6I.1** | Regret and stability audit | Report regret, success, stability, and failure roots | ✅ Complete |
 | **7A** | JSBSim/F-16 validation | Simple backend conclusions transfer to 6DOF backend | ✅ Complete (Stage 10.2 corrected) — partial geometry-dependent transfer; head-on 100%, crossing 0% |
-| **7B** | Paper release package | Frozen configs, seeds, CSVs, figures, summary, commit hash, environment file | 🔄 In Progress (Stage 9A) |
+| **7B** | Paper release package | Frozen configs, seeds, CSVs, figures, summary, commit hash, environment file | ✅ Complete (Stage 9A–10.3 frozen) |
 
 ### 7.1 Minimal Bilevel Architecture (Target)
 
@@ -451,4 +451,4 @@ uav-vpp-guidance/
 
 ---
 
-*Last updated: 2026-06-07 | Active branch: `main` | Stage 9A: experiment freeze & artifact contract in progress | 869 passed, 0 failed, 0 xpassed*
+*Last updated: 2026-06-07 | Active branch: `main` | Stage 10.3 complete | 913 passed, 0 failed, 0 xpassed*

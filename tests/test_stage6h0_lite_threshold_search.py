@@ -341,7 +341,7 @@ class TestReadmeStageStatusUpdated(unittest.TestCase):
         self.assertIn("6I | ✅ Complete", readme)
         self.assertIn("8B | ✅ Complete", readme)
         self.assertIn("8C | ✅ Complete", readme)
-        self.assertIn("9A | 🧪 Current", readme)
+        self.assertIn("9A | ✅ Complete", readme)
 
 
 class TestThresholdRunnerHelpSmoke(unittest.TestCase):

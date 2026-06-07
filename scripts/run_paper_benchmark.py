@@ -72,6 +72,7 @@ def evaluate_method(
     scenarios: list,
     seeds: tuple,
     backend: str = "simple",
+    allow_random_smoke: bool = False,
 ) -> dict:
     """Evaluate a single method across all scenarios and seeds."""
     config_path = "config/experiment/stage6f5_feasible_geometry.yaml"
@@ -91,9 +92,15 @@ def evaluate_method(
 
     agent = PPOAgent(obs_dim=obs_dim, action_dim=3, config=config, device="cpu")
     ckpt_path = method_cfg["checkpoint"]
-    if Path(ckpt_path).exists():
+    ckpt_exists = Path(ckpt_path).exists()
+    if ckpt_exists:
         agent.load(ckpt_path)
     else:
+        if not allow_random_smoke:
+            raise FileNotFoundError(
+                f"Checkpoint not found for {method_name}: {ckpt_path}. "
+                f"Use --allow-random-smoke to proceed with random policy."
+            )
         print(
             f"WARNING: Checkpoint not found for {method_name}: {ckpt_path}"
         )
@@ -116,10 +123,24 @@ def evaluate_method(
             episodes.append(result)
 
     env.close()
+
+    # Method metadata
+    metadata = {
+        "method": method_name,
+        "prediction_mode": method_cfg["config_method"],
+        "guidance_mode": config.get("guidance", {}).get("mode", "unknown"),
+        "gain_source": "cem" if method_name == "gain_only" else "default",
+        "policy_checkpoint": ckpt_path,
+        "checkpoint_exists": ckpt_exists,
+        "is_random_smoke": not ckpt_exists,
+        "invalid_for_paper": not ckpt_exists,
+        "note": method_cfg.get("note", ""),
+    }
+
     return {
         "method": method_name,
         "episodes": episodes,
-        "checkpoint_exists": Path(ckpt_path).exists(),
+        "metadata": metadata,
     }
 
 
@@ -261,15 +282,22 @@ def generate_summary(results: list, output_dir: Path, backend: str):
 
     for r in results:
         method = r["method"]
+        meta = r["metadata"]
         episodes = r["episodes"]
         successes = sum(1 for ep in episodes if ep.get("is_success", False))
         total = len(episodes)
         sr = successes / total if total > 0 else 0
         lines.append(f"### {method}")
         lines.append(f"- Success Rate: {sr:.2%} ({successes}/{total})")
-        lines.append(f"- Checkpoint Exists: {r['checkpoint_exists']}")
-        if not r["checkpoint_exists"]:
+        lines.append(f"- Prediction Mode: {meta['prediction_mode']}")
+        lines.append(f"- Guidance Mode: {meta['guidance_mode']}")
+        lines.append(f"- Gain Source: {meta['gain_source']}")
+        lines.append(f"- Policy Checkpoint: {meta['policy_checkpoint']}")
+        lines.append(f"- Checkpoint Exists: {meta['checkpoint_exists']}")
+        if meta['invalid_for_paper']:
             lines.append("- ⚠️ **INVALID FOR PAPER**: Using random policy")
+        if meta.get('note'):
+            lines.append(f"- Note: {meta['note']}")
         lines.append("")
 
     lines.extend(
@@ -327,6 +355,11 @@ def main():
     parser.add_argument(
         "--output-dir", type=str, default="outputs/paper_benchmark"
     )
+    parser.add_argument(
+        "--allow-random-smoke",
+        action="store_true",
+        help="Allow evaluation with missing checkpoints (random policy). Results will be marked invalid_for_paper.",
+    )
     args = parser.parse_args()
 
     output_dir = Path(args.output_dir)
@@ -360,6 +393,7 @@ def main():
             scenarios,
             tuple(args.seeds),
             args.backend,
+            allow_random_smoke=args.allow_random_smoke,
         )
         results.append(result)
         sr = sum(1 for ep in result["episodes"] if ep.get("is_success", False)) / max(

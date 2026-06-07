@@ -6,7 +6,7 @@ A research codebase for exploring guidance-law limitations in neural virtual-pur
 
 ## 1. Research Objective
 
-Determine when neural prediction improves aircraft tracking in pursuit-evasion, and when guidance-law limitations dominate. The project is organized into progressive stages (6E → 6F → 6G → 6H → 6I → 7A), with each stage producing **paper-safe evidence** and **runnable artifacts**.
+Determine when neural prediction improves aircraft tracking in pursuit-evasion, and when guidance-law limitations dominate. The project is organized into progressive stages (6E → 6F → 6G → 6H → 6I → 7A → 7B → 8B), with each stage producing **paper-safe evidence** and **runnable artifacts**.
 
 ---
 
@@ -60,9 +60,14 @@ experiments/                ← Git-ignored: weights, checkpoints, results
 | 6G.5D-R | ✅ Complete | Remote sync, latch robustness tests, xpass audit, threshold-gate readiness | `tests/test_stage6g5d_latch_robustness.py` |
 | 6H.0-R | ✅ Complete | Regression baseline recovery & backend consistency audit; config drift audit shows 0 critical diffs; replay runner fixed (CloseRangeTrackingEnv); challenging scenario reproducible; baseline search expanded to 180° aspect | `docs/results/stage6h0r_config_drift_audit.md` |
 | 6H.0-lite | 🧪 Ready / Preflight | Mode-switch threshold optimization preflight — regression baseline recovered (neutral + challenging non-tail-chase); threshold search unblocked | `docs/stage6h0_lite_mode_switch_threshold_optimization_plan.md` |
-| 6H (full) | ⏳ Gated | Full bilevel gain optimization — requires 6H.0-lite acceptance criteria met | — |
-| 6I | ⏳ Pending | Alternating bilevel training — gated until 6H completes | — |
-| 7A | ⏳ Pending | JSBSim/F-16 validation — pending feasible subset confirmation from 6G.5A | — |
+| 6H.1 | ✅ Complete | Gate redesign, threshold exploration, candidate search 100% success | `tests/test_stage6g5d_pn_mode_switch.py` |
+| 6H.2 | ✅ Complete | LHS20 threshold optimization, 8/20 PASS | `scripts/run_stage6h_lhs20_threshold_opt.py` |
+| 6H.3 | ✅ Complete | PN LOS-rate boundary fix, hybrid blend KeyError fix, frozen gate config | `src/uav_vpp_guidance/guidance/los_rate_guidance.py` |
+| 6I | ✅ Complete | Statistical comparison framework: bootstrap CI, paired t-test, Cohen's d, Mann-Whitney U | `tests/test_statistical_comparison.py` |
+| 7A | ✅ Complete | Gain-only CEM optimization, metrics.py field fix, CEM unit tests | `scripts/run_gain_only_cem.py` |
+| 7B | ✅ Complete | Full BilevelTrainer with regret tracking, intermediate checkpoints, smoke test 100% SR | `scripts/train_bilevel.py` |
+| 8B | ✅ Complete | Paper-ready benchmark: 4-method evaluation, figures, tables, summary.md | `scripts/run_paper_benchmark.py` |
+| 8B.1 | 🧪 Ready | Remote sync & integration hardening: --dry-run, --allow-random-smoke, method metadata, training module fix | `python -m uav_vpp_guidance.training.train_bilevel --dry-run` |
 
 ---
 
@@ -178,7 +183,35 @@ python scripts/synthesize_stage6f.py
 python scripts/train_paper_safe.py
 ```
 
-### 5.11 Run tests
+### 5.11 Dry-run bilevel training (smoke test)
+
+```bash
+python -m uav_vpp_guidance.training.train_bilevel \
+  --config config/experiment/proposed_bilevel.yaml --dry-run
+```
+
+### 5.12 Dry-run gain-only CEM (smoke test)
+
+```bash
+python -m uav_vpp_guidance.training.train_gain_only \
+  --config config/experiment/gain_only_cem.yaml --dry-run
+```
+
+### 5.13 Run paper benchmark (smoke — random policy allowed)
+
+```bash
+python scripts/run_paper_benchmark.py \
+  --backend simple --seeds 0 1 --scenarios regression --allow-random-smoke
+```
+
+### 5.14 Run paper benchmark (paper-safe — requires checkpoints)
+
+```bash
+python scripts/run_paper_benchmark.py \
+  --backend simple --seeds 0 1 2 3 4 5 6 7 8 9 --scenarios regression
+```
+
+### 5.15 Run tests
 
 ```bash
 python -m pytest tests/ -v

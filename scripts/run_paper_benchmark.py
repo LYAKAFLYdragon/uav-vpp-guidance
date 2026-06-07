@@ -1,16 +1,18 @@
 #!/usr/bin/env python3
-"""Stage 8B: Paper-ready benchmark.
+"""Stage 8C: Paper-safe experiment readiness benchmark.
 
 Evaluates all methods and generates:
-- summary.md: Full text report with statistical comparison
+- summary.md: Full text report with statistical comparison and reproducibility metadata
 - results.csv: Raw data
 - figures/*.png: Paper figures
-- tables/*.tex: LaTeX tables
+- tables/*.md: Markdown tables
 """
 
 import argparse
 import copy
+import hashlib
 import json
+import subprocess
 import sys
 from pathlib import Path
 
@@ -29,8 +31,8 @@ from uav_vpp_guidance.envs.tracking_env import CloseRangeTrackingEnv
 from uav_vpp_guidance.evaluation.evaluate_prediction_comparison import (
     evaluate_single_episode,
 )
-from uav_vpp_guidance.evaluation.metrics import aggregate_metrics_with_statistics
 from uav_vpp_guidance.evaluation.statistical_comparison import paired_t_test, cohens_d
+from uav_vpp_guidance.guidance.gain_config import GuidanceGains
 
 
 METHODS = {
@@ -49,9 +51,16 @@ METHODS = {
     "gain_only": {
         "checkpoint": "outputs/audit_no_pred_final/checkpoints/best.pt",
         "config_method": "no_prediction",
+        "gains_path": "outputs/gain_only_cem/cem_results.json",
         "note": "Same policy as no_prediction but with CEM-optimized gains",
     },
 }
+
+
+def _config_hash(config: dict) -> str:
+    """Compute a simple hash of the resolved config for reproducibility tracking."""
+    canonical = json.dumps(config, sort_keys=True, default=str)
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()[:16]
 
 
 def load_config(config_path: str, method_name: str) -> dict:
@@ -66,25 +75,64 @@ def load_config(config_path: str, method_name: str) -> dict:
     return base_config
 
 
+def _load_gain_only_gains(method_cfg: dict, allow_random_smoke: bool) -> dict:
+    """Load CEM-optimized gains for gain_only method."""
+    gains_path = method_cfg.get("gains_path")
+    if not gains_path:
+        raise FileNotFoundError(
+            f"gains_path not configured for gain_only. "
+            f"Use --allow-random-smoke to proceed without gains."
+        )
+    gains_file = Path(gains_path)
+    if not gains_file.exists():
+        if not allow_random_smoke:
+            raise FileNotFoundError(
+                f"Gains file not found for gain_only: {gains_path}. "
+                f"Use --allow-random-smoke to proceed without gains."
+            )
+        print(f"WARNING: Gains file not found for gain_only: {gains_path}")
+        return {}
+    data = json.loads(gains_file.read_text(encoding="utf-8"))
+    best = data.get("best_gains", {})
+    if not best:
+        print(f"WARNING: No best_gains found in {gains_path}")
+    return best
+
+
 def evaluate_method(
     method_name: str,
     method_cfg: dict,
     scenarios: list,
     seeds: tuple,
-    backend: str = "simple",
+    backend: str,
+    config_path: str,
     allow_random_smoke: bool = False,
 ) -> dict:
     """Evaluate a single method across all scenarios and seeds."""
-    config_path = "config/experiment/stage6f5_feasible_geometry.yaml"
     config = load_config(config_path, method_cfg["config_method"])
     config["backend"] = backend
+    if "env" not in config:
+        config["env"] = {}
     config["env"]["backend"] = backend
     config["env"]["use_jsbsim"] = backend == "jsbsim"
 
     # Disable mode-switch for clean comparison
-    if "mode_switch" not in config.get("guidance", {}):
+    if "guidance" not in config:
+        config["guidance"] = {}
+    if "mode_switch" not in config["guidance"]:
         config["guidance"]["mode_switch"] = {}
     config["guidance"]["mode_switch"]["enabled"] = False
+
+    # gain_only: load and apply CEM-optimized gains
+    loaded_gains = {}
+    gains_exists = False
+    if method_name == "gain_only":
+        loaded_gains = _load_gain_only_gains(method_cfg, allow_random_smoke)
+        gains_exists = bool(loaded_gains)
+        if loaded_gains and "guidance" in config:
+            if "gains" not in config["guidance"]:
+                config["guidance"]["gains"] = {}
+            config["guidance"]["gains"].update(copy.deepcopy(loaded_gains))
 
     env = CloseRangeTrackingEnv(config)
     obs = env.reset(seed=0)
@@ -125,15 +173,25 @@ def evaluate_method(
     env.close()
 
     # Method metadata
+    invalid_for_paper = not ckpt_exists or (method_name == "gain_only" and not gains_exists)
     metadata = {
         "method": method_name,
+        "config_path": config_path,
+        "resolved_config_hash": _config_hash(config),
+        "method_override_name": method_cfg["config_method"],
+        "backend": backend,
+        "scenarios": [s.get("name", "unknown") for s in scenarios],
+        "seeds": list(seeds),
         "prediction_mode": method_cfg["config_method"],
         "guidance_mode": config.get("guidance", {}).get("mode", "unknown"),
         "gain_source": "cem" if method_name == "gain_only" else "default",
         "policy_checkpoint": ckpt_path,
         "checkpoint_exists": ckpt_exists,
+        "gains_path": method_cfg.get("gains_path"),
+        "gains_exists": gains_exists,
+        "loaded_gains": loaded_gains,
         "is_random_smoke": not ckpt_exists,
-        "invalid_for_paper": not ckpt_exists,
+        "invalid_for_paper": invalid_for_paper,
         "note": method_cfg.get("note", ""),
     }
 
@@ -161,6 +219,18 @@ def serialize(obj):
     return obj
 
 
+def _git_commit_hash() -> str:
+    """Get current git commit hash, or 'unknown' if not available."""
+    try:
+        return (
+            subprocess.check_output(["git", "rev-parse", "--short", "HEAD"])
+            .decode("utf-8")
+            .strip()
+        )
+    except Exception:
+        return "unknown"
+
+
 def generate_figures(results: list, output_dir: Path):
     """Generate paper figures."""
     import matplotlib
@@ -168,7 +238,6 @@ def generate_figures(results: list, output_dir: Path):
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
-    # Figure 1: Method comparison bar chart with error bars
     fig, ax = plt.subplots(figsize=(10, 6))
     methods = []
     means = []
@@ -199,7 +268,7 @@ def generate_figures(results: list, output_dir: Path):
 
 
 def generate_tables(results: list, output_dir: Path):
-    """Generate LaTeX and Markdown tables."""
+    """Generate Markdown and CSV tables."""
     rows = []
     baseline = None
     for r in results:
@@ -220,7 +289,6 @@ def generate_tables(results: list, output_dir: Path):
             "N Episodes": total,
         }
 
-        # Statistical comparison vs baseline
         if baseline is not None and method != baseline["method"]:
             method_by_seed = {
                 (ep.get("scenario"), ep.get("seed")): ep.get("return", 0)
@@ -250,7 +318,6 @@ def generate_tables(results: list, output_dir: Path):
     md_path = output_dir / "tables" / "comparison_table.md"
     md_path.parent.mkdir(parents=True, exist_ok=True)
 
-    # Build Markdown table manually (avoids tabulate version issues)
     cols = list(df.columns)
     header = "| " + " | ".join(cols) + " |"
     separator = "|" + "|".join([" --- " for _ in cols]) + "|"
@@ -267,18 +334,35 @@ def generate_tables(results: list, output_dir: Path):
     return md_path, csv_path
 
 
-def generate_summary(results: list, output_dir: Path, backend: str):
-    """Generate summary.md report."""
+def generate_summary(results: list, output_dir: Path, backend: str, args: argparse.Namespace):
+    """Generate summary.md report with full reproducibility metadata."""
+    commit_hash = _git_commit_hash()
     lines = [
         "# UAV VPP Guidance — Paper Benchmark Report",
         "",
         f"**Date**: {pd.Timestamp.now().strftime('%Y-%m-%d %H:%M')}",
+        f"**Git Commit**: `{commit_hash}`",
         f"**Backend**: {backend}",
+        f"**Config**: {args.config}",
         f"**Methods**: {', '.join(r['method'] for r in results)}",
+        f"**Scenarios**: {args.scenarios}",
+        f"**Seeds**: {args.seeds}",
+        f"**Allow Random Smoke**: {args.allow_random_smoke}",
         "",
-        "## Results Summary",
+        "## Benchmark Type",
         "",
     ]
+
+    any_invalid = any(r["metadata"]["invalid_for_paper"] for r in results)
+    if any_invalid:
+        lines.append("- ⚠️ **SMOKE BENCHMARK**: At least one method uses random policy or missing gains.")
+        lines.append("- **NOT PAPER-SAFE**: Do not use these results for paper claims.")
+    else:
+        lines.append("- ✅ **PAPER-SAFE BENCHMARK**: All checkpoints and gains loaded successfully.")
+    lines.append("")
+
+    lines.append("## Results Summary")
+    lines.append("")
 
     for r in results:
         method = r["method"]
@@ -289,13 +373,21 @@ def generate_summary(results: list, output_dir: Path, backend: str):
         sr = successes / total if total > 0 else 0
         lines.append(f"### {method}")
         lines.append(f"- Success Rate: {sr:.2%} ({successes}/{total})")
+        lines.append(f"- Config Path: {meta['config_path']}")
+        lines.append(f"- Resolved Config Hash: {meta['resolved_config_hash']}")
+        lines.append(f"- Method Override: {meta['method_override_name']}")
         lines.append(f"- Prediction Mode: {meta['prediction_mode']}")
         lines.append(f"- Guidance Mode: {meta['guidance_mode']}")
         lines.append(f"- Gain Source: {meta['gain_source']}")
         lines.append(f"- Policy Checkpoint: {meta['policy_checkpoint']}")
         lines.append(f"- Checkpoint Exists: {meta['checkpoint_exists']}")
+        if meta.get("gains_path"):
+            lines.append(f"- Gains Path: {meta['gains_path']}")
+            lines.append(f"- Gains Exists: {meta['gains_exists']}")
+            if meta.get("loaded_gains"):
+                lines.append(f"- Loaded Gains: {meta['loaded_gains']}")
         if meta['invalid_for_paper']:
-            lines.append("- ⚠️ **INVALID FOR PAPER**: Using random policy")
+            lines.append("- ⚠️ **INVALID FOR PAPER**: Using random policy or missing gains")
         if meta.get('note'):
             lines.append(f"- Note: {meta['note']}")
         lines.append("")
@@ -310,7 +402,11 @@ def generate_summary(results: list, output_dir: Path, backend: str):
             "",
             "## Reproducibility",
             "```bash",
-            f"python scripts/run_paper_benchmark.py --backend {backend}",
+            f"python scripts/run_paper_benchmark.py \\",
+            f"  --config {args.config} \\",
+            f"  --backend {backend} \\",
+            f"  --scenarios {args.scenarios} \\",
+            f"  --seeds {' '.join(str(s) for s in args.seeds)}",
             "```",
         ]
     )
@@ -358,7 +454,12 @@ def main():
     parser.add_argument(
         "--allow-random-smoke",
         action="store_true",
-        help="Allow evaluation with missing checkpoints (random policy). Results will be marked invalid_for_paper.",
+        help="Allow evaluation with missing checkpoints or gains. Results will be marked invalid_for_paper.",
+    )
+    parser.add_argument(
+        "--allow-missing-methods",
+        action="store_true",
+        help="Skip unknown methods instead of raising an error.",
     )
     args = parser.parse_args()
 
@@ -379,11 +480,25 @@ def main():
 
     methods_to_run = args.methods or list(METHODS.keys())
 
+    # Validate that gain_only and no_prediction are semantically different
+    if "gain_only" in methods_to_run and "no_prediction" in methods_to_run:
+        gain_cfg = METHODS["gain_only"]
+        no_pred_cfg = METHODS["no_prediction"]
+        # They must differ in at least gains_path or note
+        if gain_cfg.get("gains_path") == no_pred_cfg.get("gains_path") and not gain_cfg.get("note"):
+            raise ValueError(
+                "gain_only and no_prediction must have distinct configuration. "
+                "gain_only requires a gains_path or note to differentiate from no_prediction."
+            )
+
     results = []
     for method_name in methods_to_run:
         if method_name not in METHODS:
-            print(f"WARNING: Unknown method '{method_name}', skipping")
-            continue
+            msg = f"Unknown method '{method_name}'. Available: {list(METHODS.keys())}"
+            if args.allow_missing_methods:
+                print(f"WARNING: {msg}, skipping")
+                continue
+            raise ValueError(msg)
         print(f"\n{'='*50}")
         print(f"Evaluating: {method_name}")
         print(f"{'='*50}")
@@ -393,6 +508,7 @@ def main():
             scenarios,
             tuple(args.seeds),
             args.backend,
+            config_path=args.config,
             allow_random_smoke=args.allow_random_smoke,
         )
         results.append(result)
@@ -406,7 +522,7 @@ def main():
     print("Generating figures and tables...")
     generate_figures(results, output_dir)
     generate_tables(results, output_dir)
-    generate_summary(results, output_dir, args.backend)
+    generate_summary(results, output_dir, args.backend, args)
 
     print(f"\n{'='*50}")
     print("Benchmark Complete!")

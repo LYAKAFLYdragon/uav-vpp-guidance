@@ -111,7 +111,8 @@ class CEMGainOptimizer:
             history.append({
                 "iteration": i,
                 "mean_score": float(np.mean(scores)),
-                "best_score": iter_best_score,
+                "best_score": float(best_score),
+                "iter_best_score": float(iter_best_score),
                 "mean": self.mean.copy(),
                 "std": self.std.copy(),
             })

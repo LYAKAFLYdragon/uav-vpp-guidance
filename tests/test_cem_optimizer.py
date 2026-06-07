@@ -58,3 +58,26 @@ class TestCEMGainOptimizer:
         assert len(history) == 3
         assert all("iteration" in h for h in history)
         assert all("best_score" in h for h in history)
+        # best_score should be monotonically non-decreasing (global best)
+        for i in range(1, len(history)):
+            assert history[i]["best_score"] >= history[i - 1]["best_score"]
+
+    def test_rng_reproducibility(self):
+        """Same seed should produce identical results."""
+        bounds = {"x": [0.0, 1.0]}
+        gs = GainSpace(bounds)
+
+        def evaluator(g):
+            return g["x"]
+
+        cem1 = CEMGainOptimizer(gs, {"candidates": 10, "elite_ratio": 0.3, "random_seed": 123})
+        cem2 = CEMGainOptimizer(gs, {"candidates": 10, "elite_ratio": 0.3, "random_seed": 123})
+
+        best1, hist1 = cem1.optimize(evaluator, n_iter=5)
+        best2, hist2 = cem2.optimize(evaluator, n_iter=5)
+
+        assert best1 == pytest.approx(best2, abs=1e-6)
+        for h1, h2 in zip(hist1, hist2):
+            assert h1["best_score"] == pytest.approx(h2["best_score"], abs=1e-6)
+            np.testing.assert_allclose(h1["mean"], h2["mean"], atol=1e-6)
+            np.testing.assert_allclose(h1["std"], h2["std"], atol=1e-6)

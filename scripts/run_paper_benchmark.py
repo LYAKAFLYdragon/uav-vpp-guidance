@@ -490,35 +490,85 @@ def generate_tables(results: list, output_dir: Path):
 
 
 def generate_raw_csv(results: list, output_dir: Path):
-    """Export one row per episode as raw data CSV."""
+    """Export one row per episode as raw data CSV with full telemetry."""
+    # Define the full set of fields we want to preserve for analysis.
+    # This must stay in sync with evaluate_single_episode return dict.
+    _fields = [
+        "method",
+        "scenario",
+        "seed",
+        "return",
+        "length",
+        "is_success",
+        "is_crash",
+        "is_timeout",
+        "is_out_of_bounds",
+        "reason",
+        "min_range_m",
+        "min_ata_deg",
+        "final_range_m",
+        "final_ata_deg",
+        "score_win",
+        "mode_switch_effective",
+        "effective_guidance_mode",
+        "prediction_enabled_rate",
+        "prediction_valid_rate",
+        "prediction_fallback_rate",
+        "warmup_fallback_rate",
+        "runtime_fallback_rate",
+        "post_warmup_fallback_rate",
+        "predictor_init_failed_count",
+        "unknown_fallback_phase_count",
+        "missing_fallback_phase_count",
+        "configured_current_target_fallback_count",
+        "mean_env_prediction_error_m",
+        "median_env_prediction_error_m",
+        "env_prediction_error_count",
+        "mean_offline_aligned_error_m",
+        "median_offline_aligned_error_m",
+        "offline_aligned_error_count",
+        "mean_prediction_error_m",
+        "median_prediction_error_m",
+        "prediction_error_count",
+        "mean_virtual_point_shift_m",
+        "mean_anchor_shift_m",
+        "time_to_first_advantage_s",
+        "advantage_hold_time_s",
+        "nz_cmd_max",
+        "nz_cmd_mean",
+        "nz_cmd_saturation_rate",
+        "nz_cmd_modification_rate",
+        "roll_rate_cmd_max",
+        "roll_rate_cmd_mean",
+        "roll_rate_cmd_saturation_rate",
+        "roll_rate_cmd_modification_rate",
+        "throttle_cmd_max",
+        "throttle_cmd_mean",
+        "throttle_cmd_saturation_rate",
+        "throttle_cmd_modification_rate",
+        "min_altitude_m",
+        "max_altitude_m",
+        "final_altitude_m",
+        "altitude_loss_rate",
+        "energy_proxy",
+    ]
     rows = []
     for r in results:
         method = r["method"]
         for ep in r["episodes"]:
-            row = {
-                "method": method,
-                "scenario": ep.get("scenario", "unknown"),
-                "seed": ep.get("seed", -1),
-                "return": ep.get("return", 0),
-                "length": ep.get("length", 0),
-                "is_success": ep.get("is_success", False),
-                "is_crash": ep.get("is_crash", False),
-                "is_timeout": ep.get("is_timeout", False),
-                "min_range_m": ep.get("min_range_m", float("nan")),
-                "final_range_m": ep.get("final_range_m", float("nan")),
-                "final_ata_deg": ep.get("final_ata_deg", float("nan")),
-                "nz_cmd_mean": ep.get("nz_cmd_mean", float("nan")),
-                "roll_rate_cmd_mean": ep.get("roll_rate_cmd_mean", float("nan")),
-                "throttle_cmd_mean": ep.get("throttle_cmd_mean", float("nan")),
-            }
+            row = {"method": method}
+            for key in _fields[1:]:
+                val = ep.get(key)
+                if val is None:
+                    val = float("nan")
+                row[key] = val
             rows.append(row)
     if rows:
         import csv
         raw_path = output_dir / "raw_episodes.csv"
         raw_path.parent.mkdir(parents=True, exist_ok=True)
-        fieldnames = list(rows[0].keys())
         with open(raw_path, "w", newline="", encoding="utf-8") as f:
-            writer = csv.DictWriter(f, fieldnames=fieldnames)
+            writer = csv.DictWriter(f, fieldnames=_fields)
             writer.writeheader()
             writer.writerows(rows)
         print(f"Saved: {raw_path}")

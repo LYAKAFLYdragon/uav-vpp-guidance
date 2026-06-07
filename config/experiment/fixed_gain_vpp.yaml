@@ -2,16 +2,32 @@
 experiment_name: "002_fixed_gain_vpp"
 seed: 0
 
+includes:
+  - "../env.yaml"
+  - "../guidance.yaml"
+  - "../ppo.yaml"
+
 env:
   config_file: "config/env.yaml"
 
 guidance:
   config_file: "config/guidance.yaml"
+  mode: los_rate
+  gains:
+    k_los: 1.0
+    k_pos: 0.5
+    k_damp: 0.2
+    k_roll: 1.0
+    k_speed: 0.2
+    k_energy: 0.1
+    alpha_filter: 0.3
   virtual_point:
     enabled: true
+    anchor_mode: current_target
 
 ppo:
   config_file: "config/ppo.yaml"
+  device: cpu
 
 training:
   total_timesteps: 5_000_000

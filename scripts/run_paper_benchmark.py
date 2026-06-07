@@ -42,15 +42,18 @@ from uav_vpp_guidance.guidance.gain_config import GuidanceGains
 
 METHODS = {
     "no_prediction": {
-        "checkpoint": "outputs/audit_no_pred_final/checkpoints/best.pt",
+        "name": "No-Prediction",
+        "checkpoint": "outputs/experiments/stage6b_no_pred_s0/checkpoints/best.pt",
         "config_method": "no_prediction",
     },
     "cv_prediction": {
-        "checkpoint": "outputs/audit_cv_final/checkpoints/best.pt",
+        "name": "CV Prediction",
+        "checkpoint": "outputs/experiments/stage6b_cv_s1/checkpoints/best.pt",
         "config_method": "cv_prediction",
     },
     "ca_prediction": {
-        "checkpoint": "outputs/audit_ca_final/checkpoints/best.pt",
+        "name": "CA Prediction",
+        "checkpoint": "outputs/experiments/stage6b_ca_s1/checkpoints/best.pt",
         "config_method": "ca_prediction",
     },
     "gain_only": {

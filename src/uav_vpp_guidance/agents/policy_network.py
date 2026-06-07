@@ -75,8 +75,12 @@ class MLPActorCritic(nn.Module):
         self.register_buffer(
             "action_high", torch.tensor(action_high, dtype=torch.float32)
         )
-        self.action_scale = (self.action_high - self.action_low) / 2.0
-        self.action_bias = (self.action_high + self.action_low) / 2.0
+        self.register_buffer(
+            "action_scale", (self.action_high - self.action_low) / 2.0
+        )
+        self.register_buffer(
+            "action_bias", (self.action_high + self.action_low) / 2.0
+        )
 
         # Shared body
         shared_sizes = [self.obs_dim] + list(hidden_sizes)

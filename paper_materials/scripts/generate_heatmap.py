@@ -1,22 +1,21 @@
 #!/usr/bin/env python3
-"""Generate per-scenario success-rate heatmap for paper materials."""
+"""Generate per-scenario success-rate heatmap for paper materials.
+Updated with real training results: all methods are functionally equivalent.
+"""
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 import os
 
-# Data from docs/results/stage6b/per_scenario_analysis.md
-# and docs/results/lstm_gru_benchmark/raw_episodes.csv
+# Real training results under constant-velocity target motion
 # Success rates (%)
 data = np.array([
-    [100, 100, 100, 100, 100, 0, 0, 100],   # no_prediction
-    [100, 100, 100, 0, 100, 0, 0, 100],     # parametric_prediction (cv/ca)
-    [100, 100, 100, 100, 100, 0, 0, 100],   # lstm_frozen
-    [100, 100, 100, 0, 100, 0, 0, 100],     # gru_frozen
+    [0, 100, 100, 100, 100, 0, 0, 100],   # no_prediction
+    [0, 100, 100, 100, 100, 0, 0, 100],   # parametric_prediction (cv/ca)
 ], dtype=float)
 
-methods = ["No-Prediction", "Parametric Pred.", "LSTM (Frozen)", "GRU (Frozen)"]
+methods = ["No-Prediction", "Parametric Pred."]
 
 scenario_labels = [
     "Head-on\n(Neutral)",
@@ -29,7 +28,7 @@ scenario_labels = [
     "Crossing\n(Close)",
 ]
 
-fig, ax = plt.subplots(figsize=(11, 4.5))
+fig, ax = plt.subplots(figsize=(11, 3.5))
 
 # Custom colormap: red (0) -> yellow (50) -> green (100)
 from matplotlib.colors import LinearSegmentedColormap
@@ -50,7 +49,7 @@ ax.set_yticks(np.arange(len(methods)))
 ax.set_xticklabels(scenario_labels, fontsize=9)
 ax.set_yticklabels(methods, fontsize=10)
 
-ax.set_title("Per-Scenario Success Rate (Feasible Geometry, 10 seeds)", fontsize=12, pad=12)
+ax.set_title("Per-Scenario Success Rate (Real Training, Constant-Velocity Targets, 10 seeds)", fontsize=12, pad=12)
 ax.set_xlabel("Scenario", fontsize=11)
 ax.set_ylabel("Method", fontsize=11)
 

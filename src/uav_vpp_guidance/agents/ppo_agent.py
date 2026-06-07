@@ -291,7 +291,7 @@ class PPOAgent:
         if not os.path.exists(path):
             raise FileNotFoundError(f"Checkpoint not found: {path}")
         checkpoint = torch.load(path, map_location=self.device)
-        self.network.load_state_dict(checkpoint["network_state_dict"])
+        self.network.load_state_dict(checkpoint["network_state_dict"], strict=False)
         self.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
         self.total_updates = checkpoint.get("total_updates", 0)
         self.total_timesteps = checkpoint.get("total_timesteps", 0)

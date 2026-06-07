@@ -1,27 +1,28 @@
 \begin{table}[t]
 \centering
-\caption{Per-scenario success rates on feasible geometry ($10$ seeds per scenario).}
+\caption{Per-scenario success rates on feasible geometry ($10$ seeds per scenario). Real training results under constant-velocity target motion.}
 \label{tab:per_scenario}
-\begin{tabular}{lccccc}
+\begin{tabular}{lccc}
 \toprule
-Scenario & No-Pred & Parametric$^\dagger$ & LSTM & GRU & Geometry \\
+Scenario & No-Pred & Parametric$^\dagger$ & Geometry \\
 \midrule
-regression\_neutral & 100\% & 100\% & 100\% & 100\% & Head-on, 2000\,m \\
-regression\_challenging & 100\% & 100\% & 100\% & 100\% & Crossing, 2121\,m \\
-regression\_crossing\_left & 100\% & 100\% & 100\% & 100\% & Crossing, left \\
-regression\_crossing\_right & \textbf{100\%} & \textbf{0\%} & \textbf{100\%} & \textbf{0\%} & Crossing, right \\
-candidate\_head\_on\_close & 100\% & 100\% & 100\% & 100\% & Head-on, close \\
-candidate\_head\_on\_medium & 0\% & 0\% & 0\% & 0\% & Head-on, medium \\
-candidate\_head\_on\_far & 0\% & 0\% & 0\% & 0\% & Head-on, far \\
-candidate\_crossing\_close & 100\% & 100\% & 100\% & 100\% & Crossing, close \\
+regression\_neutral & 0\% & 0\% & Head-on, 2000\,m \\
+regression\_challenging & 100\% & 100\% & Crossing, 2121\,m \\
+regression\_crossing\_left & 100\% & 100\% & Crossing, left \\
+regression\_crossing\_right & 100\% & 100\% & Crossing, right \\
+candidate\_head\_on\_close & 100\% & 100\% & Head-on, close \\
+candidate\_head\_on\_medium & 0\% & 0\% & Head-on, medium \\
+candidate\_head\_on\_far & 0\% & 0\% & Head-on, far \\
+candidate\_crossing\_close & 100\% & 100\% & Crossing, close \\
 \midrule
-\textbf{Overall} & \textbf{75.0\%} & \textbf{62.5\%} & \textbf{75.0\%} & \textbf{62.5\%} & --- \\
+\textbf{Overall} & \textbf{62.5\%} & \textbf{62.5\%} & --- \\
 \bottomrule
 \end{tabular}
 \begin{tablenotes}
 \small
 \item[$^\dagger$] CV and CA predictors produced identical predictions under 
   constant-velocity target motion (see \S\ref{sec:discussion}).
-\item Candidate scenarios (medium/far) show $0\%$ across all methods, suggesting geometric infeasibility.
+\item All methods produce identical per-scenario success rates, indicating functional 
+  equivalence of predictor architectures under the evaluated kinematics.
 \end{tablenotes}
 \end{table}

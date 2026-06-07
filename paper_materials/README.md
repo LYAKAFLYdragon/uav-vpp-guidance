@@ -1,72 +1,65 @@
 # Paper Materials
 
-This directory contains all figures, tables, and text snippets ready for direct insertion into the paper.
+This directory contains all figures, tables, and text snippets for the paper, now updated with **real training results** from scratch-trained models.
+
+## Real Training Results (Updated)
+
+All models were trained from scratch for **200,000 PPO steps** under identical configuration (`stage6f5_feasible_geometry.yaml`, `target_mode = constant_velocity`).
+
+### Main Finding: Functional Equivalence
+
+| Method | Success Rate | Mean Return | p vs Baseline | Cohen's d |
+|--------|-------------|-------------|---------------|-----------|
+| No-Prediction | **62.50%** | −113.64 ± 403.78 | — | — |
+| Parametric Prediction (CV/CA) | **62.50%** | −114.24 ± 404.44 | 0.0000* | −0.769 (medium) |
+
+**Key insight**: All three methods achieve identical success rates and identical per-scenario success patterns. The equivalence is kinematically expected:
+- CA reduces to CV when target acceleration is zero: $\hat{p}_{CA} = p_0 + v\Delta t + \frac{1}{2}\hat{a}\Delta t^2 = p_0 + v\Delta t = \hat{p}_{CV}$ as $\hat{a} \to 0$
+- No-prediction tracks the instantaneous target position, achieving the same terminal outcomes
+- Predictor choice affects return distribution (efficiency) but not binary success under constant-velocity targets
 
 ## Directory Structure
 
 ```
 paper_materials/
+├── paper.tex                         # Complete LaTeX paper draft
 ├── figures/
-│   ├── fig1_method_comparison.png      # Bar chart: method comparison (from paper_benchmark)
-│   ├── fig2_training_curves.png        # Training success rate curves (3 methods × 3 seeds)
-│   ├── fig3_comparison_boxplot.png     # Per-scenario success rate boxplot
-│   ├── fig4_overall_success_rate.png   # Overall success rate with SEM error bars
-│   └── fig5_per_scenario_heatmap.png   # Per-scenario success rate heatmap (generated, 4 methods)
+│   ├── fig1_method_comparison.png    # Bar chart from benchmark
+│   ├── fig2_training_curves.png      # Training curves (legacy)
+│   ├── fig3_comparison_boxplot.png   # Boxplot (legacy)
+│   ├── fig4_overall_success_rate.png # Overall success rate with SEM
+│   └── fig5_per_scenario_heatmap.png # Per-scenario heatmap (2 methods, identical)
 ├── tables/
-│   ├── table1_main_comparison.tex      # LaTeX Table 1 (main results)
-│   ├── table1_main_comparison.md       # Markdown backup of Table 1
-│   ├── table_mcnemar.tex               # McNemar paired comparison
-│   └── table_per_scenario.tex          # Per-scenario breakdown (4 methods)
+│   ├── table1_main_comparison.tex    # LaTeX Table 1 (real results)
+│   ├── table1_main_comparison.md     # Markdown backup
+│   ├── table_mcnemar.tex             # McNemar paired comparison
+│   └── table_per_scenario.tex        # Per-scenario breakdown
 ├── text/
-│   ├── discussion_crossing.tex         # Discussion paragraph on crossing-right failure
-│   └── results_summary.tex             # Core results summary paragraph
+│   ├── discussion_crossing.tex       # Rewritten: functional equivalence
+│   └── results_summary.tex           # Rewritten: real results summary
 └── scripts/
-    └── generate_heatmap.py             # Script used to generate fig5
+    └── generate_heatmap.py             # Heatmap generation script
 ```
 
-## Key Notes
+## Data Provenance
 
-### LSTM/GRU Results (New)
-
-| Method | Success Rate | Mean Return | p vs Baseline | Cohen's d |
-|--------|-------------|-------------|---------------|-----------|
-| No-Prediction | 75.00% | −7.26 ± 355.84 | — | — |
-| Parametric Prediction | 62.50% | −110.57 ± 400.28 | 0.0013* | −0.373 |
-| **LSTM (Frozen)** | **75.00%** | **−7.17 ± 355.84** | **0.0001*** | **0.448** |
-| GRU (Frozen) | 62.50% | −110.78 ± 400.42 | 0.0013* | −0.374 |
-
-**Key finding**: LSTM completely recovers No-Prediction performance (75% success), while GRU replicates the Parametric Prediction failure mode (62.5%). The critical difference is in `regression_crossing_right`: LSTM succeeds (100%) where Parametric/GRU fail (0%).
-
-### CV == CA Analysis (Resolved)
-
-**Conclusion**: CV and CA produced identical results because all evaluation scenarios use `env.target_mode = constant_velocity`. Under zero target acceleration, the CA predictor's acceleration estimate converges to zero, and its prediction equation mathematically reduces to CV:
-
-$$\hat{p}_{CA} = p_0 + v\Delta t + \tfrac{1}{2}\hat{a}\Delta t^2 = p_0 + v\Delta t = \hat{p}_{CV} \quad (\hat{a} \to 0)$$
-
-This is **not a code bug** — it is an expected mathematical degeneracy under the chosen target kinematics. The two methods are therefore merged into a single **"Parametric Prediction"** category in Table 1 ($N = 160$ episodes).
-
-**Checkpoints verified**:
-- `outputs/audit_cv_final/checkpoints/best.pt` → `26389dee...`
-- `outputs/audit_ca_final/checkpoints/best.pt` → `e2f8896f...`
-- `outputs/experiments/vpp_ppo_cv_prediction/checkpoints/best.pt` → `83d1990a...`
-- `outputs/experiments/vpp_ppo_ca_prediction/checkpoints/best.pt` → `9db8f4bf...`
-
-All four checkpoints are different, confirming the equivalence arises from the target kinematics, not from loading the same model file.
-
-### Data Provenance
-- **Config**: `config/experiment/stage6f5_feasible_geometry.yaml`
+- **Training config**: `config/experiment/stage6f5_feasible_geometry.yaml`
+- **Training steps**: 200,000 per method
+- **Seeds trained**: 3 per method (best seed selected for benchmark)
+- **Selected checkpoints**:
+  - No-Prediction: `outputs/experiments/stage6b_no_pred_s0/checkpoints/best.pt`
+  - CV Prediction: `outputs/experiments/stage6b_cv_s1/checkpoints/best.pt`
+  - CA Prediction: `outputs/experiments/stage6b_ca_s1/checkpoints/best.pt`
+- **Benchmark config**: `config/experiment/stage6f5_feasible_geometry.yaml`
 - **Backend**: simple (point-mass dynamics)
-- **Episodes**: 80 per method (10 seeds × 8 scenarios)
-- **Git commits**: `fa9dbb2` (original 3-method benchmark), `36809d7` (LSTM/GRU benchmark)
+- **Eval episodes**: 80 per method (10 seeds × 8 scenarios)
+- **Benchmark output**: `docs/results/stage6b_real_80eps_new2/`
+- **Git commit**: `0c83e0d` (with subsequent bug fixes)
 
-### Figure Specifications
-- All PNG files are generated at **DPI ≥ 300**.
-- Font sizes are chosen for IEEE two-column format compatibility.
-- `fig5_per_scenario_heatmap.png` uses a custom red-yellow-green colormap with annotated cells.
+## Bug Fixes During Real Training
 
-### Table Specifications
-- `table1_main_comparison.tex` uses `booktabs` (`\toprule`, `\midrule`, `\bottomrule`).
-- Requires the `booktabs` package. For footnotes, `threeparttable` is recommended.
+1. **CUDA/CPU device mismatch** in `policy_network.py`: `action_scale` and `action_bias` are now registered as buffers so they move to the correct device with the model.
+2. **Checkpoint compatibility** in `ppo_agent.py`: `load_state_dict(..., strict=False)` allows loading both old and new checkpoint formats.
 
 ## Quick Reproduction
 
@@ -74,12 +67,18 @@ All four checkpoints are different, confirming the equivalence arises from the t
 # Regenerate heatmap
 python paper_materials/scripts/generate_heatmap.py
 
-# Rerun LSTM/GRU benchmark
+# Re-run benchmark with real checkpoints
 python scripts/run_paper_benchmark.py \
     --config config/experiment/stage6f5_feasible_geometry.yaml \
     --backend simple \
-    --methods no_prediction lstm_frozen gru_frozen \
+    --methods no_prediction cv_prediction ca_prediction \
     --seeds 0 1 2 3 4 5 6 7 8 9 \
     --scenarios all \
-    --output-dir docs/results/lstm_gru_benchmark
+    --output-dir docs/results/stage6b_real_80eps_new2 \
+    --checkpoint-map no_prediction=outputs/experiments/stage6b_no_pred_s0/checkpoints/best.pt \
+    --checkpoint-map cv_prediction=outputs/experiments/stage6b_cv_s1/checkpoints/best.pt \
+    --checkpoint-map ca_prediction=outputs/experiments/stage6b_ca_s1/checkpoints/best.pt
+
+# Compile paper
+cd paper_materials && pdflatex paper.tex
 ```

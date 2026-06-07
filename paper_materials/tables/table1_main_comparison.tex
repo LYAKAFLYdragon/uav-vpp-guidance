@@ -1,25 +1,21 @@
 \begin{table}[t]
 \centering
-\caption{Success rates across guidance methods (feasible geometry, 10 evaluation seeds).}
+\caption{Success rates across guidance methods under constant-velocity target motion (feasible geometry, 10 evaluation seeds, $N = 80$ episodes per method).}
 \label{tab:main_results}
 \begin{tabular}{lcccc}
 \toprule
 Method & Success Rate & Mean Return & $p$ vs Baseline & Cohen's $d$ \\
 \midrule
-No-Prediction & 75.00\% & $-7.26 \pm 355.84$ & --- & --- \\
-Parametric Prediction$^\dagger$ & 62.50\% & $-110.57 \pm 400.28$ & $0.0013^*$ & $-0.373$ (small) \\
-LSTM (Frozen)$^\ddagger$ & 75.00\% & $-7.17 \pm 355.84$ & $0.0001^*$ & $0.448$ (small) \\
-GRU (Frozen)$^\ddagger$ & 62.50\% & $-110.78 \pm 400.42$ & $0.0013^*$ & $-0.374$ (small) \\
+No-Prediction & 62.50\% & $-113.64 \pm 403.78$ & --- & --- \\
+Parametric Prediction$^\dagger$ & 62.50\% & $-114.24 \pm 404.44$ & $0.0000^*$ & $-0.769$ (medium) \\
 \bottomrule
 \end{tabular}
 \begin{tablenotes}
 \small
 \item[$^\dagger$] CV and CA predictors produced identical predictions under 
-  constant-velocity target motion (see \S\ref{sec:discussion}).
-\item[$^\ddagger$] Neural predictors were frozen during RL training; the policy 
-  learns to use (or ignore) their outputs.
-\item * Paired $t$-test on episode return vs No-Prediction baseline, $N = 80$ episodes 
-  per method.  LSTM matches No-Prediction in success rate but shows a small 
-  statistically significant difference in return distribution.
+  constant-velocity target motion and are reported as a single category 
+  (see \S\ref{sec:discussion}).
+\item * Paired $t$-test on episode return vs No-Prediction baseline.  Success rates 
+  are identical, but return distributions differ significantly.
 \end{tablenotes}
 \end{table}

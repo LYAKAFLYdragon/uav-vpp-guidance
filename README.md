@@ -6,7 +6,7 @@ A research codebase for exploring guidance-law limitations in neural virtual-pur
 
 ## 1. Research Objective
 
-Determine when neural prediction improves aircraft tracking in pursuit-evasion, and when guidance-law limitations dominate. The project is organized into progressive stages (6E → 6F → 6G → 6H → 6I → 7A → 7B → 8B), with each stage producing **paper-safe evidence** and **runnable artifacts**.
+Determine when neural prediction improves aircraft tracking in pursuit-evasion, and when guidance-law limitations dominate. The project is organized into progressive stages (6E → 6F → 6G → 6H → 6I → 7A → 7B → 8B → 8B.1 → 8C → 9A), with each stage producing **paper-safe evidence** and **runnable artifacts**.
 
 ---
 
@@ -67,7 +67,9 @@ experiments/                ← Git-ignored: weights, checkpoints, results
 | 7A | ✅ Complete | Gain-only CEM optimization, metrics.py field fix, CEM unit tests | `scripts/run_gain_only_cem.py` |
 | 7B | ✅ Complete | Full BilevelTrainer with regret tracking, intermediate checkpoints, smoke test 100% SR | `scripts/train_bilevel.py` |
 | 8B | ✅ Complete | Paper-ready benchmark: 4-method evaluation, figures, tables, summary.md | `scripts/run_paper_benchmark.py` |
-| 8B.1 | 🧪 Ready | Remote sync & integration hardening: --dry-run, --allow-random-smoke, method metadata, training module fix | `python -m uav_vpp_guidance.training.train_bilevel --dry-run` |
+| 8B.1 | ✅ Complete | Remote sync & integration hardening: --dry-run, --allow-random-smoke, method metadata, training module fix | `python -m uav_vpp_guidance.training.train_bilevel --dry-run` |
+| 8C | ✅ Complete | Paper-safe readiness gate: config/gains/checkpoint metadata, unknown method hard-fail, training init semantics | `scripts/run_paper_benchmark.py` |
+| 9A | 🧪 Current | Experiment freeze & artifact contract: frozen checkpoint/gains/schema/manifest provenance | `scripts/run_paper_benchmark.py` |
 
 ---
 
@@ -274,7 +276,7 @@ After a full run, copy `README_result_block.md` into Section 6 of this README, r
 
 ---
 
-> **Current research status**: Bilevel optimization is **gated** until Stage 6G.5 identifies at least one feasible and gain-sensitive tail-chase configuration.
+> **Current research status**: Experiment freeze (Stage 9A) is in progress. The benchmark artifact contract (checkpoint precedence, gains schema, run manifest) is being hardened before the official simple-backend paper run and JSBSim validation.
 
 ## 7. Final Bilevel Roadmap
 
@@ -282,14 +284,14 @@ The goal is a **bilevel optimization system** where an outer loop optimizes guid
 
 | Gate | Name | Acceptance Criteria | Status |
 |---|---|---|---|
-| **6G.1** | Probe hardening + guidance limitation execution | Stage 6G outputs complete artifacts; paper-safe claims are no longer `Pending` or explicitly remain `Pending` | 🔄 In Progress |
-| **6G.2** | Guidance-law limitation analysis | Determination: tail-chase failure is LOS-rate limitation, geometric infeasibility, or policy/predictor limitation | ⏳ Pending |
-| **6H.0** | Gain-only CEM implementation | `CEMGainOptimizer` has unit tests, score contract, reproducible experiment output | ⏳ Not started |
-| **6H.1** | Fixed-policy gain optimization | Frozen VPP policy, optimize guidance gains, multi-seed comparison of fixed vs optimized | ⏳ Not started |
-| **6I.0** | Alternating bilevel training | Strategy step and gain step have explicit schedule, checkpoint, and rollback strategy | ⏳ Not started |
-| **6I.1** | Regret and stability audit | Report regret, success, stability, and failure roots | ⏳ Not started |
-| **7A** | JSBSim/F-16 validation | Simple backend conclusions transfer to 6DOF backend | ⏳ Not started |
-| **7B** | Paper release package | Frozen configs, seeds, CSVs, figures, summary, commit hash, environment file | ⏳ Not started |
+| **6G.1** | Probe hardening + guidance limitation execution | Stage 6G outputs complete artifacts; paper-safe claims are no longer `Pending` or explicitly remain `Pending` | ✅ Complete |
+| **6G.2** | Guidance-law limitation analysis | Determination: tail-chase failure is LOS-rate limitation, geometric infeasibility, or policy/predictor limitation | ✅ Complete |
+| **6H.0** | Gain-only CEM implementation | `CEMGainOptimizer` has unit tests, score contract, reproducible experiment output | ✅ Complete |
+| **6H.1** | Fixed-policy gain optimization | Frozen VPP policy, optimize guidance gains, multi-seed comparison of fixed vs optimized | ✅ Complete |
+| **6I.0** | Alternating bilevel training | Strategy step and gain step have explicit schedule, checkpoint, and rollback strategy | ✅ Complete |
+| **6I.1** | Regret and stability audit | Report regret, success, stability, and failure roots | ✅ Complete |
+| **7A** | JSBSim/F-16 validation | Simple backend conclusions transfer to 6DOF backend | ⏳ Pending (Stage 10) |
+| **7B** | Paper release package | Frozen configs, seeds, CSVs, figures, summary, commit hash, environment file | 🔄 In Progress (Stage 9A) |
 
 ### 7.1 Minimal Bilevel Architecture (Target)
 
@@ -369,6 +371,26 @@ pip freeze > requirements.txt
 # Commit requirements.txt before any release run
 ```
 
+### 8.4 Experiment Phase Order (frozen at Stage 9A)
+
+The remaining work is strictly sequential. Do not start a later phase until the earlier phase is frozen and its tests pass.
+
+1. **Stage 9A**: Freeze manifest and artifact contract  
+   — checkpoint precedence, gains schema, `run_manifest.json`, exact reproduction command.
+2. **Stage 9B**: Simple backend official paper-safe benchmark  
+   — full method matrix on simple backend, no `--allow-random-smoke`, all artifacts valid.
+3. **Stage 10**: JSBSim/F-16 high-fidelity validation  
+   — replicate paper-safe claims on JSBSim backend.
+
+### 8.5 Benchmark Types
+
+| Type | Purpose | CLI signal | Paper-safe? |
+|---|---|---|---|
+| **Smoke benchmark** | Fast correctness / CI check | `--allow-random-smoke` | ❌ No |
+| **Paper-safe dry-sized benchmark** | Small seeds/scenarios with real checkpoints/gains | no `--allow-random-smoke`, all artifacts valid | ✅ Yes (within tested scope) |
+| **Official paper experiment** | Full matrix, frozen config, archived manifest | exactly the command in `summary.md` | ✅ Yes |
+| **JSBSim validation** | Transfer check to 6-DOF F-16 | `--backend jsbsim` | ✅ Yes (if artifacts valid) |
+
 ---
 
 ## 9. Repository Structure
@@ -427,4 +449,4 @@ uav-vpp-guidance/
 
 ---
 
-*Last updated: 2026-06-06 | Active research branch: `feature/los-guidance-deep-hardening` | Stage 6H.0-R complete | Multi-checkpoint probe recovered non-tail-chase baseline (neutral 100%, challenging 100%); disadvantage confirmed 0% in Stage 6F.5 (not regression); 716 passed, 0 failed, 0 xpassed; 6H.0-lite unblocked*
+*Last updated: 2026-06-07 | Active branch: `main` | Stage 9A: experiment freeze & artifact contract in progress | 869 passed, 0 failed, 0 xpassed*

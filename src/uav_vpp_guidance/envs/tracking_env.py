@@ -165,8 +165,11 @@ class CloseRangeTrackingEnv:
         )
         self._command_filter = MultiChannelCommandFilter(alpha=filter_alpha)
 
-        # Current guidance gains (default fixed)
-        self.current_gains = GuidanceGains()
+        # Current guidance gains (loaded from config so external gain overrides
+        # actually propagate into the guidance law)
+        self.current_gains = GuidanceGains(
+            **config.get("guidance", {}).get("gains", {})
+        )
 
         # Trajectory prediction adapter
         self.trajectory_predictor_adapter = None

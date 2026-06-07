@@ -14,7 +14,7 @@ gain_optimizer:
   update_interval_iterations: 1
 
 regret:
-  w_return: 1.0
-  w_success: 200.0
-  w_crash: 300.0
-  w_saturation: 50.0
+  w_return_norm: 0.3
+  w_success: 0.4
+  w_crash: 0.15
+  w_saturation: 0.15

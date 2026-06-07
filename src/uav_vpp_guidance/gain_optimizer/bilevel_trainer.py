@@ -124,21 +124,23 @@ class BilevelTrainer:
         seeds = self.config.get("eval_seeds", [0, 1, 2])
 
         env = self.env_factory()
-        filtered = self._filter_gains(gains_dict)
-        env.current_gains = GuidanceGains(**filtered)
+        try:
+            filtered = self._filter_gains(gains_dict)
+            env.current_gains = GuidanceGains(**filtered)
 
-        successes = 0
-        total = 0
-        for scen in scenarios:
-            for seed in seeds:
-                result, _ = evaluate_single_episode(
-                    env, self.policy, env.config, scenario=scen, seed=seed
-                )
-                if result.get("is_success", False):
-                    successes += 1
-                total += 1
-        env.close()
-        return successes / total if total > 0 else 0.0
+            successes = 0
+            total = 0
+            for scen in scenarios:
+                for seed in seeds:
+                    result, _ = evaluate_single_episode(
+                        env, self.policy, env.config, scenario=scen, seed=seed
+                    )
+                    if result.get("is_success", False):
+                        successes += 1
+                    total += 1
+            return successes / total if total > 0 else 0.0
+        finally:
+            env.close()
 
     def _save_policy_snapshot(self):
         """Save current policy network weights for regret computation."""

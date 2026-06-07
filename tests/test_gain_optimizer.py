@@ -64,33 +64,33 @@ class TestRegret:
             "saturation_rate": 0.05,
         }
         weights = {
-            "return": 1.0,
-            "success_rate": 200.0,
-            "crash_rate": -300.0,
-            "saturation_rate": -50.0,
+            "return_norm": 0.3,
+            "success_rate": 0.4,
+            "crash_rate": -0.15,
+            "saturation_rate": -0.15,
         }
         score = compute_score(metrics, weights=weights)
-        # return_norm = (-50 + 500) / 1000 = 0.45
-        # raw = 1*0.45 + 200*0.8 - 300*0.1 - 50*0.05 = 127.95
-        # max = 201, min = -350, denom = 551
-        expected = (127.95 + 350.0) / 551.0
+        # return_norm = (-50 + 1000) / 2000 = 0.475
+        # raw = 0.3*0.475 + 0.4*0.8 - 0.15*0.1 - 0.15*0.05 = 0.44
+        # max = 0.7, min = -0.3, denom = 1.0
+        expected = (0.44 + 0.3) / 1.0
         assert score == pytest.approx(expected)
         assert 0.0 <= score <= 1.0
 
     def test_compute_score_missing_keys(self):
         metrics = {"success_rate": 1.0, "return": 10.0}
         weights = {
-            "success_rate": 200.0,
-            "return": 1.0,
-            "crash_rate": -300.0,
+            "success_rate": 0.4,
+            "return_norm": 0.3,
+            "crash_rate": -0.15,
         }
         with pytest.warns(UserWarning, match="crash_rate"):
             score = compute_score(metrics, weights=weights)
-        # return_norm = (10 + 500) / 1000 = 0.51
-        # raw = 200*1 + 1*0.51 = 200.51
-        # max = 201, min = 0, denom = 201
-        expected = 200.51 / 201.0
-        assert score == pytest.approx(expected)
+        # return_norm = (10 + 1000) / 2000 = 0.505
+        # raw = 0.4*1.0 + 0.3*0.505 = 0.5515
+        # used keys: success_rate, return_norm => max = 0.7, min = 0, denom = 0.7
+        expected = 0.5515 / 0.7
+        assert score == pytest.approx(expected, rel=1e-4)
         assert 0.0 <= score <= 1.0
 
     def test_compute_score_default_weights(self):
@@ -101,15 +101,33 @@ class TestRegret:
             "saturation_rate": 0.0,
         }
         score = compute_score(metrics, weights=None)
-        # Default weights from config/gain_space.yaml: w_success=200
-        # return_norm = 0.5, raw = 0.5 + 200 = 200.5
-        # max = 201, min = -350, denom = 551
-        expected = (200.5 + 350.0) / 551.0
+        # return_norm = 0.5, raw = 0.3*0.5 + 0.4*1.0 = 0.55
+        # max = 0.7, min = -0.3, denom = 1.0
+        expected = (0.55 + 0.3) / 1.0
         assert score > 0.0
         assert score == pytest.approx(expected, rel=1e-3)
         assert 0.0 <= score <= 1.0
 
     def test_compute_score_empty_metrics(self):
         with pytest.warns(UserWarning):
-            score = compute_score({}, weights={"success_rate": 200.0})
+            score = compute_score({}, weights={"success_rate": 0.4})
         assert score == pytest.approx(0.0)
+
+    def test_compute_score_dynamic_return_bounds(self):
+        metrics = {
+            "return": 100.0,
+            "return_min": -200.0,
+            "return_max": 200.0,
+            "success_rate": 0.8,
+        }
+        weights = {
+            "return_norm": 0.3,
+            "success_rate": 0.4,
+        }
+        score = compute_score(metrics, weights=weights)
+        # return_norm = (100 + 200) / 400 = 0.75
+        # raw = 0.3*0.75 + 0.4*0.8 = 0.225 + 0.32 = 0.545
+        # max = 0.7, min = 0, denom = 0.7
+        expected = 0.545 / 0.7
+        assert score == pytest.approx(expected, rel=1e-4)
+        assert 0.0 <= score <= 1.0

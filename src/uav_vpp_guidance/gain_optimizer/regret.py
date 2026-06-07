@@ -10,16 +10,11 @@ import yaml
 
 
 _DEFAULT_WEIGHTS = {
-    "return": 1.0,
-    "success_rate": 200.0,
-    "crash_rate": -300.0,
-    "saturation_rate": -50.0,
+    "return_norm": 0.3,
+    "success_rate": 0.4,
+    "crash_rate": -0.15,
+    "saturation_rate": -0.15,
 }
-
-# Fixed bounds for min-max normalizing episode return to [0, 1].
-# These should cover the practical range of accumulated rewards.
-_RETURN_MIN = -500.0
-_RETURN_MAX = 500.0
 
 
 def _load_weights_from_config(config_path="config/gain_space.yaml"):
@@ -30,10 +25,10 @@ def _load_weights_from_config(config_path="config/gain_space.yaml"):
         data = yaml.safe_load(f)
     regret = data.get("regret", {}) if data else {}
     mapping = {
-        "return": regret.get("w_return", 1.0),
-        "success_rate": regret.get("w_success", 200.0),
-        "crash_rate": -abs(regret.get("w_crash", 300.0)),
-        "saturation_rate": -abs(regret.get("w_saturation", 50.0)),
+        "return_norm": regret.get("w_return_norm", 0.3),
+        "success_rate": regret.get("w_success", 0.4),
+        "crash_rate": -abs(regret.get("w_crash", 0.15)),
+        "saturation_rate": -abs(regret.get("w_saturation", 0.15)),
     }
     return mapping
 
@@ -42,14 +37,18 @@ def compute_score(metrics, weights=None):
     """
     Composite score for gain evaluation.
 
-    Computes a weighted sum of evaluation metrics. The ``return`` metric is
-    min-max normalized to [0, 1] before weighting so that it is on the same
-    scale as ratio metrics (e.g. success_rate, crash_rate). The final score
-    is then linearly rescaled to the [0, 1] interval.
+    1. Dynamically min-max normalizes ``return`` to ``return_norm`` in [0, 1]
+       using ``return_min`` / ``return_max`` from ``metrics`` (defaults to
+       ``-1000`` / ``1000``).
+    2. Computes a weighted sum of normalized metrics.
+    3. Rescales the raw sum to [0, 1] based on the theoretical extrema of the
+       actually-used weights.
 
     Args:
         metrics (dict): Evaluation metrics. Expected keys include:
             - "return" (float): average episode return
+            - "return_min" (float, optional): lower bound for return normalization
+            - "return_max" (float, optional): upper bound for return normalization
             - "success_rate" (float): success rate in [0, 1]
             - "crash_rate" (float): crash rate in [0, 1]
             - "saturation_rate" (float): actuator saturation rate in [0, 1]
@@ -62,19 +61,24 @@ def compute_score(metrics, weights=None):
     if weights is None:
         weights = _load_weights_from_config()
 
-    # Min-max normalize return to [0, 1] so it shares the same scale as
-    # ratio metrics.
-    metrics = dict(metrics)
-    if "return" in metrics:
-        raw_return = float(metrics["return"])
-        norm_return = (raw_return - _RETURN_MIN) / (_RETURN_MAX - _RETURN_MIN)
-        metrics["return"] = float(np.clip(norm_return, 0.0, 1.0))
+    # Build a mutable copy and inject the normalized return.
+    evaluated = dict(metrics)
+    if "return" in evaluated:
+        raw_return = float(evaluated.pop("return"))
+        ret_min = float(evaluated.pop("return_min", -1000.0))
+        ret_max = float(evaluated.pop("return_max", 1000.0))
+        denom = ret_max - ret_min
+        if denom <= 0.0:
+            ret_norm = 0.5
+        else:
+            ret_norm = (raw_return - ret_min) / denom
+        evaluated["return_norm"] = float(np.clip(ret_norm, 0.0, 1.0))
 
     score = 0.0
     used_keys = set()
     for key, weight in weights.items():
-        if key in metrics:
-            score += weight * float(metrics[key])
+        if key in evaluated:
+            score += weight * float(evaluated[key])
             used_keys.add(key)
         else:
             warnings.warn(
@@ -84,8 +88,7 @@ def compute_score(metrics, weights=None):
             )
 
     # Map raw weighted sum to [0, 1] based on the theoretical range of the
-    # actually-used weights. This makes the score interpretable regardless of
-    # the absolute weight magnitudes.
+    # actually-used weights.
     if used_keys:
         max_possible = sum(max(0.0, weights[k]) for k in used_keys)
         min_possible = sum(min(0.0, weights[k]) for k in used_keys)
@@ -94,7 +97,7 @@ def compute_score(metrics, weights=None):
             score = (score - min_possible) / denominator
 
     # Warn if metrics contains keys not used by weights
-    unused = set(metrics.keys()) - used_keys
+    unused = set(evaluated.keys()) - used_keys
     if unused:
         warnings.warn(
             f"compute_score: metrics contains unused keys: {sorted(unused)}",

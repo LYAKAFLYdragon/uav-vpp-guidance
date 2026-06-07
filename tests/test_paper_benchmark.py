@@ -17,7 +17,7 @@ from run_paper_benchmark import (
     METHODS,
     evaluate_method,
     _resolve_checkpoint,
-    _load_gain_only_gains,
+    _load_method_gains,
     _config_hash,
     load_config,
 )
@@ -106,11 +106,11 @@ class TestGainSchemaValidation:
     def test_missing_file_raises(self, tmp_path):
         cfg = {"gains_path": str(tmp_path / "missing.json")}
         with pytest.raises(FileNotFoundError):
-            _load_gain_only_gains(cfg, allow_random_smoke=False)
+            _load_method_gains(cfg, allow_random_smoke=False)
 
     def test_missing_file_allows_smoke(self, tmp_path):
         cfg = {"gains_path": str(tmp_path / "missing.json")}
-        info = _load_gain_only_gains(cfg, allow_random_smoke=True)
+        info = _load_method_gains(cfg, allow_random_smoke=True)
         assert info["gains_exists"] is False
         assert info["gains_schema_valid"] is False
 
@@ -119,21 +119,21 @@ class TestGainSchemaValidation:
         gains_file.write_text("not json")
         cfg = {"gains_path": str(gains_file)}
         with pytest.raises(ValueError):
-            _load_gain_only_gains(cfg, allow_random_smoke=False)
+            _load_method_gains(cfg, allow_random_smoke=False)
 
     def test_missing_best_gains_raises(self, tmp_path):
         gains_file = tmp_path / "bad.json"
         gains_file.write_text(json.dumps({"history": []}))
         cfg = {"gains_path": str(gains_file)}
         with pytest.raises(ValueError):
-            _load_gain_only_gains(cfg, allow_random_smoke=False)
+            _load_method_gains(cfg, allow_random_smoke=False)
 
     def test_empty_best_gains_raises(self, tmp_path):
         gains_file = tmp_path / "bad.json"
         gains_file.write_text(json.dumps({"best_gains": {}}))
         cfg = {"gains_path": str(gains_file)}
         with pytest.raises(ValueError):
-            _load_gain_only_gains(cfg, allow_random_smoke=False)
+            _load_method_gains(cfg, allow_random_smoke=False)
 
     def test_unsupported_fields_ignored(self, tmp_path):
         gains_file = tmp_path / "gains.json"
@@ -141,7 +141,7 @@ class TestGainSchemaValidation:
             json.dumps({"best_gains": {"k_los": 2.0, "foo": 1.0}})
         )
         cfg = {"gains_path": str(gains_file)}
-        info = _load_gain_only_gains(cfg, allow_random_smoke=False)
+        info = _load_method_gains(cfg, allow_random_smoke=False)
         assert info["gains_exists"] is True
         assert info["gains_schema_valid"] is True
         assert info["loaded_gains"] == {"k_los": 2.0}
@@ -152,13 +152,13 @@ class TestGainSchemaValidation:
         gains_file.write_text(json.dumps({"best_gains": {"foo": 1.0}}))
         cfg = {"gains_path": str(gains_file)}
         with pytest.raises(ValueError):
-            _load_gain_only_gains(cfg, allow_random_smoke=False)
+            _load_method_gains(cfg, allow_random_smoke=False)
 
     def test_valid_best_gains_loaded(self, tmp_path):
         gains_file = tmp_path / "gains.json"
         gains_file.write_text(json.dumps({"best_gains": {"k_los": 2.0, "k_pos": 0.7}}))
         cfg = {"gains_path": str(gains_file)}
-        info = _load_gain_only_gains(cfg, allow_random_smoke=False)
+        info = _load_method_gains(cfg, allow_random_smoke=False)
         assert info["loaded_gains"] == {"k_los": 2.0, "k_pos": 0.7}
         assert info["ignored_gain_fields"] == []
         assert info["gains_schema_valid"] is True

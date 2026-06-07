@@ -59,6 +59,12 @@ METHODS = {
         "gains_path": "outputs/gain_only_cem/cem_results.json",
         "note": "Same policy as no_prediction but with CEM-optimized gains",
     },
+    "bilevel": {
+        "checkpoint": "outputs/bilevel_training/checkpoints/best.pt",
+        "config_method": "no_prediction",
+        "gains_path": "outputs/bilevel_training/bilevel_results.json",
+        "note": "Bilevel co-optimization: PPO policy + CEM gains",
+    },
 }
 
 
@@ -137,8 +143,8 @@ def _resolve_checkpoint(
 _GAIN_FIELD_NAMES = {f.name for f in fields(GuidanceGains)}
 
 
-def _load_gain_only_gains(method_cfg: dict, allow_random_smoke: bool) -> dict:
-    """Load and validate CEM-optimized gains for gain_only method.
+def _load_method_gains(method_cfg: dict, allow_random_smoke: bool, method_name: str = "gain_only") -> dict:
+    """Load and validate CEM-optimized gains for a method.
 
     Returns:
         {
@@ -162,20 +168,20 @@ def _load_gain_only_gains(method_cfg: dict, allow_random_smoke: bool) -> dict:
     gains_path = method_cfg.get("gains_path")
     if not gains_path:
         if allow_random_smoke:
-            print("WARNING: gains_path not configured for gain_only")
+            print(f"WARNING: gains_path not configured for {method_name}")
             return default_invalid
         raise FileNotFoundError(
-            "gains_path not configured for gain_only. "
+            f"gains_path not configured for {method_name}. "
             "Use --allow-random-smoke to proceed without gains."
         )
 
     gains_file = Path(gains_path)
     if not gains_file.exists():
         if allow_random_smoke:
-            print(f"WARNING: Gains file not found for gain_only: {gains_path}")
+            print(f"WARNING: Gains file not found for {method_name}: {gains_path}")
             return default_invalid
         raise FileNotFoundError(
-            f"Gains file not found for gain_only: {gains_path}. "
+            f"Gains file not found for {method_name}: {gains_path}. "
             "Use --allow-random-smoke to proceed without gains."
         )
 
@@ -265,8 +271,8 @@ def evaluate_method(
         "gains_schema_valid": None,
         "gains_exists": False,
     }
-    if method_name == "gain_only":
-        gains_info = _load_gain_only_gains(method_cfg, allow_random_smoke)
+    if method_name in ("gain_only", "bilevel"):
+        gains_info = _load_method_gains(method_cfg, allow_random_smoke, method_name=method_name)
         loaded_gains = gains_info["loaded_gains"]
         if loaded_gains:
             if "gains" not in config["guidance"]:
@@ -317,7 +323,7 @@ def evaluate_method(
     invalid_reasons = []
     if not ckpt_exists:
         invalid_reasons.append("missing_checkpoint")
-    if method_name == "gain_only":
+    if method_name in ("gain_only", "bilevel"):
         if not gains_info["gains_exists"]:
             invalid_reasons.append("missing_gains_file")
         if not gains_info["gains_schema_valid"]:
@@ -337,7 +343,7 @@ def evaluate_method(
         "seeds": list(seeds),
         "prediction_mode": method_cfg["config_method"],
         "guidance_mode": config.get("guidance", {}).get("mode", "unknown"),
-        "gain_source": "cem" if method_name == "gain_only" else "default",
+        "gain_source": "cem" if method_name in ("gain_only", "bilevel") else "default",
         # Checkpoint provenance (final/frozen contract)
         "checkpoint_path_final": ckpt_path,
         "checkpoint_source": ckpt_source,

@@ -269,20 +269,19 @@ def train_ppo(config, output_dir, smoke=False):
                     for step in range(rollout_steps):
                         obs_vec = obs["observation_vector"]
                         action, log_prob, value = agent.select_action(obs_vec, deterministic=False, store=False)
-                        agent.store_transition(obs_vec, action, log_prob, 0.0, False, value)
 
                         obs, reward, terminated, truncated, info = env.step(action)
+                        done = terminated or truncated
                         global_step += 1
                         episode_return += reward
                         episode_length += 1
 
+                        # Store transition with actual reward/done from env.step()
+                        agent.store_transition(obs_vec, action, log_prob, reward, done, value)
+
                         rel_state = obs.get("relative_state", {})
                         range_m = rel_state.get("range_m", 0.0)
                         episode_ranges.append(range_m)
-
-                        # Update last stored transition with actual reward and done
-                        agent.buffer.rewards[agent.buffer.ptr - 1] = float(reward)
-                        agent.buffer.dones[agent.buffer.ptr - 1] = float(terminated or truncated)
 
                         if terminated or truncated:
                             # Episode ended

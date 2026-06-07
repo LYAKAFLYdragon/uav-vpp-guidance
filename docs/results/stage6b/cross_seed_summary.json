@@ -1,0 +1,62 @@
+{
+  "git_commit": "fa9dbb2",
+  "methods": {
+    "no_prediction": {
+      "num_training_seeds": 3,
+      "instant_success_rate_mean": 0.16666666666666666,
+      "instant_success_rate_std": 0.14433756729740646,
+      "mean_return_mean": -331.25228992433466,
+      "mean_return_std": 91.1771838015021,
+      "failure_rate_mean": NaN,
+      "failure_rate_std": NaN,
+      "crash_rate_mean": 0.0,
+      "crash_rate_std": 0.0,
+      "out_of_bounds_rate_mean": 0.8333333333333334,
+      "out_of_bounds_rate_std": 0.14433756729740646,
+      "timeout_rate_mean": 0.0,
+      "timeout_rate_std": 0.0,
+      "mean_final_range_m_mean": 6841.255624178341,
+      "mean_final_range_m_std": 1031.1427393662586,
+      "mean_final_ata_deg_mean": 105.72331911892813,
+      "mean_final_ata_deg_std": 15.257359428140669
+    },
+    "cv_prediction": {
+      "num_training_seeds": 3,
+      "instant_success_rate_mean": 0.25,
+      "instant_success_rate_std": 0.25,
+      "mean_return_mean": -279.26942003243636,
+      "mean_return_std": 156.43418041875995,
+      "failure_rate_mean": NaN,
+      "failure_rate_std": NaN,
+      "crash_rate_mean": 0.0,
+      "crash_rate_std": 0.0,
+      "out_of_bounds_rate_mean": 0.75,
+      "out_of_bounds_rate_std": 0.25,
+      "timeout_rate_mean": 0.0,
+      "timeout_rate_std": 0.0,
+      "mean_final_range_m_mean": 6239.304475741672,
+      "mean_final_range_m_std": 1785.6065159498821,
+      "mean_final_ata_deg_mean": 96.34578318906175,
+      "mean_final_ata_deg_std": 25.83923428070331
+    },
+    "ca_prediction": {
+      "num_training_seeds": 3,
+      "instant_success_rate_mean": 0.25,
+      "instant_success_rate_std": 0.25,
+      "mean_return_mean": -279.26942003243636,
+      "mean_return_std": 156.43418041875995,
+      "failure_rate_mean": NaN,
+      "failure_rate_std": NaN,
+      "crash_rate_mean": 0.0,
+      "crash_rate_std": 0.0,
+      "out_of_bounds_rate_mean": 0.75,
+      "out_of_bounds_rate_std": 0.25,
+      "timeout_rate_mean": 0.0,
+      "timeout_rate_std": 0.0,
+      "mean_final_range_m_mean": 6239.304475741672,
+      "mean_final_range_m_std": 1785.6065159498821,
+      "mean_final_ata_deg_mean": 96.34578318906175,
+      "mean_final_ata_deg_std": 25.83923428070331
+    }
+  }
+}

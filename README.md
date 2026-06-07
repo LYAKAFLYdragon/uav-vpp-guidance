@@ -276,7 +276,7 @@ After a full run, copy `README_result_block.md` into Section 6 of this README, r
 
 ---
 
-> **Current research status**: Experiment freeze (Stage 9A) is in progress. The benchmark artifact contract (checkpoint precedence, gains schema, run manifest) is being hardened before the official simple-backend paper run and JSBSim validation.
+> **Current research status**: Stage 9B (simple backend benchmark) and Stage 10 (JSBSim validation) are complete. Stage 10 revealed a geometry-dependent partial transfer: head-on scenarios achieve 100% on JSBSim F-16, while crossing scenarios fail due to F-16 turn-rate/energy limits. The earlier 0% JSBSim claim was caused by a scenario-position initialization bug, now fixed in commit `c8809ca`.
 
 ## 7. Final Bilevel Roadmap
 
@@ -290,7 +290,7 @@ The goal is a **bilevel optimization system** where an outer loop optimizes guid
 | **6H.1** | Fixed-policy gain optimization | Frozen VPP policy, optimize guidance gains, multi-seed comparison of fixed vs optimized | ✅ Complete |
 | **6I.0** | Alternating bilevel training | Strategy step and gain step have explicit schedule, checkpoint, and rollback strategy | ✅ Complete |
 | **6I.1** | Regret and stability audit | Report regret, success, stability, and failure roots | ✅ Complete |
-| **7A** | JSBSim/F-16 validation | Simple backend conclusions transfer to 6DOF backend | ⏳ Pending (Stage 10) |
+| **7A** | JSBSim/F-16 validation | Simple backend conclusions transfer to 6DOF backend | ✅ Complete (Stage 10.2 corrected) — partial geometry-dependent transfer; head-on 100%, crossing 0% |
 | **7B** | Paper release package | Frozen configs, seeds, CSVs, figures, summary, commit hash, environment file | 🔄 In Progress (Stage 9A) |
 
 ### 7.1 Minimal Bilevel Architecture (Target)
@@ -380,7 +380,9 @@ The remaining work is strictly sequential. Do not start a later phase until the 
 2. **Stage 9B**: Simple backend official paper-safe benchmark  
    — full method matrix on simple backend, no `--allow-random-smoke`, all artifacts valid.
 3. **Stage 10**: JSBSim/F-16 high-fidelity validation  
-   — replicate paper-safe claims on JSBSim backend.
+   — replicate paper-safe claims on JSBSim backend.  
+   — **Status**: ✅ Complete (corrected). Head-on geometries 100% success; crossing geometries 0% success.  
+   — **Superseded artifact**: `outputs/stage10_jsbsim_validation/` (0% raw result) → corrected run at `outputs/stage10_2_jsbsim_corrected_official_20260607_164836`.
 
 ### 8.5 Benchmark Types
 

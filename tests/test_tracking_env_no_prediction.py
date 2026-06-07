@@ -359,3 +359,110 @@ class TestStrictBackend:
         _, _, _, _, info = env.step(np.zeros(3))
         assert info["backend"] == env._backend
         env.close()
+
+
+class TestCommandOverrideBackwardCompatibility:
+    """Tests for the command_override parameter added in Stage 10.1."""
+
+    def test_step_without_command_override_works(self, base_config):
+        """Default step() behavior is unchanged."""
+        env = CloseRangeTrackingEnv(base_config)
+        env.reset(seed=0)
+        obs, reward, terminated, truncated, info = env.step(np.zeros(3))
+        assert "guidance_command" in info
+        assert info.get("effective_guidance_mode") != "command_override"
+        env.close()
+
+    def test_command_override_bypasses_policy_and_guidance(self, base_config):
+        """command_override injects a command directly, bypassing VPP/guidance."""
+        env = CloseRangeTrackingEnv(base_config)
+        env.reset(seed=0)
+        override = {"nz_cmd": 2.0, "roll_rate_cmd": 0.5, "throttle_cmd": 0.8}
+        obs, reward, terminated, truncated, info = env.step(
+            np.zeros(3), command_override=override
+        )
+        assert info.get("effective_guidance_mode") == "command_override"
+        assert info.get("virtual_point_source") == "command_override"
+        # The command should still be clipped/filtered but originate from override
+        gc = info.get("guidance_command", {})
+        assert abs(gc.get("nz_cmd", 0.0) - 2.0) < 0.5  # close after filter
+        env.close()
+
+    def test_command_override_clipping_still_applies(self, base_config):
+        """Even with override, limits are enforced for safety."""
+        env = CloseRangeTrackingEnv(base_config)
+        env.reset(seed=0)
+        override = {"nz_cmd": 100.0, "roll_rate_cmd": 0.0, "throttle_cmd": 0.5}
+        _, _, _, _, info = env.step(np.zeros(3), command_override=override)
+        gc = info.get("guidance_command", {})
+        assert gc["nz_cmd"] <= base_config["limits"]["nz_max"]
+        env.close()
+
+
+class TestScenarioPositionConversionRegression:
+    """Regression tests for Stage 10.1 position conversion bug."""
+
+    def test_scenario_to_jsbsim_init_sets_geodetic_for_nonzero_xy(self, base_config):
+        """If position_m has nonzero x or y, lon/lat must be set."""
+        try:
+            import pymap3d  # noqa: F401
+        except ImportError:
+            pytest.skip("pymap3d not installed")
+
+        base_config["env"]["use_jsbsim"] = True
+        base_config["env"]["strict_backend"] = True
+        base_config["env"]["legacy_project_root"] = "E:/CloseAirCombat_control"
+        base_config["env"]["origin"] = [120.0, 60.0, 0.0]
+
+        env = CloseRangeTrackingEnv(base_config)
+        if env._backend != "jsbsim":
+            pytest.skip("JSBSim backend not available")
+
+        scenario = {
+            "own_init": {
+                "position_m": [0.0, 0.0, 5000.0],
+                "velocity_mps": 200.0,
+                "heading_deg": 0.0,
+            },
+            "target_init": {
+                "position_m": [2000.0, 0.0, 5000.0],
+                "velocity_mps": 200.0,
+                "heading_deg": 180.0,
+            },
+        }
+        own_init = env._scenario_to_jsbsim_init(scenario["own_init"])
+        target_init = env._scenario_to_jsbsim_init(scenario["target_init"])
+
+        assert "ic/long-gc-deg" in own_init
+        assert "ic/lat-geod-deg" in own_init
+        assert "ic/long-gc-deg" in target_init
+        assert "ic/lat-geod-deg" in target_init
+
+        # Target is 2000m north of origin at lat=60deg
+        assert target_init["ic/lat-geod-deg"] > own_init["ic/lat-geod-deg"]
+        env.close()
+
+    def test_zero_xy_position_keeps_default_origin(self, base_config):
+        """If position_m is [0,0,z], lon/lat should still be set (to origin)."""
+        try:
+            import pymap3d  # noqa: F401
+        except ImportError:
+            pytest.skip("pymap3d not installed")
+
+        base_config["env"]["use_jsbsim"] = True
+        base_config["env"]["strict_backend"] = True
+        base_config["env"]["legacy_project_root"] = "E:/CloseAirCombat_control"
+        base_config["env"]["origin"] = [120.0, 60.0, 0.0]
+
+        env = CloseRangeTrackingEnv(base_config)
+        if env._backend != "jsbsim":
+            pytest.skip("JSBSim backend not available")
+
+        init = env._scenario_to_jsbsim_init(
+            {"position_m": [0.0, 0.0, 5000.0], "velocity_mps": 200.0, "heading_deg": 0.0}
+        )
+        assert "ic/long-gc-deg" in init
+        assert "ic/lat-geod-deg" in init
+        assert init["ic/long-gc-deg"] == pytest.approx(120.0, abs=1e-6)
+        assert init["ic/lat-geod-deg"] == pytest.approx(60.0, abs=1e-6)
+        env.close()

@@ -7,6 +7,8 @@ Regret tracking: records regret for each (policy, gains) pairing
 """
 
 import copy
+import json
+from pathlib import Path
 from typing import Callable, Dict, List, Optional, Tuple
 
 import numpy as np
@@ -213,6 +215,11 @@ class BilevelTrainer:
                 f"Eval SR: {eval_sr:.2%} | Regret: {regret:.4f}"
             )
 
+            # Periodic checkpoint
+            if episode > 0 and episode % max(1, self.outer_every * 5) == 0:
+                ckpt_dir = self.config.get("checkpoint_dir", "outputs/bilevel_training")
+                self._save_checkpoint(episode, best_gains_iter, ckpt_dir)
+
         return {
             "history": self.history,
             "regret_log": self.regret_log,
@@ -220,3 +227,25 @@ class BilevelTrainer:
             "best_gains": best_gains,
             "best_success_rate": best_policy_sr,
         }
+
+    def _save_checkpoint(self, episode: int, gains: dict, output_dir: str) -> None:
+        """Save training checkpoint."""
+        ckpt_dir = Path(output_dir) / "checkpoints"
+        ckpt_dir.mkdir(parents=True, exist_ok=True)
+
+        # Save policy
+        policy_path = ckpt_dir / f"policy_ep{episode}.pt"
+        self.policy.save(str(policy_path))
+
+        # Save gains + history
+        meta = {
+            "episode": episode,
+            "gains": gains,
+            "history": self.history[-10:] if self.history else [],
+            "regret_log": self.regret_log[-10:] if self.regret_log else [],
+        }
+        meta_path = ckpt_dir / f"meta_ep{episode}.json"
+        with open(meta_path, "w", encoding="utf-8") as f:
+            json.dump(meta, f, default=str, indent=2)
+
+        print(f"[Checkpoint] Saved at episode {episode}: {policy_path}")

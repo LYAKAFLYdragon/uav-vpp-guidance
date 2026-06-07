@@ -847,6 +847,11 @@ class TestComparisonInvalidForPaper(unittest.TestCase):
 class TestStage6FOutputValidation(unittest.TestCase):
     """Validation script must detect formal output anomalies."""
 
+    @unittest.skipUnless(
+        os.path.isdir("outputs/tables/stage6f_full_ablation")
+        and os.path.isdir("outputs/tables/stage6f_pilot"),
+        "Stage 6F artifact directories not present (fresh clone or incomplete outputs)",
+    )
     def test_validation_passes_on_pilot(self):
         from scripts.validate_stage6f_outputs import validate
         import argparse

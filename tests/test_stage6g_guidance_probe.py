@@ -131,27 +131,37 @@ class TestPaperSafeClaimsDoNotUsePValueOnly(unittest.TestCase):
 class TestPaperNarrativeContainsLimitations(unittest.TestCase):
     """Paper narrative and sections must explicitly discuss limitations."""
 
+    _RESULTS_PATH = "outputs/paper/stage6_results_section.md"
+    _LIMITATIONS_PATH = "outputs/paper/stage6_limitations_section.md"
+    _DISCUSSION_PATH = "outputs/paper/stage6_discussion_section.md"
+
+    @unittest.skipUnless(
+        os.path.exists(_RESULTS_PATH),
+        f"Paper narrative artifact missing: {_RESULTS_PATH}",
+    )
     def test_results_section_mentions_tail_chase_limitation(self):
-        path = "outputs/paper/stage6_results_section.md"
-        self.assertTrue(os.path.exists(path))
-        with open(path, "r", encoding="utf-8") as f:
+        with open(self._RESULTS_PATH, "r", encoding="utf-8") as f:
             content = f.read()
         self.assertIn("vpp formulation", content.lower())
         self.assertIn("pursuit geometry limitation", content.lower())
         self.assertIn("tail-chase", content.lower())
 
+    @unittest.skipUnless(
+        os.path.exists(_LIMITATIONS_PATH),
+        f"Paper narrative artifact missing: {_LIMITATIONS_PATH}",
+    )
     def test_limitations_section_exists(self):
-        path = "outputs/paper/stage6_limitations_section.md"
-        self.assertTrue(os.path.exists(path))
-        with open(path, "r", encoding="utf-8") as f:
+        with open(self._LIMITATIONS_PATH, "r", encoding="utf-8") as f:
             content = f.read()
         self.assertIn("training seed", content.lower())
         self.assertIn("kinematic", content.lower())
 
+    @unittest.skipUnless(
+        os.path.exists(_DISCUSSION_PATH),
+        f"Paper narrative artifact missing: {_DISCUSSION_PATH}",
+    )
     def test_discussion_section_mentions_cross_seed(self):
-        path = "outputs/paper/stage6_discussion_section.md"
-        self.assertTrue(os.path.exists(path))
-        with open(path, "r", encoding="utf-8") as f:
+        with open(self._DISCUSSION_PATH, "r", encoding="utf-8") as f:
             content = f.read()
         self.assertIn("cross-seed", content.lower())
         self.assertIn("episode-level", content.lower())

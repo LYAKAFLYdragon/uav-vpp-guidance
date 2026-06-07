@@ -16,6 +16,8 @@ import numpy as np
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
+_THRESHOLD_CKPT = PROJECT_ROOT / "outputs" / "experiments" / "no_prediction_vpp_ppo_seed0" / "checkpoints" / "best.pt"
+
 
 class TestThresholdGridSize(unittest.TestCase):
     """Full search space must contain 1152 configs."""
@@ -174,6 +176,8 @@ class TestRegressionBaselineRequiredForSearch(unittest.TestCase):
     """Real run must reject if regression baseline file is missing in formal mode."""
 
     def test_exploratory_mode_runs_without_baseline(self):
+        if not _THRESHOLD_CKPT.exists():
+            self.skipTest(f"Checkpoint not found: {_THRESHOLD_CKPT}")
         import importlib.util
         spec = importlib.util.spec_from_file_location(
             "run_stage6h0_lite_threshold_search",
@@ -266,6 +270,8 @@ class TestRawEpisodesSchema(unittest.TestCase):
     """raw_episodes.csv must include required telemetry fields."""
 
     def test_csv_has_geometry_family_and_guidance_mode(self):
+        if not _THRESHOLD_CKPT.exists():
+            self.skipTest(f"Checkpoint not found: {_THRESHOLD_CKPT}")
         import importlib.util
         spec = importlib.util.spec_from_file_location(
             "run_stage6h0_lite_threshold_search",

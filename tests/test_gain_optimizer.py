@@ -6,7 +6,7 @@ import pytest
 import numpy as np
 from uav_vpp_guidance.gain_optimizer.gain_space import GainSpace
 from uav_vpp_guidance.gain_optimizer.cem import CEMGainOptimizer
-from uav_vpp_guidance.gain_optimizer.regret import compute_empirical_regret
+from uav_vpp_guidance.gain_optimizer.regret import compute_empirical_regret, compute_score
 
 
 class TestGainSpace:
@@ -55,3 +55,58 @@ class TestRegret:
         scores = np.array([1.0, 3.0, 2.0])
         regret = compute_empirical_regret(scores, current_index=1)
         assert regret == pytest.approx(0.0)
+
+    def test_compute_score_basic(self):
+        metrics = {
+            "return": -50.0,
+            "success_rate": 0.8,
+            "crash_rate": 0.1,
+            "saturation_rate": 0.05,
+            "command_smoothness": 0.9,
+        }
+        weights = {
+            "return": 1.0,
+            "success_rate": 200.0,
+            "crash_rate": -300.0,
+            "saturation_rate": -50.0,
+            "command_smoothness": 10.0,
+        }
+        score = compute_score(metrics, weights=weights)
+        expected = (
+            1.0 * (-50.0)
+            + 200.0 * 0.8
+            - 300.0 * 0.1
+            - 50.0 * 0.05
+            + 10.0 * 0.9
+        )
+        assert score == pytest.approx(expected)
+
+    def test_compute_score_missing_keys(self):
+        metrics = {"success_rate": 1.0, "return": 10.0}
+        weights = {
+            "success_rate": 200.0,
+            "return": 1.0,
+            "crash_rate": -300.0,
+        }
+        with pytest.warns(UserWarning, match="crash_rate"):
+            score = compute_score(metrics, weights=weights)
+        expected = 200.0 * 1.0 + 1.0 * 10.0
+        assert score == pytest.approx(expected)
+
+    def test_compute_score_default_weights(self):
+        metrics = {
+            "return": 0.0,
+            "success_rate": 1.0,
+            "crash_rate": 0.0,
+            "saturation_rate": 0.0,
+            "command_smoothness": 1.0,
+        }
+        score = compute_score(metrics, weights=None)
+        # Default weights from config/gain_space.yaml: w_success=200, w_command_smooth=10
+        assert score > 0.0
+        assert score == pytest.approx(210.0, rel=0.1)
+
+    def test_compute_score_empty_metrics(self):
+        with pytest.warns(UserWarning):
+            score = compute_score({}, weights={"success_rate": 200.0})
+        assert score == pytest.approx(0.0)

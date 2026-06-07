@@ -13,7 +13,7 @@ Eliminates duplication and guarantees semantic consistency across:
 import copy
 from typing import Dict, List, Optional
 
-from .geometry_scenarios import build_explicit_scenario, VALID_SCENARIO_TYPES
+from .geometry_scenarios import build_explicit_scenario
 
 
 class ScenarioRegistry:

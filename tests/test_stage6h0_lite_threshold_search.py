@@ -4,15 +4,11 @@ Stage 6H.0-F.3: Registry migration tests.
 """
 
 import csv
-import json
-import os
 import subprocess
 import sys
 import unittest
-import warnings
 from pathlib import Path
 
-import numpy as np
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 

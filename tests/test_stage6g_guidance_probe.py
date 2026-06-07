@@ -31,7 +31,6 @@ class TestStage6F6RemoteArtifacts(unittest.TestCase):
 
     def test_analysis_has_expected_seeds_guard(self):
         from scripts.analyze_stage6f5_results import discover_training_seeds
-        import tempfile
         with tempfile.TemporaryDirectory() as tmpdir:
             # Extra seed should be ignored
             for seed in [0, 1, 99]:
@@ -172,7 +171,8 @@ class TestGuidanceProbeConfig(unittest.TestCase):
 
     def test_build_probe_config_overrides_guidance_mode(self):
         from scripts.run_stage6g_guidance_limitation_probe import build_probe_config
-        import tempfile, yaml, os
+        import yaml
+        import os
         with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False, encoding="utf-8") as f:
             base = {
                 "guidance": {"mode": "los_rate", "gains": {"k_los": 1.0}},
@@ -192,7 +192,8 @@ class TestGuidanceProbeConfig(unittest.TestCase):
 
     def test_probe_rejects_unknown_scenario(self):
         from scripts.run_stage6g_guidance_limitation_probe import build_probe_config
-        import tempfile, yaml, os
+        import yaml
+        import os
         with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False, encoding="utf-8") as f:
             yaml.dump({"scenarios": {"favorable": {}}}, f)
             temp_path = f.name
@@ -258,7 +259,8 @@ class TestGuidanceProbeResolvedConfigSaved(unittest.TestCase):
 
     def test_build_probe_config_saves_mode(self):
         from scripts.run_stage6g_guidance_limitation_probe import build_probe_config
-        import tempfile, yaml, os
+        import yaml
+        import os
         with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False, encoding="utf-8") as f:
             base = {
                 "guidance": {"mode": "los_rate", "gains": {"k_los": 1.0}},

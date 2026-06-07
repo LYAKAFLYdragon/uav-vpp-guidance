@@ -11,7 +11,7 @@ This module eliminates ambiguity between:
 """
 
 import math
-from typing import Dict, Optional, Tuple
+from typing import Dict
 
 import numpy as np
 

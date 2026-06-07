@@ -18,13 +18,11 @@ import argparse
 import copy
 import csv
 import json
-import math
 import os
 import sys
 import time
 from pathlib import Path
 
-import numpy as np
 import yaml
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
@@ -144,7 +142,7 @@ def run_geometry_smoke(
     print(f"  Saved resolved config: {resolved_path}")
 
     if dry_run:
-        print(f"\n=== DRY RUN ===")
+        print("\n=== DRY RUN ===")
         print(f"Would evaluate {len(sampled_points)} geometry points")
         print(f"Episodes per point: {episodes_per_point}")
         print(f"Eval seeds: {eval_seeds}")

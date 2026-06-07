@@ -2,7 +2,6 @@
 Configuration loading and merging utilities.
 """
 
-import os
 import yaml
 
 

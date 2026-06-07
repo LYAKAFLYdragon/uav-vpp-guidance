@@ -4,7 +4,6 @@ Pursuit point priors (lag, lead, pure pursuit).
 TODO: Extract pursuit geometry from legacy project or reference texts.
 """
 
-import numpy as np
 
 
 def lag_pursuit_point(target_state, d_ref):

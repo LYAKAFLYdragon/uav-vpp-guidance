@@ -113,7 +113,7 @@ def aggregate_metrics_with_statistics(episodes_list, method_names):
             'pairwise': dict of pairwise comparisons,
         }
     """
-    from .statistical_comparison import paired_t_test, cohens_d, compare_methods
+    from .statistical_comparison import paired_t_test, cohens_d
 
     # Validate seed alignment across methods
     baseline_seeds = {ep.get("seed") for ep in episodes_list[0] if ep.get("seed") is not None}

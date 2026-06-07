@@ -195,7 +195,6 @@ class TestDeviceUtils:
         assert str(next(model2.parameters()).device) == "cpu"
 
     def test_load_checkpoint_missing_strict(self, tmpdir):
-        import torch
         from uav_vpp_guidance.trajectory_prediction.device_utils import load_checkpoint_to_model
         from uav_vpp_guidance.trajectory_prediction.lstm_predictor import LSTMTrajectoryPredictor
 
@@ -386,7 +385,8 @@ class TestConfigValidator:
 class TestTelemetryContract:
     def test_env_info_contains_all_telemetry_fields(self, tmpdir):
         """CloseRangeTrackingEnv with LSTM predictor must output complete telemetry in info."""
-        import os, torch
+        import os
+        import torch
         from uav_vpp_guidance.trajectory_prediction.lstm_predictor import LSTMTrajectoryPredictor
         from uav_vpp_guidance.envs.tracking_env import CloseRangeTrackingEnv
 

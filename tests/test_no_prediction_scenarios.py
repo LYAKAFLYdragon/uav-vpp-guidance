@@ -6,16 +6,14 @@ import pytest
 import numpy as np
 import os
 import csv
-import json
 
-from uav_vpp_guidance.utils.config import load_yaml_config, merge_config
+from uav_vpp_guidance.utils.config import load_yaml_config
 from uav_vpp_guidance.envs.tracking_env import CloseRangeTrackingEnv
 from uav_vpp_guidance.evaluation.evaluate_no_prediction_scenarios import (
     evaluate_scenario, compute_ego_score, compute_target_score, save_metrics_csv
 )
 from uav_vpp_guidance.visualization.plot_no_prediction_results import (
-    load_metrics_csv, load_trajectory, plot_scenario_bar_metrics,
-    plot_2d_trajectory, plot_range_ata, plot_scores, plot_commands
+    load_metrics_csv, load_trajectory, plot_2d_trajectory, plot_range_ata, plot_scores, plot_commands
 )
 
 

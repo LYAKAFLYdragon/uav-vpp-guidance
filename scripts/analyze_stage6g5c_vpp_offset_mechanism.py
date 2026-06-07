@@ -16,13 +16,11 @@ Outputs:
 import argparse
 import copy
 import csv
-import json
 import os
 import sys
 from pathlib import Path
 
 import numpy as np
-import yaml
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 

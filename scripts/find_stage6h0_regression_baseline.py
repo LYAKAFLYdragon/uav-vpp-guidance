@@ -33,13 +33,11 @@ Usage:
 import argparse
 import copy
 import csv
-import json
 import os
 import sys
 from itertools import product
 from pathlib import Path
 
-import numpy as np
 import yaml
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
@@ -159,7 +157,7 @@ def run_baseline_search(
         _write_summary_md(output_path / "regression_baseline_summary.md", [], scenarios)
         return requested_config
 
-    print(f"\n=== Stage 6H.0 Preflight: Regression Baseline Search ===")
+    print("\n=== Stage 6H.0 Preflight: Regression Baseline Search ===")
     print(f"Grid: {len(scenarios)} geometries × {len(VARIANTS)} variants × {len(eval_seeds)} seeds × {episodes_per_point} episodes")
     config = load_experiment_config(config_path)
     config["backend"] = "simple"

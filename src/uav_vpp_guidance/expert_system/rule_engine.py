@@ -12,7 +12,6 @@ V0 intents:
   - ALTITUDE_RECOVER
 """
 
-import numpy as np
 
 
 class ManeuverIntent:

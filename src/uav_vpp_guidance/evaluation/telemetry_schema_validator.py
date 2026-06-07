@@ -5,7 +5,7 @@ Ensures failure root-cause analysis scripts do not silently produce
 weak or misleading reports when key telemetry fields are missing.
 """
 
-from typing import Dict, List, Tuple, Optional, Set
+from typing import Dict, List, Tuple
 import json
 
 

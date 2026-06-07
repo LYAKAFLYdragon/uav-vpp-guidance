@@ -2,7 +2,6 @@
 Unit tests for termination checker.
 """
 
-import pytest
 from uav_vpp_guidance.envs.termination import TerminationChecker
 
 

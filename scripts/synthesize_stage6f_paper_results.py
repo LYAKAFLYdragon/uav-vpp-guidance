@@ -16,11 +16,7 @@ Usage:
 
 import argparse
 import json
-import math
-import os
-import sys
 from pathlib import Path
-from collections import defaultdict
 
 import numpy as np
 import pandas as pd
@@ -789,11 +785,11 @@ def main():
         f.write(main_tex)
 
     print(f"Synthesis complete. Output: {output_dir}")
-    print(f"  - paper_main_results.md")
-    print(f"  - paper_main_results.tex")
-    print(f"  - paper_scenario_filtered_results.csv")
-    print(f"  - paper_statistics.json")
-    print(f"  - paper_claims_checklist.md")
+    print("  - paper_main_results.md")
+    print("  - paper_main_results.tex")
+    print("  - paper_scenario_filtered_results.csv")
+    print("  - paper_statistics.json")
+    print("  - paper_claims_checklist.md")
 
 
 if __name__ == "__main__":

@@ -9,7 +9,6 @@ Covers:
   - Diagnostic logging
 """
 
-import pytest
 import numpy as np
 
 from uav_vpp_guidance.expert_system.situation_evaluator import SituationEvaluator, TacticalState

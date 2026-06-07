@@ -1,7 +1,6 @@
 """Tests for McNemar pairing validator."""
 
 import unittest
-import numpy as np
 
 from uav_vpp_guidance.evaluation.mcnemar_pairing_validator import (
     build_pairing_key,

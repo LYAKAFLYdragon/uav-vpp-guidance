@@ -2,7 +2,6 @@
 
 import json
 import os
-import tempfile
 import unittest
 
 import numpy as np
@@ -12,7 +11,6 @@ from uav_vpp_guidance.evaluation.evaluate_prediction_comparison import (
 )
 from uav_vpp_guidance.evaluation.telemetry_schema_validator import (
     validate_episode_telemetry,
-    validate_episodes_telemetry,
 )
 from uav_vpp_guidance.envs.tracking_env import CloseRangeTrackingEnv
 from uav_vpp_guidance.agents.ppo_agent import PPOAgent

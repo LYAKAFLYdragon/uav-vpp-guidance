@@ -202,10 +202,10 @@ def main():
         print("\n" + "=" * 50)
         print("DRY RUN COMPLETE")
         print("=" * 50)
-        print(f"Config loaded: OK")
-        print(f"Environment initialized: OK")
+        print("Config loaded: OK")
+        print("Environment initialized: OK")
         print(f"Policy initialized: OK (checkpoint_exists={checkpoint_exists})")
-        print(f"Gain optimizer initialized: OK")
+        print("Gain optimizer initialized: OK")
         print(f"Output dir: {args.output_dir}")
         return
 

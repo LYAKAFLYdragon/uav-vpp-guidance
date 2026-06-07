@@ -26,12 +26,10 @@ Outputs:
 import argparse
 import csv
 import json
-import os
 import sys
 from pathlib import Path
 from typing import Dict, List, Set, Tuple
 
-import yaml
 
 
 EXPECTED_GUIDANCE_MODES = {"los_rate", "proportional_navigation", "hybrid"}

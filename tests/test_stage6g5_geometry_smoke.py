@@ -2,7 +2,6 @@
 
 import csv
 import json
-import math
 import subprocess
 import sys
 import unittest
@@ -409,7 +408,6 @@ class TestEpisodesPerPointExecuted(unittest.TestCase):
             def __init__(self, cfg):
                 pass
             def reset(self, seed=None):
-                import numpy as np
                 return {"observation_vector": np.zeros(16)}
             def close(self): pass
 

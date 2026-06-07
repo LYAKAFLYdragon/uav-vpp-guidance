@@ -8,7 +8,6 @@
 所有坐标统一使用 NEU (North-East-Up)。
 """
 
-import numpy as np
 from .base_predictor import BaseTrajectoryPredictor
 from .coordinate_utils import get_position_neu, get_velocity_neu
 

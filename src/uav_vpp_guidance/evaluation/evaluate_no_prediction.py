@@ -12,11 +12,9 @@ import argparse
 import json
 import os
 import numpy as np
-from datetime import datetime
 
 from uav_vpp_guidance.utils.config import load_yaml_config, merge_config
 from uav_vpp_guidance.utils.seed import set_seed
-from uav_vpp_guidance.utils.logger import create_experiment_dir, save_config_snapshot
 from uav_vpp_guidance.envs.tracking_env import CloseRangeTrackingEnv
 from uav_vpp_guidance.baselines.rule_based_pursuit import RuleBasedPursuitPolicy
 

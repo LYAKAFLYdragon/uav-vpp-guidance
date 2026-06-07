@@ -1,6 +1,5 @@
 """Tests for explicit geometry scenario builder (Stage 6H.0-F)."""
 
-import math
 import unittest
 
 from src.uav_vpp_guidance.envs.geometry_scenarios import (

@@ -25,8 +25,7 @@ import csv
 import json
 import os
 import numpy as np
-from collections import defaultdict
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any
 
 from uav_vpp_guidance.utils.config import load_yaml_config, merge_config
 from uav_vpp_guidance.utils.seed import set_seed

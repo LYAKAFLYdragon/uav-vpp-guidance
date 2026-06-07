@@ -2,15 +2,11 @@
 Tests for Stage 6F.5 Scenario Redesign & Maneuvering Target Re-Ablation.
 """
 
-import json
 import os
 import sys
-import tempfile
 import unittest
-from pathlib import Path
 
 import numpy as np
-import yaml
 
 from uav_vpp_guidance.utils.config import load_yaml_config
 

@@ -80,7 +80,7 @@ def main():
 
     print(f"Config: {args.config}")
     print(f"Checkpoint: {args.checkpoint}")
-    print(f"Backend: jsbsim")
+    print("Backend: jsbsim")
     print(f"Output dir: {output_dir}")
 
     env = CloseRangeTrackingEnv(config)

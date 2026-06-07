@@ -9,7 +9,6 @@ Verify that:
 """
 
 import copy
-import math
 import unittest
 import warnings
 
@@ -271,7 +270,6 @@ class TestEnvLevelGeometryValidation(unittest.TestCase):
         sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
         from src.uav_vpp_guidance.envs.tracking_env import CloseRangeTrackingEnv
         from src.uav_vpp_guidance.utils.config import merge_config
-        import yaml
         from pathlib import Path
 
         config_path = Path(__file__).resolve().parent.parent / "config" / "experiment" / "stage6f5_feasible_geometry.yaml"
@@ -355,8 +353,8 @@ class TestEvaluatorConsistency(unittest.TestCase):
     def test_evaluator_scenario_field_present(self):
         from src.uav_vpp_guidance.evaluation.evaluate_prediction_comparison import evaluate_single_episode
         from src.uav_vpp_guidance.agents.ppo_agent import PPOAgent
-        import sys, os
-        import yaml
+        import sys
+        import os
         from pathlib import Path
         from src.uav_vpp_guidance.utils.config import merge_config
 

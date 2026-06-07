@@ -11,9 +11,7 @@ Covers:
 
 import csv
 import os
-import tempfile
 
-import numpy as np
 import pytest
 
 from uav_vpp_guidance.evaluation.jsbsim_diagnosis import (

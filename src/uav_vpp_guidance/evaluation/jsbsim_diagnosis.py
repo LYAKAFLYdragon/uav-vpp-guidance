@@ -19,7 +19,6 @@ import csv
 import json
 import math
 import os
-import sys
 from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
@@ -210,7 +209,6 @@ class LowGainDirectController:
 
 def compute_command_sanity(step_df):
     """Return a dict of sanity flags for a single episode's step dataframe."""
-    import pandas as pd
 
     if step_df.empty:
         return {

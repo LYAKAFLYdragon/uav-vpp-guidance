@@ -14,7 +14,6 @@ Produces artifacts in outputs/stage6h0f2_formal_baseline/:
 
 import copy
 import csv
-import json
 import os
 import sys
 from datetime import datetime
@@ -34,7 +33,6 @@ from uav_vpp_guidance.agents.ppo_agent import PPOAgent
 from uav_vpp_guidance.evaluation.evaluate_prediction_comparison import evaluate_single_episode
 from uav_vpp_guidance.utils.config import merge_config
 from uav_vpp_guidance.utils.geometry_validator import (
-    compute_relative_geometry,
     validate_scenario_geometry,
 )
 

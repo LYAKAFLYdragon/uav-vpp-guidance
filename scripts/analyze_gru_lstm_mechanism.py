@@ -14,10 +14,8 @@ Usage:
 
 import argparse
 import json
-import os
 import sys
 from pathlib import Path
-from collections import defaultdict
 
 import numpy as np
 import pandas as pd
@@ -469,15 +467,15 @@ def main():
         f.write(md)
 
     print(f"Mechanism audit complete. Output: {output_dir}")
-    print(f"  - gru_lstm_mechanism.md")
+    print("  - gru_lstm_mechanism.md")
     if not pred_error_df.empty:
-        print(f"  - prediction_error_timeseries.csv")
+        print("  - prediction_error_timeseries.csv")
     if not vpp_df.empty:
-        print(f"  - vpp_shift_distribution.csv")
+        print("  - vpp_shift_distribution.csv")
     if not action_df.empty:
-        print(f"  - action_distribution.csv")
-    print(f"  - terminal_geometry.csv")
-    print(f"  - success_failure_contrast.csv")
+        print("  - action_distribution.csv")
+    print("  - terminal_geometry.csv")
+    print("  - success_failure_contrast.csv")
 
 
 if __name__ == "__main__":

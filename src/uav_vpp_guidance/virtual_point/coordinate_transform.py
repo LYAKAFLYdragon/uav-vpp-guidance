@@ -4,7 +4,6 @@ Coordinate transforms for virtual point generation.
 Converts offsets in target body / heading frame to world coordinates.
 """
 
-import numpy as np
 
 
 def heading_to_rotation_matrix(heading_deg, pitch_deg=0.0, roll_deg=0.0):

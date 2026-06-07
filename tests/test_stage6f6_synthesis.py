@@ -4,7 +4,6 @@ Tests for Stage 6F.6 Paper-Ready Synthesis & GRU-vs-LSTM Mechanism Audit.
 
 import json
 import os
-import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -25,7 +24,7 @@ class TestStage6F5ExperimentSuiteVersion(unittest.TestCase):
         self.assertEqual(EXPERIMENT_SUITE_VERSION, "6f.5")
 
     def test_experiment_plan_contains_suite_version(self):
-        import tempfile, json, os
+        import json
         from scripts.run_stage6f5_reablation import write_experiment_plan
         with tempfile.TemporaryDirectory() as tmpdir:
             write_experiment_plan(
@@ -45,7 +44,7 @@ class TestStage6F5ExperimentSuiteVersion(unittest.TestCase):
             self.assertEqual(plan.get("metrics_schema_version"), "6f.2")
 
     def test_manifest_contains_suite_version(self):
-        import tempfile, json, os
+        import json
         from scripts.run_stage6f5_reablation import write_manifest
         with tempfile.TemporaryDirectory() as tmpdir:
             write_manifest(
@@ -71,7 +70,6 @@ class TestStage6F5ExpectedSeedsGuard(unittest.TestCase):
 
     def test_discover_ignores_extra_seeds(self):
         from scripts.analyze_stage6f5_results import discover_training_seeds
-        import tempfile, os
         with tempfile.TemporaryDirectory() as tmpdir:
             # Create train_seed0, train_seed1, train_seed99
             for seed in [0, 1, 99]:
@@ -84,7 +82,6 @@ class TestStage6F5ExpectedSeedsGuard(unittest.TestCase):
 
     def test_discover_raises_on_missing_seeds(self):
         from scripts.analyze_stage6f5_results import discover_training_seeds
-        import tempfile, os
         with tempfile.TemporaryDirectory() as tmpdir:
             d = os.path.join(tmpdir, "train_seed0")
             os.makedirs(d, exist_ok=True)

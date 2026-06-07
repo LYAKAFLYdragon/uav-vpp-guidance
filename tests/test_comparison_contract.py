@@ -1004,7 +1004,7 @@ class TestResumeManifestGuard(unittest.TestCase):
     """--resume must validate manifest.json before skipping training."""
 
     def test_resume_fails_on_manifest_mismatch(self):
-        from scripts.run_stage6f_full_ablation import run_training, compute_file_hash
+        from scripts.run_stage6f_full_ablation import run_training
         import tempfile
         import os
 
@@ -1118,7 +1118,6 @@ class TestStage6FDiagnosisReport(unittest.TestCase):
             compute_cv_ca_diagnosis,
             render_diagnosis_md,
         )
-        import tempfile
 
         cross_data = {
             "experiment_plan": {
@@ -1251,7 +1250,6 @@ class TestStage6FDeepAudit(unittest.TestCase):
     def test_cv_ca_identity_detection(self):
         from scripts.analyze_stage6f_deep_audit import investigate_cv_ca_identity
         import tempfile
-        import os
 
         with tempfile.TemporaryDirectory() as tmp:
             raw_root = Path(tmp)

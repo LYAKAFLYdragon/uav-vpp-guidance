@@ -6,8 +6,7 @@ initialize correctly and expose the expected interfaces.
 """
 
 import pytest
-import numpy as np
-from uav_vpp_guidance.envs.jsbsim_env import lla2neu, neu2lla, JSBSimEnv, _JSBSimAircraft
+from uav_vpp_guidance.envs.jsbsim_env import lla2neu, neu2lla, JSBSimEnv
 
 
 class TestCoordinateConversion:

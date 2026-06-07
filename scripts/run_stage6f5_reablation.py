@@ -34,7 +34,6 @@ import shutil
 import subprocess
 import sys
 import time
-from pathlib import Path
 
 
 METHODS = [
@@ -213,7 +212,7 @@ def validate_experiment_plan_for_resume(plan_path: str, suite_name: str, trainin
     plan_config = plan.get("comparison_config", "")
     if plan_config and os.path.exists(plan_config) and os.path.exists(comparison_config):
         if compute_file_hash(plan_config) != compute_file_hash(comparison_config):
-            mismatches.append(f"comparison_config hash mismatch")
+            mismatches.append("comparison_config hash mismatch")
     elif plan.get("comparison_config") != comparison_config:
         mismatches.append(f"comparison_config: plan={plan.get('comparison_config')} expected={comparison_config}")
     if plan.get("experiment_suite_version") != EXPERIMENT_SUITE_VERSION:
@@ -261,16 +260,16 @@ def run_training(method: dict, seed: int, smoke: bool, dry_run: bool, resume: bo
             if manifest.get("metrics_schema_version") != METRICS_SCHEMA_VERSION:
                 mismatches.append(f"schema_version: manifest={manifest.get('metrics_schema_version')} expected={METRICS_SCHEMA_VERSION}")
             if mismatches:
-                print(f"  WARNING: Manifest mismatch detected:")
+                print("  WARNING: Manifest mismatch detected:")
                 for mm in mismatches:
                     print(f"    - {mm}")
                 if not force_resume:
-                    print(f"  ERROR: Use --force-resume to override, or re-run without --resume.")
+                    print("  ERROR: Use --force-resume to override, or re-run without --resume.")
                     return False
-                print(f"  --force-resume set; continuing despite mismatches.")
+                print("  --force-resume set; continuing despite mismatches.")
         else:
             print(f"  WARNING: No manifest found at {manifest_path}; cannot validate provenance.")
-        print(f"  Skipping training (--resume).")
+        print("  Skipping training (--resume).")
         return True
 
     if not dry_run and os.path.exists(output_dir) and not resume:

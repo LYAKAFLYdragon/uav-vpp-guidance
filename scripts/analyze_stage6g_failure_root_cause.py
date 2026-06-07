@@ -17,10 +17,9 @@ Usage:
 import argparse
 import csv
 import json
-import os
 import sys
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import List
 
 import numpy as np
 

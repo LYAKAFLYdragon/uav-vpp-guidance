@@ -9,7 +9,7 @@ Regret tracking: records regret for each (policy, gains) pairing
 import copy
 import json
 from pathlib import Path
-from typing import Callable, Dict, List, Optional, Tuple
+from typing import Callable, List
 
 import numpy as np
 

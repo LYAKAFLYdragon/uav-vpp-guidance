@@ -5,17 +5,13 @@ and negative suites, then returns a structured verdict.
 """
 
 import copy
-import os
-from pathlib import Path
 from typing import Dict, List, Tuple
 
 import numpy as np
-import yaml
 
 from ..agents.ppo_agent import PPOAgent
 from ..envs.scenario_registry import ScenarioRegistry, initialize_canonical_scenarios
 from ..envs.tracking_env import CloseRangeTrackingEnv
-from ..utils.config import merge_config
 from .evaluate_prediction_comparison import evaluate_single_episode
 
 

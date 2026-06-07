@@ -185,11 +185,11 @@ def main():
         report_lines.append("```yaml")
         report_lines.append("guidance:")
         report_lines.append("  mode_switch:")
-        report_lines.append(f"    enabled: true")
+        report_lines.append("    enabled: true")
         report_lines.append(f"    aspect_threshold_deg: {best['aspect_threshold_deg']:.0f}")
         report_lines.append(f"    range_threshold_m: {best['range_threshold_m']:.0f}")
         report_lines.append(f"    closing_speed_threshold_mps: {best['closing_speed_threshold_mps']:.0f}")
-        report_lines.append(f"    crossing_aspect_threshold_deg: null")
+        report_lines.append("    crossing_aspect_threshold_deg: null")
         report_lines.append("```")
         report_lines.append("")
     else:

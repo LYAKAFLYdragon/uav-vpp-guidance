@@ -1,11 +1,8 @@
-import os
 import subprocess
 import sys
-import tempfile
 from pathlib import Path
 
 import pytest
-import yaml
 
 
 _REQUIRED_CKPT = Path("outputs/experiments/no_prediction_vpp_ppo_seed0/checkpoints/best.pt")
@@ -110,7 +107,6 @@ class TestStage6GArtifactContract:
     def test_scenario_summary_can_aggregate_from_raw(self, tmp_path):
         if not _REQUIRED_CKPT.exists():
             pytest.skip(f"Checkpoint not found: {_REQUIRED_CKPT}")
-        import csv
         output_dir = tmp_path / "probe_out"
         result = subprocess.run(
             [

@@ -3,7 +3,6 @@ Tests for no-prediction smoke rollout.
 """
 
 import pytest
-import numpy as np
 from uav_vpp_guidance.envs.tracking_env import CloseRangeTrackingEnv
 from uav_vpp_guidance.training.train_no_prediction_vpp import smoke_rollout
 from uav_vpp_guidance.evaluation.evaluate_no_prediction import evaluate

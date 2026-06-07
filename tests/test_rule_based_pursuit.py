@@ -2,7 +2,6 @@
 Tests for rule-based pursuit baseline.
 """
 
-import pytest
 import numpy as np
 from uav_vpp_guidance.baselines.rule_based_pursuit import RuleBasedPursuitPolicy
 

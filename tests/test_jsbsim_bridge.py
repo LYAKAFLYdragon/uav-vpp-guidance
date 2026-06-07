@@ -5,7 +5,6 @@ Tests for JSBSim No-Prediction VPP High-Fidelity Bridge.
 import pytest
 import numpy as np
 import os
-import csv
 
 from uav_vpp_guidance.envs.tracking_env import CloseRangeTrackingEnv
 from uav_vpp_guidance.flight_control.low_level_controller import LowLevelController

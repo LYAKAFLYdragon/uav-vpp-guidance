@@ -14,7 +14,6 @@ import argparse
 import hashlib
 import json
 import math
-import os
 import subprocess
 import sys
 from datetime import datetime, timezone

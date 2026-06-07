@@ -5,7 +5,7 @@ Ensures McNemar exact tests are computed on strictly paired episodes,
 aligned by canonical pairing keys that exclude the comparison dimension.
 """
 
-from typing import Dict, List, Tuple, Optional, Callable
+from typing import Dict, List, Tuple, Optional
 import numpy as np
 import pandas as pd
 

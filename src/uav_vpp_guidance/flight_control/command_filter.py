@@ -2,7 +2,6 @@
 Command filtering to smooth noisy or discontinuous guidance commands.
 """
 
-import numpy as np
 
 
 class FirstOrderCommandFilter:

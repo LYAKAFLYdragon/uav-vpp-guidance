@@ -318,7 +318,7 @@ def run_threshold_search(
             print("  Candidate and negative-control evaluations will proceed.")
             print("  Results are NOT paper-safe formal threshold results.")
 
-    print(f"\n=== Stage 6H.0-lite: Threshold Search ===")
+    print("\n=== Stage 6H.0-lite: Threshold Search ===")
     print(f"Mode: {mode} | Sampled configs: {len(sampled_configs)}")
     print(f"Candidates: {len(candidate_names)} | Baselines: {len(regression_baselines)} | Negatives: {len(negative_names)}")
 

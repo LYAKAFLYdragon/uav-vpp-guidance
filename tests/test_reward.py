@@ -2,7 +2,6 @@
 Unit tests for reward calculation.
 """
 
-import pytest
 import numpy as np
 from uav_vpp_guidance.envs.reward import RewardCalculator
 

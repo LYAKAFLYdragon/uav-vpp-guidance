@@ -41,7 +41,6 @@ import sys
 
 import numpy as np
 
-import warnings
 
 import copy
 
@@ -49,7 +48,7 @@ from uav_vpp_guidance.utils.config import load_yaml_config, merge_config
 from uav_vpp_guidance.utils.seed import set_seed
 from uav_vpp_guidance.envs.tracking_env import CloseRangeTrackingEnv
 from uav_vpp_guidance.agents.ppo_agent import PPOAgent
-from uav_vpp_guidance.trajectory_prediction.config_validator import validate_tp_config, validate_full_config
+from uav_vpp_guidance.trajectory_prediction.config_validator import validate_full_config
 from uav_vpp_guidance.trajectory_prediction._telemetry import PredictorHealthAccumulator
 
 

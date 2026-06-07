@@ -11,7 +11,6 @@
 - gru
 """
 
-import os
 
 import numpy as np
 import torch
@@ -22,7 +21,7 @@ from .feature_builder import build_target_prediction_feature
 from .constant_velocity import ConstantVelocityPredictor
 from .constant_acceleration import ConstantAccelerationPredictor
 from .coordinate_utils import get_position_neu
-from .device_utils import load_checkpoint_to_model, resolve_torch_device
+from .device_utils import load_checkpoint_to_model
 
 
 # ---------------------------------------------------------------------------

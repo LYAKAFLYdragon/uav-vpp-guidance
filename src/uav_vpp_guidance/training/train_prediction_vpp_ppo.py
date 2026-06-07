@@ -20,10 +20,8 @@ import json
 import os
 import sys
 import time
-from collections import defaultdict
 
 import numpy as np
-import torch
 
 from uav_vpp_guidance.utils.config import load_yaml_config, merge_config
 from uav_vpp_guidance.utils.seed import set_seed

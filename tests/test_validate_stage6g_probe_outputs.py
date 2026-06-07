@@ -1,7 +1,6 @@
 """Tests for Stage 6G probe output validator using synthetic fixtures."""
 
 import json
-import os
 import tempfile
 import unittest
 from pathlib import Path

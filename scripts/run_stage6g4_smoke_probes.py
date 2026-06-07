@@ -15,12 +15,10 @@ Usage:
 
 import argparse
 import copy
-import csv
 import json
 import os
 import sys
 import time
-from pathlib import Path
 
 import numpy as np
 
@@ -62,7 +60,7 @@ def _make_env_agent(config, method_name, method_override, allow_random_policy=Fa
             else:
                 raise
     elif allow_random_policy:
-        print(f"  WARNING: checkpoint missing, using random policy")
+        print("  WARNING: checkpoint missing, using random policy")
     else:
         raise FileNotFoundError(f"Checkpoint not found: {method_ckpt}")
     return env, agent, method_config

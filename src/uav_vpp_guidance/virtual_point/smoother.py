@@ -4,7 +4,6 @@ Virtual point smoothing utilities.
 TODO: Add temporal smoothing to avoid jitter in virtual point position.
 """
 
-import numpy as np
 
 
 class VirtualPointSmoother:

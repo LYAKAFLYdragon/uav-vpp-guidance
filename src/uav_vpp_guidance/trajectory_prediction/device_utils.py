@@ -35,8 +35,8 @@ def resolve_torch_device(device_str: str, allow_fallback: bool = True):
         if not torch.cuda.is_available():
             if allow_fallback:
                 warnings.warn(
-                    f"CUDA requested but not available. "
-                    f"Falling back to CPU.",
+                    "CUDA requested but not available. "
+                    "Falling back to CPU.",
                     RuntimeWarning,
                     stacklevel=2,
                 )

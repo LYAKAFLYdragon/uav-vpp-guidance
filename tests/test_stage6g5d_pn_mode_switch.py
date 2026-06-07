@@ -1,8 +1,6 @@
 """Stage 6G.5D: PN mode-switch & VPP offset mechanism contract tests."""
 
-import csv
 import importlib.util
-import os
 import shutil
 import subprocess
 import sys

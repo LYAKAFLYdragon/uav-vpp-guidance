@@ -12,7 +12,7 @@ No external dependencies beyond numpy and scipy.
 """
 
 import numpy as np
-from typing import List, Dict, Tuple, Optional
+from typing import List, Dict, Tuple
 from scipy.stats import binomtest, ttest_rel, mannwhitneyu
 
 
@@ -380,7 +380,7 @@ def mann_whitney_u(method_a_results: List[float],
 
     try:
         u_stat, p_val = mannwhitneyu(a_vals, b_vals, alternative='two-sided')
-    except ValueError as e:
+    except ValueError:
         # All numbers are identical
         return {
             'u_statistic': np.nan,

@@ -13,7 +13,7 @@ Contract:
 """
 
 import math
-from typing import Dict, List, Literal
+from typing import Dict, Literal
 
 import numpy as np
 

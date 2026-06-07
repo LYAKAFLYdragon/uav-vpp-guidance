@@ -4,7 +4,6 @@ Monte Carlo evaluation utilities.
 TODO: Migrate evaluation logic from legacy project.
 """
 
-import numpy as np
 
 
 def run_monte_carlo(policy, env, config):

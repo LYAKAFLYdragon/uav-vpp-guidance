@@ -23,11 +23,9 @@ import json
 import os
 import subprocess
 import sys
-import time
-import traceback
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Dict, List, Any, Optional, Tuple
+from typing import List, Tuple
 
 import yaml
 import numpy as np
@@ -428,7 +426,7 @@ def compute_pairwise_mcnemar(episodes: List[dict]) -> List[dict]:
         c_disc = int(np.sum(~a_succ & b_succ))
         try:
             p_val = mcnemar_exact_pvalue(b_disc, c_disc)
-        except Exception as exc:
+        except Exception:
             p_val = np.nan
         rows.append({
             "scenario": scenario,
@@ -463,7 +461,7 @@ def compute_pairwise_mcnemar(episodes: List[dict]) -> List[dict]:
         c_disc = int(np.sum(~a_succ & b_succ))
         try:
             p_val = mcnemar_exact_pvalue(b_disc, c_disc)
-        except Exception as exc:
+        except Exception:
             p_val = np.nan
         rows.append({
             "scenario": scenario,

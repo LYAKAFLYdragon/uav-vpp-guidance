@@ -30,3 +30,6 @@ tensorboard/
 
 # Paper materials (tex, pdf, figures, etc.)
 paper_materials/
+
+# Evaluation results (generated locally)
+docs/results/

@@ -76,8 +76,8 @@ TARGET_MODES = {
 }
 
 
-def _modify_config(config_path: Path, target_mode: str):
-    """Temporarily replace target_mode in config. Returns backup path."""
+def _modify_config(config_path: Path, target_mode: str, weaving_amplitude_g: float = None):
+    """Temporarily replace target_mode and weaving_amplitude_g in config. Returns backup path."""
     backup_path = config_path.with_suffix(".yaml.bak")
     if not backup_path.exists():
         shutil.copy2(config_path, backup_path)
@@ -85,6 +85,23 @@ def _modify_config(config_path: Path, target_mode: str):
     # Replace both constant_velocity and sinusoidal to ensure idempotency
     content = content.replace("target_mode: constant_velocity", f"target_mode: {target_mode}")
     content = content.replace("target_mode: sinusoidal", f"target_mode: {target_mode}")
+
+    # Modify weaving_amplitude_g if specified
+    if weaving_amplitude_g is not None:
+        import re
+        if "weaving_amplitude_g:" in content:
+            content = re.sub(
+                r"weaving_amplitude_g:\s*[\d.]+",
+                f"weaving_amplitude_g: {weaving_amplitude_g}",
+                content,
+            )
+        else:
+            # Insert after target_mode line (4-space indent for env block)
+            content = content.replace(
+                f"target_mode: {target_mode}",
+                f"target_mode: {target_mode}\n    weaving_amplitude_g: {weaving_amplitude_g}",
+            )
+
     config_path.write_text(content, encoding="utf-8")
     return backup_path
 
@@ -104,7 +121,8 @@ def run_training(method_key, target_mode_key, seed, steps, output_dir, gpu_id):
     output_path = output_dir / "training" / exp_name
 
     config_path = Path(method["train_config"])
-    backup_path = _modify_config(config_path, target["target_mode"])
+    weaving_amp = target.get("weaving_amplitude_g")
+    backup_path = _modify_config(config_path, target["target_mode"], weaving_amp)
 
     try:
         cmd = [
@@ -122,21 +140,19 @@ def run_training(method_key, target_mode_key, seed, steps, output_dir, gpu_id):
             else:
                 cmd.extend(["--device", "cpu"])
         elif "train_bilevel" in method["train_module"]:
-            cmd.extend(method.get("train_extra_args", []))
+            cmd.extend(["--seed", str(seed)])
             # bilevel needs a checkpoint for vpp_bilevel; skip if none
             if method_key == "vpp_bilevel":
-                # Use vpp_single checkpoint as init
                 single_ckpt = output_dir / "training" / f"vpp_single_{target_mode_key}_s{seed}" / "checkpoints" / "best.pt"
-                if single_ckpt.exists():
-                    cmd.extend(["--checkpoint", str(single_ckpt)])
-                else:
-                    print(f"  WARNING: no single-layer checkpoint for bilevel init, using random")
-                    cmd.append("--allow-random-init")
+                if not single_ckpt.exists():
+                    print(f"  SKIP: vpp_single_{target_mode_key}_s{seed} missing, cannot init bilevel")
+                    return None
+                cmd.extend(["--checkpoint", str(single_ckpt)])
+            elif method_key == "vpp_fixed":
+                # fixed gain uses random init with bilevel trainer
+                cmd.append("--allow-random-init")
 
-        # Extra args from method definition
-        for extra in method.get("train_extra_args", []):
-            if extra not in cmd:
-                cmd.append(extra)
+            cmd.extend(method.get("train_extra_args", []))
 
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=7200)
 
@@ -177,7 +193,7 @@ def run_evaluation(method_key, target_mode_key, seed, checkpoint, eval_seeds, ev
         "--backend", "simple",
         "--checkpoint", str(checkpoint),
         "--episodes", str(eval_eps),
-        "--seeds", " ".join(map(str, range(eval_seeds))),
+        "--seeds", *[str(s) for s in range(eval_seeds)],
         "--output-dir", str(eval_output),
     ]
 

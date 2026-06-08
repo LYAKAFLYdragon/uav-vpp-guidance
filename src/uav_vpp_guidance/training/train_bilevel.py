@@ -133,10 +133,21 @@ def main():
         help="Allow training from random initialization when checkpoint is missing. "
              "Results will be marked invalid_for_paper.",
     )
+    parser.add_argument(
+        "--seed",
+        type=int,
+        default=None,
+        help="Random seed override (sets config seed and CEM random seed).",
+    )
     args = parser.parse_args()
 
     print(f"[Bilevel] Loading config: {args.config}")
     config = _resolve_config(args.config, allow_missing_includes=args.allow_missing_includes)
+
+    # Apply seed override
+    if args.seed is not None:
+        config["seed"] = args.seed
+        print(f"[Bilevel] Seed override: {args.seed}")
 
     config["backend"] = "simple"
     if "env" not in config:

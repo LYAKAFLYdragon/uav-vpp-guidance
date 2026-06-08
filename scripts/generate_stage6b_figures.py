@@ -48,9 +48,20 @@ def plot_training_curves(output_dir: Path):
     print(f"Saved {output_dir / 'training_curves.png'}")
 
 
-def plot_comparison_boxplot(benchmark_csv: Path, output_dir: Path):
+def load_episodes(result_dir: Path) -> pd.DataFrame:
+    """Load per-episode CSV from result directory."""
+    csv_path = result_dir / "raw_episodes.csv"
+    if not csv_path.exists():
+        return pd.DataFrame()
+    return pd.read_csv(csv_path)
+
+
+def plot_comparison_boxplot(result_dir: Path, output_dir: Path):
     """Plot per-scenario success rate boxplot for 3 methods."""
-    df = pd.read_csv(benchmark_csv)
+    df = load_episodes(result_dir)
+    if df.empty:
+        print(f"Warning: no episodes found in {result_dir}, skipping boxplot")
+        return
     methods = ["no_prediction", "cv_prediction", "ca_prediction"]
     df = df[df["method"].isin(methods)]
 
@@ -85,9 +96,12 @@ def plot_comparison_boxplot(benchmark_csv: Path, output_dir: Path):
     print(f"Saved {output_dir / 'comparison_boxplot.png'}")
 
 
-def plot_success_rate_overall(benchmark_csv: Path, output_dir: Path):
+def plot_success_rate_overall(result_dir: Path, output_dir: Path):
     """Plot overall success rate comparison with error bars."""
-    df = pd.read_csv(benchmark_csv)
+    df = load_episodes(result_dir)
+    if df.empty:
+        print(f"Warning: no episodes found in {result_dir}, skipping overall plot")
+        return
     methods = ["no_prediction", "cv_prediction", "ca_prediction"]
     df = df[df["method"].isin(methods)]
 
@@ -123,14 +137,14 @@ def plot_success_rate_overall(benchmark_csv: Path, output_dir: Path):
 
 def main():
     output_dir = Path("docs/results/stage6b")
-    benchmark_csv = Path("outputs/stage6b/benchmark/raw_episodes.csv")
+    result_dir = Path("docs/results/stage6b_constant_velocity")
 
     plot_training_curves(output_dir)
-    if benchmark_csv.exists():
-        plot_comparison_boxplot(benchmark_csv, output_dir)
-        plot_success_rate_overall(benchmark_csv, output_dir)
+    if (result_dir / "raw_episodes.csv").exists():
+        plot_comparison_boxplot(result_dir, output_dir)
+        plot_success_rate_overall(result_dir, output_dir)
     else:
-        print(f"Warning: {benchmark_csv} not found, skipping boxplots")
+        print(f"Warning: {result_dir / 'raw_episodes.csv'} not found, skipping boxplots")
 
     print("\nStage 6B figures generated successfully.")
 

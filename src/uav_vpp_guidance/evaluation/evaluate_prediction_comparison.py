@@ -33,6 +33,18 @@ Usage:
         --allow-random-policy
 """
 
+
+def _serialize_numpy(obj):
+    """Serialize numpy types for JSON output."""
+    if isinstance(obj, np.ndarray):
+        return obj.tolist()
+    if isinstance(obj, np.floating):
+        return float(obj)
+    if isinstance(obj, np.integer):
+        return int(obj)
+    raise TypeError(f"Cannot serialize {type(obj).__name__}")
+
+
 import argparse
 import csv
 import json
@@ -475,6 +487,17 @@ def evaluate_method(env, agent, config, method_name, num_episodes=10, seeds=None
     per_scenario_episodes = {}
     per_seed_results = {}
 
+    # Initialize per-episode CSV output
+    episode_csv_path = None
+    if output_dir is not None:
+        episode_csv_path = Path(output_dir) / "raw_episodes.csv"
+        episode_csv_path.parent.mkdir(parents=True, exist_ok=True)
+        csv_fieldnames = [
+            "episode_id", "method", "scenario", "seed",
+            "is_success", "episode_return", "episode_length",
+            "is_crash", "is_timeout", "is_out_of_bounds",
+        ]
+
     for seed in seeds:
         set_seed(seed)
         seed_episodes = []
@@ -500,6 +523,26 @@ def evaluate_method(env, agent, config, method_name, num_episodes=10, seeds=None
             all_episodes.append(ep_result)
             seed_episodes.append(ep_result)
             per_scenario_episodes.setdefault(scenario_name, []).append(ep_result)
+
+            # Append to per-episode CSV
+            if episode_csv_path is not None:
+                write_header = not episode_csv_path.exists()
+                with open(episode_csv_path, "a", newline="", encoding="utf-8") as f:
+                    writer = csv.DictWriter(f, fieldnames=csv_fieldnames)
+                    if write_header:
+                        writer.writeheader()
+                    writer.writerow({
+                        "episode_id": len(all_episodes) - 1,
+                        "method": method_name,
+                        "scenario": scenario_name,
+                        "seed": seed,
+                        "is_success": ep_result.get("is_success", False),
+                        "episode_return": ep_result.get("return", 0.0),
+                        "episode_length": ep_result.get("length", 0),
+                        "is_crash": ep_result.get("is_crash", False),
+                        "is_timeout": ep_result.get("is_timeout", False),
+                        "is_out_of_bounds": ep_result.get("is_out_of_bounds", False),
+                    })
 
             if save_trajectories and output_dir is not None and trajectory:
                 traj_dir = os.path.join(output_dir, "trajectories", method_name)
@@ -744,7 +787,7 @@ def main():
     # Save aggregated metrics
     json_path = os.path.join(output_dir, "prediction_metrics.json")
     with open(json_path, "w", encoding="utf-8") as f:
-        json.dump(all_method_metrics, f, indent=2, ensure_ascii=False, default=str)
+        json.dump(all_method_metrics, f, indent=2, ensure_ascii=False, default=_serialize_numpy)
     print(f"\nMetrics JSON saved to: {json_path}")
 
     # Save CSV (overall only; per-scenario in JSON)

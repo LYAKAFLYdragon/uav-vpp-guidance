@@ -34,9 +34,11 @@ def load_eval_csv(result_dir: Path) -> pd.DataFrame:
 def compute_metrics(df: pd.DataFrame) -> dict:
     """Compute success rate, mean return, std return from evaluation dataframe."""
     if df.empty:
-        return {"success_rate": 0.0, "mean_return": 0.0, "std_return": 0.0, "n": 0}
+        raise ValueError("Empty evaluation DataFrame — check raw_episodes.csv exists and has data")
     success = df["is_success"].astype(float).mean()
-    returns = df["episode_return"].astype(float)
+    # Support both 'return' (legacy) and 'episode_return' (unified)
+    return_col = "episode_return" if "episode_return" in df.columns else "return"
+    returns = df[return_col].astype(float)
     return {
         "success_rate": success,
         "mean_return": returns.mean(),
@@ -49,8 +51,9 @@ def compare_to_baseline(df_method: pd.DataFrame, df_baseline: pd.DataFrame) -> t
     """Return p-value and Cohen's d comparing method to baseline on episode return."""
     if df_method.empty or df_baseline.empty:
         return float("nan"), float("nan")
-    r_method = df_method["episode_return"].astype(float).values
-    r_baseline = df_baseline["episode_return"].astype(float).values
+    return_col = "episode_return" if "episode_return" in df_method.columns else "return"
+    r_method = df_method[return_col].astype(float).values
+    r_baseline = df_baseline[return_col].astype(float).values
     if len(r_method) != len(r_baseline):
         # truncate to minimum length for paired test
         n = min(len(r_method), len(r_baseline))
@@ -242,16 +245,20 @@ def main():
         print("Skipping table_bilevel_ablation.tex (missing data)")
 
     # P1-A / P1-B
+    # Support both unified CSV (all methods in one file) and per-method subdirectories
     maneuver = {
-        "no_prediction": load_eval_csv(results_root / "p1a_maneuver_target"),
-        "cv_prediction": load_eval_csv(results_root / "p1a_maneuver_target"),
-        "ca_prediction": load_eval_csv(results_root / "p1a_maneuver_target"),
-        "lstm_frozen": load_eval_csv(results_root / "p1b_neural_maneuver"),
-        "gru_frozen": load_eval_csv(results_root / "p1b_neural_maneuver"),
+        "no_prediction": load_eval_csv(results_root / "p1a_maneuver_target" / "no_prediction") or load_eval_csv(results_root / "p1a_maneuver_target"),
+        "cv_prediction": load_eval_csv(results_root / "p1a_maneuver_target" / "cv_prediction") or load_eval_csv(results_root / "p1a_maneuver_target"),
+        "ca_prediction": load_eval_csv(results_root / "p1a_maneuver_target" / "ca_prediction") or load_eval_csv(results_root / "p1a_maneuver_target"),
+        "lstm_frozen": load_eval_csv(results_root / "p1b_neural_maneuver" / "lstm_frozen") or load_eval_csv(results_root / "p1b_neural_maneuver"),
+        "gru_frozen": load_eval_csv(results_root / "p1b_neural_maneuver" / "gru_frozen") or load_eval_csv(results_root / "p1b_neural_maneuver"),
     }
-    # run_paper_benchmark puts all methods in one CSV; we need to filter by method column
+    # If unified CSV was loaded, filter by method column
     for key in maneuver:
-        if not maneuver[key].empty:
+        if not maneuver[key].empty and "method" in maneuver[key].columns and key not in maneuver[key]["method"].unique():
+            # This is a unified CSV from run_paper_benchmark; filter
+            pass  # already filtered by path, or if unified, keep as-is if method matches
+        elif not maneuver[key].empty and "method" in maneuver[key].columns:
             maneuver[key] = maneuver[key][maneuver[key]["method"] == key]
 
     if any(not df.empty for df in maneuver.values()):
@@ -264,12 +271,12 @@ def main():
 
     # Cross-mode summary
     cv = {
-        "no_prediction": load_eval_csv(results_root / "stage6b_constant_velocity"),
-        "cv_prediction": load_eval_csv(results_root / "stage6b_constant_velocity"),
-        "ca_prediction": load_eval_csv(results_root / "stage6b_constant_velocity"),
+        "no_prediction": load_eval_csv(results_root / "stage6b_constant_velocity" / "no_prediction") or load_eval_csv(results_root / "stage6b_constant_velocity"),
+        "cv_prediction": load_eval_csv(results_root / "stage6b_constant_velocity" / "cv_prediction") or load_eval_csv(results_root / "stage6b_constant_velocity"),
+        "ca_prediction": load_eval_csv(results_root / "stage6b_constant_velocity" / "ca_prediction") or load_eval_csv(results_root / "stage6b_constant_velocity"),
     }
     for key in cv:
-        if not cv[key].empty:
+        if not cv[key].empty and "method" in cv[key].columns:
             cv[key] = cv[key][cv[key]["method"] == key]
 
     if any(not df.empty for df in list(cv.values()) + list(maneuver.values())):

@@ -3,6 +3,7 @@ import numpy as np
 from uav_vpp_guidance.evaluation.statistical_comparison import (
     bootstrap_confidence_interval,
     bootstrap_ci,
+    bootstrap_success_rate_ci,
     paired_t_test,
     cohens_d,
     mann_whitney_u,
@@ -61,6 +62,40 @@ class TestBootstrapConfidenceInterval:
         data = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0]
         r1 = bootstrap_confidence_interval(data, n_bootstrap=1000, ci=0.95, random_seed=123)
         r2 = bootstrap_ci(data, n_bootstrap=1000, confidence=0.95, random_seed=123)
+        assert r1 == r2
+
+
+class TestBootstrapSuccessRateCI:
+    """Tests for bootstrap success rate confidence interval."""
+
+    def test_empty_data_returns_nan(self):
+        point, lower, upper = bootstrap_success_rate_ci([])
+        assert np.isnan(point) and np.isnan(lower) and np.isnan(upper)
+
+    def test_50_percent_success_rate_80_trials(self):
+        """50% success rate over 80 trials (40/80) should yield CI ≈ [40%, 60%]."""
+        data = [1] * 40 + [0] * 40
+        point, lower, upper = bootstrap_success_rate_ci(data, n_bootstrap=1000, random_seed=42)
+        assert point == pytest.approx(0.50, abs=0.01)
+        assert 0.38 <= lower <= 0.42
+        assert 0.58 <= upper <= 0.62
+
+    def test_all_successes_ci_collapses_to_one(self):
+        data = [1, 1, 1, 1, 1]
+        point, lower, upper = bootstrap_success_rate_ci(data, n_bootstrap=100)
+        assert point == pytest.approx(1.0)
+        assert lower == pytest.approx(1.0)
+        assert upper == pytest.approx(1.0)
+
+    def test_ci_bounds_contain_point_estimate(self):
+        data = [1, 0, 1, 1, 0, 1, 0, 0, 1, 1]
+        point, lower, upper = bootstrap_success_rate_ci(data, n_bootstrap=1000, random_seed=123)
+        assert lower <= point <= upper
+
+    def test_reproducible_with_same_seed(self):
+        data = [1] * 30 + [0] * 20
+        r1 = bootstrap_success_rate_ci(data, n_bootstrap=1000, random_seed=42)
+        r2 = bootstrap_success_rate_ci(data, n_bootstrap=1000, random_seed=42)
         assert r1 == r2
 
 

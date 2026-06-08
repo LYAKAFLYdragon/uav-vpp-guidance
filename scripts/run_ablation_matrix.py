@@ -193,6 +193,15 @@ def run_training(method_key, target_mode_key, seed, steps, output_dir, gpu_id):
         ckpt = output_path / "checkpoints" / "best.pt"
         if not ckpt.exists():
             ckpt = output_path / "checkpoints" / "last.pt"
+        if not ckpt.exists() and "train_bilevel" in method["train_module"]:
+            # train_bilevel saves checkpoints as policy_ep{episode}.pt
+            import glob
+            ckpt_files = sorted(
+                glob.glob(str(output_path / "checkpoints" / "policy_ep*.pt")),
+                key=lambda x: int(x.split("_ep")[-1].split(".")[0])
+            )
+            if ckpt_files:
+                ckpt = Path(ckpt_files[-1])
 
         return str(ckpt) if ckpt.exists() else None
 

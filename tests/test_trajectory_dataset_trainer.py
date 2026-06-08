@@ -19,12 +19,14 @@ from uav_vpp_guidance.trajectory_prediction.dataset import (
     TrajectoryPredictionDataset,
     _compute_velocity_from_position,
     _build_states_from_trajectory,
+    build_lstm_prediction_feature,
 )
 from uav_vpp_guidance.trajectory_prediction.trainer import TrajectoryPredictorTrainer
 from uav_vpp_guidance.trajectory_prediction.lstm_predictor import (
     LSTMTrajectoryPredictor,
 )
 from uav_vpp_guidance.trajectory_prediction.gru_predictor import GRUTrajectoryPredictor
+from uav_vpp_guidance.envs.tracking_env import CloseRangeTrackingEnv
 
 
 # ---------------------------------------------------------------------------
@@ -256,3 +258,190 @@ class TestTrajectoryPredictorTrainer:
         # Verify weights match
         for p1, p2 in zip(model.parameters(), model2.parameters()):
             assert torch.allclose(p1, p2)
+
+
+# ---------------------------------------------------------------------------
+# LSTM Dataset Tests
+# ---------------------------------------------------------------------------
+
+
+class TestBuildLSTMPredictionFeature:
+    """Tests for build_lstm_prediction_feature (16-dim: rel_pos, rel_vel, target_vel, target_acc)."""
+
+    def test_feature_dim_is_16(self):
+        own_state = {
+            "position_m": np.array([0.0, 0.0, 5000.0]),
+            "velocity_vector_mps": np.array([100.0, 0.0, 0.0]),
+            "nz": 1.0,
+        }
+        target_state = {
+            "position_m": np.array([2000.0, 0.0, 5000.0]),
+            "velocity_vector_mps": np.array([150.0, 0.0, 0.0]),
+            "acceleration_vector_mps2": np.array([5.0, 0.0, 0.0]),
+            "nz": 1.0,
+        }
+        relative_state = {"range_m": 2000.0, "relative_velocity": np.array([50.0, 0.0, 0.0])}
+        config = {
+            "normalization": {
+                "position_scale_m": 1000.0,
+                "velocity_scale_mps": 300.0,
+                "acceleration_scale_mps2": 50.0,
+                "overload_scale": 9.0,
+            }
+        }
+        feat = build_lstm_prediction_feature(own_state, target_state, relative_state, config)
+        assert feat.shape == (16,)
+        assert feat.dtype == np.float32
+
+    def test_missing_acceleration_fallback_to_zeros(self):
+        own_state = {
+            "position_m": np.array([0.0, 0.0, 5000.0]),
+            "velocity_vector_mps": np.array([100.0, 0.0, 0.0]),
+        }
+        target_state = {
+            "position_m": np.array([2000.0, 0.0, 5000.0]),
+            "velocity_vector_mps": np.array([150.0, 0.0, 0.0]),
+            # no acceleration_vector_mps2
+        }
+        relative_state = {"range_m": 2000.0}
+        config = {"normalization": {}}
+        feat = build_lstm_prediction_feature(own_state, target_state, relative_state, config)
+        # acceleration channels (indices 9-11) should be zeros
+        assert np.allclose(feat[9:12], 0.0, atol=1e-8)
+
+    def test_relative_position_encoding(self):
+        own_state = {"position_m": np.array([0.0, 0.0, 0.0]), "velocity_vector_mps": np.array([0.0, 0.0, 0.0])}
+        target_state = {"position_m": np.array([1000.0, 2000.0, 3000.0]), "velocity_vector_mps": np.array([0.0, 0.0, 0.0])}
+        relative_state = {"range_m": np.linalg.norm([1000.0, 2000.0, 3000.0])}
+        config = {"normalization": {"position_scale_m": 1000.0}}
+        feat = build_lstm_prediction_feature(own_state, target_state, relative_state, config)
+        assert feat[0] == pytest.approx(1.0, abs=1e-6)
+        assert feat[1] == pytest.approx(2.0, abs=1e-6)
+        assert feat[2] == pytest.approx(3.0, abs=1e-6)
+
+
+class TestFromTrackingEnv:
+    """Tests for TrajectoryPredictionDataset.from_tracking_env."""
+
+    @pytest.fixture
+    def tracking_env_config(self):
+        return {
+            "experiment": {"name": "test_lstm_dataset", "seed": 42, "output_root": "outputs"},
+            "env": {
+                "use_jsbsim": False,
+                "decision_freq": 5,
+                "sim_freq": 60,
+                "max_high_level_steps": 512,
+                "success_range_m": 900.0,
+                "success_ata_deg": 25.0,
+                "success_hold_time_s": 0.2,
+                "hysteresis_range_m": 950.0,
+                "hysteresis_ata_deg": 30.0,
+                "min_altitude_m": 500.0,
+                "max_altitude_m": 15000.0,
+                "max_range_m": 8000.0,
+                "target_mode": "constant_velocity",
+                "high_level_dt": 0.2,
+            },
+            "virtual_point": {
+                "anchor_mode": "current_target",
+                "action_dim": 3,
+                "d_long_range": [-1500.0, 1500.0],
+                "d_lat_range": [-800.0, 800.0],
+                "d_vert_range": [-500.0, 500.0],
+                "smoothing_alpha": 0.3,
+            },
+            "trajectory_prediction": {"enabled": False},
+            "limits": {
+                "nz_min": -2.0,
+                "nz_max": 7.0,
+                "roll_rate_min": -1.5,
+                "roll_rate_max": 1.5,
+                "throttle_min": 0.0,
+                "throttle_max": 1.0,
+            },
+            "reward": {
+                "w_range": 0.5,
+                "w_angle": 0.8,
+                "w_energy": 0.2,
+                "w_safety": 2.0,
+                "w_saturation": 1.0,
+                "w_smooth": 0.1,
+                "terminal_success": 200.0,
+                "terminal_failure": -200.0,
+                "terminal_crash": -300.0,
+                "min_altitude_m": 500.0,
+            },
+            "guidance": {
+                "mode": "los_rate",
+                "use_gain_adapter": False,
+                "gains": {
+                    "k_los": 1.0,
+                    "k_pos": 0.5,
+                    "k_damp": 0.2,
+                    "k_roll": 1.0,
+                    "k_speed": 0.2,
+                    "alpha_filter": 0.3,
+                },
+            },
+            "normalization": {
+                "position_scale_m": 1000.0,
+                "velocity_scale_mps": 300.0,
+                "acceleration_scale_mps2": 50.0,
+                "overload_scale": 9.0,
+            },
+        }
+
+    def test_from_tracking_env_construct_samples(self, tracking_env_config):
+        env = CloseRangeTrackingEnv(tracking_env_config)
+        ds = TrajectoryPredictionDataset.from_tracking_env(
+            env,
+            num_episodes=3,
+            max_steps_per_episode=100,
+            history_len=10,
+            prediction_horizon=5,
+            config=tracking_env_config,
+            seed=42,
+        )
+        assert len(ds) > 0
+        x, y = ds[0]
+        assert x.shape == (10, 16)
+        assert y.shape == (3,)
+        assert x.dtype == torch.float32
+        assert y.dtype == torch.float32
+
+    def test_from_tracking_env_lstm_feature_builder(self, tracking_env_config):
+        env = CloseRangeTrackingEnv(tracking_env_config)
+        ds = TrajectoryPredictionDataset.from_tracking_env(
+            env,
+            num_episodes=2,
+            max_steps_per_episode=100,
+            history_len=10,
+            prediction_horizon=5,
+            config=tracking_env_config,
+            feature_builder=build_lstm_prediction_feature,
+            seed=42,
+        )
+        assert len(ds) > 0
+        x, _y = ds[0]
+        assert x.shape == (10, 16)
+
+    def test_from_tracking_env_with_lstm_predictor(self, tracking_env_config):
+        """Verify that samples can be fed directly into LSTMTrajectoryPredictor."""
+        env = CloseRangeTrackingEnv(tracking_env_config)
+        ds = TrajectoryPredictionDataset.from_tracking_env(
+            env,
+            num_episodes=2,
+            max_steps_per_episode=100,
+            history_len=10,
+            prediction_horizon=5,
+            config=tracking_env_config,
+            feature_builder=build_lstm_prediction_feature,
+            seed=42,
+        )
+        model = LSTMTrajectoryPredictor(input_dim=16, hidden_dim=32, num_layers=1)
+        loader = torch.utils.data.DataLoader(ds, batch_size=min(4, len(ds)), shuffle=False)
+        for batch_x, batch_y in loader:
+            pred = model(batch_x)
+            assert pred.shape == (batch_x.shape[0], 3)
+            break

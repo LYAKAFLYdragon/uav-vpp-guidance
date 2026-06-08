@@ -187,6 +187,42 @@ def bootstrap_confidence_interval(data: List[float],
     return bootstrap_ci(data, n_bootstrap=n_bootstrap, confidence=ci, random_seed=random_seed)
 
 
+def bootstrap_success_rate_ci(outcomes: List[int],
+                               n_bootstrap: int = 1000,
+                               confidence: float = 0.95,
+                               random_seed: int = 42) -> Tuple[float, float, float]:
+    """
+    Bootstrap confidence interval for success rate (proportion).
+
+    Args:
+        outcomes: Binary list of outcomes (1 = success, 0 = failure).
+        n_bootstrap: Number of bootstrap resamples.
+        confidence: Confidence level (e.g., 0.95 for 95% CI).
+        random_seed: Random seed for reproducibility.
+
+    Returns:
+        tuple: (success_rate, lower_bound, upper_bound)
+    """
+    arr = np.array([v for v in outcomes if np.isfinite(v)], dtype=np.float64)
+    if len(arr) == 0:
+        return np.nan, np.nan, np.nan
+
+    rng = np.random.default_rng(random_seed)
+    rates = []
+    for _ in range(n_bootstrap):
+        sample = rng.choice(arr, size=len(arr), replace=True)
+        rates.append(float(np.mean(sample)))
+
+    rates = np.sort(rates)
+    alpha = 1.0 - confidence
+    lower_idx = int(np.floor(alpha / 2 * n_bootstrap))
+    upper_idx = int(np.ceil((1.0 - alpha / 2) * n_bootstrap)) - 1
+    lower_idx = max(0, lower_idx)
+    upper_idx = min(n_bootstrap - 1, upper_idx)
+
+    return float(np.mean(arr)), float(rates[lower_idx]), float(rates[upper_idx])
+
+
 def paired_t_test(method_a_results: List[float],
                    method_b_results: List[float]) -> Dict:
     """

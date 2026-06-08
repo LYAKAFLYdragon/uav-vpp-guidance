@@ -27,3 +27,6 @@ runs/
 wandb/
 tensorboard/
 *.egg-info/
+
+# Paper materials (tex, pdf, figures, etc.)
+paper_materials/

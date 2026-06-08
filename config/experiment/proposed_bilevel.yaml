@@ -1,6 +1,7 @@
 # Experiment: Proposed strategy-gain bilevel optimization
 experiment_name: "004_bilevel"
 seed: 0
+policy_checkpoint: "outputs/experiments/no_prediction_vpp_ppo/checkpoints/best.pt"
 
 env:
   config_file: "config/env.yaml"

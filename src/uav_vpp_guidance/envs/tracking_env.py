@@ -118,6 +118,9 @@ class CloseRangeTrackingEnv:
             self._backend = "simple"
 
         # Submodules
+        self._use_virtual_point = config.get(
+            "virtual_point", config.get("guidance", {}).get("virtual_point", {})
+        ).get("enabled", True)
         self.virtual_point_generator = VirtualPointGenerator(
             config.get(
                 "virtual_point", config.get("guidance", {}).get("virtual_point", {})
@@ -488,7 +491,31 @@ class CloseRangeTrackingEnv:
             virtual_point_source = "vpp_policy"
 
         # 5. Guidance command generation
-        if use_command_override:
+        if not self._use_virtual_point:
+            # Direct command mode: policy outputs [nz, roll_rate, throttle] directly
+            limits = self.config.get("limits", {})
+            nz_min = limits.get("nz_min", -2.0)
+            nz_max = limits.get("nz_max", 7.0)
+            rr_min = limits.get("roll_rate_min", -1.5)
+            rr_max = limits.get("roll_rate_max", 1.5)
+            th_min = limits.get("throttle_min", 0.0)
+            th_max = limits.get("throttle_max", 1.0)
+            raw_command = {
+                "nz_cmd": float(action[0]) * (nz_max - nz_min) / 2.0 + (nz_max + nz_min) / 2.0,
+                "roll_rate_cmd": float(action[1]) * (rr_max - rr_min) / 2.0 + (rr_max + rr_min) / 2.0,
+                "throttle_cmd": float(action[2]) * (th_max - th_min) / 2.0 + (th_max + th_min) / 2.0,
+            }
+            virtual_point = {"position_neu": np.asarray(target_for_vp["position_neu"], dtype=np.float64)}
+            vp_info = {
+                "virtual_point": virtual_point["position_neu"],
+                "anchor_mode": anchor_mode,
+                "direct_command_mode": True,
+                "action_applied": True,
+            }
+            direct_track_mode_effective = False
+            virtual_point_source = "direct_command"
+            effective_guidance_mode = "direct_command"
+        elif use_command_override:
             raw_command = dict(command_override)
             virtual_point = {"position_neu": target_for_vp["position_neu"]}
             vp_info = {
@@ -506,7 +533,7 @@ class CloseRangeTrackingEnv:
             )
 
         # 5b. Optional command post-processing (terminal protection, energy comp, etc.)
-        if self.command_post_processor is not None and not use_command_override:
+        if self.command_post_processor is not None and not use_command_override and self._use_virtual_point:
             rel_geom = compute_relative_geometry(own_state, target_state)
             raw_command = self.command_post_processor.process(
                 raw_command,

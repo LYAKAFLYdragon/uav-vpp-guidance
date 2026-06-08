@@ -632,14 +632,39 @@ def train_ppo(config, output_dir, smoke=False):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Train CV/CA Prediction VPP PPO")
+    parser = argparse.ArgumentParser(description="Train CV/CA/LSTM Prediction VPP PPO")
     parser.add_argument("--config", type=str, required=True, help="Path to experiment config YAML")
     parser.add_argument("--smoke", action="store_true", help="Run smoke test (minimal training)")
     parser.add_argument("--seed", type=int, default=None, help="Random seed override")
     parser.add_argument("--output-dir", type=str, default=None, help="Output directory override")
+    parser.add_argument(
+        "--predictor-type",
+        type=str,
+        default=None,
+        choices=["constant_velocity", "constant_acceleration", "lstm", "gru", "none"],
+        help="Override trajectory predictor type from config.",
+    )
+    parser.add_argument(
+        "--checkpoint",
+        type=str,
+        default=None,
+        help="Override predictor checkpoint path (for lstm/gru).",
+    )
     args = parser.parse_args()
 
     config = load_experiment_config(args.config)
+
+    # Override predictor settings from CLI if provided
+    tp_cfg = config.setdefault("trajectory_prediction", {})
+    if args.predictor_type is not None:
+        if args.predictor_type == "none":
+            tp_cfg["enabled"] = False
+            tp_cfg["predictor_type"] = "none"
+        else:
+            tp_cfg["enabled"] = True
+            tp_cfg["predictor_type"] = args.predictor_type
+    if args.checkpoint is not None:
+        tp_cfg["checkpoint_path"] = args.checkpoint
 
     seed = args.seed if args.seed is not None else config.get("experiment", {}).get("seed", 0)
     set_seed(seed)
@@ -659,12 +684,15 @@ def main():
     print(f"Output dir: {output_dir}")
     print(f"Seed: {seed}")
 
-    tp_cfg = config.get("trajectory_prediction", {})
     tp_enabled = tp_cfg.get("enabled", False)
     predictor_type = tp_cfg.get("predictor_type", "none")
     anchor_mode = config.get("virtual_point", {}).get("anchor_mode", "current_target")
     print(f"Anchor mode: {anchor_mode}")
     print(f"Trajectory prediction: {'enabled' if tp_enabled else 'disabled'} ({predictor_type})")
+    if predictor_type in ("lstm", "gru"):
+        ckpt = tp_cfg.get("checkpoint_path")
+        print(f"Predictor checkpoint: {ckpt if ckpt else 'NOT SET (will train from scratch or fail)'}")
+        print(f"Freeze predictor during RL: {tp_cfg.get('freeze_predictor_during_rl', True)}")
 
     on_unknown = "warn" if args.smoke else "raise"
     try:

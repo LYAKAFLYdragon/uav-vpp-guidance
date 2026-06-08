@@ -70,14 +70,12 @@ METHODS = {
 
 TARGET_MODES = {
     "constant": {"target_mode": "constant_velocity"},
-    "sinusoidal_1g": {"target_mode": "sinusoidal", "weaving_amplitude_g": 1.0},
-    "sinusoidal_2g": {"target_mode": "sinusoidal", "weaving_amplitude_g": 2.0},
-    "sinusoidal_3g": {"target_mode": "sinusoidal", "weaving_amplitude_g": 3.0},
+    "sinusoidal": {"target_mode": "sinusoidal"},
 }
 
 
-def _modify_config(config_path: Path, target_mode: str, weaving_amplitude_g: float = None):
-    """Temporarily replace target_mode and weaving_amplitude_g in config. Returns backup path."""
+def _modify_config(config_path: Path, target_mode: str, total_timesteps: int = None):
+    """Temporarily replace target_mode and total_timesteps in config. Returns backup path."""
     backup_path = config_path.with_suffix(".yaml.bak")
     if not backup_path.exists():
         shutil.copy2(config_path, backup_path)
@@ -86,21 +84,14 @@ def _modify_config(config_path: Path, target_mode: str, weaving_amplitude_g: flo
     content = content.replace("target_mode: constant_velocity", f"target_mode: {target_mode}")
     content = content.replace("target_mode: sinusoidal", f"target_mode: {target_mode}")
 
-    # Modify weaving_amplitude_g if specified
-    if weaving_amplitude_g is not None:
+    # Modify total_timesteps if specified
+    if total_timesteps is not None:
         import re
-        if "weaving_amplitude_g:" in content:
-            content = re.sub(
-                r"weaving_amplitude_g:\s*[\d.]+",
-                f"weaving_amplitude_g: {weaving_amplitude_g}",
-                content,
-            )
-        else:
-            # Insert after target_mode line (4-space indent for env block)
-            content = content.replace(
-                f"target_mode: {target_mode}",
-                f"target_mode: {target_mode}\n    weaving_amplitude_g: {weaving_amplitude_g}",
-            )
+        content = re.sub(
+            r"total_timesteps:\s*\d+",
+            f"total_timesteps: {total_timesteps}",
+            content,
+        )
 
     config_path.write_text(content, encoding="utf-8")
     return backup_path
@@ -121,8 +112,7 @@ def run_training(method_key, target_mode_key, seed, steps, output_dir, gpu_id):
     output_path = output_dir / "training" / exp_name
 
     config_path = Path(method["train_config"])
-    weaving_amp = target.get("weaving_amplitude_g")
-    backup_path = _modify_config(config_path, target["target_mode"], weaving_amp)
+    backup_path = _modify_config(config_path, target["target_mode"], steps)
 
     try:
         cmd = [
@@ -134,11 +124,8 @@ def run_training(method_key, target_mode_key, seed, steps, output_dir, gpu_id):
 
         # Module-specific args
         if "train_prediction_vpp_ppo" in method["train_module"]:
-            cmd.extend(["--seed", str(seed), "--total-timesteps", str(steps)])
-            if gpu_id >= 0:
-                cmd.extend(["--device", f"cuda:{gpu_id}"])
-            else:
-                cmd.extend(["--device", "cpu"])
+            cmd.extend(["--seed", str(seed)])
+            # total_timesteps is modified in config file by _modify_config
         elif "train_bilevel" in method["train_module"]:
             cmd.extend(["--seed", str(seed)])
             # bilevel needs a checkpoint for vpp_bilevel; skip if none
@@ -171,9 +158,61 @@ def run_training(method_key, target_mode_key, seed, steps, output_dir, gpu_id):
         _restore_config(config_path, backup_path)
 
 
+# Method name mapping for evaluation configs
+EVAL_METHOD_NAMES = {
+    "no_vpp": "no_vpp",
+    "vpp_fixed": "no_prediction",  # Same policy structure
+    "vpp_single": "no_prediction",
+    "vpp_bilevel": "no_prediction",  # Same policy structure
+    "vpp_cv": "cv_prediction",
+    "vpp_ca": "ca_prediction",
+    "vpp_lstm": "lstm_frozen",
+    "vpp_gru": "gru_frozen",
+}
+
+
+def _create_single_method_eval_config(original_config_path: Path, method_key: str, checkpoint_path: Path, output_dir: Path):
+    """Create a temporary eval config with only one method and the given checkpoint."""
+    import yaml
+
+    with open(original_config_path, "r", encoding="utf-8") as f:
+        config = yaml.safe_load(f)
+
+    eval_method_name = EVAL_METHOD_NAMES[method_key]
+
+    # Build single-method config
+    methods = config.get("methods", {})
+
+    if eval_method_name in methods:
+        # Use existing method config, override checkpoint
+        single_method = dict(methods[eval_method_name])
+        single_method["checkpoint"] = str(checkpoint_path)
+    elif method_key == "no_vpp":
+        # Build minimal no_vpp config
+        single_method = {
+            "name": "no_vpp",
+            "checkpoint": str(checkpoint_path),
+            "trajectory_prediction": {"enabled": False},
+            "virtual_point": {"enabled": False},
+        }
+    else:
+        # Fallback: use no_prediction config as base
+        single_method = dict(methods.get("no_prediction", {}))
+        single_method["name"] = eval_method_name
+        single_method["checkpoint"] = str(checkpoint_path)
+
+    config["methods"] = {eval_method_name: single_method}
+
+    # Save temp config
+    temp_path = output_dir / f"eval_config_{method_key}.yaml"
+    with open(temp_path, "w", encoding="utf-8") as f:
+        yaml.dump(config, f, default_flow_style=False, allow_unicode=True)
+
+    return temp_path
+
+
 def run_evaluation(method_key, target_mode_key, seed, checkpoint, eval_seeds, eval_eps, output_dir, gpu_id):
     """Run evaluation for a trained checkpoint."""
-    method = METHODS[method_key]
     target = TARGET_MODES[target_mode_key]
 
     exp_name = f"{method_key}_{target_mode_key}_s{seed}"
@@ -182,16 +221,18 @@ def run_evaluation(method_key, target_mode_key, seed, checkpoint, eval_seeds, ev
 
     # Select eval config based on target mode
     if target["target_mode"] == "constant_velocity":
-        eval_config = "config/experiment/stage6f5_feasible_geometry.yaml"
+        eval_config = Path("config/experiment/stage6f5_feasible_geometry.yaml")
     else:
-        eval_config = "config/experiment/stage6f5_maneuvering_target.yaml"
+        eval_config = Path("config/experiment/stage6f5_maneuvering_target.yaml")
+
+    # Create single-method temp config
+    temp_config = _create_single_method_eval_config(eval_config, method_key, Path(checkpoint), eval_output)
 
     cmd = [
         sys.executable, "-m",
         "uav_vpp_guidance.evaluation.evaluate_prediction_comparison",
-        "--config", eval_config,
+        "--config", str(temp_config),
         "--backend", "simple",
-        "--checkpoint", str(checkpoint),
         "--episodes", str(eval_eps),
         "--seeds", *[str(s) for s in range(eval_seeds)],
         "--output-dir", str(eval_output),

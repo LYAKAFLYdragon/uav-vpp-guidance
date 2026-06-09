@@ -467,6 +467,9 @@ def aggregate_metrics(episodes):
         "mean_time_to_first_advantage_s": safe_mean([e["time_to_first_advantage_s"] for e in episodes]),
         "mean_advantage_hold_time_s": safe_mean([e["advantage_hold_time_s"] for e in episodes]),
     }
+    # Per-episode binary outcomes for bootstrap CI computation
+    result["episode_outcomes"] = [1 if e["is_success"] else 0 for e in episodes]
+
     # Unified field aliases for ablation / paper tables
     result["instant_success_rate"] = result["success_rate"]
     result["prediction_rmse_m"] = result["mean_prediction_error_m"]

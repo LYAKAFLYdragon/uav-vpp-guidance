@@ -314,12 +314,19 @@ def run_statistical_analysis(metrics: List[dict], output_dir: str) -> dict:
     for m in metrics:
         method = m.get("method", "unknown")
         sr = m.get("instant_success_rate", m.get("success_rate", np.nan))
-        # We don't have raw episode outcomes in the aggregated JSON,
-        # so we approximate CI width from std_return as a heuristic
-        # or compute CI on the aggregated mean if available.
-        # For now, report point estimate only.
+        outcomes = m.get("episode_outcomes")
+        ci = (np.nan, np.nan)
+        if outcomes is not None and len(outcomes) > 0:
+            try:
+                _sr, lower, upper = bootstrap_success_rate_ci(
+                    outcomes, n_bootstrap=1000, confidence=0.95, random_seed=42
+                )
+                ci = (lower, upper)
+            except Exception as exc:
+                print(f"[WARN] Bootstrap CI failed for {method}: {exc}")
         results[method] = {
             "success_rate": float(sr) if np.isfinite(sr) else np.nan,
+            "success_rate_ci": [float(ci[0]), float(ci[1])] if np.isfinite(ci[0]) and np.isfinite(ci[1]) else None,
             "mean_return": float(m.get("mean_return", np.nan)),
             "std_return": float(m.get("std_return", np.nan)),
             "mean_final_range_m": float(m.get("mean_final_range_m", np.nan)),
@@ -378,15 +385,28 @@ def generate_paper_tables(metrics: List[dict], stats: dict, paper_dir: str) -> L
     generated = []
 
     # Table 1: Main comparison (overall)
+    # Reuse CI already computed in run_statistical_analysis if available
+    per_method_stats = stats.get("per_method", {}) if stats else {}
     rows = []
     for method_key in METHOD_KEYS:
         m = next((x for x in metrics if x.get("method") == method_key), None)
         if m is None:
             continue
         sr = m.get("instant_success_rate", m.get("success_rate", np.nan))
+        # CI from statistical summary (pre-computed)
+        ci = per_method_stats.get(method_key, {}).get("success_rate_ci")
+        if ci is not None and len(ci) == 2:
+            lower, upper = ci
+            if np.isfinite(lower) and np.isfinite(upper):
+                ci_str = f"[{lower*100:.1f}, {upper*100:.1f}]"
+            else:
+                ci_str = "N/A"
+        else:
+            ci_str = "N/A"
         rows.append({
             "Method": METHOD_DISPLAY_NAMES.get(method_key, method_key),
             "Success Rate (%)": f"{sr*100:.1f}" if np.isfinite(sr) else "N/A",
+            "Success Rate 95% CI (%)": ci_str,
             "Mean Return": f"{m.get('mean_return', 0):.1f}",
             "Std Return": f"{m.get('std_return', 0):.1f}",
             "Mean Range (m)": f"{m.get('mean_final_range_m', 0):.1f}",
@@ -414,14 +434,15 @@ def generate_paper_tables(metrics: List[dict], stats: dict, paper_dir: str) -> L
         f.write("\\centering\n")
         f.write("\\caption{Ablation Comparison of Five Prediction Methods}\n")
         f.write("\\label{tab:ablation_main}\n")
-        f.write("\\begin{tabular}{lccccccccc}\n")
+        f.write("\\begin{tabular}{lcccccccccc}\n")
         f.write("\\toprule\n")
-        f.write("Method & Success & Return & Range (m) & ATA (deg) & Crash & OOB & Timeout & Fallback \\\\\n")
+        f.write("Method & Success & CI & Return & Range (m) & ATA (deg) & Crash & OOB & Timeout & Fallback \\\\\n")
         f.write("\\midrule\n")
         for r in rows:
             f.write(
                 f"{r['Method']} & "
                 f"{r['Success Rate (%)']} & "
+                f"{r['Success Rate 95% CI (%)']} & "
                 f"{r['Mean Return']} & "
                 f"{r['Mean Range (m)']} & "
                 f"{r['Mean ATA (deg)']} & "

@@ -31,6 +31,8 @@
 import numpy as np
 from typing import Tuple, Optional
 
+from .target_dynamics import create_target_dynamics
+
 
 class SimplePointMassEnv:
     """
@@ -59,6 +61,7 @@ class SimplePointMassEnv:
 
         # 目标机运动模式
         self._target_mode = config.get("target_mode", "constant_velocity")
+        self._target_dynamics = create_target_dynamics(config)
 
         # 内部状态
         self.own_state: Optional[dict] = None
@@ -221,37 +224,9 @@ class SimplePointMassEnv:
             self._apply_point_mass_dynamics(s, command, dt)
             return
 
-        if self._target_mode == "constant_velocity":
-            # 匀速直线
-            pos = s.get("position_m", np.zeros(3))
-            vel = s.get("velocity_vector_mps", np.zeros(3))
-            pos += vel * dt
-            s["position_m"] = pos
-            s["altitude_m"] = float(pos[2])
-
-        elif self._target_mode == "sinusoidal":
-            # 简单正弦机动：横向速度小幅波动
-            pos = s.get("position_m", np.zeros(3))
-            vel = s.get("velocity_vector_mps", np.zeros(3))
-            base_speed = float(np.linalg.norm(vel))
-            heading = np.arctan2(vel[1], vel[0])
-            # 横向机动角速度
-            lateral_rate = 0.05 * np.sin(0.5 * self.time)
-            heading += lateral_rate * dt
-            vel = np.array([
-                base_speed * np.cos(heading),
-                base_speed * np.sin(heading),
-                0.0
-            ], dtype=np.float64)
-            pos += vel * dt
-            s["velocity_vector_mps"] = vel
-            s["position_m"] = pos
-            s["altitude_m"] = float(pos[2])
-            s["heading_rad"] = heading
-            s["speed_mps"] = base_speed
-
-        else:
-            raise ValueError(f"Unknown target_mode: {self._target_mode}")
+        # 委托给目标动力学模块（支持 constant_velocity / sinusoidal /
+        # sinusoidal_weaving / bang_bang / barrel_roll 等）
+        self._target_dynamics.update_state(s, dt, self.time)
 
     @staticmethod
     def _apply_point_mass_dynamics(state: dict, command: dict, dt: float):

@@ -72,3 +72,85 @@ class TestSimplePointMassEnv:
         _, target1 = env.get_state()
         pos1 = target1["position_m"]
         assert not np.allclose(pos0, pos1)
+
+
+class TestManeuverTargetModes:
+    """Tests for new maneuver target dynamics (sinusoidal_weaving, bang_bang, barrel_roll)."""
+
+    def test_sinusoidal_weaving(self):
+        env = SimplePointMassEnv({
+            "decision_freq": 5,
+            "target_mode": "sinusoidal_weaving",
+            "weaving_amplitude_g": 3.0,
+            "weaving_frequency_rad_s": 1.0,
+        })
+        env.reset()
+        _, target0 = env.get_state()
+        pos0 = target0["position_m"].copy()
+        heading0 = target0["heading_rad"]
+        speed0 = target0["speed_mps"]
+        for _ in range(20):
+            env.step({"nz_cmd": 1.0})
+        _, target1 = env.get_state()
+        pos1 = target1["position_m"]
+        assert not np.allclose(pos0, pos1)
+        # Speed should remain approximately constant (pure lateral acceleration)
+        assert abs(target1["speed_mps"] - speed0) < 5.0
+        # Heading should have changed
+        assert abs(target1["heading_rad"] - heading0) > 0.01
+
+    def test_bang_bang(self):
+        env = SimplePointMassEnv({
+            "decision_freq": 5,
+            "target_mode": "bang_bang",
+            "bang_bang_max_g": 3.0,
+            "bang_bang_switch_interval_s": 2.0,
+        })
+        env.reset()
+        headings = []
+        for _ in range(30):
+            env.step({"nz_cmd": 1.0})
+            _, target = env.get_state()
+            headings.append(target["heading_rad"])
+        # Bang-bang should produce sawtooth-like heading changes
+        heading_range = max(headings) - min(headings)
+        assert heading_range > 0.1
+
+    def test_barrel_roll(self):
+        env = SimplePointMassEnv({
+            "decision_freq": 5,
+            "target_mode": "barrel_roll",
+            "barrel_roll_rate_rad_s": 0.5,
+        })
+        env.reset()
+        _, target0 = env.get_state()
+        alt0 = target0["altitude_m"]
+        headings = []
+        altitudes = []
+        for _ in range(50):
+            env.step({"nz_cmd": 1.0})
+            _, target = env.get_state()
+            headings.append(target["heading_rad"])
+            altitudes.append(target["altitude_m"])
+        # Should show significant heading change (circular motion)
+        heading_range = max(headings) - min(headings)
+        assert heading_range > 1.0
+        # Should show altitude variation
+        alt_range = max(altitudes) - min(altitudes)
+        assert alt_range > 5.0
+
+    def test_unknown_target_mode_raises(self):
+        with pytest.raises(ValueError, match="Unknown target_mode"):
+            SimplePointMassEnv({"decision_freq": 5, "target_mode": "hyperspace_jump"})
+
+    def test_backward_compatible_sinusoidal(self):
+        """Legacy 'sinusoidal' mode should still work via target_dynamics."""
+        env = SimplePointMassEnv({"decision_freq": 5, "target_mode": "sinusoidal"})
+        env.reset()
+        _, target0 = env.get_state()
+        pos0 = target0["position_m"].copy()
+        for _ in range(10):
+            env.step({"nz_cmd": 1.0})
+        _, target1 = env.get_state()
+        pos1 = target1["position_m"]
+        assert not np.allclose(pos0, pos1)

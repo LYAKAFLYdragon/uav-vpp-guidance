@@ -26,7 +26,8 @@ def load_all_episodes(manifest):
         if entry["status"] != "success":
             continue
 
-        eval_dir = Path(entry["checkpoint"]).parent.parent / "evaluation"
+        training_dir = Path(entry["checkpoint"]).parent.parent
+        eval_dir = training_dir.parent.parent / "evaluation" / training_dir.name
         csv_path = eval_dir / "raw_episodes.csv"
 
         if not csv_path.exists():

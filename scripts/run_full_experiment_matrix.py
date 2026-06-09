@@ -1436,6 +1436,87 @@ def validate_environment(args: argparse.Namespace) -> Dict[str, Any]:
             report["issues"].append(f"MISSING config: {name} -> {path}")
             report["status"] = "errors"
 
+    # 1b. Config semantic checks (No-VPP / End-to-End pitfalls)
+    report["config_semantics"] = {}
+    semantic_rules = {
+        "no_vpp": {
+            "expected": {
+                "virtual_point.enabled": True,
+                "virtual_point.mode": "zero_offset",
+            },
+            "forbidden": ["virtual_point.enabled=false without end_to_end.enabled=true"],
+        },
+        "e2e": {
+            "expected": {
+                "virtual_point.enabled": False,
+                "end_to_end.enabled": True,
+            },
+        },
+    }
+
+    try:
+        import yaml as _yaml
+        for cfg_name, rules in semantic_rules.items():
+            cfg_path = TRAIN_CONFIGS.get(cfg_name)
+            if not cfg_path or not Path(cfg_path).exists():
+                continue
+            with open(cfg_path, "r", encoding="utf-8") as f:
+                cfg = _yaml.safe_load(f)
+
+            vp_cfg = cfg.get("virtual_point", {})
+            e2e_cfg = cfg.get("end_to_end", {})
+            vp_enabled = vp_cfg.get("enabled", True)
+            vp_mode = vp_cfg.get("mode", "normal")
+            e2e_enabled = e2e_cfg.get("enabled", False)
+
+            entry = {
+                "file": cfg_name,
+                "virtual_point.enabled": vp_enabled,
+                "virtual_point.mode": vp_mode,
+                "end_to_end.enabled": e2e_enabled,
+            }
+
+            if cfg_name == "no_vpp":
+                if vp_enabled is not True:
+                    entry["error"] = (
+                        f"No-VPP config must set virtual_point.enabled=true "
+                        f"(got {vp_enabled}). Use mode='zero_offset' to disable offsets, "
+                        f"not enabled=false."
+                    )
+                    report["issues"].append(f"CONFIG SEMANTICS: {entry['error']} ({cfg_path})")
+                    report["status"] = "errors"
+                elif vp_mode != "zero_offset":
+                    entry["error"] = (
+                        f"No-VPP config must set virtual_point.mode='zero_offset' "
+                        f"(got '{vp_mode}')."
+                    )
+                    report["issues"].append(f"CONFIG SEMANTICS: {entry['error']} ({cfg_path})")
+                    report["status"] = "errors"
+                else:
+                    entry["ok"] = True
+
+            elif cfg_name == "e2e":
+                if vp_enabled is not False:
+                    entry["error"] = (
+                        f"End-to-End config must set virtual_point.enabled=false "
+                        f"(got {vp_enabled})."
+                    )
+                    report["issues"].append(f"CONFIG SEMANTICS: {entry['error']} ({cfg_path})")
+                    report["status"] = "errors"
+                elif e2e_enabled is not True:
+                    entry["error"] = (
+                        f"End-to-End config must set end_to_end.enabled=true "
+                        f"(got {e2e_enabled})."
+                    )
+                    report["issues"].append(f"CONFIG SEMANTICS: {entry['error']} ({cfg_path})")
+                    report["status"] = "errors"
+                else:
+                    entry["ok"] = True
+
+            report["config_semantics"][cfg_name] = entry
+    except Exception as e:
+        report["warnings"].append(f"Could not run config semantic checks: {e}")
+
     # 2. Check script files
     scripts = {
         "grid_search_lstm.py": PROJECT_ROOT / "scripts" / "grid_search_lstm.py",
@@ -1552,6 +1633,16 @@ def print_validation_report(report: Dict[str, Any]):
         print(f"  Unimportable: {', '.join(bad_modules)}")
     else:
         print("  All importable [OK]")
+
+    # Config semantics
+    semantics = report.get("config_semantics", {})
+    if semantics:
+        print(f"\n[Config Semantics] {len(semantics)} checked")
+        for cfg_name, entry in semantics.items():
+            if entry.get("ok"):
+                print(f"  {cfg_name}: OK (vp.enabled={entry.get('virtual_point.enabled')}, vp.mode={entry.get('virtual_point.mode')!r}, e2e.enabled={entry.get('end_to_end.enabled')})")
+            else:
+                print(f"  {cfg_name}: ERROR - {entry.get('error', 'unknown')}")
 
     # Python env
     py = report.get("python", {})

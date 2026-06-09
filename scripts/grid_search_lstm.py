@@ -40,6 +40,7 @@ from uav_vpp_guidance.trajectory_prediction.dataset import (
     build_lstm_prediction_feature,
 )
 from uav_vpp_guidance.trajectory_prediction.lstm_predictor import LSTMTrajectoryPredictor
+from uav_vpp_guidance.trajectory_prediction.gru_predictor import GRUTrajectoryPredictor
 from uav_vpp_guidance.trajectory_prediction.trainer import TrajectoryPredictorTrainer
 
 
@@ -117,6 +118,13 @@ def parse_args():
         type=str,
         default=None,
         help="Optional experiment suffix (default: auto timestamp).",
+    )
+    parser.add_argument(
+        "--model_type",
+        type=str,
+        default="lstm",
+        choices=["lstm", "gru"],
+        help="Predictor architecture type (default: lstm).",
     )
 
     return parser.parse_args()
@@ -274,13 +282,22 @@ def run_single_experiment(
     val_loader = DataLoader(val_ds, batch_size=args.batch_size, shuffle=False)
 
     # 2. Model
-    model = LSTMTrajectoryPredictor(
-        input_dim=16,
-        hidden_dim=hidden_dim,
-        num_layers=num_layers,
-        dropout=dropout,
-        predict_variance=False,
-    )
+    if args.model_type == "gru":
+        model = GRUTrajectoryPredictor(
+            input_dim=16,
+            hidden_dim=hidden_dim,
+            num_layers=num_layers,
+            dropout=dropout,
+            predict_variance=False,
+        )
+    else:
+        model = LSTMTrajectoryPredictor(
+            input_dim=16,
+            hidden_dim=hidden_dim,
+            num_layers=num_layers,
+            dropout=dropout,
+            predict_variance=False,
+        )
 
     # 3. Trainer (patience is baked into TrajectoryPredictorTrainer)
     trainer_cfg = {

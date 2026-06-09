@@ -650,6 +650,13 @@ def main():
         default=None,
         help="Override predictor checkpoint path (for lstm/gru).",
     )
+    parser.add_argument(
+        "--device",
+        type=str,
+        default=None,
+        choices=["cpu", "cuda"],
+        help="Override compute device (default: from config).",
+    )
     args = parser.parse_args()
 
     config = load_experiment_config(args.config)
@@ -693,6 +700,13 @@ def main():
         ckpt = tp_cfg.get("checkpoint_path")
         print(f"Predictor checkpoint: {ckpt if ckpt else 'NOT SET (will train from scratch or fail)'}")
         print(f"Freeze predictor during RL: {tp_cfg.get('freeze_predictor_during_rl', True)}")
+
+    # Device override
+    if args.device is not None:
+        if "ppo" not in config:
+            config["ppo"] = {}
+        config["ppo"]["device"] = args.device
+        print(f"Device override: {args.device}")
 
     on_unknown = "warn" if args.smoke else "raise"
     try:

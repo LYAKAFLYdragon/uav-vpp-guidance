@@ -163,6 +163,15 @@ def _print_banner(text: str, width: int = 60):
     print("=" * width + "\n")
 
 
+def _get_default_device() -> str:
+    """Auto-detect GPU availability for default device selection."""
+    try:
+        import torch
+        return "cuda" if torch.cuda.is_available() else "cpu"
+    except ImportError:
+        return "cpu"
+
+
 def _check_gpu_available(gpu_id: int) -> bool:
     try:
         import torch
@@ -334,6 +343,7 @@ def build_task_graph(args: argparse.Namespace) -> List[Task]:
                     "--batch_size", "32",
                     "--device", device,
                     "--output_dir", out_subdir,
+                    "--exp_name", "best",
                     "--seed", "42",
                 ]
                 # Best model is written to a known path by the grid search script
@@ -359,14 +369,28 @@ def build_task_graph(args: argparse.Namespace) -> List[Task]:
 
                 # Inline script: read best_config.json from grid search, then train
                 train_script = f"""
-import json, subprocess, sys
+import json, subprocess, sys, os
 from pathlib import Path
 
 grid_dir = Path({grid_out!r})
-best_cfg_path = grid_dir / "best_config.json"
-if not best_cfg_path.exists():
-    print(f"ERROR: best_config.json not found at {{best_cfg_path}}")
-    sys.exit(1)
+
+# grid_search_lstm.py creates a timestamp subdirectory; find it
+best_cfg_path = None
+for item in grid_dir.iterdir():
+    if item.is_dir():
+        candidate = item / "best_config.json"
+        if candidate.exists():
+            best_cfg_path = candidate
+            break
+
+if best_cfg_path is None:
+    # Fallback: try direct path
+    direct = grid_dir / "best_config.json"
+    if direct.exists():
+        best_cfg_path = direct
+    else:
+        print(f"ERROR: best_config.json not found under {{grid_dir}}")
+        sys.exit(1)
 
 with open(best_cfg_path, "r", encoding="utf-8") as f:
     best = json.load(f)
@@ -384,7 +408,7 @@ cmd = [
     "--epochs", "50" if not {smoke!r} else "2",
     "--batch-size", str(best.get("batch_size", 32)),
 ]
-print(f"[Predictor] Training best {{model_type.upper()}} with config:")
+print(f"[Predictor] Training best {model_type.upper()} with config:")
 print(json.dumps(best, indent=2))
 result = subprocess.run(cmd, capture_output=True, text=True)
 print(result.stdout)
@@ -396,8 +420,11 @@ if result.returncode != 0:
 ckpt_files = list(out_dir.glob("*.pt"))
 if ckpt_files:
     import shutil
-    shutil.copy(ckpt_files[0], out_dir / "best_model.pt")
-    print(f"[Predictor] Checkpoint saved to {{out_dir / 'best_model.pt'}}")
+    src = ckpt_files[0]
+    dst = out_dir / "best_model.pt"
+    if str(src.resolve()) != str(dst.resolve()):
+        shutil.copy(src, dst)
+    print(f"[Predictor] Checkpoint saved to {{dst}}")
 else:
     print("WARNING: No .pt checkpoint found after training")
 """
@@ -615,28 +642,78 @@ print("[Eval-C] Architecture comparison complete. Results:", output_dir / "archi
         # -------------------------------------------------------------------
         if args.only_group in (None, "E"):
             # Evaluate 2 representative methods on JSBSim backend
-            # We use run_paper_benchmark.py with --backend jsbsim
-            jsbsim_methods = [("no_pred", "No-Prediction"), ("cv", "CV")]
+            # migrate_to_jsbsim.py evaluates a single policy on both simple and JSBSim backends
+            jsbsim_methods = [
+                ("no_pred", "No-Prediction", str(EVAL_CONFIGS["ablation_scenarios"])),
+                ("cv", "CV", str(EVAL_CONFIGS["ablation_scenarios"])),
+            ]
             ckpt_deps = []
-            for method_key, _ in jsbsim_methods:
-                ckpt = _out("phase1_training", "experiment_A", f"{method_key}_s0", "checkpoints", "best.pt")
+            for method_key, _, _ in jsbsim_methods:
                 ckpt_deps.append(f"A_train_{method_key}_s0")
 
-            eval_cmd = [
-                sys.executable, str(PROJECT_ROOT / "scripts" / "run_paper_benchmark.py"),
-                "--config", str(EVAL_CONFIGS["jsbsim"]),
-                "--backend", "jsbsim",
-                "--seeds", ] + (["0", "1"] if smoke else [str(s) for s in range(5)]) + [
-                "--scenarios", "all",
-                "--output-dir", _out("phase2_evaluation", "experiment_E"),
-                "--allow-missing-methods",
-                "--methods", "no_prediction", "cv_prediction",
-            ]
-            # Map our internal method keys to run_paper_benchmark method names
-            method_name_map = {"no_pred": "no_prediction", "cv": "cv_prediction"}
-            for method_key, _ in jsbsim_methods:
-                ckpt = _out("phase1_training", "experiment_A", f"{method_key}_s0", "checkpoints", "best.pt")
-                eval_cmd.extend(["--checkpoint-map", f"{method_name_map[method_key]}={ckpt}"])
+            seeds_list = [0, 1] if smoke else list(range(5))
+            eps_str = "1" if smoke else "10"
+            out_dir = _out("phase2_evaluation", "experiment_E")
+
+            # Inline script: call migrate_to_jsbsim.py for each method sequentially
+            eval_script = f"""
+import subprocess, sys, json, shutil
+from pathlib import Path
+
+methods = {jsbsim_methods!r}
+output_dir = Path({out_dir!r})
+output_dir.mkdir(parents=True, exist_ok=True)
+results = {{}}
+
+for method_key, method_name, config_path in methods:
+    ckpt = str(Path({_out("phase1_training", "experiment_A")!r}) / f"{{method_key}}_s0" / "checkpoints" / "best.pt")
+    method_out = output_dir / method_key
+    method_out.mkdir(exist_ok=True)
+
+    cmd = [
+        sys.executable, str(Path({str(PROJECT_ROOT)!r}) / "scripts" / "migrate_to_jsbsim.py"),
+        "--checkpoint", ckpt,
+        "--config", config_path,
+        "--scenarios", "favorable", "neutral", "disadvantage", "challenging",
+        "--episodes-per-scenario", {eps_str!r},
+        "--output-dir", str(method_out),
+        "--device", {device!r},
+        "--skip-jsbsim-if-missing",
+    ]
+    for s in {seeds_list!r}:
+        cmd.extend(["--seeds", str(s)])
+    if {smoke!r}:
+        cmd.append("--smoke")
+
+    print(f"[Eval-E] Running JSBSim migration for {{method_name}}...")
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    results[method_key] = {{
+        "name": method_name,
+        "returncode": result.returncode,
+        "stdout": result.stdout[-1000:] if len(result.stdout) > 1000 else result.stdout,
+        "stderr": result.stderr[-1000:] if len(result.stderr) > 1000 else result.stderr,
+    }}
+
+# Aggregate reports if both succeeded
+report_files = []
+for method_key, _, _ in methods:
+    rp = output_dir / method_key / "report.md"
+    if rp.exists():
+        report_files.append((method_key, rp))
+
+if report_files:
+    with open(output_dir / "combined_report.md", "w", encoding="utf-8") as out_f:
+        out_f.write("# JSBSim Migration Evaluation - Combined Report\\n\\n")
+        for method_key, rp in report_files:
+            out_f.write(f"## {{methods[[m for m in methods if m[0] == method_key][0]][1]}}\\n\\n")
+            out_f.write(rp.read_text(encoding="utf-8"))
+            out_f.write("\\n---\\n\\n")
+
+with open(output_dir / "jsbsim_eval_results.json", "w", encoding="utf-8") as f:
+    json.dump(results, f, indent=2)
+print("[Eval-E] JSBSim evaluation complete.")
+"""
+            eval_cmd = [sys.executable, "-c", eval_script]
 
             tasks.append(Task(
                 id="Eval_E",
@@ -645,8 +722,8 @@ print("[Eval-C] Architecture comparison complete. Results:", output_dir / "archi
                 group="E",
                 cmd=eval_cmd,
                 depends_on=ckpt_deps,
-                output_files=[_out("phase2_evaluation", "experiment_E", "summary.md")],
-                estimated_minutes=_dur("jsbsim_eval_smoke" if smoke else "jsbsim_eval"),
+                output_files=[_out("phase2_evaluation", "experiment_E", "jsbsim_eval_results.json")],
+                estimated_minutes=_dur("jsbsim_eval_smoke" if smoke else "jsbsim_eval") * 2,
             ))
 
     # ========================================================================
@@ -841,7 +918,7 @@ class ProgressTracker:
         total = self.total_tasks
         width = 40
         filled = int(width * done / total) if total > 0 else 0
-        bar = "█" * filled + "░" * (width - filled)
+        bar = "#" * filled + "-" * (width - filled)
         print(f"\r[{bar}] {done}/{total} done, {failed} failed, {skipped} skipped | ETA: {self.get_eta()}", end="", flush=True)
         if done + failed + skipped == total:
             print()  # newline when complete
@@ -1281,9 +1358,9 @@ Examples:
     parser.add_argument(
         "--device",
         type=str,
-        default="cpu",
+        default=_get_default_device(),
         choices=["cpu", "cuda"],
-        help="PyTorch compute device (default: cpu)",
+        help=f"PyTorch compute device (default: auto-detected, currently {_get_default_device()})",
     )
     parser.add_argument(
         "--max-gpu-hours",

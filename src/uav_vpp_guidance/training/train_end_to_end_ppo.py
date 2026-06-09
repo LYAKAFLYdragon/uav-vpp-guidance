@@ -1,17 +1,21 @@
 """
-Stage 5: No-Prediction VPP PPO Autonomous Decision Baseline.
+End-to-End PPO Baseline.
 
-Trains a PPO policy to output virtual pursuit point offsets Δp
-without trajectory prediction.
+Trains a PPO policy to directly output control commands
+[nz_cmd, roll_rate_cmd, throttle_cmd], skipping the virtual pursuit point
+and LOS-rate guidance layers entirely.
+
+This serves as a baseline to demonstrate the superiority of the hierarchical
+VPP + LOS-rate guidance architecture.
 
 Usage:
     # Smoke test (fast)
-    python -m uav_vpp_guidance.training.train_no_prediction_vpp_ppo \
-        --config config/experiment/train_no_prediction_vpp_ppo.yaml --smoke
+    python -m uav_vpp_guidance.training.train_end_to_end_ppo \
+        --config config/experiment/train_end_to_end_ppo.yaml --smoke
 
     # Full training
-    python -m uav_vpp_guidance.training.train_no_prediction_vpp_ppo \
-        --config config/experiment/train_no_prediction_vpp_ppo.yaml
+    python -m uav_vpp_guidance.training.train_end_to_end_ppo \
+        --config config/experiment/train_end_to_end_ppo.yaml
 """
 
 import argparse
@@ -25,7 +29,7 @@ import numpy as np
 from uav_vpp_guidance.utils.config import load_yaml_config, merge_config
 from uav_vpp_guidance.utils.seed import set_seed
 from uav_vpp_guidance.envs.tracking_env import CloseRangeTrackingEnv
-from uav_vpp_guidance.agents.ppo_agent import PPOAgent
+from uav_vpp_guidance.agents.end_to_end_ppo_agent import EndToEndPPOAgent
 
 
 def load_experiment_config(config_path):
@@ -49,9 +53,17 @@ def sample_scenario(config, rng):
     return scenarios[name]
 
 
-def run_evaluation(env, agent, config, num_episodes=10, seeds=None, save_trajectories=False, output_dir=None):
+def run_evaluation(
+    env,
+    agent,
+    config,
+    num_episodes=10,
+    seeds=None,
+    save_trajectories=False,
+    output_dir=None,
+):
     """
-    Evaluate a trained policy.
+    Evaluate a trained end-to-end policy.
 
     Returns:
         dict: Aggregated evaluation metrics.
@@ -78,6 +90,8 @@ def run_evaluation(env, agent, config, num_episodes=10, seeds=None, save_traject
             for step in range(env.max_steps):
                 obs_vec = obs["observation_vector"]
                 action = agent.get_deterministic_action(obs_vec)
+                # Safety clip for evaluation
+                action = agent.clip_action(action)
 
                 obs, reward, terminated, truncated, info = env.step(action)
                 ep_reward += reward
@@ -91,16 +105,18 @@ def run_evaluation(env, agent, config, num_episodes=10, seeds=None, save_traject
                 final_ata = ata_deg
 
                 if save_trajectories and output_dir is not None:
-                    trajectory.append({
-                        "step": step,
-                        "time": step * env.env_config.get("high_level_dt", 0.2),
-                        "range_m": range_m,
-                        "ata_deg": ata_deg,
-                        "reward": reward,
-                        "action_x": float(action[0]),
-                        "action_y": float(action[1]),
-                        "action_z": float(action[2]),
-                    })
+                    trajectory.append(
+                        {
+                            "step": step,
+                            "time": step * env.env_config.get("high_level_dt", 0.2),
+                            "range_m": range_m,
+                            "ata_deg": ata_deg,
+                            "reward": reward,
+                            "nz_cmd": float(action[0]),
+                            "roll_rate_cmd": float(action[1]),
+                            "throttle_cmd": float(action[2]),
+                        }
+                    )
 
                 if terminated or truncated:
                     reason = info.get("reason", "unknown")
@@ -156,7 +172,7 @@ def run_evaluation(env, agent, config, num_episodes=10, seeds=None, save_traject
 
 def train_ppo(config, output_dir, smoke=False):
     """
-    Main PPO training loop.
+    Main end-to-end PPO training loop.
 
     Args:
         config (dict): Full experiment configuration.
@@ -173,6 +189,7 @@ def train_ppo(config, output_dir, smoke=False):
 
     # Save config snapshot
     import yaml
+
     config_path = os.path.join(output_dir, "config_snapshot.yaml")
     with open(config_path, "w", encoding="utf-8") as f:
         yaml.dump(config, f, default_flow_style=False, allow_unicode=True)
@@ -208,7 +225,9 @@ def train_ppo(config, output_dir, smoke=False):
 
     # Agent
     device = ppo_cfg.get("device", "cpu")
-    agent = PPOAgent(obs_dim=obs_dim, action_dim=action_dim, config=config, device=device)
+    agent = EndToEndPPOAgent(
+        obs_dim=obs_dim, action_dim=action_dim, config=config, device=device
+    )
     print(f"Network parameters: {agent.network.count_parameters()}")
 
     # Training state
@@ -222,18 +241,41 @@ def train_ppo(config, output_dir, smoke=False):
     eval_log_path = os.path.join(log_dir, "eval_log.csv")
 
     episode_fieldnames = [
-        "step", "episode", "episode_return", "episode_length",
-        "success", "score_win", "crash", "out_of_bounds", "timeout",
-        "mean_range", "final_range", "final_ata",
+        "step",
+        "episode",
+        "episode_return",
+        "episode_length",
+        "success",
+        "score_win",
+        "crash",
+        "out_of_bounds",
+        "timeout",
+        "mean_range",
+        "final_range",
+        "final_ata",
     ]
     update_fieldnames = [
-        "step", "update_num", "policy_loss", "value_loss", "entropy",
-        "approx_kl", "clip_fraction", "explained_variance", "learning_rate",
+        "step",
+        "update_num",
+        "policy_loss",
+        "value_loss",
+        "entropy",
+        "approx_kl",
+        "clip_fraction",
+        "explained_variance",
+        "learning_rate",
     ]
     eval_fieldnames = [
-        "step", "num_episodes", "mean_return", "std_return",
-        "success_rate", "crash_rate", "out_of_bounds_rate", "timeout_rate",
-        "mean_final_range_m", "mean_final_ata_deg",
+        "step",
+        "num_episodes",
+        "mean_return",
+        "std_return",
+        "success_rate",
+        "crash_rate",
+        "out_of_bounds_rate",
+        "timeout_rate",
+        "mean_final_range_m",
+        "mean_final_ata_deg",
     ]
 
     with open(episode_log_path, "w", newline="", encoding="utf-8") as f_ep:
@@ -249,7 +291,9 @@ def train_ppo(config, output_dir, smoke=False):
                 eval_writer.writeheader()
 
                 # Main training loop
-                rng = np.random.default_rng(config.get("experiment", {}).get("seed", 0))
+                rng = np.random.default_rng(
+                    config.get("experiment", {}).get("seed", 0)
+                )
                 obs = env.reset(seed=rng.integers(0, 1000000))
 
                 episode_return = 0.0
@@ -268,7 +312,11 @@ def train_ppo(config, output_dir, smoke=False):
                     # Collect rollout
                     for step in range(rollout_steps):
                         obs_vec = obs["observation_vector"]
-                        action, log_prob, value = agent.select_action(obs_vec, deterministic=False, store=False)
+                        action, log_prob, value = agent.select_action(
+                            obs_vec, deterministic=False, store=False
+                        )
+                        # Hard clip for environment safety
+                        action = agent.clip_action(action)
 
                         obs, reward, terminated, truncated, info = env.step(action)
                         done = terminated or truncated
@@ -277,7 +325,9 @@ def train_ppo(config, output_dir, smoke=False):
                         episode_length += 1
 
                         # Store transition with actual reward/done from env.step()
-                        agent.store_transition(obs_vec, action, log_prob, reward, done, value)
+                        agent.store_transition(
+                            obs_vec, action, log_prob, reward, done, value
+                        )
 
                         rel_state = obs.get("relative_state", {})
                         range_m = rel_state.get("range_m", 0.0)
@@ -298,8 +348,14 @@ def train_ppo(config, output_dir, smoke=False):
                             episode_score_win = ego_score > target_score
 
                             final_range = range_m
-                            final_ata = float(np.rad2deg(rel_state.get("ata_rad", 0.0)))
-                            mean_range = float(np.mean(episode_ranges)) if episode_ranges else 0.0
+                            final_ata = float(
+                                np.rad2deg(rel_state.get("ata_rad", 0.0))
+                            )
+                            mean_range = (
+                                float(np.mean(episode_ranges))
+                                if episode_ranges
+                                else 0.0
+                            )
 
                             # Log episode stats immediately
                             ep_row = {
@@ -326,7 +382,9 @@ def train_ppo(config, output_dir, smoke=False):
 
                             # Reset environment
                             scenario = sample_scenario(config, rng)
-                            obs = env.reset(scenario=scenario, seed=rng.integers(0, 1000000))
+                            obs = env.reset(
+                                scenario=scenario, seed=rng.integers(0, 1000000)
+                            )
 
                             # Check if buffer is full after this step
                             if agent.buffer.full:
@@ -336,7 +394,9 @@ def train_ppo(config, output_dir, smoke=False):
                             break
 
                     # PPO update when buffer is full or training ended
-                    if agent.buffer.full or (global_step >= total_timesteps and len(agent.buffer) > 0):
+                    if agent.buffer.full or (
+                        global_step >= total_timesteps and len(agent.buffer) > 0
+                    ):
                         next_obs_vec = obs["observation_vector"]
                         update_stats = agent.update(next_obs=next_obs_vec)
                         update_num += 1
@@ -349,7 +409,9 @@ def train_ppo(config, output_dir, smoke=False):
                             "entropy": update_stats.get("entropy", ""),
                             "approx_kl": update_stats.get("approx_kl", ""),
                             "clip_fraction": update_stats.get("clip_fraction", ""),
-                            "explained_variance": update_stats.get("explained_variance", ""),
+                            "explained_variance": update_stats.get(
+                                "explained_variance", ""
+                            ),
                             "learning_rate": update_stats.get("learning_rate", ""),
                         }
                         up_writer.writerow(up_row)
@@ -365,14 +427,22 @@ def train_ppo(config, output_dir, smoke=False):
                         )
 
                     # Evaluation
-                    if eval_interval > 0 and global_step % eval_interval == 0 and global_step > 0:
+                    if (
+                        eval_interval > 0
+                        and global_step % eval_interval == 0
+                        and global_step > 0
+                    ):
                         print(f"\n--- Evaluation at step {global_step} ---")
                         eval_cfg = config.get("evaluation", {})
                         eval_metrics = run_evaluation(
-                            env, agent, config,
+                            env,
+                            agent,
+                            config,
                             num_episodes=eval_cfg.get("eval_episodes", 10),
                             seeds=eval_cfg.get("seeds", [0, 1, 2]),
-                            save_trajectories=eval_cfg.get("save_trajectories", False),
+                            save_trajectories=eval_cfg.get(
+                                "save_trajectories", False
+                            ),
                             output_dir=output_dir,
                         )
                         eval_row = {
@@ -398,15 +468,26 @@ def train_ppo(config, output_dir, smoke=False):
                         )
 
                         # Save best checkpoint
-                        if save_best and eval_metrics["mean_return"] > best_eval_return:
+                        if (
+                            save_best
+                            and eval_metrics["mean_return"] > best_eval_return
+                        ):
                             best_eval_return = eval_metrics["mean_return"]
                             best_path = os.path.join(checkpoint_dir, "best.pt")
                             agent.save(best_path)
-                            print(f"  -> Saved best checkpoint (return={best_eval_return:.2f})")
+                            print(
+                                f"  -> Saved best checkpoint (return={best_eval_return:.2f})"
+                            )
 
                     # Periodic checkpoint save
-                    if save_interval > 0 and global_step % save_interval == 0 and global_step > 0:
-                        step_path = os.path.join(checkpoint_dir, f"step_{global_step}.pt")
+                    if (
+                        save_interval > 0
+                        and global_step % save_interval == 0
+                        and global_step > 0
+                    ):
+                        step_path = os.path.join(
+                            checkpoint_dir, f"step_{global_step}.pt"
+                        )
                         agent.save(step_path)
 
                 # Save last checkpoint
@@ -416,7 +497,9 @@ def train_ppo(config, output_dir, smoke=False):
                     print(f"\nSaved last checkpoint to {last_path}")
 
                 elapsed = time.time() - start_time
-                print(f"\nTraining complete! Total steps: {global_step}, Episodes: {episode_count}, Time: {elapsed:.1f}s")
+                print(
+                    f"\nTraining complete! Total steps: {global_step}, Episodes: {episode_count}, Time: {elapsed:.1f}s"
+                )
 
     env.close()
 
@@ -442,20 +525,43 @@ def train_ppo(config, output_dir, smoke=False):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Train No-Prediction VPP PPO Baseline")
-    parser.add_argument("--config", type=str, required=True, help="Path to experiment config YAML")
-    parser.add_argument("--smoke", action="store_true", help="Run smoke test (minimal training)")
-    parser.add_argument("--seed", type=int, default=None, help="Random seed override")
-    parser.add_argument("--output-dir", type=str, default=None, help="Output directory override")
-    parser.add_argument("--device", type=str, default=None, choices=["cpu", "cuda"], help="Override compute device (default: from config).")
+    parser = argparse.ArgumentParser(
+        description="Train End-to-End PPO Baseline"
+    )
+    parser.add_argument(
+        "--config", type=str, required=True, help="Path to experiment config YAML"
+    )
+    parser.add_argument(
+        "--smoke", action="store_true", help="Run smoke test (minimal training)"
+    )
+    parser.add_argument(
+        "--seed", type=int, default=None, help="Random seed override"
+    )
+    parser.add_argument(
+        "--output-dir",
+        type=str,
+        default=None,
+        help="Output directory override",
+    )
+    parser.add_argument(
+        "--device",
+        type=str,
+        default=None,
+        choices=["cpu", "cuda"],
+        help="Override compute device (default: from config).",
+    )
     args = parser.parse_args()
 
     config = load_experiment_config(args.config)
 
-    seed = args.seed if args.seed is not None else config.get("experiment", {}).get("seed", 0)
+    seed = (
+        args.seed
+        if args.seed is not None
+        else config.get("experiment", {}).get("seed", 0)
+    )
     set_seed(seed)
 
-    exp_name = config.get("experiment", {}).get("name", "no_prediction_vpp_ppo")
+    exp_name = config.get("experiment", {}).get("name", "end_to_end_ppo")
     if args.output_dir is not None:
         output_dir = args.output_dir
     else:
@@ -470,15 +576,27 @@ def main():
     print(f"Output dir: {output_dir}")
     print(f"Seed: {seed}")
 
-    # Verify trajectory prediction is disabled
-    tp_enabled = config.get("trajectory_prediction", {}).get("enabled", False)
-    if tp_enabled:
-        print("WARNING: trajectory_prediction.enabled is True! Forcing to False for this baseline.")
-        config["trajectory_prediction"]["enabled"] = False
+    # Force end-to-end mode
+    if "end_to_end" not in config:
+        config["end_to_end"] = {}
+    config["end_to_end"]["enabled"] = True
+    print("Mode: END-TO-END (direct control commands)")
 
-    anchor_mode = config.get("virtual_point", {}).get("anchor_mode", "current_target")
-    print(f"Anchor mode: {anchor_mode}")
-    print(f"Trajectory prediction: {'enabled' if tp_enabled else 'disabled'}")
+    # Disable virtual point layer
+    if "virtual_point" not in config:
+        config["virtual_point"] = {}
+    config["virtual_point"]["enabled"] = False
+    print("Virtual point: DISABLED")
+
+    # Disable trajectory prediction
+    if "trajectory_prediction" not in config:
+        config["trajectory_prediction"] = {}
+    config["trajectory_prediction"]["enabled"] = False
+    print("Trajectory prediction: DISABLED")
+
+    # Guidance mode info (not used in end-to-end, but logged for reference)
+    guidance_mode = config.get("guidance", {}).get("mode", "los_rate")
+    print(f"Guidance mode: {guidance_mode} (bypassed in end-to-end)")
 
     # Device override
     if args.device is not None:

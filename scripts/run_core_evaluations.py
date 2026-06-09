@@ -150,10 +150,10 @@ def main():
     df_no_vpp = evaluate_method(
         "config/experiment/train_no_vpp_direct_command.yaml",
         "outputs/experiments/p0a_no_vpp_s0/checkpoints/best.pt",
-        "no_vpp_direct",
+        "no_vpp_zero_offset",
         seeds,
     )
-    save_results(df_no_vpp, results_root / "p0a_no_vpp_ablation", "no_vpp_direct")
+    save_results(df_no_vpp, results_root / "p0a_no_vpp_ablation", "no_vpp_zero_offset")
     compare_methods(df_vpp, df_no_vpp, "VPP", "No-VPP")
 
     # --- P0-B: Bilevel Ablation ---

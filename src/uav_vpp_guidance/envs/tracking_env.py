@@ -22,6 +22,7 @@ from .observation import compute_relative_geometry, build_observation
 from .reward import RewardCalculator
 from .termination import TerminationChecker
 from ..virtual_point.generator import VirtualPointGenerator
+from ..virtual_point.no_vpp_guidance import NoVPPGuidance
 from ..guidance.los_rate_guidance import LOSRateGuidance
 from ..guidance.proportional_navigation import ProportionalNavigationGuidance
 from ..guidance.hybrid_guidance import HybridGuidance
@@ -118,14 +119,35 @@ class CloseRangeTrackingEnv:
             self._backend = "simple"
 
         # Submodules
-        self._use_virtual_point = config.get(
+        vp_config = config.get(
             "virtual_point", config.get("guidance", {}).get("virtual_point", {})
-        ).get("enabled", True)
-        self.virtual_point_generator = VirtualPointGenerator(
-            config.get(
-                "virtual_point", config.get("guidance", {}).get("virtual_point", {})
-            )
         )
+        vp_enabled = vp_config.get("enabled", True)
+        e2e_enabled = config.get("end_to_end", {}).get("enabled", False)
+
+        if not vp_enabled and e2e_enabled:
+            # End-to-end mode: policy outputs direct control commands
+            self._use_virtual_point = False
+            self.virtual_point_generator = None
+        elif vp_enabled:
+            # VPP layer is enabled: choose between normal offset or zero-offset (No-VPP)
+            vp_mode = vp_config.get("mode", "normal")
+            if vp_mode == "zero_offset":
+                # No-VPP baseline: keep full guidance chain but force VPP offset to zero
+                self._use_virtual_point = True
+                self.virtual_point_generator = NoVPPGuidance()
+            else:
+                # Normal VPP mode
+                self._use_virtual_point = True
+                self.virtual_point_generator = VirtualPointGenerator(vp_config)
+        else:
+            # vp_enabled=False without e2e_enabled is an invalid configuration
+            raise ValueError(
+                "Invalid configuration: virtual_point.enabled=false without "
+                "end_to_end.enabled=true. If you want No-VPP baseline, set "
+                "virtual_point.enabled=true and virtual_point.mode='zero_offset'. "
+                "If you want End-to-End, set end_to_end.enabled=true."
+            )
 
         # Guidance law selection based on mode
         guidance_config = config.get("guidance", {})
@@ -476,7 +498,7 @@ class CloseRangeTrackingEnv:
             }
             direct_track_mode_effective = True
             virtual_point_source = "direct_track"
-        else:
+        elif self._use_virtual_point and self.virtual_point_generator is not None:
             vp_result = self.virtual_point_generator.action_to_virtual_point(
                 action,
                 own_state,
@@ -489,10 +511,23 @@ class CloseRangeTrackingEnv:
             virtual_point, vp_info = vp_result
             direct_track_mode_effective = False
             virtual_point_source = "vpp_policy"
+        else:
+            # End-to-end mode: virtual_point is not used for guidance,
+            # but we still populate it for telemetry consistency.
+            virtual_point = {"position_neu": np.asarray(target_for_vp["position_neu"], dtype=np.float64)}
+            vp_info = {
+                "virtual_point": virtual_point["position_neu"],
+                "anchor_mode": anchor_mode,
+                "end_to_end_mode": True,
+                "action_applied": True,
+            }
+            direct_track_mode_effective = False
+            virtual_point_source = "end_to_end"
 
         # 5. Guidance command generation
         if not self._use_virtual_point:
-            # Direct command mode: policy outputs [nz, roll_rate, throttle] directly
+            # Direct command mode: policy outputs normalized commands in [-1, 1]
+            # which are then mapped to physical limits here.
             limits = self.config.get("limits", {})
             nz_min = limits.get("nz_min", -2.0)
             nz_max = limits.get("nz_max", 7.0)
@@ -533,7 +568,7 @@ class CloseRangeTrackingEnv:
             )
 
         # 5b. Optional command post-processing (terminal protection, energy comp, etc.)
-        if self.command_post_processor is not None and not use_command_override and self._use_virtual_point:
+        if self.command_post_processor is not None and not use_command_override:
             rel_geom = compute_relative_geometry(own_state, target_state)
             raw_command = self.command_post_processor.process(
                 raw_command,

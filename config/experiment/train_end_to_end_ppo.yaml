@@ -1,18 +1,25 @@
-# No-VPP Baseline (zero-offset mode)
+# End-to-End PPO Baseline
 #
-# Trains a PPO policy with the virtual pursuit point offset forced to zero.
-# The full guidance chain (LOS-rate guidance law + command post-processing)
-# is preserved. This serves as an ablation baseline to quantify the tactical
-# value added by the VPP offset layer.
+# Trains a PPO policy to directly output control commands
+# [nz_cmd, roll_rate_cmd, throttle_cmd], bypassing the virtual pursuit point
+# and LOS-rate guidance layers.
+#
+# Observation: raw relative geometry (range, ATA, aspect, velocities, altitudes)
+#   - 16-dimensional normalized vector (see build_observation in envs/observation.py)
+#   - No VPP-related features (vp_error, guidance gains, etc.)
+#
+# Action: 3-dimensional physical control commands
+#   - nz_cmd      ∈ [-2.0,  7.0]   (load factor, g)
+#   - roll_rate_cmd ∈ [-1.5, 1.5]  (roll rate, rad/s)
+#   - throttle_cmd  ∈ [0.0,  1.0]   (throttle, normalized)
 
 includes:
   - ../env.yaml
   - ../ppo.yaml
-  - ../guidance.yaml
   - ../reward.yaml
 
 experiment:
-  name: no_vpp_direct_command
+  name: end_to_end_ppo
   seed: 0
   mode: train
   output_root: outputs
@@ -36,12 +43,13 @@ env:
   max_altitude_m: 15000.0
   max_range_m: 8000.0
 
-trajectory_prediction:
-  enabled: false
-
-virtual_point:
+# End-to-end flag: tells the environment that actions are already in physical units
+end_to_end:
   enabled: true
-  mode: zero_offset
+
+# Virtual point layer is disabled for end-to-end control
+virtual_point:
+  enabled: false
   anchor_mode: current_target
   return_info: true
   action_dim: 3
@@ -50,6 +58,8 @@ virtual_point:
   d_vert_range: [-500.0, 500.0]
   smoothing_alpha: 0.3
 
+# Guidance law is bypassed in end-to-end mode, but kept for reference
+# when comparing with hierarchical architectures.
 guidance:
   mode: los_rate
   use_gain_adapter: false
@@ -86,6 +96,7 @@ policy:
   hidden_sizes: [128, 128]
   activation: tanh
   action_dim: 3
+  # Normalized [-1, 1] outputs; environment maps to physical limits
   action_low: [-1.0, -1.0, -1.0]
   action_high: [1.0, 1.0, 1.0]
 

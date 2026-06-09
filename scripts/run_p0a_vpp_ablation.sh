@@ -39,12 +39,12 @@ else
     fi
 fi
 
-# --- No-VPP Group (direct command) ---
+# --- No-VPP Group (zero-offset baseline) ---
 CONFIG_NO_VPP="config/experiment/train_no_vpp_direct_command.yaml"
 OUT_NO_VPP="outputs/experiments/p0a_no_vpp_s0"
 
 echo ""
-echo "[2/2] Training No-VPP group (direct command)..."
+echo "[2/2] Training No-VPP group (zero-offset baseline)..."
 echo "Config: $CONFIG_NO_VPP"
 echo "Output: $OUT_NO_VPP"
 

@@ -1,9 +1,13 @@
-# No-VPP Baseline (zero-offset mode)
+# No-VPP Baseline
 #
-# Trains a PPO policy with the virtual pursuit point offset forced to zero.
-# The full guidance chain (LOS-rate guidance law + command post-processing)
-# is preserved. This serves as an ablation baseline to quantify the tactical
-# value added by the VPP offset layer.
+# Trains a PPO policy with the virtual pursuit point layer disabled.
+# The policy still outputs a 3-D action vector (to keep the network
+# architecture identical to the VPP baseline), but the action is ignored
+# and the virtual point is always set to the target's current position
+# with zero offset.
+#
+# This serves as an ablation baseline to quantify the tactical value
+# added by the VPP offset layer.
 
 includes:
   - ../env.yaml
@@ -12,7 +16,7 @@ includes:
   - ../reward.yaml
 
 experiment:
-  name: no_vpp_direct_command
+  name: no_vpp_baseline
   seed: 0
   mode: train
   output_root: outputs
@@ -39,6 +43,9 @@ env:
 trajectory_prediction:
   enabled: false
 
+# No-VPP baseline: VPP layer is enabled but offset is forced to zero.
+# This preserves the full guidance chain (LOS-rate guidance law + command
+# post-processing) while quantifying the tactical value of the VPP offset.
 virtual_point:
   enabled: true
   mode: zero_offset

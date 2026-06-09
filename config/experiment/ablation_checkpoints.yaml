@@ -1,0 +1,15 @@
+# Ablation checkpoint paths for maneuver sweep experiments.
+#
+# These paths point to trained PPO policy checkpoints for each ablation method.
+# Update them to match your actual experiment outputs.
+
+checkpoints:
+  no_prediction: outputs/experiments/no_prediction_vpp_ppo/checkpoints/best.pt
+  cv_prediction: outputs/experiments/vpp_ppo_cv_prediction/checkpoints/best.pt
+  ca_prediction: outputs/experiments/vpp_ppo_ca_prediction/checkpoints/best.pt
+  lstm_frozen: outputs/experiments/vpp_ppo_lstm_frozen/checkpoints/best.pt
+  gru_frozen: outputs/experiments/vpp_ppo_gru_frozen/checkpoints/best.pt
+
+predictor_checkpoints:
+  lstm: outputs/trajectory_prediction/best_model.pt
+  gru: outputs/trajectory_prediction/best_model_gru.pt

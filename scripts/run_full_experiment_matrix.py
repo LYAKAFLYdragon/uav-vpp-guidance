@@ -368,6 +368,11 @@ def build_task_graph(args: argparse.Namespace) -> List[Task]:
                 best_model = os.path.join(best_out, "best_model.pt")
 
                 # Inline script: read best_config.json from grid search, then train
+                # P4 CONFIRMED: train_pipeline.py is located at
+                # src/uav_vpp_guidance/trajectory_prediction/train_pipeline.py
+                # and is runnable via `python -m` because the package directory
+                # contains __init__.py. Verified with:
+                #   python -m uav_vpp_guidance.trajectory_prediction.train_pipeline --help
                 train_script = f"""
 import json, subprocess, sys, os
 from pathlib import Path
@@ -554,6 +559,10 @@ else:
                 ckpt_deps.append(f"C_train_{arch_key}_s0")
 
             # Build a Python inline script that evaluates each architecture
+            # P3 CONFIRMED: evaluate_prediction_comparison.py uses nargs="+" for
+            # --scenarios, so passing ["--scenarios", "favorable", "neutral", ...]
+            # is safe. Each value after --scenarios is consumed until the next
+            # flag (--output-dir) is encountered.
             seeds_list = [0, 1] if smoke else DEFAULT_EVAL_SEEDS
             eps_str = "2" if smoke else "10"
             arch_eval_script = f"""
@@ -1394,7 +1403,188 @@ Examples:
         action="store_true",
         help="Skip tasks whose output files already exist",
     )
+    parser.add_argument(
+        "--validate",
+        action="store_true",
+        help="Validate environment: check all dependencies exist without executing",
+    )
     return parser.parse_args()
+
+
+# ---------------------------------------------------------------------------
+# Environment validation
+# ---------------------------------------------------------------------------
+
+def validate_environment(args: argparse.Namespace) -> Dict[str, Any]:
+    """Check all dependencies (configs, scripts, modules) without executing."""
+    report = {
+        "status": "ok",
+        "configs": {},
+        "scripts": {},
+        "modules": {},
+        "python": {},
+        "issues": [],
+        "warnings": [],
+    }
+
+    # 1. Check config files
+    all_configs = {**TRAIN_CONFIGS, **EVAL_CONFIGS}
+    for name, path in all_configs.items():
+        exists = Path(path).exists()
+        report["configs"][name] = {"path": str(path), "exists": exists}
+        if not exists:
+            report["issues"].append(f"MISSING config: {name} -> {path}")
+            report["status"] = "errors"
+
+    # 2. Check script files
+    scripts = {
+        "grid_search_lstm.py": PROJECT_ROOT / "scripts" / "grid_search_lstm.py",
+        "migrate_to_jsbsim.py": PROJECT_ROOT / "scripts" / "migrate_to_jsbsim.py",
+        "run_ablation_matrix.py": PROJECT_ROOT / "scripts" / "run_ablation_matrix.py",
+        "run_maneuver_sweep.py": PROJECT_ROOT / "scripts" / "run_maneuver_sweep.py",
+        "compare_gain_optimization.py": PROJECT_ROOT / "scripts" / "compare_gain_optimization.py",
+        "compile_ablation_results.py": PROJECT_ROOT / "scripts" / "compile_ablation_results.py",
+    }
+    for name, path in scripts.items():
+        exists = path.exists()
+        report["scripts"][name] = {"path": str(path), "exists": exists}
+        if not exists:
+            report["issues"].append(f"MISSING script: {name} -> {path}")
+            report["status"] = "errors"
+
+    # 3. Check Python modules (try import without executing)
+    modules = [
+        "uav_vpp_guidance.training.train_prediction_vpp_ppo",
+        "uav_vpp_guidance.training.train_no_prediction_vpp_ppo",
+        "uav_vpp_guidance.training.train_end_to_end_ppo",
+        "uav_vpp_guidance.training.train_fixed_gain",
+        "uav_vpp_guidance.trajectory_prediction.train_pipeline",
+        "uav_vpp_guidance.evaluation.evaluate_prediction_comparison",
+    ]
+    for mod in modules:
+        try:
+            __import__(mod)
+            report["modules"][mod] = {"importable": True}
+        except Exception as e:
+            report["modules"][mod] = {"importable": False, "error": str(e)}
+            report["issues"].append(f"UNIMPORTABLE module: {mod} -> {e}")
+            report["status"] = "errors"
+
+    # 4. Check Python / PyTorch / CUDA
+    report["python"]["version"] = f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
+    try:
+        import torch
+        report["python"]["torch_version"] = torch.__version__
+        report["python"]["cuda_available"] = torch.cuda.is_available()
+        if torch.cuda.is_available():
+            report["python"]["cuda_version"] = torch.version.cuda
+            report["python"]["gpu_count"] = torch.cuda.device_count()
+            for i in range(torch.cuda.device_count()):
+                report["python"][f"gpu_{i}"] = torch.cuda.get_device_name(i)
+        else:
+            report["warnings"].append("CUDA not available; training will use CPU (slower)")
+    except ImportError:
+        report["issues"].append("MISSING package: torch is not installed")
+        report["status"] = "errors"
+
+    try:
+        import numpy as np
+        report["python"]["numpy_version"] = np.__version__
+    except ImportError:
+        report["issues"].append("MISSING package: numpy is not installed")
+        report["status"] = "errors"
+
+    try:
+        import yaml
+        report["python"]["pyyaml_ok"] = True
+    except ImportError:
+        report["issues"].append("MISSING package: PyYAML is not installed")
+        report["status"] = "errors"
+
+    # 5. Check output dir writable
+    out_dir = Path(args.output_dir).resolve()
+    try:
+        out_dir.mkdir(parents=True, exist_ok=True)
+        test_file = out_dir / ".write_test"
+        test_file.write_text("ok")
+        test_file.unlink()
+        report["output_dir"] = {"path": str(out_dir), "writable": True}
+    except Exception as e:
+        report["output_dir"] = {"path": str(out_dir), "writable": False, "error": str(e)}
+        report["issues"].append(f"NOT WRITABLE: output_dir {out_dir} -> {e}")
+        report["status"] = "errors"
+
+    return report
+
+
+def print_validation_report(report: Dict[str, Any]):
+    """Print a human-readable validation report."""
+    _print_banner("Environment Validation Report")
+
+    status = report.get("status", "unknown")
+    if status == "ok":
+        print("Status: ALL CHECKS PASSED [OK]")
+    elif status == "warnings":
+        print("Status: PASSED WITH WARNINGS [WARN]")
+    else:
+        print("Status: FAILED [ERROR]")
+
+    # Configs
+    print(f"\n[Configs] {len(report['configs'])} checked")
+    missing_cfgs = [k for k, v in report["configs"].items() if not v["exists"]]
+    if missing_cfgs:
+        print(f"  Missing: {', '.join(missing_cfgs)}")
+    else:
+        print("  All present [OK]")
+
+    # Scripts
+    print(f"\n[Scripts] {len(report['scripts'])} checked")
+    missing_scripts = [k for k, v in report["scripts"].items() if not v["exists"]]
+    if missing_scripts:
+        print(f"  Missing: {', '.join(missing_scripts)}")
+    else:
+        print("  All present [OK]")
+
+    # Modules
+    print(f"\n[Modules] {len(report['modules'])} checked")
+    bad_modules = [k for k, v in report["modules"].items() if not v.get("importable")]
+    if bad_modules:
+        print(f"  Unimportable: {', '.join(bad_modules)}")
+    else:
+        print("  All importable [OK]")
+
+    # Python env
+    py = report.get("python", {})
+    print(f"\n[Python Environment]")
+    print(f"  Python: {py.get('version', 'unknown')}")
+    print(f"  PyTorch: {py.get('torch_version', 'not installed')}")
+    print(f"  CUDA available: {py.get('cuda_available', False)}")
+    if py.get("cuda_available"):
+        print(f"  GPUs: {py.get('gpu_count', 0)}")
+        for i in range(py.get("gpu_count", 0)):
+            print(f"    GPU {i}: {py.get(f'gpu_{i}', 'unknown')}")
+
+    # Output dir
+    od = report.get("output_dir", {})
+    print(f"\n[Output Directory]")
+    print(f"  Path: {od.get('path', 'unknown')}")
+    print(f"  Writable: {'Yes [OK]' if od.get('writable') else 'No [FAIL]'}")
+
+    # Issues and warnings
+    issues = report.get("issues", [])
+    warnings = report.get("warnings", [])
+    if warnings:
+        print(f"\n[Warnings] ({len(warnings)})")
+        for w in warnings:
+            print(f"  [WARN] {w}")
+    if issues:
+        print(f"\n[Errors] ({len(issues)})")
+        for issue in issues:
+            print(f"  [ERROR] {issue}")
+        print("\nPlease fix the above errors before running experiments.")
+        sys.exit(1)
+    else:
+        print("\n[OK] Environment is ready for experiments.")
 
 
 # ---------------------------------------------------------------------------
@@ -1403,6 +1593,12 @@ Examples:
 
 def main():
     args = parse_args()
+
+    # Validate mode: check dependencies and exit
+    if args.validate:
+        report = validate_environment(args)
+        print_validation_report(report)
+        return
 
     # Resolve output directory and state file
     output_dir = Path(args.output_dir).resolve()
@@ -1424,7 +1620,7 @@ def main():
 
     if args.device == "cuda":
         if _check_gpu_available(args.gpu):
-            print(f"GPU {args.gpu}: {_get_gpu_name(args.gpu)} ✓")
+            print(f"GPU {args.gpu}: {_get_gpu_name(args.gpu)} [OK]")
         else:
             print(f"WARNING: GPU {args.gpu} not available, falling back to CPU")
             args.device = "cpu"

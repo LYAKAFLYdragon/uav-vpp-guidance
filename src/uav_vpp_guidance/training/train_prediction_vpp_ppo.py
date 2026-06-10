@@ -657,9 +657,33 @@ def main():
         choices=["cpu", "cuda"],
         help="Override compute device (default: from config).",
     )
+    parser.add_argument(
+        "--backend",
+        type=str,
+        default=None,
+        choices=["simple", "jsbsim"],
+        help="Override simulation backend (default: from config).",
+    )
+    parser.add_argument(
+        "--use-jsbsim",
+        action="store_true",
+        help="Force use_jsbsim=True (equivalent to --backend jsbsim).",
+    )
     args = parser.parse_args()
 
     config = load_experiment_config(args.config)
+
+    # Backend override
+    backend = args.backend
+    if args.use_jsbsim:
+        backend = "jsbsim"
+    if backend is not None:
+        config["backend"] = backend
+        if "env" not in config:
+            config["env"] = {}
+        config["env"]["backend"] = backend
+        config["env"]["use_jsbsim"] = (backend == "jsbsim")
+        print(f"Backend override: {backend}")
 
     # Override predictor settings from CLI if provided
     tp_cfg = config.setdefault("trajectory_prediction", {})

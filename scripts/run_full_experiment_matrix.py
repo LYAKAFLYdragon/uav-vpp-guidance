@@ -221,6 +221,7 @@ def build_task_graph(args: argparse.Namespace) -> List[Task]:
     output_dir = Path(args.output_dir).resolve()
     smoke = args.smoke
     device = args.device
+    backend = getattr(args, "backend", "jsbsim")
 
     # Duration multiplier for smoke mode
     dur_mult = 0.1 if smoke else 1.0
@@ -256,6 +257,7 @@ def build_task_graph(args: argparse.Namespace) -> List[Task]:
                         "--seed", str(seed),
                         "--output-dir", out_subdir,
                         "--device", device,
+                        "--backend", backend,
                     ]
                     if smoke:
                         cmd.append("--smoke")
@@ -302,6 +304,7 @@ def build_task_graph(args: argparse.Namespace) -> List[Task]:
                         "--seed", str(seed),
                         "--output-dir", out_subdir,
                         "--device", device,
+                        "--backend", backend,
                     ]
                     if smoke:
                         cmd.append("--smoke")
@@ -480,7 +483,7 @@ else:
                 "--seeds", "2" if smoke else "10",
                 "--episodes-per-scenario", "2" if smoke else "50",
                 "--output-dir", _out("phase2_evaluation", "experiment_A"),
-                "--backend", "simple",
+                "--backend", backend,
             ]
             if smoke:
                 eval_cmd.append("--smoke")
@@ -525,6 +528,7 @@ else:
                 "--episodes-per-scenario", "2" if smoke else "10",
                 "--base-config", str(EVAL_CONFIGS["maneuver_base"]),
                 "--output-dir", _out("phase2_evaluation", "experiment_B"),
+                "--backend", backend,
             ]
             if smoke:
                 sweep_cmd.append("--smoke")
@@ -606,7 +610,7 @@ for arch_key, arch_name, config_path in archs:
         "--episodes-per-scenario", {eps_str!r},
         "--scenarios", "favorable", "neutral", "disadvantage", "challenging",
         "--output-dir", str(arch_out),
-        "--backend", "simple",
+        "--backend", {backend!r},
     ]
     cmd.append("--seeds")
     for s in seeds:
@@ -1422,6 +1426,13 @@ Examples:
         "--skip-existing",
         action="store_true",
         help="Skip tasks whose output files already exist",
+    )
+    parser.add_argument(
+        "--backend",
+        type=str,
+        default="jsbsim",
+        choices=["simple", "jsbsim"],
+        help="Simulation backend for training and evaluation (default: jsbsim)",
     )
     parser.add_argument(
         "--validate",

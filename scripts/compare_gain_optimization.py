@@ -152,6 +152,13 @@ def parse_args():
         choices=["cpu", "cuda"],
         help="Override torch device in config",
     )
+    parser.add_argument(
+        "--backend",
+        type=str,
+        default="jsbsim",
+        choices=["simple", "jsbsim"],
+        help="Simulation backend for training (default: jsbsim)",
+    )
 
     return parser.parse_args()
 
@@ -193,6 +200,7 @@ def build_method_config(
     gains: dict,
     temp_dir: Path,
     device: Optional[str] = None,
+    backend: str = "jsbsim",
 ) -> str:
     """Build a temporary training config with fixed gains injected."""
     config = _load_yaml(base_config_path)
@@ -219,6 +227,13 @@ def build_method_config(
             config["ppo"] = {}
         config["ppo"]["device"] = device
 
+    # Backend override
+    config["backend"] = backend
+    if "env" not in config:
+        config["env"] = {}
+    config["env"]["backend"] = backend
+    config["env"]["use_jsbsim"] = (backend == "jsbsim")
+
     # Save temp file
     temp_dir.mkdir(parents=True, exist_ok=True)
     temp_path = temp_dir / f"gain_config_{method_key}.yaml"
@@ -237,6 +252,7 @@ def run_single_training(
     config_path: str,
     output_dir: str,
     smoke: bool,
+    backend: str = "jsbsim",
 ) -> bool:
     """Run one training seed for a given method."""
     cmd = [
@@ -249,6 +265,8 @@ def run_single_training(
         str(seed),
         "--output-dir",
         output_dir,
+        "--backend",
+        backend,
     ]
     if smoke:
         cmd.append("--smoke")
@@ -545,7 +563,7 @@ def main():
 
         # Build temp config for this method
         method_config_path = build_method_config(
-            args.base_config, method_key, gain_cfg["gains"], temp_dir, args.device
+            args.base_config, method_key, gain_cfg["gains"], temp_dir, args.device, args.backend
         )
 
         for seed in range(args.seeds):
@@ -568,7 +586,7 @@ def main():
                 continue
 
             success = run_single_training(
-                method_key, seed, method_config_path, seed_dir, args.smoke
+                method_key, seed, method_config_path, seed_dir, args.smoke, args.backend
             )
             if success:
                 metrics = extract_metrics_from_logs(str(Path(seed_dir) / "logs"))

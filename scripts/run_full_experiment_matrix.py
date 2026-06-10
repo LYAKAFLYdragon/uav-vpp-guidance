@@ -548,8 +548,12 @@ else:
         # Group C: Architecture comparison evaluation
         # -------------------------------------------------------------------
         if args.only_group in (None, "C"):
+            # FIX: Each architecture needs its TRAINING config as the base,
+            # because evaluate_prediction_comparison.py requires a 'methods' field.
+            # We dynamically generate a per-architecture temp YAML that includes
+            # the training config settings + a single-method 'methods' block.
             archs = [
-                ("vpp", "VPP-normal", str(EVAL_CONFIGS["ablation_scenarios"])),
+                ("vpp", "VPP-normal", str(TRAIN_CONFIGS["cv"])),
                 ("no_vpp", "No-VPP", str(TRAIN_CONFIGS["no_vpp"])),
                 ("e2e", "End-to-End", str(TRAIN_CONFIGS["e2e"])),
                 ("no_pred", "No-Pred-only", str(TRAIN_CONFIGS["no_pred"])),
@@ -579,10 +583,26 @@ for arch_key, arch_name, config_path in archs:
     ckpt = str(Path({_out("phase1_training", "experiment_C")!r}) / f"{{arch_key}}_s0" / "checkpoints" / "best.pt")
     arch_out = output_dir / arch_key
     arch_out.mkdir(exist_ok=True)
+
+    # FIX: evaluate_prediction_comparison.py requires a 'methods' dict.
+    # Dynamically generate a temp YAML that wraps the training config
+    # with a single-method block and the correct checkpoint path.
+    import yaml
+    with open(config_path, "r", encoding="utf-8") as f:
+        base_cfg = yaml.safe_load(f)
+    base_cfg["methods"] = {{
+        arch_key: {{
+            "name": arch_key,
+            "checkpoint": ckpt,
+        }}
+    }}
+    tmp_cfg_path = arch_out / "_eval_config.yaml"
+    with open(tmp_cfg_path, "w", encoding="utf-8") as f:
+        yaml.dump(base_cfg, f, default_flow_style=False, allow_unicode=True)
+
     cmd = [
         sys.executable, "-m", "uav_vpp_guidance.evaluation.evaluate_prediction_comparison",
-        "--config", config_path,
-        "--checkpoint", ckpt,
+        "--config", str(tmp_cfg_path),
         "--episodes-per-scenario", {eps_str!r},
         "--scenarios", "favorable", "neutral", "disadvantage", "challenging",
         "--output-dir", str(arch_out),

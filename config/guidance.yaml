@@ -53,7 +53,15 @@ guidance:
     energy_speed_hysteresis_mps: 20.0
     min_dwell_steps: 3
 
-    # Command post-processing
+    # Mode-switch gate: switch to proportional navigation for tail-chase / head-on
+  # geometries where LOS-rate guidance struggles (Stage 6H.1 verified)
+  mode_switch:
+    enabled: true
+    aspect_threshold_deg: 25.0
+    range_threshold_m: 3000.0
+    closing_speed_threshold_mps: 50.0
+
+  # Command post-processing
   post_process:
     enabled: false
     enable_energy_compensation: false

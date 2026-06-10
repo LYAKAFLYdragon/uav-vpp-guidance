@@ -4,6 +4,7 @@
 用于验证：0% Success 是 Simple 后端固有问题，还是 No-Pred 方法本身弱。
 """
 
+import argparse
 import sys
 from pathlib import Path
 import numpy as np
@@ -16,12 +17,31 @@ from uav_vpp_guidance.expert_system import ExpertVPPPolicy
 import yaml
 
 
-def load_config():
-    with open(project_root / "config" / "experiment" / "train_no_prediction_vpp_ppo.yaml") as f:
+def merge_config(base, override):
+    merged = dict(base)
+    for key, value in override.items():
+        if key in merged and isinstance(merged[key], dict) and isinstance(value, dict):
+            merged[key] = merge_config(merged[key], value)
+        else:
+            merged[key] = value
+    return merged
+
+
+def load_config(backend="simple"):
+    config_path = project_root / "config" / "experiment" / "train_no_prediction_vpp_ppo.yaml"
+    with open(config_path) as f:
         config = yaml.safe_load(f)
-    config["backend"] = "simple"
-    config["env"]["backend"] = "simple"
-    config["env"]["use_jsbsim"] = False
+    includes = config.pop("includes", [])
+    merged = {}
+    for inc in includes:
+        inc_path = project_root / "config" / "experiment" / inc
+        if inc_path.exists():
+            with open(inc_path) as f:
+                merged = merge_config(merged, yaml.safe_load(f))
+    config = merge_config(merged, config)
+    config["backend"] = backend
+    config["env"]["backend"] = backend
+    config["env"]["use_jsbsim"] = (backend == "jsbsim")
     config["trajectory_prediction"]["enabled"] = False
     return config
 
@@ -57,7 +77,12 @@ def run_episode(env, policy, scenario, seed):
 
 
 def main():
-    config = load_config()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--backend", default="simple", choices=["simple", "jsbsim"])
+    parser.add_argument("--episodes", type=int, default=3)
+    args = parser.parse_args()
+    
+    config = load_config(backend=args.backend)
     env = CloseRangeTrackingEnv(config)
     policy = ExpertVPPPolicy(config.get("expert_vpp", {}))
     
@@ -68,7 +93,7 @@ def main():
     print("=" * 60)
     
     results = []
-    for ep in range(3):
+    for ep in range(args.episodes):
         result = run_episode(env, policy, scenario, seed=ep)
         results.append(result)
         status = "SUCCESS" if result["is_success"] else result["reason"].upper()

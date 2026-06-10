@@ -1,0 +1,80 @@
+{
+  "architectures": {
+    "vpp": {
+      "success_rate_mean": 0.7501518416932038,
+      "success_rate_std": 0.022831028782437292,
+      "ci_lower": 0.7188004768127851,
+      "ci_upper": 0.7725135358741936,
+      "mean_return": -91.16706661099984,
+      "std_return": 9.910628317818722,
+      "n_seeds": 3.0
+    },
+    "no_vpp": {
+      "success_rate_mean": 0.6179479665331941,
+      "success_rate_std": 0.005547937101968884,
+      "ci_lower": 0.6105127222296926,
+      "ci_upper": 0.6238352120950186,
+      "mean_return": -107.85561071275147,
+      "std_return": 6.350533468893389,
+      "n_seeds": 3.0
+    },
+    "end_to_end": {
+      "success_rate_mean": 0.566607812467813,
+      "success_rate_std": 0.01312478182957682,
+      "ci_lower": 0.5519809209268365,
+      "ci_upper": 0.583817236209041,
+      "mean_return": -128.86513141234596,
+      "std_return": 4.829994298023427,
+      "n_seeds": 3.0
+    },
+    "no_pred": {
+      "success_rate_mean": 0.5864366202677576,
+      "success_rate_std": 0.014180000215153305,
+      "ci_lower": 0.5744541290936421,
+      "ci_upper": 0.6063535090392181,
+      "mean_return": -113.96778050079656,
+      "std_return": 6.420313581095367,
+      "n_seeds": 3.0
+    }
+  },
+  "comparisons": {
+    "VPP vs No-Pred": {
+      "t_statistic": 9.330354447042959,
+      "p_value": 0.011292713643642248,
+      "cohens_d": 5.386882651457625,
+      "significant_05": true,
+      "mean_diff": 0.16371522142544637,
+      "n_pairs": 3
+    },
+    "VPP vs No-VPP": {
+      "t_statistic": 10.165440531754054,
+      "p_value": 0.009538909613287839,
+      "cohens_d": 5.869019827178788,
+      "significant_05": true,
+      "mean_diff": 0.13220387516000975,
+      "n_pairs": 3
+    },
+    "VPP vs End-to-End": {
+      "t_statistic": 7.558409676059069,
+      "p_value": 0.0170574948762924,
+      "cohens_d": 4.363849861014423,
+      "significant_05": true,
+      "mean_diff": 0.18354402922539095,
+      "n_pairs": 3
+    },
+    "No-VPP vs End-to-End": {
+      "t_statistic": 3.889757660041239,
+      "p_value": 0.06018766199141202,
+      "cohens_d": 2.2457526320089833,
+      "significant_05": false,
+      "mean_diff": 0.051340154065381206,
+      "n_pairs": 3
+    }
+  },
+  "maneuver_n_configs": 9,
+  "gain_methods": [
+    "cem",
+    "default",
+    "heuristic"
+  ]
+}

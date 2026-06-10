@@ -932,7 +932,7 @@ class ProgressTracker:
         # Calculate average actual vs estimated ratio
         ratios = []
         for tid in self.completed:
-            if tid in self.start_times and tid in self.end_times:
+            if tid in self.start_times and tid in self.end_times and tid in self.tasks:
                 actual = self.end_times[tid] - self.start_times[tid]
                 estimated = self.tasks[tid].estimated_minutes * 60
                 if estimated > 0:

@@ -6,6 +6,8 @@ reward:
   w_safety: 2.0
   w_saturation: 1.0
   w_smooth: 0.1
+  w_turn_rate: 0.5
+  max_heading_rate: 0.3
   terminal_success: 200.0
   terminal_failure: -200.0
   terminal_crash: -300.0

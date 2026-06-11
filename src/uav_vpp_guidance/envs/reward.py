@@ -13,7 +13,16 @@ Migrated from legacy project:
 - terminal_reward: 终端成功/失败/坠毁奖励
 """
 
+import math
 import numpy as np
+
+
+def _stable_angle_diff(a, b):
+    """Signed smallest angle difference in radians."""
+    delta = a - b
+    if not np.isfinite(delta):
+        return float(delta)
+    return float(np.arctan2(np.sin(delta), np.cos(delta)))
 
 
 class RewardCalculator:
@@ -41,6 +50,9 @@ class RewardCalculator:
         self.w_safety = self.config.get("w_safety", 2.0)
         self.w_saturation = self.config.get("w_saturation", 1.0)
         self.w_smooth = self.config.get("w_smooth", 0.1)
+        self.w_turn_rate = self.config.get("w_turn_rate", 0.5)
+        # F-16 typical max heading rate ≈ 0.3 rad/s (≈17°/s) at cruise speed
+        self.max_heading_rate = self.config.get("max_heading_rate", 0.3)
         self.terminal_success = self.config.get("terminal_success", 200.0)
         self.terminal_failure = self.config.get("terminal_failure", -200.0)
         self.terminal_crash = self.config.get("terminal_crash", -300.0)
@@ -114,11 +126,24 @@ class RewardCalculator:
                 smooth_penalty += delta
         reward_smooth = -self.w_smooth * smooth_penalty
 
-        # 6. 终端奖励（由调用方根据 done/reason 注入，这里预留接口）
+        # 6. 转弯速率惩罚（动力学可行性）
+        # 惩罚需要 F-16 无法完成的航向变化率的场景
+        turn_rate_penalty = self._compute_turn_rate_penalty(rel, own_state, command)
+        reward_turn = -self.w_turn_rate * turn_rate_penalty
+
+        # 7. 终端奖励（由调用方根据 done/reason 注入，这里预留接口）
         terminal_reward = info.get("terminal_reward", 0.0)
 
         # 汇总
-        reward = reward_range + reward_angle + reward_safety + reward_saturation + reward_smooth + terminal_reward
+        reward = (
+            reward_range
+            + reward_angle
+            + reward_safety
+            + reward_saturation
+            + reward_smooth
+            + reward_turn
+            + terminal_reward
+        )
 
         reward_terms = {
             "reward_range": reward_range,
@@ -126,6 +151,7 @@ class RewardCalculator:
             "reward_safety": reward_safety,
             "reward_saturation": reward_saturation,
             "reward_smooth": reward_smooth,
+            "reward_turn": reward_turn,
             "terminal_reward": terminal_reward,
             "reward_total": reward,
         }
@@ -157,6 +183,50 @@ class RewardCalculator:
             # 过远：惩罚
             error = min(1.0, (range_m - ideal_max) / (max_penalty_range - ideal_max))
             return -self.w_range * error
+
+    def _compute_turn_rate_penalty(self, rel, own_state, command):
+        """
+        Compute turn-rate penalty based on required heading rate vs F-16 capability.
+
+        Penalizes two conditions:
+        1. Large heading errors at close range (crossing scenario signature).
+        2. Required heading rate exceeding aircraft max capability.
+
+        Args:
+            rel (dict): Relative geometry dict.
+            own_state (dict): Own aircraft state.
+            command (dict): Current command dict.
+
+        Returns:
+            float: Turn-rate penalty (0.0 if feasible, positive if infeasible).
+        """
+        range_m = rel.get("range_m", 2000.0)
+        speed_mps = own_state.get("speed_mps", 200.0)
+        if range_m <= 0 or speed_mps <= 0:
+            return 0.0
+
+        # Current heading error from LOS
+        los_az = rel.get("los_azimuth_rad", 0.0)
+        own_yaw = own_state.get("yaw_rad", 0.0)
+        heading_error = abs(_stable_angle_diff(los_az, own_yaw))
+
+        penalty = 0.0
+
+        # Condition 1: large heading error at close range (crossing signature)
+        # F-16 needs time to establish roll; >60° error within 3000m is risky
+        if heading_error > math.pi / 3 and range_m < 3000.0:
+            base_penalty = (heading_error - math.pi / 3) / (math.pi / 2)
+            range_factor = (3000.0 - range_m) / 3000.0
+            penalty += base_penalty * range_factor
+
+        # Condition 2: required heading rate exceeds max capability
+        tgo = range_m / speed_mps
+        required_heading_rate = heading_error / max(tgo, 0.1)
+        excess = required_heading_rate - self.max_heading_rate
+        if excess > 0:
+            penalty += excess / self.max_heading_rate
+
+        return penalty
 
     def reset(self):
         """Reset internal state (e.g., previous command buffer)."""

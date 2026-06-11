@@ -11,6 +11,14 @@ relative to the target aircraft.
 import numpy as np
 
 
+def _stable_angle_diff(a, b):
+    """Signed smallest angle difference in radians."""
+    delta = a - b
+    if not np.isfinite(delta):
+        return float(delta)
+    return float(np.arctan2(np.sin(delta), np.cos(delta)))
+
+
 class VirtualPointGenerator:
     """
     Convert policy action into a virtual pursuit point.
@@ -43,6 +51,10 @@ class VirtualPointGenerator:
         self.speed_bias_range = config.get("speed_bias_range", [-80.0, 80.0])
         self.smoothing_alpha = config.get("smoothing_alpha", 0.3)
         self.lead_distance_m = config.get("lead_distance_m", 500.0)
+        # Dynamics-aware constraint: clip virtual points to feasible heading sector
+        self.dynamics_aware = config.get("dynamics_aware", False)
+        # F-16 max feasible heading change per step (high_level_dt=0.2s, max rate ≈ 0.3 rad/s)
+        self.max_heading_rate = config.get("max_heading_rate", 0.3)
         self._prev_action = None
 
     def action_to_virtual_point(
@@ -151,6 +163,12 @@ class VirtualPointGenerator:
         # 虚拟追踪点 = 锚点 + 偏移
         virtual_point_pos = anchor_pos + offset
 
+        # 动力学感知约束：将虚拟点限制在当前飞机的可行航向扇区内
+        if self.dynamics_aware and own_state is not None:
+            virtual_point_pos = self._apply_dynamics_constraint(
+                virtual_point_pos, own_state
+            )
+
         virtual_point = {
             "position": virtual_point_pos,
             "offset": offset,
@@ -205,6 +223,60 @@ class VirtualPointGenerator:
         else:
             los_unit = los / distance
         return target_pos + los_unit * lead_distance_m
+
+    def _apply_dynamics_constraint(self, virtual_point_pos, own_state):
+        """
+        Clip virtual point to a feasible heading sector based on aircraft dynamics.
+
+        F-16 cannot instantaneously change heading. If the virtual point demands a
+        heading change beyond the aircraft's physical capability, clip it to the
+        edge of the feasible sector while preserving distance.
+
+        Args:
+            virtual_point_pos (np.ndarray): Proposed virtual point position [3].
+            own_state (dict): Own aircraft state.
+
+        Returns:
+            np.ndarray: Constrained virtual point position [3].
+        """
+        own_pos = self._get_own_position(own_state)
+        los = virtual_point_pos - own_pos
+        distance = float(np.linalg.norm(los))
+        if distance < 1e-6:
+            return virtual_point_pos
+
+        los_heading = float(np.arctan2(los[1], los[0]))
+
+        # Extract own heading from velocity
+        own_vel = own_state.get("velocity_vector_mps")
+        if own_vel is None:
+            own_vel = own_state.get("velocity_ned")
+        if own_vel is not None:
+            own_vel_arr = np.asarray(own_vel, dtype=np.float64)
+            own_speed = float(np.linalg.norm(own_vel_arr))
+            if own_speed > 1e-6:
+                own_heading = float(np.arctan2(own_vel_arr[1], own_vel_arr[0]))
+            else:
+                own_heading = float(own_state.get("yaw_rad", 0.0))
+        else:
+            own_heading = float(own_state.get("yaw_rad", 0.0))
+
+        heading_error = _stable_angle_diff(los_heading, own_heading)
+        abs_error = abs(heading_error)
+
+        # Max feasible heading change per step (assuming high_level_dt ≈ 0.2s)
+        # Allow a small buffer so the policy still learns to turn aggressively
+        # when it is physically possible.
+        max_feasible = self.max_heading_rate * 0.2 * 5.0  # 5 steps lookahead
+
+        if abs_error > max_feasible:
+            sign = 1.0 if heading_error > 0 else -1.0
+            constrained_heading = own_heading + sign * max_feasible
+            los[0] = distance * np.cos(constrained_heading)
+            los[1] = distance * np.sin(constrained_heading)
+            return own_pos + los
+
+        return virtual_point_pos
 
     @staticmethod
     def _get_target_position(target_state):

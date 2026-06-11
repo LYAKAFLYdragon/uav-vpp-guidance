@@ -225,7 +225,7 @@ def main():
         "inner_iter": args.inner_iter,
         "n_episodes": args.n_episodes,
         "eval_seeds": [0, 1, 2],
-        "eval_scenarios": ScenarioRegistry.get_regression_suite()[:2],
+        "eval_scenarios": ScenarioRegistry.get_regression_suite(),
         "checkpoint_dir": args.output_dir,
     }
 

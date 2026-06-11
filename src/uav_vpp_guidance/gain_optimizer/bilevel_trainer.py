@@ -112,15 +112,19 @@ class BilevelTrainer:
         return evaluator
 
     def _evaluate_policy_gains(
-        self, gains_dict: dict, n_scenarios: int = 2
+        self, gains_dict: dict, n_scenarios: int = None
     ) -> float:
-        """Evaluate a (policy, gains) pairing on a small eval set."""
+        """Evaluate a (policy, gains) pairing on the regression suite."""
         from ..envs.scenario_registry import ScenarioRegistry
         from ..evaluation.evaluate_prediction_comparison import (
             evaluate_single_episode,
         )
 
-        scenarios = ScenarioRegistry.get_regression_suite()[:n_scenarios]
+        all_scenarios = ScenarioRegistry.get_regression_suite()
+        if n_scenarios is not None:
+            scenarios = all_scenarios[:n_scenarios]
+        else:
+            scenarios = all_scenarios
         seeds = self.config.get("eval_seeds", [0, 1, 2])
 
         env = self.env_factory()

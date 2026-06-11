@@ -1,27 +1,32 @@
 #!/usr/bin/env bash
 # Maneuvering target training: 3 methods x 1 seed
 # Temporarily modifies target_mode, then restores original config
+#
+# Output paths are resolved from config/checkpoint_registry.yaml.
 
 PYTHON="/d/Anaconda3/envs/jsbenv/python.exe"
+REGISTRY="config/checkpoint_registry.yaml"
+
+# Config file prefix → registry key mapping
 METHODS=(
-    "train_no_prediction_vpp_ppo:maneuver_no_pred"
-    "train_vpp_ppo_cv:maneuver_cv"
-    "train_vpp_ppo_ca:maneuver_ca"
+    "train_no_prediction_vpp_ppo:p1a_no_pred"
+    "train_vpp_ppo_cv:p1a_cv"
+    "train_vpp_ppo_ca:p1a_ca"
 )
 
 TOTAL=3
 DONE=0
 
 for method_pair in "${METHODS[@]}"; do
-    IFS=: read -r config_prefix exp_prefix <<< "$method_pair"
-    exp_name="${exp_prefix}_s0"
+    IFS=: read -r config_prefix registry_key <<< "$method_pair"
+    output_dir=$($PYTHON scripts/get_registry_path.py --registry "$REGISTRY" --key "$registry_key" --field output_dir)
     config_path="config/experiment/${config_prefix}.yaml"
 
     DONE=$((DONE + 1))
     echo ""
     echo "========================================"
-    echo "RUN $DONE/$TOTAL: $exp_name"
-    echo "Config: $config_path | Seed: 0"
+    echo "RUN $DONE/$TOTAL: $registry_key"
+    echo "Config: $config_path | Output: $output_dir"
     echo "Start: $(date +%H:%M:%S)"
     echo "========================================"
 
@@ -31,7 +36,7 @@ for method_pair in "${METHODS[@]}"; do
     $PYTHON -m uav_vpp_guidance.training.train_prediction_vpp_ppo \
         --config "$config_path" \
         --seed 0 \
-        --output-dir "outputs/experiments/$exp_name"
+        --output-dir "$output_dir"
 
     EXIT_CODE=$?
 
@@ -39,15 +44,15 @@ for method_pair in "${METHODS[@]}"; do
     sed -i 's/target_mode: sinusoidal/target_mode: constant_velocity/g' "$config_path"
 
     if [ $EXIT_CODE -ne 0 ]; then
-        echo "ERROR: Training failed for $exp_name (exit $EXIT_CODE)"
+        echo "ERROR: Training failed for $registry_key (exit $EXIT_CODE)"
         continue
     fi
 
     # Verify checkpoint
-    if [ ! -f "outputs/experiments/$exp_name/checkpoints/best.pt" ]; then
-        echo "WARNING: Checkpoint missing for $exp_name"
+    if [ ! -f "$output_dir/checkpoints/best.pt" ]; then
+        echo "WARNING: Checkpoint missing for $registry_key"
     else
-        echo "OK: Checkpoint saved for $exp_name"
+        echo "OK: Checkpoint saved for $registry_key"
     fi
 
     echo "End: $(date +%H:%M:%S)"

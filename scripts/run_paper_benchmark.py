@@ -20,6 +20,7 @@ import sys
 from dataclasses import fields
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Dict, Optional
 
 import numpy as np
 import pandas as pd
@@ -38,6 +39,51 @@ from uav_vpp_guidance.evaluation.evaluate_prediction_comparison import (
 )
 from uav_vpp_guidance.evaluation.statistical_comparison import paired_t_test, cohens_d
 from uav_vpp_guidance.guidance.gain_config import GuidanceGains
+
+
+# ---------------------------------------------------------------------------
+# Registry helpers
+# ---------------------------------------------------------------------------
+def _load_methods_from_registry(registry_path: str, stage: Optional[str]) -> Dict:
+    """Load method definitions from checkpoint registry for a given stage.
+
+    Returns a dict compatible with METHODS schema:
+      {
+        "no_prediction": {
+          "name": "No-Prediction",
+          "checkpoint": "...",
+          "config_method": "no_prediction",
+          # optional:
+          "gains_path": "...",
+        },
+        ...
+      }
+    """
+    if not stage:
+        return {}
+    p = Path(registry_path)
+    if not p.exists():
+        raise FileNotFoundError(f"Checkpoint registry not found: {p}")
+    registry = yaml.safe_load(p.read_text(encoding="utf-8"))
+    eval_methods = registry.get("evaluation_methods", {})
+    stage_methods = eval_methods.get(stage)
+    if stage_methods is None:
+        raise ValueError(
+            f"Stage '{stage}' not found in registry. "
+            f"Available stages: {list(eval_methods.keys())}"
+        )
+    methods = {}
+    for method_name, cfg in stage_methods.items():
+        entry = {
+            "name": method_name.replace("_", " ").title(),
+            "checkpoint": cfg["checkpoint"],
+            "config_method": method_name,
+        }
+        if "gains" in cfg:
+            entry["gains_path"] = cfg["gains"]
+            entry["note"] = f"CEM-optimized gains from {cfg['gains']}"
+        methods[method_name] = entry
+    return methods
 
 
 METHODS = {
@@ -129,20 +175,25 @@ def _resolve_checkpoint(
     methods_default_cfg: dict,
     config_method_override: dict,
     checkpoint_map: dict,
+    registry_stage: Optional[str] = None,
+    registry_methods: Optional[Dict] = None,
 ) -> tuple:
     """Resolve final checkpoint path with explicit precedence.
 
     Precedence (high to low):
       1. CLI --checkpoint-map
-      2. Config method override
-      3. METHODS default
+      2. Registry stage (if --registry-stage provided)
+      3. Config method override
+      4. METHODS default
 
     Returns:
         (final_path, source) where source is one of
-        "cli_checkpoint_map", "config_method", "methods_default".
+        "cli_checkpoint_map", "registry_stage", "config_method", "methods_default".
     """
     if checkpoint_map and method_name in checkpoint_map:
         return checkpoint_map[method_name], "cli_checkpoint_map"
+    if registry_stage and registry_methods and method_name in registry_methods:
+        return registry_methods[method_name]["checkpoint"], "registry_stage"
     if config_method_override.get("checkpoint"):
         return config_method_override["checkpoint"], "config_method"
     return methods_default_cfg["checkpoint"], "methods_default"
@@ -259,6 +310,8 @@ def evaluate_method(
     full_config: dict,
     checkpoint_map: dict = None,
     allow_random_smoke: bool = False,
+    registry_stage: Optional[str] = None,
+    registry_methods: Optional[Dict] = None,
 ) -> dict:
     """Evaluate a single method across all scenarios and seeds."""
     config = load_config(config_path, method_cfg["config_method"])
@@ -298,7 +351,12 @@ def evaluate_method(
 
     config_method_override = full_config.get("methods", {}).get(method_name, {})
     ckpt_path, ckpt_source = _resolve_checkpoint(
-        method_name, method_cfg, config_method_override, checkpoint_map or {}
+        method_name,
+        method_cfg,
+        config_method_override,
+        checkpoint_map or {},
+        registry_stage=registry_stage,
+        registry_methods=registry_methods,
     )
     ckpt_exists = Path(ckpt_path).exists()
     if ckpt_exists:
@@ -807,6 +865,21 @@ def main():
         default=[],
         help="Per-method checkpoint override, e.g. no_prediction=path/to/best.pt. Can be repeated.",
     )
+    parser.add_argument(
+        "--registry",
+        type=str,
+        default="config/checkpoint_registry.yaml",
+        help="Path to checkpoint registry YAML.",
+    )
+    parser.add_argument(
+        "--registry-stage",
+        type=str,
+        default=None,
+        help=(
+            "Load method checkpoints from registry for this stage. "
+            "e.g. 'stage6f5', 'p0a', 'p1a'. Overrides default METHODS."
+        ),
+    )
     args = parser.parse_args()
 
     output_dir = Path(args.output_dir)
@@ -839,12 +912,26 @@ def main():
             + ScenarioRegistry.get_candidate_suite()
         )
 
-    methods_to_run = args.methods or list(METHODS.keys())
+    # Merge registry methods (if specified) into defaults
+    # Precedence: CLI --checkpoint-map > registry > hard-coded defaults
+    registry_methods = _load_methods_from_registry(args.registry, args.registry_stage)
+    merged_methods = copy.deepcopy(METHODS)
+    merged_methods.update(registry_methods)
+
+    # When registry stage is active, suppress config-file checkpoint overrides
+    # so that registry paths take precedence over embedded YAML paths.
+    if args.registry_stage and "methods" in full_config:
+        for method_name in list(full_config["methods"].keys()):
+            if method_name in registry_methods:
+                full_config["methods"][method_name].pop("checkpoint", None)
+                full_config["methods"][method_name].pop("gains_path", None)
+
+    methods_to_run = args.methods or list(merged_methods.keys())
 
     # Validate that gain_only and no_prediction are semantically different
     if "gain_only" in methods_to_run and "no_prediction" in methods_to_run:
-        gain_cfg = METHODS["gain_only"]
-        no_pred_cfg = METHODS["no_prediction"]
+        gain_cfg = merged_methods["gain_only"]
+        no_pred_cfg = merged_methods["no_prediction"]
         if gain_cfg.get("gains_path") == no_pred_cfg.get("gains_path") and not gain_cfg.get("note"):
             raise ValueError(
                 "gain_only and no_prediction must have distinct configuration. "
@@ -854,8 +941,8 @@ def main():
     start_time = datetime.now(timezone.utc).isoformat()
     results = []
     for method_name in methods_to_run:
-        if method_name not in METHODS:
-            msg = f"Unknown method '{method_name}'. Available: {list(METHODS.keys())}"
+        if method_name not in merged_methods:
+            msg = f"Unknown method '{method_name}'. Available: {list(merged_methods.keys())}"
             if args.allow_missing_methods:
                 print(f"WARNING: {msg}, skipping")
                 continue
@@ -865,7 +952,7 @@ def main():
         print(f"{'='*50}")
         result = evaluate_method(
             method_name,
-            METHODS[method_name],
+            merged_methods[method_name],
             scenarios,
             tuple(args.seeds),
             args.backend,
@@ -873,6 +960,8 @@ def main():
             full_config=full_config,
             checkpoint_map=checkpoint_map,
             allow_random_smoke=args.allow_random_smoke,
+            registry_stage=args.registry_stage,
+            registry_methods=registry_methods,
         )
         results.append(result)
         sr = sum(1 for ep in result["episodes"] if ep.get("is_success", False)) / max(

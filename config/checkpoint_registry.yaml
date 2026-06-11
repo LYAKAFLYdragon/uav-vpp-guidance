@@ -1,0 +1,279 @@
+# =============================================================================
+# Checkpoint Registry for UAV VPP Guidance
+# =============================================================================
+# 版本: 1.0.0
+# 作用: 集中定义所有实验阶段的 checkpoint 路径，消除训练输出与评估输入之间的不一致。
+# 规范:
+#   - 所有训练脚本必须通过 registry 解析默认输出路径
+#   - 所有评估脚本必须通过 registry 解析 checkpoint 输入路径
+#   - 禁止在脚本中硬编码 checkpoint 路径（registry 是单一事实来源）
+# =============================================================================
+
+registry_version: "1.0.0"
+description: "Central checkpoint path registry for the UAV VPP Guidance project."
+
+# ---------------------------------------------------------------------------
+# 1. 训练输出路径定义 (Training Scripts → Registry → Output Directory)
+# ---------------------------------------------------------------------------
+# 键名规范: <stage>_<method>
+# 训练脚本应使用这些路径作为 --output-dir 默认值
+training:
+  # --- Stage 6B: Constant velocity baseline (multi-seed) ---
+  stage6b_no_pred:
+    output_dir: outputs/experiments/stage6b_no_pred_s{seed}
+    checkpoint: outputs/experiments/stage6b_no_pred_s{seed}/checkpoints/best.pt
+    seeds: [0, 1, 2]
+    description: "Stage 6B no-prediction baseline"
+
+  stage6b_cv:
+    output_dir: outputs/experiments/stage6b_cv_s{seed}
+    checkpoint: outputs/experiments/stage6b_cv_s{seed}/checkpoints/best.pt
+    seeds: [0, 1, 2]
+    description: "Stage 6B constant-velocity prediction"
+
+  stage6b_ca:
+    output_dir: outputs/experiments/stage6b_ca_s{seed}
+    checkpoint: outputs/experiments/stage6b_ca_s{seed}/checkpoints/best.pt
+    seeds: [0, 1, 2]
+    description: "Stage 6B constant-acceleration prediction"
+
+  # --- Legacy frozen neural predictors (constant velocity target, seed 0) ---
+  no_prediction_vpp_ppo:
+    output_dir: outputs/experiments/no_prediction_vpp_ppo
+    checkpoint: outputs/experiments/no_prediction_vpp_ppo/checkpoints/best.pt
+    seeds: [0]
+    description: "No-prediction VPP PPO (legacy canonical model)"
+
+  vpp_ppo_cv_prediction:
+    output_dir: outputs/experiments/vpp_ppo_cv_prediction
+    checkpoint: outputs/experiments/vpp_ppo_cv_prediction/checkpoints/best.pt
+    seeds: [0]
+    description: "CV prediction VPP PPO (legacy canonical model)"
+
+  vpp_ppo_ca_prediction:
+    output_dir: outputs/experiments/vpp_ppo_ca_prediction
+    checkpoint: outputs/experiments/vpp_ppo_ca_prediction/checkpoints/best.pt
+    seeds: [0]
+    description: "CA prediction VPP PPO (legacy canonical model)"
+
+  vpp_ppo_lstm_frozen:
+    output_dir: outputs/experiments/vpp_ppo_lstm_frozen
+    checkpoint: outputs/experiments/vpp_ppo_lstm_frozen/checkpoints/best.pt
+    seeds: [0]
+    description: "LSTM frozen predictor VPP PPO"
+
+  vpp_ppo_gru_frozen:
+    output_dir: outputs/experiments/vpp_ppo_gru_frozen
+    checkpoint: outputs/experiments/vpp_ppo_gru_frozen/checkpoints/best.pt
+    seeds: [0]
+    description: "GRU frozen predictor VPP PPO"
+
+  # --- P0-A: VPP Ablation ---
+  p0a_vpp:
+    output_dir: outputs/experiments/p0a_vpp_s0
+    checkpoint: outputs/experiments/p0a_vpp_s0/checkpoints/best.pt
+    seeds: [0]
+    description: "P0-A VPP-enabled ablation"
+
+  p0a_no_vpp:
+    output_dir: outputs/experiments/p0a_no_vpp_s0
+    checkpoint: outputs/experiments/p0a_no_vpp_s0/checkpoints/best.pt
+    seeds: [0]
+    description: "P0-A No-VPP ablation (zero-offset baseline)"
+
+  # --- P0-B: Bilevel ---
+  p0b_bilevel:
+    output_dir: outputs/experiments/p0b_bilevel_s0
+    checkpoint: outputs/experiments/p0b_bilevel_s0/checkpoints/policy_ep200.pt
+    seeds: [0]
+    description: "P0-B Bilevel optimization (policy checkpoint)"
+    gains: outputs/experiments/p0b_bilevel_s0/bilevel_results.json
+
+  # --- P1-A: Maneuvering target ---
+  p1a_no_pred:
+    output_dir: outputs/experiments/maneuver_no_pred_s0
+    checkpoint: outputs/experiments/maneuver_no_pred_s0/checkpoints/best.pt
+    seeds: [0]
+    description: "P1-A maneuver no-prediction"
+
+  p1a_cv:
+    output_dir: outputs/experiments/maneuver_cv_s0
+    checkpoint: outputs/experiments/maneuver_cv_s0/checkpoints/best.pt
+    seeds: [0]
+    description: "P1-A maneuver CV prediction"
+
+  p1a_ca:
+    output_dir: outputs/experiments/maneuver_ca_s0
+    checkpoint: outputs/experiments/maneuver_ca_s0/checkpoints/best.pt
+    seeds: [0]
+    description: "P1-A maneuver CA prediction"
+
+  # --- P1-B: Neural predictors on maneuvering target ---
+  p1b_lstm:
+    output_dir: outputs/experiments/maneuver_lstm_s0
+    checkpoint: outputs/experiments/maneuver_lstm_s0/checkpoints/best.pt
+    seeds: [0]
+    description: "P1-B maneuver LSTM frozen"
+
+  p1b_gru:
+    output_dir: outputs/experiments/maneuver_gru_s0
+    checkpoint: outputs/experiments/maneuver_gru_s0/checkpoints/best.pt
+    seeds: [0]
+    description: "P1-B maneuver GRU frozen"
+
+  # --- End-to-end baseline ---
+  end_to_end:
+    output_dir: outputs/experiments/end_to_end_ppo
+    checkpoint: outputs/experiments/end_to_end_ppo/checkpoints/best.pt
+    seeds: [0]
+    description: "End-to-end DRL baseline"
+
+  # --- Enhanced end-to-end baseline (experimental) ---
+  end_to_end_enhanced:
+    output_dir: outputs/experiments/end_to_end_ppo_enhanced
+    checkpoint: outputs/experiments/end_to_end_ppo_enhanced/checkpoints/best.pt
+    seeds: [0]
+    description: "End-to-end DRL baseline with enhanced hyperparameters"
+
+# ---------------------------------------------------------------------------
+# 2. 评估脚本 Method → Checkpoint 映射 (Evaluation Config → Registry → Checkpoint)
+# ---------------------------------------------------------------------------
+# 评估 YAML 和脚本通过 <stage> 和 <method> 双键查询
+evaluation_methods:
+  # Stage 6F.5 feasible geometry (使用 legacy canonical 模型)
+  stage6f5:
+    no_prediction:
+      checkpoint: outputs/experiments/no_prediction_vpp_ppo/checkpoints/best.pt
+      source_training: no_prediction_vpp_ppo
+    cv_prediction:
+      checkpoint: outputs/experiments/vpp_ppo_cv_prediction/checkpoints/best.pt
+      source_training: vpp_ppo_cv_prediction
+    ca_prediction:
+      checkpoint: outputs/experiments/vpp_ppo_ca_prediction/checkpoints/best.pt
+      source_training: vpp_ppo_ca_prediction
+    lstm_frozen:
+      checkpoint: outputs/experiments/vpp_ppo_lstm_frozen/checkpoints/best.pt
+      source_training: vpp_ppo_lstm_frozen
+    gru_frozen:
+      checkpoint: outputs/experiments/vpp_ppo_gru_frozen/checkpoints/best.pt
+      source_training: vpp_ppo_gru_frozen
+
+  # Stage 6B comparison (audit 最终路径)
+  stage6b:
+    no_prediction:
+      checkpoint: outputs/audit_no_pred_final/checkpoints/best.pt
+      source_training: stage6b_no_pred
+    cv_prediction:
+      checkpoint: outputs/audit_cv_final/checkpoints/best.pt
+      source_training: stage6b_cv
+    ca_prediction:
+      checkpoint: outputs/audit_ca_final/checkpoints/best.pt
+      source_training: stage6b_ca
+
+  # Paper benchmark default METHODS (run_paper_benchmark.py)
+  paper_benchmark:
+    no_prediction:
+      checkpoint: outputs/experiments/stage6b_no_pred_s0/checkpoints/best.pt
+      source_training: stage6b_no_pred
+    cv_prediction:
+      checkpoint: outputs/experiments/stage6b_cv_s1/checkpoints/best.pt
+      source_training: stage6b_cv
+    ca_prediction:
+      checkpoint: outputs/experiments/stage6b_ca_s1/checkpoints/best.pt
+      source_training: stage6b_ca
+    gain_only:
+      checkpoint: outputs/audit_no_pred_final/checkpoints/best.pt
+      gains: outputs/gain_only_cem/cem_results.json
+      source_training: stage6b_no_pred
+    # bilevel legacy path removed; use p0b_bilevel instead
+    lstm_frozen:
+      checkpoint: outputs/experiments/vpp_ppo_lstm_frozen/checkpoints/best.pt
+      source_training: vpp_ppo_lstm_frozen
+    gru_frozen:
+      checkpoint: outputs/experiments/vpp_ppo_gru_frozen/checkpoints/best.pt
+      source_training: vpp_ppo_gru_frozen
+
+  # P0-A evaluation
+  p0a:
+    no_prediction:
+      checkpoint: outputs/experiments/p0a_vpp_s0/checkpoints/best.pt
+      source_training: p0a_vpp
+
+  p0a_no_vpp:
+    no_prediction:
+      checkpoint: outputs/experiments/p0a_no_vpp_s0/checkpoints/best.pt
+      source_training: p0a_no_vpp
+
+  # P0-B evaluation
+  p0b:
+    bilevel:
+      checkpoint: outputs/experiments/p0b_bilevel_s0/checkpoints/policy_ep200.pt
+      gains: outputs/experiments/p0b_bilevel_s0/bilevel_results.json
+      source_training: p0b_bilevel
+
+  # P1-A evaluation
+  p1a:
+    no_prediction:
+      checkpoint: outputs/experiments/maneuver_no_pred_s0/checkpoints/best.pt
+      source_training: p1a_no_pred
+    cv_prediction:
+      checkpoint: outputs/experiments/maneuver_cv_s0/checkpoints/best.pt
+      source_training: p1a_cv
+    ca_prediction:
+      checkpoint: outputs/experiments/maneuver_ca_s0/checkpoints/best.pt
+      source_training: p1a_ca
+
+  # P1-B evaluation
+  p1b:
+    lstm_frozen:
+      checkpoint: outputs/experiments/maneuver_lstm_s0/checkpoints/best.pt
+      source_training: p1b_lstm
+    gru_frozen:
+      checkpoint: outputs/experiments/maneuver_gru_s0/checkpoints/best.pt
+      source_training: p1b_gru
+
+  # End-to-end baseline evaluation
+  end_to_end:
+    end_to_end:
+      checkpoint: outputs/experiments/end_to_end_ppo/checkpoints/best.pt
+      source_training: end_to_end
+
+# ---------------------------------------------------------------------------
+# 3. CEM / Bilevel 特殊路径 (checkpoint + gains 文件)
+# ---------------------------------------------------------------------------
+cem_bilevel:
+  gain_only:
+    checkpoint: outputs/audit_no_pred_final/checkpoints/best.pt
+    gains: outputs/gain_only_cem/cem_results.json
+    description: "CEM gain-only optimization"
+  p0b_bilevel:
+    checkpoint: outputs/experiments/p0b_bilevel_s0/checkpoints/policy_ep200.pt
+    gains: outputs/experiments/p0b_bilevel_s0/bilevel_results.json
+    description: "P0-B bilevel training"
+
+# ---------------------------------------------------------------------------
+# 4. 预测器 Checkpoint
+# ---------------------------------------------------------------------------
+predictors:
+  lstm:
+    checkpoint: outputs/trajectory_prediction/best_model.pt
+    description: "LSTM trajectory predictor"
+  gru:
+    checkpoint: outputs/trajectory_prediction/best_model_gru.pt
+    description: "GRU trajectory predictor"
+
+# ---------------------------------------------------------------------------
+# 5. 兼容性别名 (旧名称 → 新 registry 键)
+# ---------------------------------------------------------------------------
+aliases:
+  # 旧脚本中可能出现的实验名称
+  "no_pred": "no_prediction_vpp_ppo"
+  "cv": "vpp_ppo_cv_prediction"
+  "ca": "vpp_ppo_ca_prediction"
+  "lstm": "vpp_ppo_lstm_frozen"
+  "gru": "vpp_ppo_gru_frozen"
+  "maneuver_no_pred": "p1a_no_pred"
+  "maneuver_cv": "p1a_cv"
+  "maneuver_ca": "p1a_ca"
+  "maneuver_lstm": "p1b_lstm"
+  "maneuver_gru": "p1b_gru"

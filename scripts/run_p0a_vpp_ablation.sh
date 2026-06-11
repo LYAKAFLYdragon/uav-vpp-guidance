@@ -1,11 +1,18 @@
 #!/usr/bin/env bash
 # P0-A: VPP Ablation Experiment
 # Compare VPP-enabled policy vs direct-command (no VPP) policy
+#
+# Output paths are resolved from config/checkpoint_registry.yaml.
 
 set -e
 
 PYTHON="python"
+REGISTRY="config/checkpoint_registry.yaml"
 CUDA_AVAILABLE=$($PYTHON -c "import torch; print(torch.cuda.is_available())" 2>/dev/null || echo "False")
+
+# Resolve output paths from registry
+OUT_VPP=$($PYTHON scripts/get_registry_path.py --registry "$REGISTRY" --key p0a_vpp --field output_dir)
+OUT_NO_VPP=$($PYTHON scripts/get_registry_path.py --registry "$REGISTRY" --key p0a_no_vpp --field output_dir)
 
 echo "========================================"
 echo "P0-A: VPP Ablation"
@@ -14,7 +21,6 @@ echo "========================================"
 
 # --- VPP Group (baseline) ---
 CONFIG_VPP="config/experiment/train_no_prediction_vpp_ppo.yaml"
-OUT_VPP="outputs/experiments/p0a_vpp_s0"
 
 echo ""
 echo "[1/2] Training VPP group..."
@@ -41,7 +47,6 @@ fi
 
 # --- No-VPP Group (zero-offset baseline) ---
 CONFIG_NO_VPP="config/experiment/train_no_vpp_direct_command.yaml"
-OUT_NO_VPP="outputs/experiments/p0a_no_vpp_s0"
 
 echo ""
 echo "[2/2] Training No-VPP group (zero-offset baseline)..."

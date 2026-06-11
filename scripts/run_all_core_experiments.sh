@@ -5,11 +5,23 @@
 set -e
 
 PYTHON="python"
+REGISTRY="config/checkpoint_registry.yaml"
 
 echo "========================================"
 echo "Core Experiments Runner"
 echo "========================================"
 echo "This script executes P0-A, P0-B, P1-A, P1-B in sequence."
+echo ""
+
+# Pre-flight: verify checkpoint registry integrity
+echo ">>> Pre-flight: verifying checkpoint registry..."
+$PYTHON scripts/verify_checkpoint_registry.py --registry "$REGISTRY"
+if [ $? -ne 0 ]; then
+    echo "ERROR: Checkpoint registry validation failed. Aborting."
+    echo "Run 'python scripts/verify_checkpoint_registry.py' for details."
+    exit 1
+fi
+echo "Registry verification passed."
 echo ""
 
 # P0-A: VPP Ablation (must complete)

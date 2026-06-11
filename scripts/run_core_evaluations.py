@@ -9,9 +9,11 @@ import copy
 import json
 import sys
 from pathlib import Path
+from typing import Dict, Optional
 
 import numpy as np
 import pandas as pd
+import yaml
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
@@ -20,6 +22,31 @@ from uav_vpp_guidance.envs.scenario_registry import initialize_canonical_scenari
 from uav_vpp_guidance.envs.tracking_env import CloseRangeTrackingEnv
 from uav_vpp_guidance.evaluation.evaluate_prediction_comparison import evaluate_single_episode
 from uav_vpp_guidance.evaluation.statistical_comparison import paired_t_test, cohens_d
+
+
+REGISTRY_PATH = Path("config/checkpoint_registry.yaml")
+
+
+def _load_registry() -> dict:
+    if not REGISTRY_PATH.exists():
+        raise FileNotFoundError(f"Registry not found: {REGISTRY_PATH}")
+    return yaml.safe_load(REGISTRY_PATH.read_text(encoding="utf-8"))
+
+
+def get_training_checkpoint(registry: dict, key: str, seed: int = 0) -> str:
+    entry = registry["training"][key]
+    ckpt = entry["checkpoint"]
+    if "{seed}" in ckpt:
+        ckpt = ckpt.format(seed=seed)
+    return ckpt
+
+
+def get_training_output_dir(registry: dict, key: str, seed: int = 0) -> str:
+    entry = registry["training"][key]
+    out = entry["output_dir"]
+    if "{seed}" in out:
+        out = out.format(seed=seed)
+    return out
 
 
 def evaluate_method(
@@ -130,10 +157,17 @@ def compare_methods(df1: pd.DataFrame, df2: pd.DataFrame, label1: str, label2: s
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--seeds", type=int, nargs="+", default=list(range(10)))
+    parser.add_argument(
+        "--registry",
+        type=Path,
+        default=REGISTRY_PATH,
+        help="Path to checkpoint registry YAML",
+    )
     args = parser.parse_args()
 
     seeds = args.seeds
     results_root = Path("docs/results")
+    registry = yaml.safe_load(args.registry.read_text(encoding="utf-8"))
 
     initialize_canonical_scenarios()
 
@@ -141,7 +175,7 @@ def main():
     print("\n>>> P0-A: VPP Ablation")
     df_vpp = evaluate_method(
         "config/experiment/train_no_prediction_vpp_ppo.yaml",
-        "outputs/experiments/p0a_vpp_s0/checkpoints/best.pt",
+        get_training_checkpoint(registry, "p0a_vpp"),
         "vpp_no_pred",
         seeds,
     )
@@ -149,7 +183,7 @@ def main():
 
     df_no_vpp = evaluate_method(
         "config/experiment/train_no_vpp_direct_command.yaml",
-        "outputs/experiments/p0a_no_vpp_s0/checkpoints/best.pt",
+        get_training_checkpoint(registry, "p0a_no_vpp"),
         "no_vpp_zero_offset",
         seeds,
     )
@@ -159,16 +193,17 @@ def main():
     # --- P0-B: Bilevel Ablation ---
     print("\n>>> P0-B: Bilevel Ablation")
     # Load best gains from bilevel results
+    bilevel_out = get_training_output_dir(registry, "p0b_bilevel")
     bilevel_results = json.load(
-        open("outputs/experiments/p0b_bilevel_s0/bilevel_results.json")
+        open(Path(bilevel_out) / "bilevel_results.json")
     )
     best_gains = bilevel_results.get("best_gains", {})
     best_episode = bilevel_results.get("best_policy_episode", 10)
-    ckpt = f"outputs/experiments/p0b_bilevel_s0/checkpoints/policy_ep{best_episode}.pt"
+    ckpt = str(Path(bilevel_out) / f"checkpoints/policy_ep{best_episode}.pt")
 
     df_single = evaluate_method(
         "config/experiment/train_no_prediction_vpp_ppo.yaml",
-        "outputs/experiments/no_prediction_vpp_ppo/checkpoints/best.pt",
+        get_training_checkpoint(registry, "no_prediction_vpp_ppo"),
         "single_layer",
         seeds,
     )
@@ -189,15 +224,15 @@ def main():
     methods_p1a = {
         "no_prediction": (
             "config/experiment/train_no_prediction_vpp_ppo_maneuver.yaml",
-            "outputs/experiments/maneuver_no_pred_s0/checkpoints/best.pt",
+            get_training_checkpoint(registry, "p1a_no_pred"),
         ),
         "cv_prediction": (
             "config/experiment/train_vpp_ppo_cv_maneuver.yaml",
-            "outputs/experiments/maneuver_cv_s0/checkpoints/best.pt",
+            get_training_checkpoint(registry, "p1a_cv"),
         ),
         "ca_prediction": (
             "config/experiment/train_vpp_ppo_ca_maneuver.yaml",
-            "outputs/experiments/maneuver_ca_s0/checkpoints/best.pt",
+            get_training_checkpoint(registry, "p1a_ca"),
         ),
     }
     dfs_p1a = {}
@@ -220,11 +255,11 @@ def main():
     methods_p1b = {
         "lstm_frozen": (
             "config/experiment/train_vpp_ppo_lstm_frozen_maneuver.yaml",
-            "outputs/experiments/maneuver_lstm_s0/checkpoints/best.pt",
+            get_training_checkpoint(registry, "p1b_lstm"),
         ),
         "gru_frozen": (
             "config/experiment/train_vpp_ppo_gru_frozen_maneuver.yaml",
-            "outputs/experiments/maneuver_gru_s0/checkpoints/best.pt",
+            get_training_checkpoint(registry, "p1b_gru"),
         ),
     }
     dfs_p1b = {}

@@ -101,9 +101,12 @@ def check_git():
     try:
         commit = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
         branch = subprocess.check_output(["git", "rev-parse", "--abbrev-ref", "HEAD"], cwd=ROOT, text=True).strip()
-        status = subprocess.check_output(["git", "status", "--short"], cwd=ROOT, text=True).strip()
+        # Only consider modifications to tracked files as dirty; ignore untracked runtime artifacts
+        status = subprocess.check_output(
+            ["git", "status", "--short", "--untracked-files=no"], cwd=ROOT, text=True
+        ).strip()
         dirty = len(status) > 0
-        return not dirty, f"git branch={branch}, commit={commit[:8]}, dirty={dirty}", {"branch": branch, "commit": commit, "dirty": dirty}
+        return not dirty, f"git branch={branch}, commit={commit[:8]}, tracked_files_dirty={dirty}", {"branch": branch, "commit": commit, "dirty": dirty}
     except Exception as e:
         return None, f"git check failed: {e}", None
 

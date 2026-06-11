@@ -104,13 +104,24 @@ def build_command(exp, seed):
         cmd.extend(["--seed", str(seed)])
         output_dir = exp["output_dir"].format(seed=seed)
         cmd.extend(["--output-dir", str(ROOT / output_dir)])
-    elif "input_checkpoint" in exp and "evaluate" in exp["script"]:
-        # Evaluation scripts typically take --checkpoint
-        cmd.extend(["--checkpoint", str(ROOT / exp["input_checkpoint"])])
-        if "scales" in exp:
-            cmd.extend(["--scales"] + [str(s) for s in exp["scales"]])
-        if "episodes_per_scale" in exp:
-            cmd.extend(["--episodes", str(exp["episodes_per_scale"])])
+    elif "evaluate" in exp["script"] or "benchmark" in exp["script"] or "compute_capture" in exp["script"]:
+        # Domain randomization evaluation needs multiple checkpoints
+        if "domain_rand" in exp["script"]:
+            if "dr_checkpoints" in exp:
+                cmd.extend(["--dr-checkpoints"] + [str(ROOT / c) for c in exp["dr_checkpoints"]])
+            if "control_checkpoints" in exp:
+                cmd.extend(["--control-checkpoints"] + [str(ROOT / c) for c in exp["control_checkpoints"]])
+            if "scales" in exp:
+                cmd.extend(["--scales"] + [str(s) for s in exp["scales"]])
+            if "episodes_per_scale" in exp:
+                cmd.extend(["--num-episodes", str(exp["episodes_per_scale"])])
+        elif "input_checkpoint" in exp:
+            # Evaluation scripts typically take --checkpoint
+            cmd.extend(["--checkpoint", str(ROOT / exp["input_checkpoint"])])
+            if "scales" in exp:
+                cmd.extend(["--scales"] + [str(s) for s in exp["scales"]])
+            if "episodes_per_scale" in exp:
+                cmd.extend(["--episodes", str(exp["episodes_per_scale"])])
     elif "input_checkpoint" in exp and "compute_capture_region" in exp["script"]:
         cmd.extend(["--checkpoint", str(ROOT / exp["input_checkpoint"])])
     elif "input_checkpoint" in exp and "benchmark_inference_time" in exp["script"]:

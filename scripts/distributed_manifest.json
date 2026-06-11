@@ -267,7 +267,16 @@
           "name": "domain_randomization_eval",
           "description": "Evaluate DR-trained policy under perturbation scales",
           "script": "python scripts/evaluate_domain_rand_v2.py",
-          "input_checkpoint": "outputs/experiments/no_prediction_vpp_ppo_domain_rand_s0/checkpoints/best.pt",
+          "dr_checkpoints": [
+            "outputs/experiments/no_prediction_vpp_ppo_domain_rand_s0/checkpoints/best.pt",
+            "outputs/experiments/no_prediction_vpp_ppo_domain_rand_s1/checkpoints/best.pt",
+            "outputs/experiments/no_prediction_vpp_ppo_domain_rand_s2/checkpoints/best.pt"
+          ],
+          "control_checkpoints": [
+            "outputs/experiments/no_prediction_vpp_ppo_control_s0/checkpoints/best.pt",
+            "outputs/experiments/no_prediction_vpp_ppo_control_s1/checkpoints/best.pt",
+            "outputs/experiments/no_prediction_vpp_ppo_control_s2/checkpoints/best.pt"
+          ],
           "scales": [0.0, 0.5, 1.0, 1.5, 2.0],
           "episodes_per_scale": 30,
           "hardware": "CPU",

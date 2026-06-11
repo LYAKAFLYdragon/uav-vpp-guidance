@@ -226,6 +226,11 @@ class CloseRangeTrackingEnv:
                 print(f"WARNING: Failed to create trajectory predictor: {exc}")
                 self.trajectory_predictor_adapter = None
 
+        # Domain randomization state
+        self.domain_rand_config = config.get("domain_randomization", {})
+        self.domain_rand_scale = float(self.domain_rand_config.get("scale", 0.0))
+        self._domain_rand_rng = np.random.default_rng(42)
+
         self.current_step = 0
         self._episode_count = 0
         self._sim_time_s = 0.0
@@ -271,6 +276,85 @@ class CloseRangeTrackingEnv:
         obs = self._get_observation()
         return obs
 
+    def set_domain_rand_scale(self, scale: float):
+        """Set the current domain randomization scale (0.0 = off)."""
+        self.domain_rand_scale = float(scale)
+
+    def _apply_domain_randomization(self, scenario: dict) -> dict:
+        """
+        Apply domain randomization to a scenario dict.
+
+        Perturbs own_init and target_init by:
+          - position: ±position_noise_fraction of initial range
+          - velocity: ±velocity_noise_fraction of nominal velocity
+          - heading: ±heading_noise_deg
+
+        The magnitude is scaled by self.domain_rand_scale.
+        """
+        if self.domain_rand_scale <= 0.0:
+            return scenario
+
+        cfg = self.domain_rand_config
+        pos_frac = cfg.get("position_noise_fraction", 0.10)  # 10% of range
+        vel_frac = cfg.get("velocity_noise_fraction", 0.10)  # 10% of speed
+        head_deg = cfg.get("heading_noise_deg", 15.0)        # ±15°
+
+        # Deep-copy scenario to avoid mutating the original config
+        import copy
+        scenario = copy.deepcopy(scenario)
+
+        own = _get_scenario_attr(scenario, "own_init")
+        target = _get_scenario_attr(scenario, "target_init")
+
+        # Compute initial range for position noise magnitude
+        if own is not None and target is not None:
+            own_pos = _get_attr(own, "position_m", np.array([0.0, 0.0, 5000.0]))
+            tgt_pos = _get_attr(target, "position_m", np.array([2000.0, 0.0, 5000.0]))
+            initial_range = float(np.linalg.norm(np.asarray(own_pos) - np.asarray(tgt_pos)))
+        else:
+            initial_range = 2000.0
+
+        for aircraft_key in ("own_init", "target_init"):
+            ac = _get_scenario_attr(scenario, aircraft_key)
+            if ac is None:
+                continue
+
+            # Perturb position
+            pos = _get_attr(ac, "position_m", None)
+            if pos is not None:
+                pos = np.asarray(pos, dtype=np.float64)
+                noise = self._domain_rand_rng.uniform(-1.0, 1.0, size=pos.shape)
+                pos = pos + noise * initial_range * pos_frac * self.domain_rand_scale
+                if isinstance(ac, dict):
+                    ac["position_m"] = pos.tolist()
+                else:
+                    setattr(ac, "position_m", pos.tolist())
+
+            # Perturb velocity
+            vel = _get_attr(ac, "velocity_mps", None)
+            if vel is not None:
+                noise = self._domain_rand_rng.uniform(-1.0, 1.0)
+                vel = float(vel) * (1.0 + noise * vel_frac * self.domain_rand_scale)
+                vel = max(50.0, vel)  # prevent negative or too-small speed
+                if isinstance(ac, dict):
+                    ac["velocity_mps"] = vel
+                else:
+                    setattr(ac, "velocity_mps", vel)
+
+            # Perturb heading
+            heading = _get_attr(ac, "heading_deg", None)
+            if heading is not None:
+                noise = self._domain_rand_rng.uniform(-1.0, 1.0)
+                heading = float(heading) + noise * head_deg * self.domain_rand_scale
+                # Normalize to [-180, 180]
+                heading = (heading + 180.0) % 360.0 - 180.0
+                if isinstance(ac, dict):
+                    ac["heading_deg"] = heading
+                else:
+                    setattr(ac, "heading_deg", heading)
+
+        return scenario
+
     def _reset_jsbsim(self, scenario=None):
         own_init = {
             "ic/long-gc-deg": 120.0,
@@ -291,6 +375,7 @@ class CloseRangeTrackingEnv:
             "ic/w-fps": 0.0,
         }
         if scenario is not None:
+            scenario = self._apply_domain_randomization(scenario)
             own_scenario = _get_scenario_attr(scenario, "own_init")
             target_scenario = _get_scenario_attr(scenario, "target_init")
             if own_scenario is not None:
@@ -309,6 +394,7 @@ class CloseRangeTrackingEnv:
             "velocity_vector_mps": np.array([200.0, 0.0, 0.0]),
         }
         if scenario is not None:
+            scenario = self._apply_domain_randomization(scenario)
             own_scenario = _get_scenario_attr(scenario, "own_init")
             target_scenario = _get_scenario_attr(scenario, "target_init")
             if own_scenario is not None:

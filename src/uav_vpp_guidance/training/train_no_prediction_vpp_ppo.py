@@ -154,6 +154,24 @@ def run_evaluation(env, agent, config, num_episodes=10, seeds=None, save_traject
     }
 
 
+def _compute_curriculum_scale(progress: float, schedule: list) -> float:
+    """
+    Compute domain-randomization scale from training progress.
+
+    Args:
+        progress: global_step / total_timesteps (0.0 – 1.0)
+        schedule: list of (progress_threshold, scale) tuples, sorted by threshold.
+                  E.g. [(0.0, 0.05), (0.25, 0.10), (0.50, 0.15), (0.75, 0.20)]
+    Returns:
+        Current scale value.
+    """
+    scale = 0.0
+    for thresh, s in schedule:
+        if progress >= thresh:
+            scale = s
+    return scale
+
+
 def train_ppo(config, output_dir, smoke=False):
     """
     Main PPO training loop.
@@ -186,6 +204,19 @@ def train_ppo(config, output_dir, smoke=False):
     save_best = bool(config.get("checkpoint", {}).get("save_best", True))
     save_last = bool(config.get("checkpoint", {}).get("save_last", True))
 
+    # Domain randomization curriculum schedule
+    dr_config = config.get("domain_randomization", {})
+    dr_enabled = dr_config.get("enabled", False)
+    dr_schedule = dr_config.get("curriculum_schedule", [
+        (0.00, 0.05),
+        (0.25, 0.10),
+        (0.50, 0.15),
+        (0.75, 0.20),
+    ])
+    dr_fixed_scale = dr_config.get("fixed_scale", None)
+    if dr_fixed_scale is not None:
+        dr_schedule = [(0.0, float(dr_fixed_scale))]
+
     if smoke:
         total_timesteps = 512
         rollout_steps = 128
@@ -198,6 +229,9 @@ def train_ppo(config, output_dir, smoke=False):
     env = CloseRangeTrackingEnv(config)
     backend = env._backend
     print(f"Backend: {backend}")
+
+    if dr_enabled:
+        print(f"Domain randomization enabled with schedule: {dr_schedule}")
 
     # Get observation and action dimensions
     sample_obs = env.reset(seed=0)
@@ -326,6 +360,10 @@ def train_ppo(config, output_dir, smoke=False):
 
                             # Reset environment
                             scenario = sample_scenario(config, rng)
+                            if dr_enabled:
+                                progress = min(1.0, global_step / max(1, total_timesteps))
+                                current_dr_scale = _compute_curriculum_scale(progress, dr_schedule)
+                                env.set_domain_rand_scale(current_dr_scale)
                             obs = env.reset(scenario=scenario, seed=rng.integers(0, 1000000))
 
                             # Check if buffer is full after this step
@@ -367,6 +405,8 @@ def train_ppo(config, output_dir, smoke=False):
                     # Evaluation
                     if eval_interval > 0 and global_step % eval_interval == 0 and global_step > 0:
                         print(f"\n--- Evaluation at step {global_step} ---")
+                        # Evaluate on nominal conditions (no domain randomization)
+                        env.set_domain_rand_scale(0.0)
                         eval_cfg = config.get("evaluation", {})
                         eval_metrics = run_evaluation(
                             env, agent, config,
@@ -450,6 +490,7 @@ def main():
     parser.add_argument("--device", type=str, default=None, choices=["cpu", "cuda"], help="Override compute device (default: from config).")
     parser.add_argument("--backend", type=str, default=None, choices=["simple", "jsbsim"], help="Override simulation backend (default: from config).")
     parser.add_argument("--use-jsbsim", action="store_true", help="Force use_jsbsim=True (equivalent to --backend jsbsim).")
+    parser.add_argument("--domain-rand-scale", type=float, default=None, help="Override domain randomization scale (0.0=off). If set, curriculum is disabled and this fixed scale is used during training.")
     args = parser.parse_args()
 
     config = load_experiment_config(args.config)
@@ -483,6 +524,14 @@ def main():
     print(f"Experiment: {exp_name}")
     print(f"Output dir: {output_dir}")
     print(f"Seed: {seed}")
+
+    # Domain randomization override
+    if args.domain_rand_scale is not None:
+        if "domain_randomization" not in config:
+            config["domain_randomization"] = {}
+        config["domain_randomization"]["enabled"] = (args.domain_rand_scale > 0.0)
+        config["domain_randomization"]["fixed_scale"] = args.domain_rand_scale
+        print(f"Domain randomization scale override: {args.domain_rand_scale}")
 
     # Verify trajectory prediction is disabled
     tp_enabled = config.get("trajectory_prediction", {}).get("enabled", False)

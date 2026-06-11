@@ -55,6 +55,7 @@ class VirtualPointGenerator:
         self.dynamics_aware = config.get("dynamics_aware", False)
         # F-16 max feasible heading change per step (high_level_dt=0.2s, max rate ≈ 0.3 rad/s)
         self.max_heading_rate = config.get("max_heading_rate", 0.3)
+        self.lookahead_steps = config.get("lookahead_steps", 5)
         self._prev_action = None
 
     def action_to_virtual_point(
@@ -267,7 +268,7 @@ class VirtualPointGenerator:
         # Max feasible heading change per step (assuming high_level_dt ≈ 0.2s)
         # Allow a small buffer so the policy still learns to turn aggressively
         # when it is physically possible.
-        max_feasible = self.max_heading_rate * 0.2 * 5.0  # 5 steps lookahead
+        max_feasible = self.max_heading_rate * 0.2 * self.lookahead_steps
 
         if abs_error > max_feasible:
             sign = 1.0 if heading_error > 0 else -1.0

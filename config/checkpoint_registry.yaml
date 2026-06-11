@@ -135,6 +135,45 @@ training:
     seeds: [0]
     description: "End-to-end DRL baseline with enhanced hyperparameters"
 
+  # --- Domain randomization robustness training ---
+  no_prediction_vpp_ppo_domain_rand:
+    output_dir: outputs/experiments/no_prediction_vpp_ppo_domain_rand_s{seed}
+    checkpoint: outputs/experiments/no_prediction_vpp_ppo_domain_rand_s{seed}/checkpoints/best.pt
+    seeds: [0, 1, 2]
+    description: "No-prediction VPP PPO with domain randomization curriculum (v1, small scale)"
+
+  no_prediction_vpp_ppo_domain_rand_v2:
+    output_dir: outputs/experiments/no_prediction_vpp_ppo_domain_rand_v2_s{seed}
+    checkpoint: outputs/experiments/no_prediction_vpp_ppo_domain_rand_v2_s{seed}/checkpoints/best.pt
+    seeds: [0, 1, 2]
+    description: "No-prediction VPP PPO with domain randomization curriculum (v2, corrected scale)"
+
+  # --- Crossing breakthrough experiments ---
+  crossing_curriculum:
+    output_dir: outputs/experiments/crossing_curriculum_s{seed}
+    checkpoint: outputs/experiments/crossing_curriculum_s{seed}/checkpoints/best.pt
+    seeds: [0, 1, 2]
+    description: "Curriculum learning for crossing breakthrough"
+
+  crossing_constrained:
+    output_dir: outputs/experiments/crossing_constrained_s{seed}
+    checkpoint: outputs/experiments/crossing_constrained_s{seed}/checkpoints/best.pt
+    seeds: [0, 1, 2]
+    description: "Dynamics-constrained VPP for crossing breakthrough (100% SR)"
+
+  crossing_hybrid:
+    output_dir: outputs/experiments/crossing_hybrid_s{seed}
+    checkpoint: outputs/experiments/crossing_hybrid_s{seed}/checkpoints/best.pt
+    seeds: [0, 1, 2]
+    description: "Hybrid mode switch for crossing breakthrough"
+
+  # --- Control group for domain randomization ---
+  no_prediction_vpp_ppo_control:
+    output_dir: outputs/experiments/no_prediction_vpp_ppo_control_s{seed}
+    checkpoint: outputs/experiments/no_prediction_vpp_ppo_control_s{seed}/checkpoints/best.pt
+    seeds: [0, 1, 2]
+    description: "Control group for domain randomization (no DR)"
+
 # ---------------------------------------------------------------------------
 # 2. 评估脚本 Method → Checkpoint 映射 (Evaluation Config → Registry → Checkpoint)
 # ---------------------------------------------------------------------------

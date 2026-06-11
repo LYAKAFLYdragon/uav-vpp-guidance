@@ -1,0 +1,319 @@
+{
+  "version": "1.0.0",
+  "project_root": "e:/uav-vpp-guidance",
+  "backend": "simple",
+  "total_experiments": 93,
+  "groups": [
+    {
+      "group_id": "A",
+      "name": "core_architecture_necessity",
+      "description": "Compare hierarchical VPP+LOS against end-to-end DRL and No-VPP ablation",
+      "estimated_total_hours": 5.0,
+      "hardware": "CPU",
+      "experiments": [
+        {
+          "id": "A1",
+          "name": "baseline_vpp_los",
+          "description": "Hierarchical VPP+LOS-rate with CEM-optimized gains",
+          "script": "python -m uav_vpp_guidance.training.train_no_prediction_vpp_ppo",
+          "config": "config/experiment/train_no_prediction_vpp_ppo.yaml",
+          "seeds": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+          "budget_steps": 200000,
+          "output_dir": "outputs/experiments/baseline_10seed_s{seed}",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 6,
+          "paper_claim": "Hierarchical design achieves 75.0% success rate"
+        },
+        {
+          "id": "A2",
+          "name": "end_to_end_drl",
+          "description": "End-to-end DRL baseline without VPP or guidance law",
+          "script": "python -m uav_vpp_guidance.training.train_end_to_end_ppo",
+          "config": "config/experiment/train_end_to_end_ppo.yaml",
+          "seeds": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+          "budget_steps": 200000,
+          "output_dir": "outputs/experiments/end_to_end_ppo_seed{seed}",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 6,
+          "paper_claim": "End-to-end DRL baseline at 56.7% success rate"
+        },
+        {
+          "id": "A3",
+          "name": "no_vpp_ablation",
+          "description": "VPP+LOS with zero virtual point offset",
+          "script": "python -m uav_vpp_guidance.training.train_no_prediction_vpp_ppo",
+          "config": "config/experiment/train_no_prediction_vpp_ppo.yaml",
+          "override_config": {"virtual_point": {"offset": [0.0, 0.0, 0.0]}},
+          "seeds": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+          "budget_steps": 200000,
+          "output_dir": "outputs/experiments/no_vpp_ppo_seed{seed}",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 6,
+          "paper_claim": "Removing VPP reduces success by 6.7%"
+        }
+      ]
+    },
+    {
+      "group_id": "B",
+      "name": "crossing_breakthrough",
+      "description": "Validate crossing fix and compare alternative methods",
+      "estimated_total_hours": 6.0,
+      "hardware": "CPU",
+      "experiments": [
+        {
+          "id": "B1",
+          "name": "constrained_vpp",
+          "description": "Dynamics-aware VPP with max_heading_rate=0.2 rad/s",
+          "script": "python -m uav_vpp_guidance.training.train_no_prediction_vpp_ppo",
+          "config": "config/experiment/stage6f5_feasible_geometry_constrained.yaml",
+          "seeds": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+          "budget_steps": 200000,
+          "output_dir": "outputs/experiments/constrained_10seed_s{seed}",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 5,
+          "paper_claim": "Dynamics-aware constraint achieves 100% on crossing_left/right"
+        },
+        {
+          "id": "B2",
+          "name": "curriculum_learning",
+          "description": "Curriculum learning across scenario difficulties",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/experiment/train_curriculum_ppo.yaml",
+          "seeds": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+          "budget_steps": 200000,
+          "output_dir": "outputs/experiments/curriculum_ppo_s{seed}",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 6,
+          "paper_claim": "Curriculum learning as crossing alternative method"
+        },
+        {
+          "id": "B3",
+          "name": "hybrid_mode_switch",
+          "description": "Hybrid PN/LOS-rate with mode switching",
+          "script": "python -m uav_vpp_guidance.training.train_no_prediction_vpp_ppo",
+          "config": "config/experiment/train_hybrid_mode_switch.yaml",
+          "seeds": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+          "budget_steps": 200000,
+          "output_dir": "outputs/experiments/hybrid_mode_switch_s{seed}",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 6,
+          "paper_claim": "Hybrid mode switch as crossing alternative method"
+        },
+        {
+          "id": "B4",
+          "name": "crossing_generalization_grid",
+          "description": "Evaluate constrained model on 175 crossing geometric variants",
+          "script": "python scripts/evaluate_crossing_generalization.py",
+          "input_checkpoint": "outputs/experiments/constrained_10seed_s0/checkpoints/best.pt",
+          "scenarios": 175,
+          "episodes_per_scenario": 5,
+          "hardware": "CPU",
+          "estimated_minutes": 120,
+          "paper_claim": "Crossing generalization boundary"
+        }
+      ]
+    },
+    {
+      "group_id": "C",
+      "name": "bilevel_optimization",
+      "description": "CEM gain optimization and default gains ablation",
+      "estimated_total_hours": 3.0,
+      "hardware": "CPU",
+      "experiments": [
+        {
+          "id": "C1",
+          "name": "cem_gain_optimization",
+          "description": "Cross-entropy method optimization of guidance gains",
+          "script": "python scripts/run_bilevel_audit.py",
+          "config": "config/experiment/stage6f5_feasible_geometry_constrained.yaml",
+          "candidates": 12,
+          "iterations": 20,
+          "seeds": [0],
+          "output_dir": "outputs/experiments/p0b_bilevel_s0",
+          "hardware": "CPU",
+          "estimated_minutes": 60,
+          "paper_claim": "CEM gain optimization improves SR by 14.47%"
+        },
+        {
+          "id": "C2",
+          "name": "default_gains_ablation",
+          "description": "Train without CEM gain optimization (fixed default gains)",
+          "script": "python -m uav_vpp_guidance.training.train_no_prediction_vpp_ppo",
+          "config": "config/experiment/train_no_prediction_vpp_ppo.yaml",
+          "override_config": {"guidance": {"gains": {"k_los": 1.0, "k_pos": 0.1, "k_damp": 0.5}}},
+          "seeds": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+          "budget_steps": 200000,
+          "output_dir": "outputs/experiments/default_gains_seed{seed}",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 6,
+          "paper_claim": "Default gains ablation (60.2% vs 74.7%)"
+        }
+      ]
+    },
+    {
+      "group_id": "D",
+      "name": "predictor_stratification",
+      "description": "Predictor value under maneuvering target motion",
+      "estimated_total_hours": 8.0,
+      "hardware": "CPU",
+      "experiments": [
+        {
+          "id": "D1",
+          "name": "maneuver_no_pred",
+          "description": "No prediction baseline on maneuvering targets",
+          "script": "python -m uav_vpp_guidance.training.train_no_prediction_vpp_ppo",
+          "config": "config/experiment/train_no_prediction_vpp_ppo.yaml",
+          "override_config": {"target": {"mode": "maneuver", "maneuver_intensity": "both"}},
+          "seeds": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+          "budget_steps": 200000,
+          "output_dir": "outputs/experiments/maneuver_no_pred_s{seed}",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 6,
+          "paper_claim": "No-prediction baseline under maneuvers"
+        },
+        {
+          "id": "D2",
+          "name": "maneuver_cv",
+          "description": "Constant-velocity predictor on maneuvering targets",
+          "script": "python -m uav_vpp_guidance.training.train_no_prediction_vpp_ppo",
+          "config": "config/experiment/train_no_prediction_vpp_ppo.yaml",
+          "override_config": {"predictor": {"type": "cv"}, "target": {"mode": "maneuver", "maneuver_intensity": "both"}},
+          "seeds": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+          "budget_steps": 200000,
+          "output_dir": "outputs/experiments/maneuver_cv_s{seed}",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 6,
+          "paper_claim": "CV predictor under maneuvers"
+        },
+        {
+          "id": "D3",
+          "name": "maneuver_ca",
+          "description": "Constant-acceleration predictor on maneuvering targets",
+          "script": "python -m uav_vpp_guidance.training.train_no_prediction_vpp_ppo",
+          "config": "config/experiment/train_no_prediction_vpp_ppo.yaml",
+          "override_config": {"predictor": {"type": "ca"}, "target": {"mode": "maneuver", "maneuver_intensity": "both"}},
+          "seeds": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+          "budget_steps": 200000,
+          "output_dir": "outputs/experiments/maneuver_ca_s{seed}",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 6,
+          "paper_claim": "CA predictor under maneuvers"
+        },
+        {
+          "id": "D4",
+          "name": "maneuver_lstm_frozen",
+          "description": "Frozen LSTM predictor on maneuvering targets",
+          "script": "python -m uav_vpp_guidance.training.train_no_prediction_vpp_ppo",
+          "config": "config/experiment/train_no_prediction_vpp_ppo.yaml",
+          "override_config": {"predictor": {"type": "lstm", "frozen": true}, "target": {"mode": "maneuver", "maneuver_intensity": "both"}},
+          "seeds": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+          "budget_steps": 200000,
+          "output_dir": "outputs/experiments/maneuver_lstm_s{seed}",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 8,
+          "paper_claim": "LSTM provides +26.88% under strong maneuvers"
+        },
+        {
+          "id": "D5",
+          "name": "maneuver_gru_frozen",
+          "description": "Frozen GRU predictor on maneuvering targets",
+          "script": "python -m uav_vpp_guidance.training.train_no_prediction_vpp_ppo",
+          "config": "config/experiment/train_no_prediction_vpp_ppo.yaml",
+          "override_config": {"predictor": {"type": "gru", "frozen": true}, "target": {"mode": "maneuver", "maneuver_intensity": "both"}},
+          "seeds": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+          "budget_steps": 200000,
+          "output_dir": "outputs/experiments/maneuver_gru_s{seed}",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 8,
+          "paper_claim": "GRU provides +21.2% under strong maneuvers"
+        }
+      ]
+    },
+    {
+      "group_id": "E",
+      "name": "domain_randomization",
+      "description": "Domain randomization robustness and control group",
+      "estimated_total_hours": 5.0,
+      "hardware": "CPU",
+      "experiments": [
+        {
+          "id": "E1",
+          "name": "domain_randomization_train",
+          "description": "Curriculum-style domain randomization training",
+          "script": "python -m uav_vpp_guidance.training.train_no_prediction_vpp_ppo",
+          "config": "config/experiment/train_no_prediction_vpp_ppo_domain_rand.yaml",
+          "seeds": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+          "budget_steps": 200000,
+          "output_dir": "outputs/experiments/no_prediction_vpp_ppo_domain_rand_s{seed}",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 6,
+          "paper_claim": "Domain randomization improves initial condition robustness"
+        },
+        {
+          "id": "E2",
+          "name": "domain_randomization_control",
+          "description": "Control group without domain randomization",
+          "script": "python -m uav_vpp_guidance.training.train_no_prediction_vpp_ppo",
+          "config": "config/experiment/train_no_prediction_vpp_ppo.yaml",
+          "seeds": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+          "budget_steps": 200000,
+          "output_dir": "outputs/experiments/no_prediction_vpp_ppo_control_s{seed}",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 6,
+          "paper_claim": "Control group for domain randomization"
+        },
+        {
+          "id": "E3",
+          "name": "domain_randomization_eval",
+          "description": "Evaluate DR-trained policy under perturbation scales",
+          "script": "python scripts/evaluate_domain_rand_v2.py",
+          "input_checkpoint": "outputs/experiments/no_prediction_vpp_ppo_domain_rand_s0/checkpoints/best.pt",
+          "scales": [0.0, 0.5, 1.0, 1.5, 2.0],
+          "episodes_per_scale": 30,
+          "hardware": "CPU",
+          "estimated_minutes": 60,
+          "paper_claim": "Robustness under ±20% disturbance (25.8% vulnerability)"
+        }
+      ]
+    },
+    {
+      "group_id": "F",
+      "name": "capture_and_inference",
+      "description": "Capture region heatmaps and inference timing",
+      "estimated_total_hours": 2.0,
+      "hardware": "CPU",
+      "experiments": [
+        {
+          "id": "F1",
+          "name": "capture_region_highres",
+          "description": "600-point capture region grid",
+          "script": "python scripts/compute_capture_region.py",
+          "input_checkpoint": "outputs/experiments/baseline_10seed_s0/checkpoints/best.pt",
+          "grid": {"distances": 10, "headings": 12, "speed_ratios": 5},
+          "episodes_per_point": 5,
+          "hardware": "CPU",
+          "estimated_minutes": 90,
+          "paper_claim": "Capture region comparison between VPP+LOS and PN"
+        },
+        {
+          "id": "F2",
+          "name": "inference_time_benchmark",
+          "description": "PPO inference and CEM optimization latency",
+          "script": "python scripts/benchmark_inference_time.py",
+          "input_checkpoint": "outputs/experiments/baseline_10seed_s0/checkpoints/best.pt",
+          "hardware": "CPU",
+          "estimated_minutes": 10,
+          "paper_claim": "PPO inference <1ms, total control cycle <5ms"
+        }
+      ]
+    }
+  ],
+  "aggregation": {
+    "scripts": [
+      {"name": "aggregate_10seed_results.py", "output": "docs/results/10seed_evaluation/summary_10seed_full.md"},
+      {"name": "aggregate_crossing_generalization.py", "output": "docs/results/crossing_generalization/full_grid_summary.md"},
+      {"name": "aggregate_domain_rand.py", "output": "docs/results/domain_randomization/distributed_summary.md"},
+      {"name": "aggregate_predictor_stratification.py", "output": "docs/results/predictor_stratification/10seed_summary.md"}
+    ]
+  }
+}

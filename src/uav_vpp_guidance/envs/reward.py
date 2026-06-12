@@ -51,6 +51,8 @@ class RewardCalculator:
         self.w_saturation = self.config.get("w_saturation", 1.0)
         self.w_smooth = self.config.get("w_smooth", 0.1)
         self.w_turn_rate = self.config.get("w_turn_rate", 0.5)
+        self.w_closing = self.config.get("w_closing", 0.0)
+        self.w_alive = self.config.get("w_alive", 0.0)
         # F-16 typical max heading rate ≈ 0.3 rad/s (≈17°/s) at cruise speed
         self.max_heading_rate = self.config.get("max_heading_rate", 0.3)
         self.terminal_success = self.config.get("terminal_success", 200.0)
@@ -131,7 +133,14 @@ class RewardCalculator:
         turn_rate_penalty = self._compute_turn_rate_penalty(rel, own_state, command)
         reward_turn = -self.w_turn_rate * turn_rate_penalty
 
-        # 7. 终端奖励（由调用方根据 done/reason 注入，这里预留接口）
+        # 7. 接近奖励：鼓励减小距离（range_rate 为负表示接近）
+        range_rate_mps = rel.get("range_rate_mps", 0.0)
+        reward_closing = self.w_closing * (-range_rate_mps / 200.0)
+
+        # 8. 存活奖励：每步小额正奖励，帮助端到端基线避免早期出界
+        reward_alive = self.w_alive
+
+        # 9. 终端奖励（由调用方根据 done/reason 注入，这里预留接口）
         terminal_reward = info.get("terminal_reward", 0.0)
 
         # 汇总
@@ -142,6 +151,8 @@ class RewardCalculator:
             + reward_saturation
             + reward_smooth
             + reward_turn
+            + reward_closing
+            + reward_alive
             + terminal_reward
         )
 
@@ -152,6 +163,8 @@ class RewardCalculator:
             "reward_saturation": reward_saturation,
             "reward_smooth": reward_smooth,
             "reward_turn": reward_turn,
+            "reward_closing": reward_closing,
+            "reward_alive": reward_alive,
             "terminal_reward": terminal_reward,
             "reward_total": reward,
         }

@@ -1,0 +1,27 @@
+# Default success-criterion curriculum for the no-prediction VPP baseline.
+# Stages are selected by training progress (global_step / total_timesteps).
+success_criterion_curriculum:
+  - until_progress: 0.20
+    success_range_m: 900.0
+    success_ata_deg: 25.0
+    success_hold_time_s: 0.2
+    hysteresis_range_m: 950.0
+    hysteresis_ata_deg: 30.0
+  - until_progress: 0.45
+    success_range_m: 800.0
+    success_ata_deg: 22.0
+    success_hold_time_s: 0.5
+    hysteresis_range_m: 850.0
+    hysteresis_ata_deg: 27.0
+  - until_progress: 0.70
+    success_range_m: 750.0
+    success_ata_deg: 20.0
+    success_hold_time_s: 1.0
+    hysteresis_range_m: 800.0
+    hysteresis_ata_deg: 25.0
+  - until_progress: 1.00
+    success_range_m: 700.0
+    success_ata_deg: 18.0
+    success_hold_time_s: 1.0
+    hysteresis_range_m: 750.0
+    hysteresis_ata_deg: 22.0

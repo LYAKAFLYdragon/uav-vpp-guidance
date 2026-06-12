@@ -1,0 +1,17 @@
+# Strict success criterion stage.
+# Final evaluation standard: stable close-range tracking.
+env:
+  success_range_m: 700.0
+  success_ata_deg: 18.0
+  success_hold_time_s: 2.0
+  hysteresis_range_m: 750.0
+  hysteresis_ata_deg: 22.0
+
+success_criterion_stage:
+  name: strict
+  until_progress: 1.00
+  success_range_m: 700.0
+  success_ata_deg: 18.0
+  success_hold_time_s: 2.0
+  hysteresis_range_m: 750.0
+  hysteresis_ata_deg: 22.0

@@ -149,11 +149,11 @@ def main():
         config["seed"] = args.seed
         print(f"[Bilevel] Seed override: {args.seed}")
 
-    config["backend"] = "simple"
+    config.setdefault("backend", "simple")
     if "env" not in config:
         config["env"] = {}
-    config["env"]["backend"] = "simple"
-    config["env"]["use_jsbsim"] = False
+    config["env"].setdefault("backend", "simple")
+    config["env"].setdefault("use_jsbsim", False)
     if "guidance" not in config:
         config["guidance"] = {}
     if "mode_switch" not in config["guidance"]:

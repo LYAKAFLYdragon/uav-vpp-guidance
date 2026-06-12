@@ -24,8 +24,20 @@ _current_dir = os.path.dirname(os.path.abspath(__file__))
 if _current_dir not in sys.path:
     sys.path.insert(0, _current_dir)
 
-from train_no_prediction_vpp_ppo import load_experiment_config, train_ppo
+from train_no_prediction_vpp_ppo import load_experiment_config, train_ppo, run_evaluation
 from uav_vpp_guidance.utils.seed import set_seed
+from uav_vpp_guidance.envs.tracking_env import CloseRangeTrackingEnv
+import numpy as np
+
+
+class _ZeroActionAgent:
+    """Deterministic zero-action agent for fixed-gain evaluation."""
+
+    def __init__(self, action_dim: int = 3):
+        self.action_dim = action_dim
+
+    def get_deterministic_action(self, obs):
+        return np.zeros(self.action_dim, dtype=np.float32)
 
 
 def main():
@@ -60,6 +72,24 @@ def main():
         "--dry-run",
         action="store_true",
         help="Parse config, print resolved settings, and exit.",
+    )
+    parser.add_argument(
+        "--eval-only",
+        action="store_true",
+        help="Evaluate a deterministic zero-action fixed-gain policy without training.",
+    )
+    parser.add_argument(
+        "--eval-episodes",
+        type=int,
+        default=20,
+        help="Number of episodes for eval-only mode.",
+    )
+    parser.add_argument(
+        "--eval-seeds",
+        type=int,
+        nargs="+",
+        default=[0, 1, 2],
+        help="Seeds for eval-only mode.",
     )
     parser.add_argument(
         "--backend",
@@ -129,6 +159,30 @@ def main():
         print(f"  action_dim: {config.get('policy', {}).get('action_dim', 3)}")
         print(f"  gains: {gains}")
         print("Exiting without training.")
+        return
+
+    if args.eval_only:
+        print("\n[EVAL-ONLY] Running deterministic zero-action fixed-gain evaluation...")
+        env = CloseRangeTrackingEnv(config)
+        action_dim = int(config.get("policy", {}).get("action_dim", 3))
+        agent = _ZeroActionAgent(action_dim=action_dim)
+        eval_cfg = config.get("evaluation", {})
+        eval_metrics = run_evaluation(
+            env,
+            agent,
+            config,
+            num_episodes=args.eval_episodes,
+            seeds=args.eval_seeds,
+            save_trajectories=eval_cfg.get("save_trajectories", False),
+            output_dir=output_dir,
+        )
+        print(
+            f"Eval Return: {eval_metrics['mean_return']:.2f} ± {eval_metrics['std_return']:.2f} | "
+            f"Success: {eval_metrics['success_rate']:.2%} | "
+            f"Crash: {eval_metrics['crash_rate']:.2%} | "
+            f"OOB: {eval_metrics['out_of_bounds_rate']:.2%}"
+        )
+        env.close()
         return
 
     train_ppo(config, output_dir, smoke=args.smoke)

@@ -280,6 +280,29 @@ class CloseRangeTrackingEnv:
         """Set the current domain randomization scale (0.0 = off)."""
         self.domain_rand_scale = float(scale)
 
+    def set_success_criteria(
+        self,
+        success_range_m: float = None,
+        success_ata_deg: float = None,
+        success_hold_time_s: float = None,
+        hysteresis_range_m: float = None,
+        hysteresis_ata_deg: float = None,
+    ):
+        """
+        Update the success criteria used by the termination checker.
+
+        This is the public entry point for curriculum learning: the training
+        loop can call it with progressively tighter thresholds and longer
+        hold times.  A value of None preserves the current threshold.
+        """
+        self.termination_checker.set_success_criteria(
+            success_range_m=success_range_m,
+            success_ata_deg=success_ata_deg,
+            success_hold_time_s=success_hold_time_s,
+            hysteresis_range_m=hysteresis_range_m,
+            hysteresis_ata_deg=hysteresis_ata_deg,
+        )
+
     def _apply_domain_randomization(self, scenario: dict) -> dict:
         """
         Apply domain randomization to a scenario dict.

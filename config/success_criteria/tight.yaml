@@ -1,0 +1,17 @@
+# Tight success criterion stage.
+# Approaching the final tracking requirement.
+env:
+  success_range_m: 750.0
+  success_ata_deg: 20.0
+  success_hold_time_s: 1.0
+  hysteresis_range_m: 800.0
+  hysteresis_ata_deg: 25.0
+
+success_criterion_stage:
+  name: tight
+  until_progress: 0.70
+  success_range_m: 750.0
+  success_ata_deg: 20.0
+  success_hold_time_s: 1.0
+  hysteresis_range_m: 800.0
+  hysteresis_ata_deg: 25.0

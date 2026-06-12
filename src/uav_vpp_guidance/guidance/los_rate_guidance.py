@@ -88,6 +88,11 @@ class LOSRateGuidance:
         self.enable_internal_clip = bool(params.get("enable_internal_clip", True))
         self.enable_internal_filter = bool(params.get("enable_internal_filter", False))
         self.alpha_filter = float(gains.get("alpha_filter", 0.3))
+        # When enabled, approach speed scales from cruise speed at long range
+        # down to the target's speed as distance to the virtual point goes to 0.
+        self.use_distance_aware_speed = bool(
+            params.get("use_distance_aware_speed", False)
+        )
 
         # Limits (prefer top-level limits block, fall back to defaults)
         limits = config.get("limits", {})
@@ -189,7 +194,10 @@ class LOSRateGuidance:
         nz_cmd = self._compute_nz_cmd(los_elevation, distance, k_los, k_pos)
 
         # 3. Speed / throttle
-        throttle_cmd = self._compute_throttle_cmd(own_speed, k_speed)
+        target_speed = self._extract_target_speed(target_state)
+        throttle_cmd = self._compute_throttle_cmd(
+            own_speed, k_speed, d_safe, target_speed
+        )
 
         command = {
             "nz_cmd": float(nz_cmd),
@@ -328,9 +336,21 @@ class LOSRateGuidance:
         proportional_term = k_pos * (distance / self.distance_scale_m)
         return self.base_nz + k_los * los_elevation + proportional_term
 
-    def _compute_throttle_cmd(self, own_speed: float, k_speed: float) -> float:
+    def _compute_throttle_cmd(
+        self,
+        own_speed: float,
+        k_speed: float,
+        distance: float,
+        target_speed: float,
+    ) -> float:
         """
         Compute throttle command.
+
+        By default the controller tries to reach ``self.target_speed_mps``.
+        When ``use_distance_aware_speed`` is enabled, the desired speed scales
+        from ``self.target_speed_mps`` at long range down to the actual target
+        speed as the distance to the virtual point approaches zero.  This helps
+        prevent overshooting the target.
 
         throttle = base_throttle + k_speed * (speed_error / speed_error_scale)
         Clamped to [0, 1]. If own_speed is non-finite, returns base_throttle.
@@ -339,11 +359,37 @@ class LOSRateGuidance:
             return float(
                 np.clip(self.base_throttle, self.throttle_min, self.throttle_max)
             )
-        speed_error = self.target_speed_mps - own_speed
+
+        if self.use_distance_aware_speed and distance >= 0.0:
+            # Normalized distance factor in [0, 1]
+            range_factor = min(1.0, distance / self.distance_scale_m)
+            desired_speed = target_speed + range_factor * (
+                self.target_speed_mps - target_speed
+            )
+        else:
+            desired_speed = self.target_speed_mps
+
+        speed_error = desired_speed - own_speed
         throttle = self.base_throttle + k_speed * (
             speed_error / self.speed_error_scale_mps
         )
         return float(np.clip(throttle, self.throttle_min, self.throttle_max))
+
+    def _extract_target_speed(self, target_state) -> float:
+        """Extract target speed from state; fall back to cruise target speed."""
+        if target_state is None:
+            return self.target_speed_mps
+        vel = None
+        for key in ("velocity_vector_mps", "velocity", "velocity_mps"):
+            if key in target_state:
+                vel = target_state[key]
+                break
+        if vel is not None:
+            try:
+                return float(np.linalg.norm(np.asarray(vel, dtype=float)))
+            except Exception:
+                pass
+        return self.target_speed_mps
 
     def _apply_internal_limits(self, command: Dict[str, float]) -> Dict[str, float]:
         """Clip commands to configured physical limits."""

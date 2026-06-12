@@ -53,6 +53,11 @@ class RewardCalculator:
         self.w_turn_rate = self.config.get("w_turn_rate", 0.5)
         self.w_closing = self.config.get("w_closing", 0.0)
         self.w_alive = self.config.get("w_alive", 0.0)
+        self.w_overshoot = self.config.get("w_overshoot", 0.0)
+        self.w_boundary = self.config.get("w_boundary", 0.0)
+        self.boundary_range_m = float(self.config.get("boundary_range_m", 6000.0))
+        self.boundary_alt_min_m = float(self.config.get("boundary_alt_min_m", 1000.0))
+        self.boundary_alt_max_m = float(self.config.get("boundary_alt_max_m", 9000.0))
         # F-16 typical max heading rate ≈ 0.3 rad/s (≈17°/s) at cruise speed
         self.max_heading_rate = self.config.get("max_heading_rate", 0.3)
         self.terminal_success = self.config.get("terminal_success", 200.0)
@@ -63,6 +68,10 @@ class RewardCalculator:
         self._ref_range_m = 2000.0
         self._ref_altitude_m = 5000.0
         self._prev_command = None
+
+        # 理想距离区间（可配置，用于与成功条件对齐）
+        self.ideal_range_min = float(self.config.get("ideal_range_min", 800.0))
+        self.ideal_range_max = float(self.config.get("ideal_range_max", 1200.0))
 
     def compute(self, info):
         """
@@ -140,7 +149,28 @@ class RewardCalculator:
         # 8. 存活奖励：每步小额正奖励，帮助端到端基线避免早期出界
         reward_alive = self.w_alive
 
-        # 9. 终端奖励（由调用方根据 done/reason 注入，这里预留接口）
+        # 9. 过冲惩罚：当距离已经小于理想下界且还在继续接近时惩罚
+        # 这防止飞机飞过目标导致坠毁/越界
+        reward_overshoot = 0.0
+        if self.w_overshoot > 0.0:
+            if range_m < self.ideal_range_min and range_rate_mps < 0.0:
+                # 越接近目标、速度越快，惩罚越大
+                proximity_factor = (self.ideal_range_min - range_m) / self.ideal_range_min
+                reward_overshoot = -self.w_overshoot * proximity_factor * (-range_rate_mps / 200.0)
+
+        # 10. 边界接近惩罚：防止飞出 max_range 或极端高度
+        reward_boundary = 0.0
+        if self.w_boundary > 0.0:
+            boundary_penalty = 0.0
+            if range_m > self.boundary_range_m:
+                boundary_penalty += (range_m - self.boundary_range_m) / self.boundary_range_m
+            if altitude_m < self.boundary_alt_min_m:
+                boundary_penalty += (self.boundary_alt_min_m - altitude_m) / 1000.0
+            if altitude_m > self.boundary_alt_max_m:
+                boundary_penalty += (altitude_m - self.boundary_alt_max_m) / 1000.0
+            reward_boundary = -self.w_boundary * boundary_penalty
+
+        # 11. 终端奖励（由调用方根据 done/reason 注入，这里预留接口）
         terminal_reward = info.get("terminal_reward", 0.0)
 
         # 汇总
@@ -153,6 +183,8 @@ class RewardCalculator:
             + reward_turn
             + reward_closing
             + reward_alive
+            + reward_overshoot
+            + reward_boundary
             + terminal_reward
         )
 
@@ -165,6 +197,8 @@ class RewardCalculator:
             "reward_turn": reward_turn,
             "reward_closing": reward_closing,
             "reward_alive": reward_alive,
+            "reward_overshoot": reward_overshoot,
+            "reward_boundary": reward_boundary,
             "terminal_reward": terminal_reward,
             "reward_total": reward,
         }
@@ -181,8 +215,8 @@ class RewardCalculator:
         理想区间 [ideal_min, ideal_max]，区间内奖励最高。
         区间外按偏离程度线性惩罚。
         """
-        ideal_min = 800.0
-        ideal_max = 1200.0
+        ideal_min = self.ideal_range_min
+        ideal_max = self.ideal_range_max
         max_penalty_range = 4000.0
 
         if ideal_min <= range_m <= ideal_max:

@@ -128,7 +128,7 @@ class PPOAgent:
 
         return action, log_prob, value
 
-    def store_transition(self, obs, action, log_prob, reward, done, value):
+    def store_transition(self, obs, action, log_prob, reward, done, value, info=None):
         """
         Store a transition in the rollout buffer.
 
@@ -139,6 +139,7 @@ class PPOAgent:
             reward (float): Reward received.
             done (bool): Whether episode terminated.
             value (float): Value estimate.
+            info (dict, optional): Extra environment info (ignored by base PPO).
         """
         self.buffer.add(obs, action, log_prob, reward, done, value)
         self.total_timesteps += 1

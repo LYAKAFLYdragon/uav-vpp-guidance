@@ -61,6 +61,8 @@ guidance:
     k_roll: 1.0
     k_speed: 0.2
     alpha_filter: 0.3
+  params:
+    use_distance_aware_speed: true
 
 limits:
   nz_min: -2.0

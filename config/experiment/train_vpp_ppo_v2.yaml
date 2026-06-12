@@ -43,6 +43,8 @@ guidance:
     k_speed: 0.2
   mode: los_rate
   use_gain_adapter: false
+  params:
+    use_distance_aware_speed: true
 includes:
 - ../env.yaml
 - ../ppo.yaml

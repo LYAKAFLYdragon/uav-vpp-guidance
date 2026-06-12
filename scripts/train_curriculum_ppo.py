@@ -24,6 +24,7 @@ from uav_vpp_guidance.utils.config import load_yaml_config, merge_config
 from uav_vpp_guidance.utils.seed import set_seed
 from uav_vpp_guidance.envs.tracking_env import CloseRangeTrackingEnv
 from uav_vpp_guidance.agents.ppo_agent import PPOAgent
+from uav_vpp_guidance.agents.cr_ppo_agent import CRPPOAgent
 
 
 def load_experiment_config(config_path):
@@ -133,7 +134,7 @@ DEFAULT_CURRICULUM = [
 ]
 
 
-def train_ppo_curriculum(config, output_dir, smoke=False):
+def train_ppo_curriculum(config, output_dir, smoke=False, algorithm="ppo"):
     checkpoint_dir = os.path.join(output_dir, "checkpoints")
     log_dir = os.path.join(output_dir, "logs")
     os.makedirs(checkpoint_dir, exist_ok=True)
@@ -166,8 +167,11 @@ def train_ppo_curriculum(config, output_dir, smoke=False):
     obs_dim = int(sample_obs["observation_vector"].shape[0])
     action_dim = int(config.get("policy", {}).get("action_dim", 3))
     device = ppo_cfg.get("device", "cpu")
-    agent = PPOAgent(obs_dim=obs_dim, action_dim=action_dim, config=config, device=device)
-    print(f"Network parameters: {agent.network.count_parameters()}")
+    if algorithm == "cr_ppo":
+        agent = CRPPOAgent(obs_dim=obs_dim, action_dim=action_dim, config=config, device=device)
+    else:
+        agent = PPOAgent(obs_dim=obs_dim, action_dim=action_dim, config=config, device=device)
+    print(f"Algorithm: {algorithm} | Network parameters: {agent.network.count_parameters()}")
 
     # Curriculum config
     curriculum = config.get("curriculum", {}).get("stages", DEFAULT_CURRICULUM)
@@ -235,14 +239,15 @@ def train_ppo_curriculum(config, output_dir, smoke=False):
             active_scenarios = {k: v for k, v in all_scenarios.items() if k in allowed_names}
 
             for step in range(rollout_steps):
-                obs_vec = obs["observation_vector"]
+                obs_dict = obs
+                obs_vec = obs_dict["observation_vector"]
                 action, log_prob, value = agent.select_action(obs_vec, deterministic=False, store=False)
                 obs, reward, terminated, truncated, info = env.step(action)
                 done = terminated or truncated
                 global_step += 1
                 episode_return += reward
                 episode_length += 1
-                agent.store_transition(obs_vec, action, log_prob, reward, done, value)
+                agent.store_transition(obs_vec, action, log_prob, reward, done, value, info=obs_dict)
 
                 rel_state = obs.get("relative_state", {})
                 range_m = rel_state.get("range_m", 0.0)
@@ -369,6 +374,13 @@ def main():
     parser.add_argument("--output-dir", type=str, default=None)
     parser.add_argument("--device", type=str, default=None, choices=["cpu", "cuda"])
     parser.add_argument("--backend", type=str, default=None, choices=["simple", "jsbsim"])
+    parser.add_argument(
+        "--algorithm",
+        type=str,
+        default="ppo",
+        choices=["ppo", "cr_ppo"],
+        help="RL algorithm to use for training",
+    )
     args = parser.parse_args()
 
     config = load_experiment_config(args.config)
@@ -385,7 +397,7 @@ def main():
     os.makedirs(output_dir, exist_ok=True)
     if args.device is not None:
         config.setdefault("ppo", {})["device"] = args.device
-    train_ppo_curriculum(config, output_dir, smoke=args.smoke)
+    train_ppo_curriculum(config, output_dir, smoke=args.smoke, algorithm=args.algorithm)
 
 
 if __name__ == "__main__":

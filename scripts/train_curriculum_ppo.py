@@ -203,6 +203,9 @@ def train_ppo_curriculum(config, output_dir, smoke=False, algorithm="ppo"):
         up_writer = csv.DictWriter(f_up, fieldnames=[
             "step", "update_num", "policy_loss", "value_loss", "entropy",
             "approx_kl", "clip_fraction", "explained_variance", "learning_rate",
+            # Algorithm-specific diagnostics (union across branches)
+            "complexity",
+            "scale_actor", "scale_critic", "ema_abs_adv",
         ])
         up_writer.writeheader()
 
@@ -304,6 +307,10 @@ def train_ppo_curriculum(config, output_dir, smoke=False, algorithm="ppo"):
                     "clip_fraction": update_stats.get("clip_fraction", ""),
                     "explained_variance": update_stats.get("explained_variance", ""),
                     "learning_rate": update_stats.get("learning_rate", ""),
+                    "complexity": update_stats.get("complexity", ""),
+                    "scale_actor": update_stats.get("scale_actor", ""),
+                    "scale_critic": update_stats.get("scale_critic", ""),
+                    "ema_abs_adv": update_stats.get("ema_abs_adv", ""),
                 })
                 f_up.flush()
                 print(

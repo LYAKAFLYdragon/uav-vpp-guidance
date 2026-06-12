@@ -37,7 +37,11 @@ class PPOAgent:
         self.obs_dim = int(obs_dim)
         self.action_dim = int(action_dim)
         self.config = config
-        self.device = torch.device(device)
+        requested = torch.device(device)
+        if requested.type == "cuda" and not torch.cuda.is_available():
+            print(f"WARNING: CUDA requested but not available. Falling back to CPU.")
+            requested = torch.device("cpu")
+        self.device = requested
 
         # Extract hyperparameters
         ppo_cfg = config.get("ppo", config)

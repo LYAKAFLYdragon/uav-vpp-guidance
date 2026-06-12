@@ -6,18 +6,20 @@ env:
   backend: simple
   decision_freq: 5
   high_level_dt: 0.2
-  hysteresis_ata_deg: 25.0
-  hysteresis_range_m: 800.0
+  hysteresis_ata_deg: 30.0
+  hysteresis_range_m: 950.0
   max_altitude_m: 15000.0
   max_high_level_steps: 512
   max_range_m: 12000.0
   min_altitude_m: 500.0
   sim_freq: 60
-  success_ata_deg: 20.0
-  success_hold_time_s: 2.0
-  success_range_m: 700.0
+  success_ata_deg: 25.0
+  success_hold_time_s: 0.2
+  success_range_m: 900.0
   target_mode: constant_velocity
   use_jsbsim: false
+
+# Success-criterion curriculum is loaded from ../success_criteria/curriculum_default.yaml
 evaluation:
   eval_episodes: 10
   eval_interval: 10000
@@ -46,6 +48,7 @@ includes:
 - ../ppo.yaml
 - ../guidance.yaml
 - ../reward.yaml
+- ../success_criteria/curriculum_default.yaml
 limits:
   nz_max: 7.0
   nz_min: -2.0
@@ -89,13 +92,16 @@ reward:
   terminal_success: 400.0
   w_alive: 0.02
   w_angle: 0.9
-  w_closing: 0.3
+  w_closing: 0.1
   w_energy: 0.0
   w_range: 0.6
   w_safety: 3.0
   w_saturation: 0.5
   w_smooth: 0.2
   w_turn_rate: 0.5
+  w_overshoot: 1.0
+  ideal_range_min: 700.0
+  ideal_range_max: 1100.0
 scenarios:
   challenging:
     description: Target starts at high lateral offset with crossing trajectory.

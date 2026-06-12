@@ -43,6 +43,34 @@ class TerminationChecker:
         self._success_counter = 0
         self._in_success_zone = False
 
+    def set_success_criteria(
+        self,
+        success_range_m: float = None,
+        success_ata_deg: float = None,
+        success_hold_time_s: float = None,
+        hysteresis_range_m: float = None,
+        hysteresis_ata_deg: float = None,
+    ):
+        """
+        Dynamically update success criteria (e.g., for curriculum learning).
+
+        When a criterion is set to None the existing value is preserved.
+        The success counter is reset so that previously accumulated steps
+        under looser criteria do not count toward the new criterion.
+        """
+        if success_range_m is not None:
+            self.success_range_m = float(success_range_m)
+        if success_ata_deg is not None:
+            self.success_ata_deg = float(success_ata_deg)
+        if success_hold_time_s is not None:
+            self.success_hold_time_s = float(success_hold_time_s)
+            self._success_hold_steps = int(self.success_hold_time_s * self.decision_freq)
+        if hysteresis_range_m is not None:
+            self.hysteresis_range_m = float(hysteresis_range_m)
+        if hysteresis_ata_deg is not None:
+            self.hysteresis_ata_deg = float(hysteresis_ata_deg)
+        self._success_counter = 0
+
     def check(self, own_state, target_state, metrics, step) -> Tuple[bool, dict]:
         """
         Check termination conditions.

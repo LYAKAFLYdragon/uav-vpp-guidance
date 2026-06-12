@@ -172,6 +172,41 @@ def _compute_curriculum_scale(progress: float, schedule: list) -> float:
     return scale
 
 
+def _select_success_criterion_stage(progress: float, schedule: list) -> dict:
+    """
+    Select the current success-criterion stage from a curriculum schedule.
+
+    Args:
+        progress: global_step / total_timesteps (0.0 – 1.0)
+        schedule: list of dicts with key "until_progress" (float, exclusive upper bound)
+                  and success criteria fields.  Stages must be sorted by
+                  until_progress in ascending order.
+    Returns:
+        dict: The active stage.
+    """
+    for stage in schedule:
+        if progress <= stage.get("until_progress", 1.0):
+            return stage
+    return schedule[-1]
+
+
+def _apply_success_criterion_stage(env, stage: dict):
+    """Apply a success-criterion stage to the environment."""
+    env.set_success_criteria(
+        success_range_m=stage.get("success_range_m"),
+        success_ata_deg=stage.get("success_ata_deg"),
+        success_hold_time_s=stage.get("success_hold_time_s"),
+        hysteresis_range_m=stage.get("hysteresis_range_m"),
+        hysteresis_ata_deg=stage.get("hysteresis_ata_deg"),
+    )
+
+
+def _apply_final_success_criterion(env, schedule: list):
+    """Apply the final (strictest) success-criterion stage for evaluation."""
+    final_stage = schedule[-1]
+    _apply_success_criterion_stage(env, final_stage)
+
+
 def train_ppo(config, output_dir, smoke=False):
     """
     Main PPO training loop.
@@ -217,6 +252,11 @@ def train_ppo(config, output_dir, smoke=False):
     if dr_fixed_scale is not None:
         dr_schedule = [(0.0, float(dr_fixed_scale))]
 
+    # Success-criterion curriculum schedule
+    sc_curriculum = config.get("success_criterion_curriculum", None)
+    if sc_curriculum:
+        print(f"Success-criterion curriculum enabled with {len(sc_curriculum)} stages")
+
     if smoke:
         total_timesteps = 512
         rollout_steps = 128
@@ -249,6 +289,7 @@ def train_ppo(config, output_dir, smoke=False):
     global_step = 0
     episode_count = 0
     best_eval_return = -float("inf")
+    last_sc_stage = None  # tracks last applied success-criterion curriculum stage
 
     # CSV loggers
     episode_log_path = os.path.join(log_dir, "episode_train_log.csv")
@@ -309,6 +350,20 @@ def train_ppo(config, output_dir, smoke=False):
                         global_step += 1
                         episode_return += reward
                         episode_length += 1
+
+                        # Update success-criterion curriculum
+                        if sc_curriculum:
+                            progress = min(1.0, global_step / max(1, total_timesteps))
+                            sc_stage = _select_success_criterion_stage(progress, sc_curriculum)
+                            if sc_stage != last_sc_stage:
+                                _apply_success_criterion_stage(env, sc_stage)
+                                print(
+                                    f"[Curriculum] step={global_step} progress={progress:.2f} | "
+                                    f"success_range={env.termination_checker.success_range_m:.0f}m "
+                                    f"ata={env.termination_checker.success_ata_deg:.1f}deg "
+                                    f"hold={env.termination_checker.success_hold_time_s:.1f}s"
+                                )
+                                last_sc_stage = sc_stage
 
                         # Store transition with actual reward/done from env.step()
                         agent.store_transition(obs_vec, action, log_prob, reward, done, value)
@@ -407,6 +462,11 @@ def train_ppo(config, output_dir, smoke=False):
                         print(f"\n--- Evaluation at step {global_step} ---")
                         # Evaluate on nominal conditions (no domain randomization)
                         env.set_domain_rand_scale(0.0)
+                        if sc_curriculum:
+                            _apply_final_success_criterion(env, sc_curriculum)
+                            # Force restoration of the training curriculum stage
+                            # at the next environment step.
+                            last_sc_stage = None
                         eval_cfg = config.get("evaluation", {})
                         eval_metrics = run_evaluation(
                             env, agent, config,

@@ -58,3 +58,25 @@ class TestTerminationChecker:
         done, info = checker.check(own_state, {}, metrics, step=0)
         assert done is False
         assert info["reason"] is None
+
+    def test_set_success_criteria_updates_hold_steps(self):
+        checker = TerminationChecker(config={"success_hold_time_s": 0.2, "decision_freq": 5})
+        assert checker._success_hold_steps == 1
+        checker.set_success_criteria(success_hold_time_s=1.0)
+        assert checker._success_hold_steps == 5
+        assert checker.success_range_m == 900.0  # unchanged
+
+    def test_set_success_criteria_resets_counter(self):
+        checker = TerminationChecker(config={
+            "success_range_m": 900.0,
+            "success_ata_deg": 25.0,
+            "success_hold_time_s": 0.0,
+            "decision_freq": 5,
+            "max_high_level_steps": 100,
+        })
+        own_state = {"altitude_m": 5000.0}
+        metrics = {"range_m": 800.0, "ata_rad": 0.0}
+        checker.check(own_state, {}, metrics, step=0)
+        assert checker._success_counter == 1
+        checker.set_success_criteria(success_range_m=700.0)
+        assert checker._success_counter == 0

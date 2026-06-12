@@ -1,0 +1,17 @@
+# Medium success criterion stage.
+# Requires a modest hold time and tighter geometry.
+env:
+  success_range_m: 800.0
+  success_ata_deg: 22.0
+  success_hold_time_s: 0.5
+  hysteresis_range_m: 850.0
+  hysteresis_ata_deg: 27.0
+
+success_criterion_stage:
+  name: medium
+  until_progress: 0.45
+  success_range_m: 800.0
+  success_ata_deg: 22.0
+  success_hold_time_s: 0.5
+  hysteresis_range_m: 850.0
+  hysteresis_ata_deg: 27.0

@@ -1,0 +1,17 @@
+# Loose success criterion stage.
+# Allows a short "fly-by" success to bootstrap early learning.
+env:
+  success_range_m: 900.0
+  success_ata_deg: 25.0
+  success_hold_time_s: 0.2
+  hysteresis_range_m: 950.0
+  hysteresis_ata_deg: 30.0
+
+success_criterion_stage:
+  name: loose
+  until_progress: 0.20
+  success_range_m: 900.0
+  success_ata_deg: 25.0
+  success_hold_time_s: 0.2
+  hysteresis_range_m: 950.0
+  hysteresis_ata_deg: 30.0

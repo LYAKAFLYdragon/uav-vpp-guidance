@@ -1,0 +1,58 @@
+# Method Innovation Track 1: CR-PPO + Curriculum Learning + CEM-GD
+# ------------------------------------------------------------------
+# This config wires the three Track 1 innovations into the existing
+# PPO / environment stack. It is intentionally minimal so that it can
+# be used for smoke tests and small-scale ablations before scaling up.
+
+includes:
+  - ppo.yaml
+  - env.yaml
+
+experiment:
+  name: cl_crppo_cemgd_track1
+  seed: 0
+  output_root: outputs
+
+# Override PPO with CR-PPO complexity regularization.
+ppo:
+  # Replace the entropy bonus with a complexity (entropy * disequilibrium) bonus.
+  complexity_coef: 1.0e-3
+  # Number of bins used to approximate the continuous-action complexity term.
+  cr_n_bins: 8
+  # You can leave the standard PPO hyperparameters untouched; they are inherited
+  # from ppo.yaml.
+
+# Curriculum schedule for crossing-scenario breakthrough.
+curriculum:
+  gate_mode: min
+  stages:
+    - name: static_target
+      scenario_names: [favorable, neutral]
+      success_threshold: 0.80
+      min_episodes: 100
+    - name: random_maneuver
+      scenario_names: [favorable, neutral, disadvantage]
+      success_threshold: 0.60
+      min_episodes: 200
+    - name: scripted_opponent
+      scenario_names: [favorable, neutral, disadvantage, bank_to_turn]
+      success_threshold: 0.50
+      min_episodes: 300
+    - name: crossing_geometry
+      scenario_names: [favorable, neutral, disadvantage, challenging]
+      success_threshold: 0.30
+      min_episodes: 500
+
+# CEM-GD configuration for the bilevel guidance-gain optimizer.
+cem_gd:
+  candidates: 12
+  elite_ratio: 0.25
+  noise_floor: 0.01
+  convergence_tol: 0.001
+  random_seed: 42
+  # Fraction of total iterations spent in gradient-descent refinement.
+  gd_ratio: 0.5
+  # Step size for the finite-difference GD ascent on the best elite vector.
+  gd_lr: 0.05
+  # Perturbation size for two-point finite-difference gradient estimation.
+  gd_fd_eps: 1.0e-3

@@ -33,3 +33,7 @@ paper_materials/
 
 # Evaluation results (generated locally)
 docs/results/
+
+# Runtime logs and temporary archives
+logs/
+*.tar.gz

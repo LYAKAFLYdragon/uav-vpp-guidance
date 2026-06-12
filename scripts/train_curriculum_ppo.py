@@ -228,14 +228,23 @@ def train_ppo_curriculum(config, output_dir, smoke=False, algorithm="ppo"):
         while global_step < total_timesteps:
             # Determine current curriculum stage
             progress = global_step / max(1, total_timesteps)
-            for i, (thresh, _) in enumerate(curriculum):
+            current_stage = 0
+            for i, stage in enumerate(curriculum):
+                if isinstance(stage, dict):
+                    thresh = stage.get("progress_end", (i + 1) / max(1, len(curriculum)))
+                else:
+                    thresh = stage[0]
                 if progress <= thresh:
                     current_stage = i
                     break
             else:
                 current_stage = len(curriculum) - 1
 
-            allowed_names = curriculum[current_stage][1]
+            stage_spec = curriculum[current_stage]
+            if isinstance(stage_spec, dict):
+                allowed_names = stage_spec.get("scenario_names", [])
+            else:
+                allowed_names = stage_spec[1]
             active_scenarios = {k: v for k, v in all_scenarios.items() if k in allowed_names}
 
             for step in range(rollout_steps):

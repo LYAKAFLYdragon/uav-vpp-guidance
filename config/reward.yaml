@@ -10,6 +10,10 @@ reward:
   w_closing: 0.0
   w_alive: 0.0
   w_overshoot: 0.0
+  w_boundary: 0.0
+  boundary_range_m: 6000.0
+  boundary_alt_min_m: 1000.0
+  boundary_alt_max_m: 9000.0
   ideal_range_min: 800.0
   ideal_range_max: 1200.0
   max_heading_rate: 0.3

@@ -54,6 +54,10 @@ class RewardCalculator:
         self.w_closing = self.config.get("w_closing", 0.0)
         self.w_alive = self.config.get("w_alive", 0.0)
         self.w_overshoot = self.config.get("w_overshoot", 0.0)
+        self.w_boundary = self.config.get("w_boundary", 0.0)
+        self.boundary_range_m = float(self.config.get("boundary_range_m", 6000.0))
+        self.boundary_alt_min_m = float(self.config.get("boundary_alt_min_m", 1000.0))
+        self.boundary_alt_max_m = float(self.config.get("boundary_alt_max_m", 9000.0))
         # F-16 typical max heading rate ≈ 0.3 rad/s (≈17°/s) at cruise speed
         self.max_heading_rate = self.config.get("max_heading_rate", 0.3)
         self.terminal_success = self.config.get("terminal_success", 200.0)
@@ -154,7 +158,19 @@ class RewardCalculator:
                 proximity_factor = (self.ideal_range_min - range_m) / self.ideal_range_min
                 reward_overshoot = -self.w_overshoot * proximity_factor * (-range_rate_mps / 200.0)
 
-        # 10. 终端奖励（由调用方根据 done/reason 注入，这里预留接口）
+        # 10. 边界接近惩罚：防止飞出 max_range 或极端高度
+        reward_boundary = 0.0
+        if self.w_boundary > 0.0:
+            boundary_penalty = 0.0
+            if range_m > self.boundary_range_m:
+                boundary_penalty += (range_m - self.boundary_range_m) / self.boundary_range_m
+            if altitude_m < self.boundary_alt_min_m:
+                boundary_penalty += (self.boundary_alt_min_m - altitude_m) / 1000.0
+            if altitude_m > self.boundary_alt_max_m:
+                boundary_penalty += (altitude_m - self.boundary_alt_max_m) / 1000.0
+            reward_boundary = -self.w_boundary * boundary_penalty
+
+        # 11. 终端奖励（由调用方根据 done/reason 注入，这里预留接口）
         terminal_reward = info.get("terminal_reward", 0.0)
 
         # 汇总
@@ -168,6 +184,7 @@ class RewardCalculator:
             + reward_closing
             + reward_alive
             + reward_overshoot
+            + reward_boundary
             + terminal_reward
         )
 
@@ -181,6 +198,7 @@ class RewardCalculator:
             "reward_closing": reward_closing,
             "reward_alive": reward_alive,
             "reward_overshoot": reward_overshoot,
+            "reward_boundary": reward_boundary,
             "terminal_reward": terminal_reward,
             "reward_total": reward,
         }

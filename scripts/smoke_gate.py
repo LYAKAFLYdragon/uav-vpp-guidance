@@ -26,6 +26,7 @@ import yaml
 ROOT = Path(__file__).parent.parent.resolve()
 
 DEFAULT_CONFIG = ROOT / "config" / "experiment" / "train_no_prediction_vpp_ppo.yaml"
+DEFAULT_FIXED_GAIN_CONFIG = ROOT / "config" / "experiment" / "fixed_gain_vpp.yaml"
 DEFAULT_BUDGET = 10_000
 DEFAULT_SEEDS = 3
 
@@ -94,6 +95,57 @@ def parse_eval_log(log_path: Path) -> dict:
     }
 
 
+def run_fixed_gain_eval(fg_config: Path, episodes: int, seeds: list) -> dict:
+    """Run deterministic zero-action fixed-gain evaluation (L1)."""
+    outdir = ROOT / "outputs" / "smoke_gate" / "l1_fixed_gain"
+    shutil.rmtree(outdir, ignore_errors=True)
+
+    seeds_str = " ".join(str(s) for s in seeds)
+    cmd = (
+        f"python -m uav_vpp_guidance.training.train_fixed_gain "
+        f"--config {fg_config} --eval-only "
+        f"--eval-episodes {episodes} --eval-seeds {seeds_str} "
+        f"--output-dir {outdir}"
+    )
+
+    t0 = time.time()
+    proc = subprocess.run(cmd, shell=True, capture_output=True, text=True, cwd=ROOT)
+    elapsed = time.time() - t0
+
+    # The eval-only path prints metrics to stdout but does not write eval_log.csv.
+    metrics = _parse_eval_stdout(proc.stdout)
+
+    return {
+        "stage": "L1_fixed_gain",
+        "returncode": proc.returncode,
+        "elapsed_seconds": elapsed,
+        "eval": metrics,
+        "stdout_tail": proc.stdout[-1500:] if proc.stdout else "",
+        "stderr_tail": proc.stderr[-1500:] if proc.stderr else "",
+    }
+
+
+def _parse_eval_stdout(stdout: str) -> dict:
+    """Parse the 'Eval Return: ... | Success: ...' line from train_fixed_gain --eval-only."""
+    for line in stdout.splitlines():
+        if "Eval Return:" in line and "Success:" in line:
+            try:
+                parts = line.split("|")
+                mean_return = float(parts[0].split(":")[1].split("±")[0].strip())
+                success_rate = float(parts[1].split(":")[1].strip().replace("%", "")) / 100.0
+                crash_rate = float(parts[2].split(":")[1].strip().replace("%", "")) / 100.0
+                oob_rate = float(parts[3].split(":")[1].strip().replace("%", "")) / 100.0
+                return {
+                    "success_rate": success_rate,
+                    "crash_rate": crash_rate,
+                    "out_of_bounds_rate": oob_rate,
+                    "mean_return": mean_return,
+                }
+            except Exception:
+                pass
+    return {}
+
+
 def run_single_seed(base_config: Path, seed: int, budget: int, device: str) -> dict:
     """Run one smoke-gate seed and return parsed metrics."""
     outdir = ROOT / "outputs" / "smoke_gate" / f"seed_{seed}"
@@ -136,6 +188,13 @@ def main():
     parser.add_argument("--device", type=str, default="cpu", choices=["cpu", "cuda"], help="Compute device.")
     parser.add_argument("--sr-threshold", type=float, default=0.25, help="Minimum mean eval success rate.")
     parser.add_argument("--max-crash-rate", type=float, default=0.50, help="Maximum mean eval crash rate.")
+    parser.add_argument("--max-oob-rate", type=float, default=0.50, help="Maximum mean eval OOB rate.")
+    parser.add_argument("--fixed-gain-config", type=Path, default=DEFAULT_FIXED_GAIN_CONFIG, help="Fixed-gain baseline config.")
+    parser.add_argument("--fixed-gain-episodes", type=int, default=30, help="Episodes for L1 fixed-gain eval.")
+    parser.add_argument("--fixed-gain-seeds", type=int, nargs="+", default=[0, 1, 2], help="Seeds for L1 fixed-gain eval.")
+    parser.add_argument("--fixed-gain-sr-threshold", type=float, default=0.50, help="L1 minimum success rate.")
+    parser.add_argument("--fixed-gain-max-crash-rate", type=float, default=0.25, help="L1 maximum crash rate.")
+    parser.add_argument("--skip-l1", action="store_true", help="Skip L1 fixed-gain evaluation.")
     parser.add_argument("--output", type=Path, default=ROOT / "outputs" / "smoke_gate" / "report.json")
     args = parser.parse_args()
 
@@ -143,8 +202,29 @@ def main():
     print("FLYABLE BASELINE SMOKE GATE")
     print(f"Config: {args.config}")
     print(f"Budget: {args.budget} steps/seed  |  Seeds: {args.seeds}  |  Device: {args.device}")
-    print(f"Pass thresholds: mean SR >= {args.sr_threshold:.0%}, mean crash <= {args.max_crash_rate:.0%}")
+    print(f"L3 pass thresholds: mean SR >= {args.sr_threshold:.0%}, crash <= {args.max_crash_rate:.0%}, OOB <= {args.max_oob_rate:.0%}")
+    if not args.skip_l1:
+        print(f"L1 pass thresholds: SR >= {args.fixed_gain_sr_threshold:.0%}, crash <= {args.fixed_gain_max_crash_rate:.0%}")
     print("=" * 70)
+
+    l1_result = None
+    if not args.skip_l1:
+        print("\n[L1] Deterministic fixed-gain (zero-action) evaluation...")
+        l1_result = run_fixed_gain_eval(
+            args.fixed_gain_config,
+            args.fixed_gain_episodes,
+            args.fixed_gain_seeds,
+        )
+        l1_sr = l1_result["eval"].get("success_rate", -1.0)
+        l1_crash = l1_result["eval"].get("crash_rate", 1.0)
+        l1_oob = l1_result["eval"].get("out_of_bounds_rate", 1.0)
+        print(
+            f"  rc={l1_result['returncode']} | SR={l1_sr:.3f} | crash={l1_crash:.3f} | "
+            f"OOB={l1_oob:.3f} | {l1_result['elapsed_seconds']:.1f}s"
+        )
+        if l1_result["returncode"] != 0:
+            print("  stdout tail:\n", l1_result["stdout_tail"])
+            print("  stderr tail:\n", l1_result["stderr_tail"])
 
     results = []
     for seed in range(args.seeds):
@@ -164,22 +244,44 @@ def main():
 
     srs = [r["eval"].get("success_rate", 0.0) for r in results if r["returncode"] == 0 and r["eval"]]
     crashes = [r["eval"].get("crash_rate", 1.0) for r in results if r["returncode"] == 0 and r["eval"]]
+    oobs = [r["eval"].get("out_of_bounds_rate", 1.0) for r in results if r["returncode"] == 0 and r["eval"]]
     mean_sr = float(sum(srs) / len(srs)) if srs else 0.0
     mean_crash = float(sum(crashes) / len(crashes)) if crashes else 1.0
+    mean_oob = float(sum(oobs) / len(oobs)) if oobs else 1.0
     all_ok = all(r["returncode"] == 0 for r in results)
 
-    passed = all_ok and mean_sr >= args.sr_threshold and mean_crash <= args.max_crash_rate
+    l3_passed = (
+        all_ok
+        and mean_sr >= args.sr_threshold
+        and mean_crash <= args.max_crash_rate
+        and mean_oob <= args.max_oob_rate
+    )
+
+    l1_passed = True
+    if not args.skip_l1 and l1_result is not None:
+        l1_passed = (
+            l1_result["returncode"] == 0
+            and l1_result["eval"].get("success_rate", 0.0) >= args.fixed_gain_sr_threshold
+            and l1_result["eval"].get("crash_rate", 1.0) <= args.fixed_gain_max_crash_rate
+        )
+
+    passed = l3_passed and l1_passed
 
     report = {
         "passed": passed,
+        "l1_passed": l1_passed,
+        "l3_passed": l3_passed,
         "config": str(args.config),
         "budget": args.budget,
         "seeds": args.seeds,
         "device": args.device,
         "mean_success_rate": mean_sr,
         "mean_crash_rate": mean_crash,
+        "mean_oob_rate": mean_oob,
         "sr_threshold": args.sr_threshold,
         "max_crash_rate": args.max_crash_rate,
+        "max_oob_rate": args.max_oob_rate,
+        "l1_result": l1_result,
         "all_ran_ok": all_ok,
         "per_seed": results,
     }
@@ -189,11 +291,20 @@ def main():
         json.dump(report, f, indent=2, ensure_ascii=False)
 
     print("\n" + "=" * 70)
+    if not args.skip_l1:
+        print(
+            f"L1 fixed-gain:  SR={l1_result['eval'].get('success_rate', -1):.2%}  "
+            f"crash={l1_result['eval'].get('crash_rate', -1):.2%}  "
+            f"({'PASS' if l1_passed else 'FAIL'})"
+        )
+    print(
+        f"L3 RL baseline: SR={mean_sr:.2%}  crash={mean_crash:.2%}  OOB={mean_oob:.2%}  "
+        f"({'PASS' if l3_passed else 'FAIL'})"
+    )
     if passed:
-        print(f"PASS  mean SR={mean_sr:.2%}  mean crash={mean_crash:.2%}")
+        print("OVERALL PASS")
     else:
-        print(f"FAIL  mean SR={mean_sr:.2%}  mean crash={mean_crash:.2%}")
-        print("Do not resume large-scale experiments until this gate passes.")
+        print("OVERALL FAIL — Do not resume large-scale experiments until this gate passes.")
     print(f"Report: {args.output}")
     print("=" * 70)
 

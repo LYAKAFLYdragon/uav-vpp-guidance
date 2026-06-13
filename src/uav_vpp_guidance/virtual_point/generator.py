@@ -24,12 +24,13 @@ class VirtualPointGenerator:
     Convert policy action into a virtual pursuit point.
 
     Policy action should be normalized in [-1, 1].
-    It is mapped to:
+    The canonical action space (action_dim == 3) is mapped to:
     - longitudinal offset
     - lateral offset
     - vertical offset
-    - prediction time
-    - speed bias
+
+    The legacy 5-D action space also included prediction time and speed bias;
+    those extra dimensions are deprecated and ignored when action_dim == 3.
 
     支持三种锚点模式：
     - current_target: 目标当前位置（旧逻辑）
@@ -43,7 +44,7 @@ class VirtualPointGenerator:
             config (dict): Virtual point configuration dictionary.
         """
         self.config = config
-        self.action_dim = config.get("action_dim", 5)
+        self.action_dim = config.get("action_dim", 3)
         self.d_long_range = config.get("d_long_range", [-1500.0, 1500.0])
         self.d_lat_range = config.get("d_lat_range", [-800.0, 800.0])
         self.d_vert_range = config.get("d_vert_range", [-500.0, 500.0])

@@ -41,13 +41,23 @@ def load_config(config_path: str) -> dict:
 
 
 def build_gain_space(config: dict) -> GainSpace:
-    """Build GainSpace from config bounds."""
-    gain_bounds = config.get("guidance", {}).get("gain_space", {
-        "k_los": [0.1, 3.0],
-        "k_pos": [0.1, 2.0],
-        "k_roll": [0.1, 3.0],
-        "k_speed": [0.0, 1.0],
-    })
+    """Build GainSpace from config bounds.
+
+    Prefers ``guidance.gain_space``, falls back to top-level ``gain_space``,
+    and finally to the canonical 5-D search space documented in
+    config/canonical/gain_space.yaml.
+    """
+    gain_bounds = config.get("guidance", {}).get("gain_space")
+    if gain_bounds is None:
+        gain_bounds = config.get("gain_space")
+    if gain_bounds is None:
+        gain_bounds = {
+            "k_los": [0.5, 4.0],
+            "k_pos": [0.1, 2.0],
+            "k_damp": [0.2, 3.0],
+            "k_roll": [0.5, 2.0],
+            "k_speed": [0.1, 1.0],
+        }
     return GainSpace(gain_bounds)
 
 

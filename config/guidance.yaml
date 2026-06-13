@@ -1,8 +1,12 @@
 virtual_point:
+  # Canonical action space: 3-D spatial offset only.
+  # tau_pred and speed_bias are deprecated and ignored when action_dim == 3.
   action_dim: 3
   d_long_range: [-1500.0, 1500.0]
   d_lat_range: [-800.0, 800.0]
   d_vert_range: [-500.0, 500.0]
+  # DEPRECATED: kept for backward compatibility with legacy 5-D experiments.
+  # These fields are ignored by VirtualPointGenerator when action_dim == 3.
   tau_pred_range: [0.0, 3.0]
   speed_bias_range: [-80.0, 80.0]
   smoothing_alpha: 0.3
@@ -10,11 +14,13 @@ virtual_point:
 guidance:
   mode: los_rate
   gains:
+    # CEM-optimized variables (must match config/canonical/gain_space.yaml).
     k_los: 1.0
     k_pos: 0.5
     k_damp: 0.2
     k_roll: 1.0
     k_speed: 0.2
+    # Fixed parameters (not searched by CEM).
     k_energy: 0.1
     alpha_filter: 0.3
 

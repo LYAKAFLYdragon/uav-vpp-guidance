@@ -1,12 +1,25 @@
+# Gain search space and optimizer settings.
+#
+# NOTE: This file is kept for backward compatibility with legacy experiments.
+# For paper-safe experiments, use config/canonical/gain_space.yaml, which
+# defines the canonical 5-D CEM search space:
+#   g = (k_los, k_pos, k_damp, k_roll, k_speed).
+
 gain_space:
-  k_los: [0.1, 5.0]
-  k_pos: [0.0, 3.0]
-  k_damp: [0.0, 2.0]
-  k_roll: [0.1, 5.0]
-  alpha_filter: [0.05, 0.8]
+  names: [k_los, k_pos, k_damp, k_roll, k_speed]
+  bounds:
+    k_los: [0.5, 4.0]
+    k_pos: [0.1, 2.0]
+    k_damp: [0.2, 3.0]
+    k_roll: [0.5, 2.0]
+    k_speed: [0.1, 1.0]
+
+  fixed:
+    alpha_filter: 0.3
+    k_energy: 0.1
 
 gain_optimizer:
-  type: cem
+  type: cem_ema
   candidates: 12
   elite_ratio: 0.25
   eval_episodes_per_candidate: 30

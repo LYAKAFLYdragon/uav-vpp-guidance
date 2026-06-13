@@ -95,7 +95,16 @@ def benchmark_cem_optimization(
     ]
     seeds = [0, 1, 2]
 
-    gain_space = GainSpace(config.get("gain_space", {}))
+    gain_bounds = config.get("gain_space")
+    if gain_bounds is None:
+        gain_bounds = {
+            "k_los": [0.5, 4.0],
+            "k_pos": [0.1, 2.0],
+            "k_damp": [0.2, 3.0],
+            "k_roll": [0.5, 2.0],
+            "k_speed": [0.1, 1.0],
+        }
+    gain_space = GainSpace(gain_bounds)
     cem_config = {
         "candidates": config.get("gain_optimizer", {}).get("candidates", 12),
         "elite_ratio": config.get("gain_optimizer", {}).get("elite_ratio", 0.25),

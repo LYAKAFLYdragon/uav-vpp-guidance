@@ -25,6 +25,7 @@ from uav_vpp_guidance.utils.seed import set_seed
 from uav_vpp_guidance.envs.tracking_env import CloseRangeTrackingEnv
 from uav_vpp_guidance.agents.ppo_agent import PPOAgent
 from uav_vpp_guidance.agents.cr_ppo_agent import CRPPOAgent
+from uav_vpp_guidance.agents.intentional_ppo_agent import IntentionalPPOAgent
 
 
 def load_experiment_config(config_path):
@@ -169,6 +170,8 @@ def train_ppo_curriculum(config, output_dir, smoke=False, algorithm="ppo"):
     device = ppo_cfg.get("device", "cpu")
     if algorithm == "cr_ppo":
         agent = CRPPOAgent(obs_dim=obs_dim, action_dim=action_dim, config=config, device=device)
+    elif algorithm == "intentional_ppo":
+        agent = IntentionalPPOAgent(obs_dim=obs_dim, action_dim=action_dim, config=config, device=device)
     else:
         agent = PPOAgent(obs_dim=obs_dim, action_dim=action_dim, config=config, device=device)
     print(f"Algorithm: {algorithm} | Network parameters: {agent.network.count_parameters()}")
@@ -259,6 +262,7 @@ def train_ppo_curriculum(config, output_dir, smoke=False, algorithm="ppo"):
                 global_step += 1
                 episode_return += reward
                 episode_length += 1
+                # Pass obs_dict so IntentionalPPOAgent can extract combat-aware phase features.
                 agent.store_transition(obs_vec, action, log_prob, reward, done, value, info=obs_dict)
 
                 rel_state = obs.get("relative_state", {})
@@ -394,7 +398,7 @@ def main():
         "--algorithm",
         type=str,
         default="ppo",
-        choices=["ppo", "cr_ppo"],
+        choices=["ppo", "cr_ppo", "intentional_ppo"],
         help="RL algorithm to use for training",
     )
     args = parser.parse_args()

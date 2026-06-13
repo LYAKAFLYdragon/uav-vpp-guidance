@@ -1,0 +1,41 @@
+# Method Innovation Track 2: Intentional Updates for Air-Combat RL
+# ------------------------------------------------------------------
+# Configures Intentional PPO (I-PPO / CAI-PPO) for the UAV-VPP project.
+# The three switches below can be toggled independently for ablation.
+
+includes:
+  - ppo.yaml
+  - env.yaml
+
+experiment:
+  name: intentional_updates_track2
+  seed: 0
+  output_root: outputs
+
+# Intentional PPO overrides.
+ppo:
+  # Core switches
+  use_intentional_critic: true   # ICU: intentional value update
+  use_intentional_actor: true    # IAU: intentional policy update
+  use_combat_aware_eta: true     # CAIS: phase-dependent budget
+
+  # Base update budgets (eta in Sutton et al.)
+  eta_critic: 0.1      # target value-prediction change magnitude
+  eta_actor: 0.01      # target log-probability change magnitude
+
+  # Numerical stability and EMA
+  iu_eps: 1.0e-8
+  beta_adv: 0.999      # EMA decay for advantage normalization in IAU
+
+  # Keep standard PPO hyperparameters inherited from ppo.yaml.
+
+# Combat-aware intentional schedule.
+combat_aware:
+  eta_actor: 0.01      # same base as ppo.eta_actor, used by the schedule
+  eta_critic: 0.1
+  range_thresholds_m: [3000.0, 6000.0]
+  terminal_range_m: 1200.0
+  aspect_threshold_deg: 30.0
+  # Optional: override default phase scales
+  # phase_scales:
+  #   search_approach: {actor: 1.5, critic: 1.0}

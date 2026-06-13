@@ -7,6 +7,7 @@ Provides three variants:
 - CEMGDGainOptimizer: score-weighted gradient ascent on the distribution mean.
 """
 
+import warnings
 from typing import Callable, Dict, List, Tuple
 
 import numpy as np
@@ -114,6 +115,12 @@ class CEMEMAGainOptimizer(CEMGainOptimizer):
 class CEMGDGainOptimizer(CEMGainOptimizer):
     """Score-weighted gradient-ascent variant of CEM.
 
+    .. deprecated::
+
+        CEM-GD hybrid is not recommended for flat, noisy landscapes.
+        Use ``CEMEMAGainOptimizer`` instead. See Theorem 3' and
+        docs/status.md for the canonical optimizer choice.
+
     Instead of fitting a Gaussian to elites, this optimizer estimates the
     gradient of the expected score with respect to the distribution mean and
     takes a step of size alpha in that direction:
@@ -127,6 +134,12 @@ class CEMGDGainOptimizer(CEMGainOptimizer):
 
     def __init__(self, gain_space, config):
         super().__init__(gain_space, config)
+        warnings.warn(
+            "CEMGDGainOptimizer is deprecated. Use CEMEMAGainOptimizer for "
+            "flat, noisy gain landscapes. See Theorem 3' and docs/status.md.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         self.alpha = float(config.get("alpha_gd", 0.05))
 
     def update(self, candidates: np.ndarray, scores: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:

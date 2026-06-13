@@ -130,6 +130,10 @@ evaluation:
   eval_episodes: 10
   seeds: [0, 1, 2]
   save_trajectories: false
+  # Eval-time domain randomization: perturb initial conditions so per-scenario
+  # success rates are no longer stuck at 0 % / 100 % plateaus.
+  domain_rand_scale: 0.30
+  eval_episodes_per_scenario: 20
 
 checkpoint:
   save_interval: 5000

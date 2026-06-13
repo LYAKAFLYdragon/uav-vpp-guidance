@@ -47,7 +47,7 @@ def sample_scenario(config, rng):
     return scenarios[name]
 
 
-def run_evaluation(env, agent, config, num_episodes=10, seeds=None, save_trajectories=False, output_dir=None):
+def run_evaluation(env, agent, config, num_episodes=10, seeds=None, save_trajectories=False, output_dir=None, domain_rand_scale=0.0):
     if seeds is None:
         seeds = [0, 1, 2]
 
@@ -62,6 +62,12 @@ def run_evaluation(env, agent, config, num_episodes=10, seeds=None, save_traject
             ep_seed = seed * 10000 + ep
             rng = np.random.default_rng(ep_seed)
             scenario = sample_scenario(config, rng)
+            # Apply eval-time domain randomization if requested. A fixed
+            # evaluation RNG makes results reproducible while still perturbing
+            # initial conditions across episodes.
+            if domain_rand_scale > 0.0 and hasattr(env, "set_domain_rand_scale"):
+                env.set_domain_rand_scale(domain_rand_scale)
+                scenario = env._apply_domain_randomization(scenario)
             obs = env.reset(scenario=scenario, seed=ep_seed)
             ep_reward = 0.0
             ep_length = 0
@@ -160,7 +166,7 @@ def run_evaluation(env, agent, config, num_episodes=10, seeds=None, save_traject
     }
 
 
-def evaluate_scenarios(env, agent, scenarios, num_episodes=5, seed_base=1000):
+def evaluate_scenarios(env, agent, scenarios, num_episodes=5, seed_base=1000, domain_rand_scale=0.0):
     """Evaluate each scenario individually and return per-scenario SR."""
     results = {}
     for name, scenario in scenarios.items():
@@ -168,6 +174,9 @@ def evaluate_scenarios(env, agent, scenarios, num_episodes=5, seed_base=1000):
         total = num_episodes
         for ep in range(num_episodes):
             ep_seed = seed_base + hash(name) % 10000 + ep
+            if domain_rand_scale > 0.0 and hasattr(env, "set_domain_rand_scale"):
+                env.set_domain_rand_scale(domain_rand_scale)
+                scenario = env._apply_domain_randomization(scenario)
             obs = env.reset(scenario=scenario, seed=ep_seed)
             for step in range(env.max_steps):
                 action = agent.get_deterministic_action(obs["observation_vector"])
@@ -387,10 +396,12 @@ def train_ppo_curriculum(config, output_dir, smoke=False, algorithm="ppo"):
             if eval_interval > 0 and global_step % eval_interval == 0 and global_step > 0:
                 print(f"\n--- Evaluation at step {global_step} ---")
                 eval_cfg = config.get("evaluation", {})
+                eval_domain_rand_scale = float(eval_cfg.get("domain_rand_scale", 0.0))
                 eval_metrics = run_evaluation(
                     env, agent, config,
                     num_episodes=eval_cfg.get("eval_episodes", 10),
                     seeds=eval_cfg.get("seeds", [0, 1, 2]),
+                    domain_rand_scale=eval_domain_rand_scale,
                 )
                 eval_writer.writerow({
                     "step": global_step, "num_episodes": eval_metrics["num_episodes"],
@@ -419,7 +430,13 @@ def train_ppo_curriculum(config, output_dir, smoke=False, algorithm="ppo"):
                 )
 
                 # Per-scenario evaluation for curriculum gate
-                per_scenario = evaluate_scenarios(env, agent, all_scenarios, num_episodes=5)
+                per_scenario_eval_episodes = int(
+                    eval_cfg.get("eval_episodes_per_scenario", 20)
+                )
+                per_scenario = evaluate_scenarios(
+                    env, agent, all_scenarios, num_episodes=per_scenario_eval_episodes,
+                    domain_rand_scale=eval_domain_rand_scale,
+                )
                 cur_writer.writerow({
                     "step": global_step, "stage": current_stage,
                     "allowed_scenarios": "|".join(allowed_names),

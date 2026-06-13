@@ -132,6 +132,8 @@ evaluation:
   eval_episodes: 20
   seeds: [0, 1, 2, 3, 4]
   save_trajectories: false
+  domain_rand_scale: 0.30
+  eval_episodes_per_scenario: 20
 
 checkpoint:
   save_interval: 5000

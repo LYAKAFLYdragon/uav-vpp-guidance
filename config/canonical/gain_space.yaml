@@ -1,0 +1,30 @@
+# Canonical gain-search space for CEM optimization.
+#
+# CEM optimized variables (5-D):
+#   g = (k_los, k_pos, k_damp, k_roll, k_speed)
+#
+# Fixed parameters (set in config/canonical/guidance.yaml, NOT searched):
+#   alpha_filter : command-filter smoothing factor
+#   k_energy     : energy-compensation gain
+
+gain_space:
+  names: [k_los, k_pos, k_damp, k_roll, k_speed]
+  bounds:
+    k_los: [0.5, 4.0]
+    k_pos: [0.1, 2.0]
+    k_damp: [0.2, 3.0]
+    k_roll: [0.5, 2.0]
+    k_speed: [0.1, 1.0]
+
+  fixed:
+    alpha_filter: 0.3
+    k_energy: 0.1
+
+gain_optimizer:
+  type: cem_ema
+  candidates: 50
+  elite_ratio: 0.25
+  eval_episodes_per_candidate: 30
+  noise_floor: 0.01
+  convergence_tol: 0.001
+  beta_ema: 0.7

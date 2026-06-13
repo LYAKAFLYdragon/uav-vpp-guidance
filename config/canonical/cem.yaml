@@ -1,0 +1,18 @@
+# Canonical Cross-Entropy Method (CEM) configuration.
+#
+# EMA-CEM is the default and recommended variant.
+# The CEM-GD hybrid is deprecated; see src/uav_vpp_guidance/ablations/deprecated/.
+
+gain_optimizer:
+  type: cem_ema
+  mode: ema
+  candidates: 50
+  elite_ratio: 0.25
+  eval_episodes_per_candidate: 30
+  noise_floor: 0.01
+  convergence_tol: 0.001
+  beta_ema: 0.7
+
+  # Legacy GD settings (kept only for deprecated ablations)
+  alpha_gd: 0.05
+  gd_std_shrink: 0.99

@@ -63,6 +63,19 @@ class RewardCalculator:
         self.terminal_failure = self.config.get("terminal_failure", -200.0)
         self.terminal_crash = self.config.get("terminal_crash", -300.0)
 
+        # Angle reward formula ("max_ata_aa" recommended for JSBSim)
+        self.angle_reward_formula = self.config.get("angle_reward_formula", "max_ata_aa")
+
+        # Turn-rate penalty config (crossing-scenario aware)
+        trp = self.config.get("turn_rate_penalty", {})
+        self.turn_rate_penalty_enabled = bool(trp.get("enabled", True))
+        self.turn_rate_penalty_range_min_m = float(trp.get("range_min_m", 1000.0))
+        self.turn_rate_penalty_range_max_m = float(trp.get("range_max_m", 3000.0))
+        self.turn_rate_penalty_heading_error_threshold_deg = float(
+            trp.get("heading_error_threshold_deg", 60.0)
+        )
+        self.turn_rate_penalty_require_closing = bool(trp.get("require_closing", True))
+
         # 归一化参考值
         self._ref_range_m = 2000.0
         self._ref_altitude_m = 5000.0
@@ -113,7 +126,12 @@ class RewardCalculator:
         # AA: 本机速度与本机-目标视线的夹角，越小表示本机正对目标
         ata_deg = np.rad2deg(ata_rad)
         aa_deg = np.rad2deg(aa_rad)
-        angle_error = (ata_deg + aa_deg) / 180.0
+        if self.angle_reward_formula == "max_ata_aa":
+            # Use max(ATA, AA) to guarantee monotonic [-w_angle, 0] mapping.
+            angle_error = max(ata_deg, aa_deg) / 180.0
+        else:
+            # Legacy (sum) formula — kept for backward compatibility only.
+            angle_error = (ata_deg + aa_deg) / 180.0
         reward_angle = -self.w_angle * angle_error
 
         # 3. 安全惩罚（低空）
@@ -293,12 +311,26 @@ class RewardCalculator:
 
         penalty = 0.0
 
+        if not self.turn_rate_penalty_enabled:
+            return penalty
+
+        range_min = self.turn_rate_penalty_range_min_m
+        range_max = self.turn_rate_penalty_range_max_m
+        # Only apply turn-rate penalty within the configured range window.
+        # This exempts very close range (crossing passes) and very far range
+        # where the aircraft has ample time to maneuver.
+        if not (range_min < range_m < range_max):
+            return penalty
+
         # Condition 1: large heading error at close range (crossing signature)
-        # F-16 needs time to establish roll; >60° error within 3000m is risky
-        if heading_error > math.pi / 3 and range_m < 3000.0:
-            base_penalty = (heading_error - math.pi / 3) / (math.pi / 2)
-            range_factor = (3000.0 - range_m) / 3000.0
-            penalty += base_penalty * range_factor
+        # F-16 needs time to establish roll; >60° error within 3000m is risky.
+        # Require closing to avoid punishing legitimate crossing geometries.
+        threshold_rad = math.radians(self.turn_rate_penalty_heading_error_threshold_deg)
+        if heading_error > threshold_rad:
+            if (not self.turn_rate_penalty_require_closing) or (rel.get("range_rate_mps", 0.0) < 0.0):
+                base_penalty = (heading_error - threshold_rad) / (math.pi / 2)
+                range_factor = (range_max - range_m) / (range_max - range_min)
+                penalty += base_penalty * range_factor
 
         # Condition 2: required heading rate exceeds max capability
         tgo = range_m / speed_mps

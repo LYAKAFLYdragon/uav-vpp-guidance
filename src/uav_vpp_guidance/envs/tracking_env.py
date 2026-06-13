@@ -4,9 +4,7 @@ High-level close-range tracking environment.
 Connects policy action -> virtual pursuit point -> LOS-rate guidance
 -> low-level controller -> JSBSim dynamics -> reward/termination.
 
-Migrated from legacy project:
-  - <JSBSIM_ROOT>/envs/JSBSim/envs/env_base.py
-  - <JSBSIM_ROOT>/envs/JSBSim/envs/singlecombat_env.py
+Self-contained JSBSim integration.
 
 P1 scope: minimal closed loop with JSBSimEnv.
 P3 scope: no-prediction VPP baseline with SimplePointMassEnv fallback.

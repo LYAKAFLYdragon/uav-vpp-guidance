@@ -1,8 +1,7 @@
 """
 Modular reward calculator.
 
-Migrated from legacy project:
-  <JSBSIM_ROOT>/envs/JSBSim/reward_functions/*.py
+Self-contained JSBSim integration.
 
 第一版奖励项：
 - range_reward: 鼓励进入合理距离区间

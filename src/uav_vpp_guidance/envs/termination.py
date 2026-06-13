@@ -1,8 +1,7 @@
 """
 Termination condition checker.
 
-Migrated from legacy project:
-  <JSBSIM_ROOT>/envs/JSBSim/termination_conditions/*.py
+Self-contained JSBSim integration.
 
 检查成功、失败、坠毁、超时、越界等终止条件。
 """

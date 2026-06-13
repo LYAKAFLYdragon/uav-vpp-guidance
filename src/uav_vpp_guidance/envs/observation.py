@@ -1,8 +1,7 @@
 """
 Observation construction utilities.
 
-Migrated from legacy project:
-  <JSBSIM_ROOT>/envs/JSBSim/envs/env_wrappers.py
+Self-contained JSBSim integration.
 
 第一版使用简化几何计算，支持 NEU 坐标系下的相对态势特征提取。
 """

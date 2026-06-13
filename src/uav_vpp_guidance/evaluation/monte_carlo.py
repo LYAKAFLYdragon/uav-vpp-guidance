@@ -1,7 +1,7 @@
 """
 Monte Carlo evaluation utilities.
 
-TODO: Migrate evaluation logic from legacy project.
+Self-contained JSBSim integration.
 """
 
 
@@ -25,5 +25,4 @@ def run_monte_carlo(policy, env, config):
             - mean_episode_length
     """
     # TODO: Implement Monte Carlo rollouts.
-    # Legacy reference: <JSBSIM_ROOT>/runner/ evaluation patterns.
     raise NotImplementedError

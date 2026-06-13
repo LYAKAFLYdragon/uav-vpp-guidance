@@ -1,17 +1,13 @@
 """
 JSBSim flight dynamics environment wrapper.
 
-Migrated from legacy project:
-  - <JSBSIM_ROOT>/envs/JSBSim/core/simulatior.py
-  - <JSBSIM_ROOT>/envs/JSBSim/utils/utils.py
-
 This module provides a thin wrapper around JSBSim FGFDMExec for single
-or multiple aircraft simulation. It intentionally avoids the full
-Catalog/Enum system from the legacy project and uses direct property
-name strings for minimal dependency.
+or multiple aircraft simulation. JSBSim data is self-contained in
+<project_root>/data/jsbsim/ (aircraft/, engine/, systems/).
 """
 
 import os
+import warnings
 import logging
 import numpy as np
 from typing import Dict, Any, Optional
@@ -83,6 +79,57 @@ def neu2lla(n, e, u, lon0=120.0, lat0=60.0, alt0=0.0):
 
 
 # ---------------------------------------------------------------------------
+# JSBSim data directory resolution
+# ---------------------------------------------------------------------------
+
+def _resolve_jsbsim_data_dir(config):
+    """Resolve JSBSim data directory with multiple strategies.
+
+    Priority:
+    1. config.get("jsbsim_data_dir") -- user-specified absolute path
+    2. Project-relative default: <project_root>/data/jsbsim
+    3. Backward compat: legacy_project_root + "envs/JSBSim/data"
+    4. Environment variable: JSBSIM_ROOT + "envs/JSBSim/data"
+    """
+    # 1. User-specified path
+    user_dir = config.get("jsbsim_data_dir")
+    if user_dir and os.path.isdir(user_dir):
+        return user_dir
+
+    # 2. Project-relative default (preferred for self-contained project)
+    project_dir = os.path.abspath(
+        os.path.join(os.path.dirname(__file__), "..", "..", "..", "data", "jsbsim")
+    )
+    if os.path.isdir(project_dir) and os.path.isdir(os.path.join(project_dir, "aircraft")):
+        return project_dir
+
+    # 3. Backward compat: legacy_project_root
+    legacy_root = config.get("legacy_project_root", "")
+    if legacy_root:
+        compat_dir = os.path.join(legacy_root, "envs", "JSBSim", "data")
+        if os.path.isdir(compat_dir):
+            return compat_dir
+
+    # 4. Environment variable
+    env_root = os.environ.get("JSBSIM_ROOT")
+    if env_root:
+        env_dir = os.path.join(env_root, "envs", "JSBSim", "data")
+        if os.path.isdir(env_dir):
+            return env_dir
+
+    warnings.warn(
+        "JSBSim data directory not found. Expected one of:\n"
+        "  1. config['jsbsim_data_dir'] (user-specified path)\n"
+        "  2. <project_root>/data/jsbsim (project-relative, self-contained)\n"
+        "  3. config['legacy_project_root'] + /envs/JSBSim/data (backward compat)\n"
+        "  4. JSBSIM_ROOT env var + /envs/JSBSim/data\n"
+        "Please run: cp -r <external_jsbsim>/data <project_root>/data/jsbsim",
+        stacklevel=2,
+    )
+    return None
+
+
+# ---------------------------------------------------------------------------
 # Internal single-aircraft wrapper
 # ---------------------------------------------------------------------------
 
@@ -109,18 +156,7 @@ class _JSBSimAircraft:
         self.dt = 1.0 / self.sim_freq
         self.origin = origin
         self.lon0, self.lat0, self.alt0 = origin
-        import warnings
-        self.legacy_root = (
-            os.environ.get("JSBSIM_ROOT")
-            or config.get("legacy_project_root", "")
-        )
-        if not self.legacy_root:
-            warnings.warn(
-                "JSBSIM_ROOT environment variable or legacy_project_root config "
-                "is required for JSBSim backend. Set JSBSIM_ROOT=/path/to/jsbsim "
-                "or configure legacy_project_root in config/env.yaml.",
-                stacklevel=2,
-            )
+        self.jsbsim_data_dir = _resolve_jsbsim_data_dir(config)
         self.jsbsim_exec = None
         self._state = {}
 
@@ -139,11 +175,12 @@ class _JSBSimAircraft:
         """
         self._close_exec()
 
-        jsbsim_data_dir = os.path.join(self.legacy_root, "envs", "JSBSim", "data")
-        if not os.path.isdir(jsbsim_data_dir):
+        jsbsim_data_dir = self.jsbsim_data_dir
+        if not jsbsim_data_dir or not os.path.isdir(jsbsim_data_dir):
             raise RuntimeError(
                 f"JSBSim data directory not found: {jsbsim_data_dir}. "
-                f"Check legacy_project_root in config/env.yaml."
+                f"Please ensure <project_root>/data/jsbsim exists and contains "
+                f"aircraft/, engine/, systems/ subdirectories."
             )
 
         self.jsbsim_exec = jsbsim.FGFDMExec(jsbsim_data_dir)
@@ -376,33 +413,23 @@ class JSBSimEnv:
         """
         Args:
             config (dict): Environment configuration dictionary.
-                Expected keys: sim_freq, legacy_project_root, origin (optional).
+                Expected keys: sim_freq, jsbsim_data_dir (optional), origin (optional).
         """
         self.config = config
         self.sim_freq = config.get("sim_freq", 60)
         self.dt = 1.0 / self.sim_freq
-        import warnings
-        self.legacy_root = (
-            os.environ.get("JSBSIM_ROOT")
-            or config.get("legacy_project_root", "")
-        )
-        if not self.legacy_root:
-            warnings.warn(
-                "JSBSIM_ROOT environment variable or legacy_project_root config "
-                "is required for JSBSim backend. Set JSBSIM_ROOT=/path/to/jsbsim "
-                "or configure legacy_project_root in config/env.yaml.",
-                stacklevel=2,
-            )
+        # Resolve JSBSim data directory (self-contained project preferred)
+        self.jsbsim_data_dir = _resolve_jsbsim_data_dir(config)
         self.origin = config.get("origin", (120.0, 60.0, 0.0))
         self._aircraft: Dict[str, _JSBSimAircraft] = {}
 
         # Validate data directory early so tracking_env can fallback gracefully
-        jsbsim_data_dir = os.path.join(self.legacy_root, "envs", "JSBSim", "data")
-        if not os.path.isdir(jsbsim_data_dir):
+        jsbsim_data_dir = self.jsbsim_data_dir
+        if not jsbsim_data_dir or not os.path.isdir(jsbsim_data_dir):
             raise RuntimeError(
                 f"JSBSim data directory not found: {jsbsim_data_dir}. "
-                f"Set JSBSIM_ROOT environment variable or configure "
-                f"legacy_project_root in config/env.yaml."
+                f"Please ensure <project_root>/data/jsbsim exists and contains "
+                f"aircraft/, engine/, systems/ subdirectories."
             )
 
     # ------------------------------------------------------------------

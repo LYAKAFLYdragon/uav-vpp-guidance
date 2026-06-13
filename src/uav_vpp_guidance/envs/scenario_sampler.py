@@ -1,8 +1,7 @@
 """
 Scenario sampling for initial conditions.
 
-TODO: Migrate scenario initialization logic from legacy project:
-  <JSBSIM_ROOT>/runner/jsbsim_runner.py or envs/JSBSim/__init__.py
+Self-contained JSBSim integration.
 """
 
 from dataclasses import dataclass

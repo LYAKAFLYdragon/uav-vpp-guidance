@@ -1,8 +1,7 @@
 """
 Flight data recording utilities (ACMI, CSV).
 
-TODO: Migrate ACMI recording from legacy project:
-  <JSBSIM_ROOT>/scripts/render/ or similar.
+Self-contained JSBSim integration.
 
 Design principle: recording should not block or interfere with training logic.
 """

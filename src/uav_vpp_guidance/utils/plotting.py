@@ -1,9 +1,7 @@
 """
 Plotting utilities for training curves and evaluation figures.
 
-TODO: Migrate plotting helpers from legacy project if reusable.
-  <JSBSIM_ROOT>/get_reward_figure/ contains many ad-hoc scripts;
-  extract only general-purpose functions.
+Self-contained JSBSim integration.
 """
 
 import os

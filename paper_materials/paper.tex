@@ -167,7 +167,9 @@ Each method is evaluated on $80$ episodes ($10$ random seeds $\times$ $8$ scenar
 
 \section{Results}\label{sec:results}
 
-\subsection{Architecture Necessity: Hierarchical vs End-to-End}
+This section presents the empirical evaluation in five parts: architecture comparison and ablations (\S\ref{sec:architecture}--\ref{sec:method_innovation}), generalization and continuous metrics (\S\ref{sec:method_innovation}), computational complexity (\S\ref{sec:timing}), capture-region analysis (\S\ref{sec:capture_region}), and CEM optimizer variants (\S\ref{sec:cem_variants}). Results that depend on the 5-seed method-innovation campaign are reported as soon as that campaign completes; the capture-region and timing benchmarks are already complete.
+
+\subsection{Architecture Necessity: Hierarchical vs End-to-End}\label{sec:architecture}
 
 Table~\ref{tab:architecture_comparison} compares the hierarchical VPP+LOS-rate design against an end-to-end DRL baseline that directly maps observations to control commands without the VPP or guidance-law layers.
 
@@ -188,7 +190,7 @@ No-VPP (zero offset) & $68.3\%$ & $-134.7 \pm 356.1$ & $<0.05$ \\
 
 The hierarchical design achieves $75.0\%$ success rate, significantly outperforming the end-to-end baseline at $56.7\%$ ($p < 0.05$, Cohen's $d = 4.36$, large effect). This establishes that the decomposition is not merely convenient but \emph{essential} for sample-efficient guidance learning: the end-to-end policy must simultaneously learn perception, prediction, guidance, and control, a burden that demands far greater sample complexity.
 
-\subsection{Ablation Study}
+\subsection{Ablation Study}\label{sec:ablation}
 
 Table~\ref{tab:ablation} isolates the contribution of each architectural component.
 
@@ -210,7 +212,7 @@ No prediction + default gains & $52.1\%$ & $-22.9\%$ \\
 
 Removing the VPP layer reduces success by $6.7\%$; removing CEM gain optimization reduces it by $14.8\%$; and combining both reductions yields a $22.9\%$ drop. Each component contributes measurably, confirming that the hierarchical decomposition provides complementary advantages.
 
-\subsection{Crossing Geometry Analysis}
+\subsection{Crossing Geometry Analysis}\label{sec:crossing}
 
 A persistent bottleneck in prior work was crossing geometries (ego and target on near-perpendicular trajectories). Table~\ref{tab:crossing} compares baseline and constrained performance on the standard crossing scenarios.
 
@@ -249,7 +251,7 @@ $3000$~m & $0\%$ & $0\%$ \\
 \end{tabular}
 \end{table}
 
-\subsection{Predictor Value Stratification}
+\subsection{Predictor Value Stratification}\label{sec:predictor}
 
 Under constant-velocity target motion, no prediction, CV, and CA achieve functionally equivalent success rates ($62.5\%$ each) with identical per-scenario patterns, as CA reduces to CV when $\hat{a} \to 0$. However, under maneuvering targets, predictor value stratifies with target maneuver intensity (Table~\ref{tab:predictor_stratification}).
 
@@ -270,7 +272,7 @@ GRU frozen & $77.8\%$ ($+7.5\%$) & $58.3\%$ ($+21.2\%$) \\
 
 Neural predictors provide $+9.3\%$ under weak maneuvers and up to $+26.9\%$ under strong maneuvers. The correlation between predictor value and target maneuver intensity is positive and monotonic, answering the ``when does prediction help?'' question with empirical precision.
 
-\subsection{Bilevel Optimization Gains}
+\subsection{Bilevel Optimization Gains}\label{sec:bilevel_gains}
 
 CEM gain optimization improves success rate from $60.2\%$ (default gains) to $74.7\%$ ($+14.47\%$). The bilevel audit confirms regret monotonicity (zero violations) and stability variance below the $0.05$ threshold, validating the convergence and robustness of the outer-level policy training.
 
@@ -282,7 +284,7 @@ Table~\ref{tab:method_innovation_comparison} compares the hierarchical baseline 
 
 The comparison is intentionally exploratory: if a method significantly improves continuous metrics or success rate relative to the baseline, it will be included in the final 141-seed reproducibility campaign; otherwise the baseline PPO policy is retained as the primary result.
 
-\subsection{Computational Complexity}
+\subsection{Computational Complexity}\label{sec:timing}
 
 Table~\ref{tab:timing} reports inference and optimization latency on an Intel Core i7-12700H CPU.
 
@@ -303,6 +305,27 @@ MPC online solve (literature) & $50$--$200$~ms \\
 \end{table}
 
 The total control cycle is well below the $20$~ms budget required for $50$~Hz operation. CEM optimization is performed offline and amortized over all flight episodes; the online overhead is dominated by the PPO forward pass, which is orders of magnitude faster than model-predictive control solvers.
+
+\input{sections/capture_region_analysis}
+
+\subsection{CEM Optimizer Variants}\label{sec:cem_variants}
+
+We compare three gain-optimization mechanisms: standard CEM, EMA-smoothed CEM, and a score-weighted gradient-ascent variant (CEM-GD). Table~\ref{tab:cem_variants} reports final best score, mean candidate score, and wall-clock solve time. The theoretical analysis predicts that CEM-GD will be unstable on flat or noisy gain landscapes, while CEM-EMA should reduce variance without sacrificing final performance.
+
+\begin{table}[t]
+\centering
+\caption{CEM optimizer variant comparison (frozen policy, regression scenarios).}
+\label{tab:cem_variants}
+\begin{tabular}{lccc}
+\toprule
+Mode & Final best score & Final mean score & Solve time (s) \\
+\midrule
+Standard CEM & \textcolor{red}{TBD} & \textcolor{red}{TBD} & \textcolor{red}{TBD} \\
+CEM-EMA      & \textcolor{red}{TBD} & \textcolor{red}{TBD} & \textcolor{red}{TBD} \\
+CEM-GD       & \textcolor{red}{TBD} & \textcolor{red}{TBD} & \textcolor{red}{TBD} \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 \section{Discussion}\label{sec:discussion}
 

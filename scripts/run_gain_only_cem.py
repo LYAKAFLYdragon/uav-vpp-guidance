@@ -19,7 +19,11 @@ from uav_vpp_guidance.agents.ppo_agent import PPOAgent
 from uav_vpp_guidance.envs.scenario_registry import ScenarioRegistry, initialize_canonical_scenarios
 from uav_vpp_guidance.envs.tracking_env import CloseRangeTrackingEnv
 from uav_vpp_guidance.evaluation.evaluate_prediction_comparison import evaluate_single_episode
-from uav_vpp_guidance.gain_optimizer.cem import CEMGainOptimizer
+from uav_vpp_guidance.gain_optimizer.cem import (
+    CEMGainOptimizer,
+    CEMEMAGainOptimizer,
+    CEMGDGainOptimizer,
+)
 from uav_vpp_guidance.gain_optimizer.gain_space import GainSpace
 from uav_vpp_guidance.guidance.gain_config import GuidanceGains
 
@@ -93,6 +97,15 @@ def main():
     parser.add_argument("--scenarios", type=str, nargs="+", default=None,
                         choices=["regression", "candidate", "negative"])
     parser.add_argument("--output-dir", type=str, default="outputs/gain_only_cem")
+    parser.add_argument(
+        "--cem-mode",
+        type=str,
+        default="standard",
+        choices=["standard", "ema", "gd"],
+        help="CEM optimizer variant",
+    )
+    parser.add_argument("--beta-ema", type=float, default=0.7, help="EMA smoothing factor (mode=ema)")
+    parser.add_argument("--alpha-gd", type=float, default=0.05, help="GD step size (mode=gd)")
     args = parser.parse_args()
 
     output_dir = Path(args.output_dir)
@@ -133,8 +146,17 @@ def main():
         "elite_ratio": args.elite_ratio,
         "noise_floor": 0.05,
         "convergence_tol": 0.001,
+        "beta_ema": args.beta_ema,
+        "alpha_gd": args.alpha_gd,
     }
-    cem = CEMGainOptimizer(gain_space, cem_config)
+    if args.cem_mode == "standard":
+        cem = CEMGainOptimizer(gain_space, cem_config)
+    elif args.cem_mode == "ema":
+        cem = CEMEMAGainOptimizer(gain_space, cem_config)
+    elif args.cem_mode == "gd":
+        cem = CEMGDGainOptimizer(gain_space, cem_config)
+    else:
+        raise ValueError(f"Unknown cem_mode: {args.cem_mode}")
 
     # Create evaluator
     evaluator = make_evaluator(env, agent, scenarios, tuple(args.seeds))

@@ -486,9 +486,20 @@ def main():
         choices=["ppo", "cr_ppo", "intentional_ppo"],
         help="RL algorithm to use for training",
     )
+    parser.add_argument(
+        "--reward-shaping",
+        type=str,
+        default=None,
+        choices=["true", "false"],
+        help="Override config: enable/disable potential-based reward shaping",
+    )
     args = parser.parse_args()
 
     config = load_experiment_config(args.config)
+    if args.reward_shaping is not None:
+        config.setdefault("reward", {}).setdefault("potential_based_shaping", {})["enabled"] = (
+            args.reward_shaping == "true"
+        )
     if args.backend is not None:
         config["backend"] = args.backend
         config.setdefault("env", {})["backend"] = args.backend

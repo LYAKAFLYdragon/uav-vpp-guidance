@@ -1,0 +1,62 @@
+\subsection{Capture Region Analysis}\label{sec:capture_region}
+
+We numerically compare the capture regions of two guidance strategies on a grid of initial conditions:
+\begin{itemize}
+    \item \textbf{VPP+LOS-rate:} the hierarchical policy that places a virtual pursuit point via PPO and tracks it with LOS-rate guidance.
+    \item \textbf{PN direct:} the same LOS-rate guidance law, but with the virtual point fixed at the instantaneous target position (zero learned offset).
+\end{itemize}
+
+The grid spans initial range $R \in [500, 5000]$~m (10 points), heading error $\eta \in [-180°, 180°]$ (12 points), and speed ratio $v_o/v_t \in [0.8, 1.5]$ (4 points), for 480 initial conditions with 10 Monte Carlo episodes per condition.
+
+\subsubsection{Overall comparison}
+
+Table~\ref{tab:capture_region_overall} reports the pooled success rates.
+
+\begin{table}[t]
+\centering
+\caption{Capture-region overall comparison (480 grid points).}
+\label{tab:capture_region_overall}
+\begin{tabular}{lccc}
+\toprule
+Method & Mean SR & Min SR & Max SR \\
+\midrule
+VPP+LOS-rate & 29.17\% & 0.00\% & 100.00\% \\
+PN direct      & 28.75\% & 0.00\% & 100.00\% \\
+Difference     & +0.42\% & --- & --- \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The overall difference is small and not statistically significant (Fisher exact test, $p = 0.669$). This is consistent with the theoretical expectation in Proposition~2: when the learned offset is small and the guidance gains are fixed to their default values, the VPP+LOS-rate law degenerates to classical proportional navigation.
+
+\subsubsection{Sub-region analysis}
+
+Table~\ref{tab:capture_region_sub} reports pooled success rates in sub-regions where the VPP layer might be expected to help.
+
+\begin{table}[t]
+\centering
+\caption{Capture-region sub-region comparison.}
+\label{tab:capture_region_sub}
+\begin{tabular}{lccccc}
+\toprule
+Sub-region & Points & VPP SR & PN SR & $\Delta$ SR & $p$-value \\
+\midrule
+Overall & 480 & 29.17\% & 28.75\% & +0.42\% & 0.6690 \\
+High ATA ($|\eta| > 90°$) & 240 & 25.00\% & 24.17\% & +0.83\% & 0.5242 \\
+High speed ratio ($v_o/v_t > 1.2$) & 240 & 27.50\% & 26.67\% & +0.83\% & 0.5372 \\
+High ATA + close/mid range & 72 & 83.33\% & 80.56\% & +2.78\% & 0.1930 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+No sub-region reaches statistical significance at $\alpha = 0.05$. The largest nominal advantage ($+2.78\%$) occurs in high-aspect, close-to-medium-range engagements, but the sample is too small to claim significance.
+
+\subsubsection{Theoretical interpretation}
+
+The near-equivalence of VPP+LOS and PN direct in this study does \emph{not} imply that the VPP layer is unnecessary. Rather, it confirms the \emph{degeneration property} predicted by Proposition~2: under fixed, default parameters the hierarchical law behaves like PN. The adaptive value of VPP arises only when the high-level policy is trained to choose context-dependent virtual-point offsets---lead pursuit in high-aspect engagements to avoid collision singularities (Proposition~5), lag pursuit at high speed ratios to prevent overrun (Proposition~4), and terminal blending near the minimum stand-off distance.
+
+Because the capture-region grid freezes the policy and the gains, it measures the \emph{baseline kinematic capability} of the guidance law, not its \emph{learned adaptive capability}. The result therefore supports the paper's central claim: VPP is best understood as a \emph{learnable augmentation} of PN, not a replacement that is universally superior without learning.
+
+\subsubsection{Limitations}
+
+The analysis uses the \texttt{simple} point-mass backend; JSBSim validation is future work. The PPO policy used in VPP+LOS was trained only for a short smoke run and is therefore not representative of a fully trained policy. The grid resolution (10~$\times$~12~$\times$~4) is coarse; finer grids and more episodes per cell are needed for high-confidence sub-region claims.

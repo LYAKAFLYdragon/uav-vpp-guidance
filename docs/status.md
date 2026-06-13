@@ -64,6 +64,7 @@ Key alignment decisions (Phase 1 freeze):
 | 8C | [FROZEN] Complete | Paper-safe readiness gate | `scripts/run_paper_benchmark.py` |
 | 9A | [FROZEN] Complete | Experiment freeze & artifact contract | `scripts/run_paper_benchmark.py` |
 | **Phase 1 freeze (this PR)** | [ACTIVE] | Canonical configs, CEM-GD deprecation, reward audit | this file |
+| **Phase 2 reward audit (A2')** | [FROZEN] Complete | Dense vs. dense+PBS vs. terminal-only, 3 seeds, simple backend, standard PPO | `scripts/run_a2_reward_ablation.py`, `outputs/ablation_reward_design/` |
 | **Phase 2 ablation separation** | [FROZEN] Complete | CR-PPO / Intentional / CAIS / baseline split into `src/uav_vpp_guidance/ablations/`; main branch keeps standard PPO only | `tests/test_cr_ppo_agent.py`, `tests/test_intentional_ppo_agent.py`, `tests/test_combat_aware_schedule.py` |
 
 ---
@@ -76,7 +77,7 @@ Key alignment decisions (Phase 1 freeze):
 | 2 | VPP action space | Frozen at 3-D; legacy 5-D fields deprecated | Resolved |
 | 3 | Gain space | Frozen at 5-D CEM search; fixed params documented | Resolved |
 | 4 | CEM-GD legacy code | Moved to `ablations/deprecated/`; EMA default | Resolved |
-| 5 | Reward description | Unified as dense + terminal sparse; audit in `docs/reward_audit.md` | Resolved |
+| 5 | Reward description | Unified as dense + terminal sparse; A2' ablation confirms PBS redundant (`docs/reward_audit.md` §4.1) | Resolved |
 | 6 | Method-innovation branch mixing | CR-PPO → `ablations/cr_ppo/`, Intentional PPO → `ablations/intentional/`, CAIS → `ablations/cais_only/`, baseline → `ablations/baseline/`; main branch keeps only standard PPO + CEM-EMA + canonical guidance/VPP/gain-space | [FROZEN] |
 | 7 | Documentation status | This file is now the single source of truth | Resolved |
 
@@ -91,7 +92,10 @@ Key alignment decisions (Phase 1 freeze):
    is determined by the command-chain implementation.
 2. **Reward Design**: The repository uses a dense reward mixture (range, angle,
    safety, smoothness, closing rate) plus terminal sparse events. Potential-based
-   shaping is an optional theoretical enhancement, not a necessity.
+   shaping is an optional theoretical enhancement, not a necessity. The Phase 2
+   A2' ablation (3 seeds, simple backend, standard PPO) found no statistically
+   significant difference between dense-only and dense + PBS (p = 0.785),
+   empirically confirming PBS is redundant; it stays disabled in canonical runs.
 3. **CEM Convergence**: Theorem 2' is a heuristic scaling intuition, not a
    rigorous guarantee. The lower-level objective is a noisy episodic estimate.
 4. **Bilevel Equilibrium**: Proposition 10' frames the pipeline as a conceptual

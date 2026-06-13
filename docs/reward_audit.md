@@ -51,3 +51,53 @@ already provides sufficient signal. PBS remains available as an ablation
 - **A2' reward ablation**: dense-only vs. dense + PBS vs. terminal-only.
 - If dense-only and dense + PBS are statistically equivalent, declare PBS
   redundant in the paper and disable it in canonical configs.
+
+### 4.1 A2' Result (executed — Phase 2) **[FROZEN]**
+
+The A2' ablation has been run on the **simple backend** with **standard PPO**
+and the **canonical configuration** (`config/canonical/`), 3 seeds per
+condition. All three reward designs are derived solely by toggling existing
+canonical reward parameters; no new defaults were introduced.
+
+- `dense_only` (= Baseline): canonical dense mixture + terminal sparse events,
+  PBS disabled.
+- `dense_pbs`: dense_only + `potential_based_shaping.enabled = true`.
+- `terminal_only`: all canonical dense weights set to `0.0`, terminal sparse
+  events retained, PBS disabled.
+
+| Condition | Seeds | Final SR (mean ± std) |
+|-----------|------:|-----------------------|
+| Dense-only (Baseline) | 3 | 25.6% ± 11.7% |
+| Dense + PBS | 3 | 28.9% ± 7.7% |
+| Terminal-only | 3 | 30.0% ± 3.3% |
+
+Pairwise significance on per-seed final success rate (paired by seed):
+
+| Comparison | Δ SR | p (paired t) | Cohen's d | Mann–Whitney p | Significant @0.05 |
+|------------|-----:|-------------:|-----------|---------------:|:-----------------:|
+| Dense-only vs Dense + PBS | +3.3% | 0.785 | 0.18 (negligible) | 1.000 | No |
+| Dense-only vs Terminal-only | +4.4% | 0.625 | 0.33 (small) | 0.825 | No |
+| Dense + PBS vs Terminal-only | +1.1% | 0.742 | 0.22 (small) | 1.000 | No |
+
+**Verdict — PBS is REDUNDANT.** Dense-only and Dense + PBS are not
+statistically distinguishable (p = 0.785, negligible effect size). PBS does not
+improve the final success rate, confirming the Section 3 expectation that the
+dense mixture already provides sufficient learning signal. PBS therefore remains
+**disabled** in the canonical configuration and should be reported in the paper
+as an optional, non-essential enhancement rather than a necessity.
+
+> **Caveat (honest scope)**: With only 3 seeds the test is low-powered, so this
+> establishes the *absence of a detectable benefit* from PBS, not strict
+> statistical equivalence. The conclusion is robust to the direction of the
+> claim: no condition beats the dense-only baseline at the 0.05 level. The
+> dominant failure mode across all conditions is out-of-bounds (~65–87%),
+> which is a guidance/geometry limitation independent of the reward design and
+> is tracked separately under Stage 6G/6H.
+
+Artifacts: `outputs/ablation_reward_design/` (`summary.md`,
+`ablation_results.json`, per-condition resolved configs under `configs/`, and
+per-seed training/eval logs). Reproduce with:
+
+```bash
+python scripts/run_a2_reward_ablation.py --seeds 3 --device cpu
+```

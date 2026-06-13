@@ -1,5 +1,10 @@
 # UAV VPP Guidance
 
+> **Status as of 2026-06-13**: See [`docs/status.md`](docs/status.md) for the
+> single source of truth on project stages, canonical configurations, and known
+> limitations. This README reflects that status but may be cached in earlier
+> commits.
+
 A research codebase for exploring guidance-law limitations in neural virtual-pursuit-point (VPP) pursuit-evasion.
 
 ---

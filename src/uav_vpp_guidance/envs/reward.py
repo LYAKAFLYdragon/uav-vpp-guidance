@@ -73,6 +73,13 @@ class RewardCalculator:
         self.ideal_range_min = float(self.config.get("ideal_range_min", 800.0))
         self.ideal_range_max = float(self.config.get("ideal_range_max", 1200.0))
 
+        # 势能奖励塑形（Potential-Based Reward Shaping）
+        pbs = self.config.get("potential_based_shaping", {})
+        self.pbs_enabled = bool(pbs.get("enabled", False))
+        self.pbs_C = float(pbs.get("C", 0.001))
+        self.pbs_gamma = float(pbs.get("gamma", 0.99))
+        self._prev_rel_state = None
+
     def compute(self, info):
         """
         Compute the scalar reward for the current step.
@@ -173,6 +180,11 @@ class RewardCalculator:
         # 11. 终端奖励（由调用方根据 done/reason 注入，这里预留接口）
         terminal_reward = info.get("terminal_reward", 0.0)
 
+        # 12. 势能奖励塑形：提供密集的距离梯度信号
+        reward_potential = 0.0
+        if self.pbs_enabled:
+            reward_potential = self._compute_potential_shaping(rel)
+
         # 汇总
         reward = (
             reward_range
@@ -186,6 +198,7 @@ class RewardCalculator:
             + reward_overshoot
             + reward_boundary
             + terminal_reward
+            + reward_potential
         )
 
         reward_terms = {
@@ -200,6 +213,7 @@ class RewardCalculator:
             "reward_overshoot": reward_overshoot,
             "reward_boundary": reward_boundary,
             "terminal_reward": terminal_reward,
+            "reward_potential": reward_potential,
             "reward_total": reward,
         }
 
@@ -207,6 +221,27 @@ class RewardCalculator:
         self._prev_command = dict(command)
 
         return reward, reward_terms
+
+    def _compute_potential_shaping(self, rel_next: dict) -> float:
+        """
+        Potential-based reward shaping using relative distance.
+
+        phi(s) = -C * range(s)
+        r_shape = gamma * phi(s') - phi(s)
+              = -C * (gamma * range' - range)
+        """
+        range_next = float(rel_next.get("range_m", 0.0))
+        phi_next = -self.pbs_C * range_next
+
+        if self._prev_rel_state is None:
+            # First call: no previous state, initialize and return zero shaping.
+            self._prev_rel_state = dict(rel_next)
+            return 0.0
+
+        range_prev = float(self._prev_rel_state.get("range_m", 0.0))
+        phi_prev = -self.pbs_C * range_prev
+        self._prev_rel_state = dict(rel_next)
+        return self.pbs_gamma * phi_next - phi_prev
 
     def _compute_range_reward(self, range_m: float) -> float:
         """
@@ -278,3 +313,4 @@ class RewardCalculator:
     def reset(self):
         """Reset internal state (e.g., previous command buffer)."""
         self._prev_command = None
+        self._prev_rel_state = None

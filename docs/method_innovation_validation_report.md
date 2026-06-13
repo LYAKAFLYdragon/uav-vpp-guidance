@@ -172,7 +172,90 @@ To obtain a decisive comparison, the following changes are needed:
 
 ---
 
-## 7. Artifacts
+## 7. Quasi-Realistic Backend Implementation (2026-06-13)
+
+Following the theoretical interpretation in `uav_vpp_theoretical_derivation_report.md` (v1.1), the simple backend was made sensitive enough to distinguish method innovations by injecting delay, saturation, terminal boundary-layer protection, and potential-based reward shaping.
+
+### 7.1 Actuator dynamics (`actuator_dynamics`)
+
+A new backend-agnostic layer, `src/uav_vpp_guidance/flight_control/actuator_dynamics.py`, is inserted between the guidance command and the aircraft dynamics inside `CloseRangeTrackingEnv`. It models:
+- First-order lag per channel (`tau_s`).
+- Pure delay in high-level steps (`delay_steps`).
+- Per-channel rate limits (`rate_limit_per_s`).
+- Final saturation using the existing `limits` block.
+
+Default settings in `config/method_innovation_comparison.yaml`:
+```yaml
+actuator_dynamics:
+  enabled: true
+  tau_s:
+    nz_cmd: 0.2
+    roll_rate_cmd: 0.15
+    throttle_cmd: 0.1
+  delay_steps: 1
+  rate_limit_per_s:
+    nz_cmd: 35.0
+    roll_rate_cmd: 7.5
+    throttle_cmd: 2.0
+```
+
+### 7.2 Terminal boundary layer (`terminal_boundary_layer`)
+
+`LOSRateGuidance` now smoothly suppresses heading-error and LOS-elevation terms inside a configurable terminal boundary layer:
+```yaml
+terminal_boundary_layer:
+  enabled: true
+  R_dead_m: 500.0
+  blend_scale: 125.0
+```
+This prevents the collision singularity (`R -> 0`) from deterministically crashing all methods in crossing geometries.
+
+### 7.3 Potential-based reward shaping (`potential_based_shaping`)
+
+`RewardCalculator` adds an optional dense distance-gradient signal:
+```yaml
+potential_based_shaping:
+  enabled: true
+  C: 0.001
+  gamma: 0.99
+```
+This breaks the sparse-reward plateau that caused all methods to saturate within 2,048 steps.
+
+### 7.4 Continuous evaluation metrics
+
+Binary success rate alone cannot distinguish methods on 0 % / 100 % per-scenario plateaus. The evaluation pipeline now reports continuous metrics:
+- `mean_final_range_m`, `std_final_range_m`
+- `mean_min_range_m`, `std_min_range_m`
+- `mean_final_ata_deg`, `std_final_ata_deg`
+- `mean_time_to_first_contact_s`
+- `mean_control_effort`
+- `mean_command_smoothness`
+
+These are written to `eval_log.csv` and aggregated in `scripts/aggregate_method_innovation_comparison.py`.
+
+### 7.5 Hyperparameter tuning configs
+
+Ready-to-run sweep configs and runner:
+- `config/method_innovation_tuning_eta.yaml`
+- `config/method_innovation_tuning_complexity.yaml`
+- `scripts/run_method_innovation_tuning.py`
+
+Usage:
+```bash
+python scripts/run_method_innovation_tuning.py --sweep eta --seeds 3 --steps 20000
+python scripts/run_method_innovation_tuning.py --sweep complexity --seeds 3 --steps 20000
+```
+
+### 7.6 Expected validation workflow
+
+1. Run a 1-seed Baseline PPO smoke test on the new backend and confirm continuous metrics vary across scenarios.
+2. If Baseline no longer shows 0 % / 100 % plateaus, launch the full 5-seed method comparison (`scripts/run_method_innovation_comparison.py`).
+3. If methods still do not diverge, run the eta sweep and complexity sweep.
+4. Only after method differences are observable should the 141-seed campaign be launched.
+
+---
+
+## 8. Artifacts
 
 - Standard summary: `outputs/method_innovation_compare/summary.md`
 - Standard CSV/plots: `outputs/method_innovation_compare/summary.csv`, `learning_curves.png`, `stability_bars.png`
@@ -180,3 +263,4 @@ To obtain a decisive comparison, the following changes are needed:
 - Harder CSV/plots: `outputs/method_innovation_compare_hard/summary.csv`, `learning_curves.png`, `stability_bars.png`
 - Run logs: `outputs/method_innovation_compare_run.log`, `outputs/method_innovation_compare_hard_run.log`
 - Tuning run log: `outputs/method_innovation_tuning_run.log`
+- Quasi-realistic backend memory note: `memory/2026-06-13_quasi_realistic_backend_plan.md`

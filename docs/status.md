@@ -66,6 +66,7 @@ Key alignment decisions (Phase 1 freeze):
 | **Phase 1 freeze (this PR)** | [ACTIVE] | Canonical configs, CEM-GD deprecation, reward audit | this file |
 | **Phase 2 reward audit (A2')** | [FROZEN] Complete | Dense vs. dense+PBS vs. terminal-only, 3 seeds, simple backend, standard PPO | `scripts/run_a2_reward_ablation.py`, `outputs/ablation_reward_design/` |
 | **Phase 2 ablation separation** | [FROZEN] Complete | CR-PPO / Intentional / CAIS / baseline split into `src/uav_vpp_guidance/ablations/`; main branch keeps standard PPO only | `tests/test_cr_ppo_agent.py`, `tests/test_intentional_ppo_agent.py`, `tests/test_combat_aware_schedule.py` |
+| **Phase 3 geometry ablation (jsbenv)** | [ACTIVE] | G1–G5 geometric hierarchical ablation on the JSBSim backend (VPP vs No-VPP vs Pure-PN, tail-chase root cause, CEM-EMA g* stability, CAIS terminal-crash, turn-rate/energy bottleneck) | `scripts/run_phase3_geometry_ablation.py`, `docs/results/phase3_geometry_ablation.md` |
 
 ---
 

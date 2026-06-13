@@ -6,7 +6,7 @@
 **Environment:** `simple` backend, CPU  
 **Seeds:** 5  
 **Steps per run:** 50,000  
-**Config:** `config/method_innovation_comparison.yaml`
+**Main configs:** `config/method_innovation_comparison.yaml`, `config/method_innovation_comparison_hard.yaml`
 
 ---
 
@@ -24,15 +24,21 @@ We compare five algorithm variants on the same curriculum-learning setup:
 
 All methods share the same network (`[128, 128]` tanh MLP), PPO hyperparameters, reward, curriculum, and scenarios.
 
-### Scripts created
+### Scripts created / modified
 
+- `scripts/train_curriculum_ppo.py` — unified to support `ppo`, `cr_ppo`, and `intentional_ppo`.
 - `scripts/run_method_innovation_comparison.py` — runs the full comparison matrix.
-- `scripts/aggregate_method_innovation_comparison.py` — produces tables, CSV, and plots.
-- `config/method_innovation_comparison.yaml` — unified comparison configuration.
+- `scripts/aggregate_method_innovation_comparison.py` — produces tables, CSV, t-tests, learning curves, and stability plots.
+- `config/method_innovation_comparison.yaml` — standard unified comparison configuration.
+- `config/method_innovation_comparison_hard.yaml` — harder config with sinusoidal weaving target and six diverse scenarios.
+
+### Fix applied to Intentional PPO
+
+The original `IntentionalPPOAgent.update()` only performed a single pass over the rollout data, unlike `PPOAgent`/`CRPPOAgent` which respect `update_epochs=10`. We added the outer `for epoch in range(self.update_epochs):` loop with per-epoch index reshuffling. This change is included in the re-run below.
 
 ---
 
-## 2. Results
+## 2. Standard-Scenario Results (original 4 scenarios)
 
 ### 2.1 Final performance (mean ± std over 5 seeds)
 
@@ -44,9 +50,7 @@ All methods share the same network (`[128, 128]` tanh MLP), PPO hyperparameters,
 | Intentional PPO-C | -313.1±0.5 | 36.67%±0.00% | 13.33%±0.00% | 50.00%±0.00% | 0.00%±0.00% | 49,152±0 |
 | Intentional PPO-A | -312.0±0.6 | 36.67%±0.00% | 13.33%±0.00% | 50.00%±0.00% | 0.00%±0.00% | 49,152±0 |
 
-**Observation:** Final success rate, crash rate, out-of-bounds rate, and timeout rate are identical across all algorithms and all random seeds. No method reached the 50% success-rate threshold during training, so the "steps to 50% SR" metric is capped at the final step.
-
-### 2.2 Stability metrics (training update logs, mean ± std over 5 seeds)
+### 2.2 Stability metrics
 
 | Algorithm | Policy Loss | Value Loss | Approx KL | Clip Fraction | Explained Var |
 |-----------|-------------|------------|-----------|---------------|---------------|
@@ -56,108 +60,123 @@ All methods share the same network (`[128, 128]` tanh MLP), PPO hyperparameters,
 | Intentional PPO-C | 0.0001±0.0020 | 2120.7±360.3 | 0.0010±0.0010 | 0.63%±1.14% | 0.0655±0.0464 |
 | Intentional PPO-A | -0.0000±0.0022 | 2101.2±366.3 | 0.0003±0.0006 | 0.18%±0.63% | 0.0799±0.0622 |
 
-**Observation:** Intentional-update variants dramatically reduce `approx_kl` and `clip_fraction` compared with baseline/CR-PPO, confirming that ICU/IAU are actively scaling the update magnitudes. However, this improved update stability does not translate into different final success rates in this setting.
+**Observation:** With the single-epoch implementation, Intentional PPO variants show dramatically lower KL/clip fraction, indicating the intentional scalars are active, but final success rates are identical.
 
-### 2.3 Method-specific diagnostics
+---
 
-| Algorithm | Extra Metrics |
-|-----------|---------------|
-| CR-PPO | complexity = 0.0726 ± 0.0027 |
-| Intentional PPO | scale_actor = 0.0005±0.0003, scale_critic = 0.0021±0.0015, ema_abs_adv = 0.9516±0.0263 |
-| Intentional PPO-C | scale_critic = 0.0025±0.0018, ema_abs_adv = 1.0000±0.0000 |
-| Intentional PPO-A | scale_actor = 0.0005±0.0004, ema_abs_adv = 0.9516±0.0263 |
+## 3. Harder-Scenario Results (6 weaving scenarios, after update_epochs fix)
 
-### 2.4 Per-scenario success rate (seed 0, final evaluation)
+JSBSim was not available in this environment (no `JSBSIM_ROOT`), so we created a harder `simple`-backend benchmark: `target_mode: sinusoidal`, six scenarios covering tail-chase, head-on, close/far crossing, disadvantage, and weaving pursuit, with 5 eval seeds × 20 eval episodes.
+
+### 3.1 Final performance (mean ± std over 5 seeds)
+
+| Algorithm | Return | Success Rate | Crash Rate | OOB Rate | Timeout Rate | Steps to 50% SR |
+|-----------|--------|--------------|------------|----------|--------------|-----------------|
+| Baseline PPO | -244.7±0.6 | 46.00%±0.00% | 32.00%±0.00% | 22.00%±0.00% | 0.00%±0.00% | 49,152±0 |
+| CR-PPO | -244.9±0.8 | 46.00%±0.00% | 32.00%±0.00% | 22.00%±0.00% | 0.00%±0.00% | 49,152±0 |
+| Intentional PPO | -245.8±0.7 | 46.00%±0.00% | 32.00%±0.00% | 22.00%±0.00% | 0.00%±0.00% | 49,152±0 |
+| Intentional PPO-C | -244.3±0.7 | 46.00%±0.00% | 32.00%±0.00% | 22.00%±0.00% | 0.00%±0.00% | 49,152±0 |
+| Intentional PPO-A | -244.9±0.7 | 46.00%±0.00% | 32.00%±0.00% | 22.00%±0.00% | 0.00%±0.00% | 49,152%±0.00% | 49,152±0 |
+
+### 3.2 Stability metrics
+
+| Algorithm | Policy Loss | Value Loss | Approx KL | Clip Fraction | Explained Var |
+|-----------|-------------|------------|-----------|---------------|---------------|
+| Baseline PPO | -0.0035±0.0021 | 2134.0±389.7 | 0.0049±0.0015 | 5.76%±2.60% | 0.0831±0.0633 |
+| CR-PPO | -0.0034±0.0021 | 2133.0±390.4 | 0.0049±0.0014 | 5.76%±2.39% | 0.0853±0.0646 |
+| Intentional PPO | 0.0078±0.0251 | 1909.4±461.6 | 0.0436±0.0938 | 19.24%±18.11% | 0.2083±0.1220 |
+| Intentional PPO-C | -0.0035±0.0022 | 2001.4±416.9 | 0.0059±0.0017 | 7.30%±2.90% | 0.1604±0.0899 |
+| Intentional PPO-A | -0.0008±0.0062 | 2133.2±387.0 | 0.0091±0.0152 | 7.71%±8.02% | 0.0870±0.0669 |
+
+**Observation:** After adding `update_epochs`, the full Intentional PPO now exhibits **higher** KL and clip fraction on average, with larger cross-run variance. ICU-only (Intentional-C) modestly lowers value loss, while IAU-only (Intentional-A) is closer to baseline. Success rates remain identical across all variants.
+
+### 3.3 Per-scenario success rate (seed 0, final evaluation)
 
 | Scenario | Baseline | CR-PPO | Intentional | Intentional-C | Intentional-A |
 |----------|----------|--------|-------------|---------------|---------------|
-| favorable | 0.0 | 0.0 | 0.0 | 0.0 | 0.0 |
-| neutral | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 |
+| crossing_close | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 |
+| crossing_far | 0.0 | 0.0 | 0.0 | 0.0 | 0.0 |
 | disadvantage | 0.0 | 0.0 | 0.0 | 0.0 | 0.0 |
-| challenging | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 |
+| head_on | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 |
+| tail_chase | 0.0 | 0.0 | 0.0 | 0.0 | 0.0 |
+| weaving_pursuit | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 |
 
-All algorithms solve exactly the same two scenarios (`neutral`, `challenging`) and fail the same two (`favorable`, `disadvantage`). The identical discrete outcomes drive the zero cross-seed variance in success rate.
-
----
-
-## 3. Why the Performance Metrics Do Not Diverge
-
-The main experiment and an additional 3-seed tuning run (20k steps, 10× `complexity_coef` and 10× `eta_actor`/`eta_critic`) both show the same 36.67% final success rate. We attribute the lack of performance differentiation to the following factors:
-
-1. **Discrete, low-variance evaluation metric.** Final success rate is a hard threshold over only 30 evaluation episodes (3 fixed seeds × 10 episodes). With deterministic eval scenarios and deterministic policies, different policies often produce the same binary outcome, collapsing variance to zero.
-
-2. **Scenario distribution creates a flat ceiling.** The four scenarios reduce to two easy and two hard cases. All methods reach the same per-scenario success pattern, so the aggregate success rate cannot differ.
-
-3. **Task is too easy/hard for the chosen horizon.** The learning curves are flat from the first evaluation (2,048 steps), indicating that the policies reach their asymptotic behavior very quickly. Either the task is already nearly solved for two scenarios and unsolvable for the other two within 512 steps, or the policy network quickly finds the same dominant strategy.
-
-4. **Simple backend has reduced dynamics diversity.** The simplified flight model and constant-velocity target offer fewer degrees of freedom in which exploration regularization (CR-PPO) or intentional update budgets (Intentional PPO) can create meaningful behavioral differences.
-
-5. **Intentional PPO implementation uses only one update epoch.** Unlike baseline/CR-PPO, which perform `update_epochs=10` passes over the rollout buffer, the current `IntentionalPPOAgent.update()` iterates over the data only once. This is a substantial implementation difference that may under-train the policy and mask any benefit from intentional scaling.
+Again, all algorithms solve and fail exactly the same scenarios.
 
 ---
 
-## 4. Tuning Recommendations
+## 4. Why the Performance Metrics Still Do Not Diverge
 
-To make the comparison more discriminative, try the following before declaring a winner:
+Even after fixing the `update_epochs` bug and increasing scenario difficulty, final success rates are identical. Contributing factors:
 
-### A. Make the evaluation more informative
+1. **Deterministic evaluation + deterministic policies + binary metric.** With fixed eval seeds and a hard success threshold, different policies frequently produce the same discrete outcome, collapsing cross-seed variance to zero.
 
-- Increase `eval_episodes` to 30–50 and add more eval seeds.
-- Report continuous metrics: mean final range, minimum range, final ATA, and episode return distribution.
-- Use a stratified per-scenario success rate with confidence intervals rather than a single aggregate binary rate.
+2. **Per-scenario success rates are at 0% or 100% plateaus.** Each scenario is either solved by all methods or by none, so aggregate success rate cannot differ.
 
-### B. Increase environment difficulty / diversity
+3. **Flat learning curves.** Performance asymptotes within the first 2,048 steps; additional training and algorithmic changes do not push scenarios off their 0%/100% plateaus.
 
-- Add more scenarios, e.g., varying initial headings, speeds, altitudes, and target maneuvers.
-- Use the `jsbsim` backend, which has richer dynamics and is the eventual target domain.
-- Lengthen episodes or relax/tighten success thresholds to move performance off the 0%/100% per-scenario plateau.
+4. **Simple backend lacks dynamics diversity.** The simplified flight model and rule-based target motion provide limited room for exploration regularizers or intentional update budgets to create divergent behavior.
 
-### C. Algorithm-specific tuning
-
-- **CR-PPO:** Sweep `complexity_coef` over `[1e-4, 1e-3, 1e-2, 1e-1]` and `cr_n_bins` over `[4, 8, 16]`.
-- **Intentional PPO:**
-  - Fix the single-epoch issue: add the outer `for epoch in range(self.update_epochs)` loop around the intentional minibatch loop.
-  - Sweep `eta_actor` and `eta_critic` over a wider range (e.g., `[1e-3, 1e-2, 1e-1, 1.0]`).
-  - Try disabling CAIS initially and only compare ICU vs. IAU vs. ICU+IAU to isolate the source of benefit.
-- **Baseline:** Run a learning-rate sweep (`1e-4`, `3e-4`, `1e-3`) to ensure the baseline is well-tuned.
-
-### D. Training length and curriculum
-
-- Try 100k–200k steps; the flat learning curves may be a horizon issue.
-- Adjust curriculum stage thresholds. The current gate (50% SR) is never met for `favorable`/`disadvantage`, so the curriculum stays open and may not provide useful staging.
+5. **Intentional PPO scales are very small.** With default `eta_actor=0.01` and `eta_critic=0.1`, the effective per-update scalars are ~`1e-3`–`1e-2`. Combined with 10 epochs, the full ICU+IAU+CAIS configuration can swing between overly conservative and unexpectedly large steps (high variance seen in the hard benchmark).
 
 ---
 
-## 5. Conclusions and Branch Recommendation
+## 5. Updated Tuning Recommendations
+
+To obtain a decisive comparison, the following changes are needed:
+
+### A. Evaluation
+
+- Increase `eval_episodes` to 50+ and add at least 5–10 eval seeds.
+- Report continuous metrics (mean final range, min range, final ATA, return distribution) alongside binary success rate.
+- Add eval-time action noise or domain randomization to make the metric sensitive to small policy differences.
+
+### B. Environment
+
+- Run on **JSBSim** as soon as it is available; the simple backend is too constrained.
+- Add stochastic target maneuvers (e.g., sinusoidal with random phase/frequency) instead of fixed weaving.
+- Avoid 0%/100% per-scenario plateaus by adjusting initial geometries and success thresholds.
+
+### C. Intentional PPO tuning
+
+- **Sweep eta aggressively:** `eta_actor` ∈ `[1e-3, 1e-2, 1e-1, 1.0]`, `eta_critic` ∈ `[1e-2, 1e-1, 1.0, 10.0]`.
+- **Consider removing CAIS initially** and compare ICU-only / IAU-only / ICU+IAU without phase coupling.
+- **Monitor effective step size:** ensure `scale_actor` and `scale_critic` are in a sensible range (e.g., 0.1–10) rather than `1e-3`.
+
+### D. CR-PPO tuning
+
+- Sweep `complexity_coef` over `[1e-4, 1e-3, 1e-2, 1e-1]` and `cr_n_bins` over `[4, 8, 16]`.
+
+---
+
+## 6. Conclusions and Branch Recommendation
 
 ### Track 1: CR-PPO + Curriculum Learning + CEM-GD (`CL_CRPPO_CEMGD`)
 
-- **Status:** Functionally correct and minimally invasive. CR-PPO plugs into the existing PPO update with a single loss-term change.
-- **Verdict:** The branch is **safe but not clearly beneficial** under the current simple-backend benchmark. Keep the code, but CR-PPO should be treated as an optional regularizer until tested on JSBSim or a harder scenario set.
-- **Action:** Do **not** roll back. Merge is acceptable once the smoke tests pass, but do **not** claim a performance win from this benchmark alone.
+- **Status:** Functionally correct, minimally invasive, and stable across both benchmarks.
+- **Verdict:** **Safe but not clearly beneficial** on simple backend. No regression, no statistically significant gain.
+- **Action:** Do **not** roll back. Merge is acceptable, but treat CR-PPO as an optional regularizer, not a default upgrade.
 
 ### Track 2: Intentional PPO + Combat-Aware Schedule (`Intentional_Updates`)
 
-- **Status:** The intentional-update mechanism is working (lower KL/clip fraction prove the scalars are active), but the current implementation has two issues:
-  1. It only performs one epoch per PPO update, unlike the baseline's 10 epochs.
-  2. CAIS requires relative-state info to be passed through `store_transition`, which is now supported but adds coupling.
-- **Verdict:** The branch shows **genuine training-stability differences** but no performance gain here. The missing update-epochs loop is likely a bug that should be fixed before any claim of superiority.
-- **Action:** **Fix the single-epoch issue** and re-run the comparison. If performance still does not improve, consider merging only the ICU/IAU modules as optional utilities rather than the default algorithm.
+- **Status:** The `update_epochs` bug has been fixed. ICU/IAU scalars are active, but the full ICU+IAU+CAIS combination shows **higher update variance** on the harder benchmark. The individual ICU-only and IAU-only ablations are more stable.
+- **Verdict:** Still **no performance advantage** on simple backend. The mechanism is interesting but not yet tuned or proven.
+- **Action:** Do **not** make Intentional PPO the default. Keep it as an optional module. Before merging as default, run the eta sweep and JSBSim comparison recommended above.
 
 ### Overall recommendation
 
-1. **Neither branch demonstrates a clear performance advantage on this benchmark.**
-2. **Both branches are worth preserving** as optional modules because they are well-encapsulated and add no baseline regression.
-3. **The baseline PPO remains the default.** Only switch the default after JSBSim-scale experiments with the tuning changes above show a statistically significant win.
-4. **Immediate next step:** Fix Intentional PPO's update-epochs loop, then run a 5-seed 100k-step comparison on the JSBSIM backend with expanded eval episodes and continuous metrics.
+1. **Neither branch beats the baseline on these benchmarks.**
+2. **Both branches can be preserved** as optional, well-encapsulated modules.
+3. **Baseline PPO remains the default.**
+4. **Next step:** Run the recommended eta sweep and a 5-seed 100k-step JSBSim comparison with expanded, continuous evaluation metrics.
 
 ---
 
-## 6. Artifacts
+## 7. Artifacts
 
-- Main summary: `outputs/method_innovation_compare/summary.md`
-- Main CSV: `outputs/method_innovation_compare/summary.csv`
-- Learning curves: `outputs/method_innovation_compare/learning_curves.png`
-- Stability bars: `outputs/method_innovation_compare/stability_bars.png`
-- Run log: `outputs/method_innovation_compare_run.log`
+- Standard summary: `outputs/method_innovation_compare/summary.md`
+- Standard CSV/plots: `outputs/method_innovation_compare/summary.csv`, `learning_curves.png`, `stability_bars.png`
+- Harder summary: `outputs/method_innovation_compare_hard/summary.md`
+- Harder CSV/plots: `outputs/method_innovation_compare_hard/summary.csv`, `learning_curves.png`, `stability_bars.png`
+- Run logs: `outputs/method_innovation_compare_run.log`, `outputs/method_innovation_compare_hard_run.log`
 - Tuning run log: `outputs/method_innovation_tuning_run.log`

@@ -14,22 +14,19 @@ Usage:
 """
 
 import argparse
-import copy
-import json
 import os
 import subprocess
 import sys
 import time
 from pathlib import Path
 
-import numpy as np
 import yaml
 
 from uav_vpp_guidance.utils.config import load_yaml_config, merge_config
 
 
 BASE_CONFIG = Path("config/method_innovation_comparison.yaml")
-OUTPUT_ROOT = Path("outputs/method_innovation_compare")
+DEFAULT_OUTPUT_ROOT = Path("outputs/method_innovation_compare")
 ALGORITHMS = {
     "baseline": {
         "algorithm": "ppo",
@@ -112,9 +109,9 @@ def build_config(base_path, overrides, total_timesteps=None, seed=0):
     return cfg
 
 
-def run_single(base_path, algo_key, seed, total_timesteps, device, backend):
+def run_single(base_path, output_root, algo_key, seed, total_timesteps, device, backend):
     spec = ALGORITHMS[algo_key]
-    output_dir = OUTPUT_ROOT / algo_key / f"seed{seed}"
+    output_dir = Path(output_root) / algo_key / f"seed{seed}"
     output_dir.mkdir(parents=True, exist_ok=True)
 
     cfg = build_config(base_path, spec["config_overrides"], total_timesteps, seed)
@@ -150,7 +147,10 @@ def main():
     parser.add_argument("--parallel", type=int, default=1, help="Number of parallel workers")
     parser.add_argument("--algos", type=str, default=None, help="Comma-separated algorithm keys to run")
     parser.add_argument("--config", type=str, default=str(BASE_CONFIG))
+    parser.add_argument("--output-root", type=str, default=None)
     args = parser.parse_args()
+
+    output_root = Path(args.output_root) if args.output_root else DEFAULT_OUTPUT_ROOT
 
     algorithms = list(ALGORITHMS.keys())
     if args.algos:
@@ -159,16 +159,16 @@ def main():
             raise ValueError(f"No valid algorithms in {args.algos}")
 
     seed_list = list(range(args.seeds))
-    tasks = [(args.config, algo, seed, args.steps, args.device, args.backend)
+    tasks = [(args.config, str(output_root), algo, seed, args.steps, args.device, args.backend)
              for algo in algorithms for seed in seed_list]
 
     print(f"Running comparison: {algorithms} x {len(seed_list)} seeds x {args.steps} steps")
-    print(f"Output root: {OUTPUT_ROOT}")
+    print(f"Output root: {output_root}")
 
     if args.parallel <= 1:
         failures = 0
-        for cfg_path, algo, seed, steps, device, backend in tasks:
-            rc = run_single(cfg_path, algo, seed, steps, device, backend)
+        for t in tasks:
+            rc = run_single(*t)
             failures += (rc != 0)
     else:
         from concurrent.futures import ProcessPoolExecutor, as_completed

@@ -122,7 +122,10 @@ class IntentionalPPOAgent(PPOAgent):
         """
         Perform an Intentional PPO update.
 
-        Falls back to standard PPO if both intentional flags are disabled.
+        Runs ``self.update_epochs`` passes over the rollout data, reshuffling
+        the minibatches each epoch. Intentional actor/critic scales are
+        recomputed per minibatch. Falls back to standard PPO if both intentional
+        flags are disabled.
         """
         if len(self.buffer) == 0:
             return {}
@@ -159,8 +162,6 @@ class IntentionalPPOAgent(PPOAgent):
             return {}
 
         n = data["obs"].shape[0]
-        indices = np.arange(n)
-        np.random.shuffle(indices)
 
         total_policy_loss = 0.0
         total_value_loss = 0.0
@@ -171,129 +172,133 @@ class IntentionalPPOAgent(PPOAgent):
         total_scale_critic = 0.0
         num_minibatches = 0
 
-        for start in range(0, n, self.minibatch_size):
-            end = min(start + self.minibatch_size, n)
-            batch_idx = indices[start:end]
+        for epoch in range(self.update_epochs):
+            indices = np.arange(n)
+            np.random.shuffle(indices)
 
-            obs_b = data["obs"][batch_idx]
-            actions_b = data["actions"][batch_idx]
-            old_log_probs_b = data["log_probs"][batch_idx]
-            advantages_b = data["advantages"][batch_idx]
-            returns_b = data["returns"][batch_idx]
-            old_values_b = data["values"][batch_idx]
+            for start in range(0, n, self.minibatch_size):
+                end = min(start + self.minibatch_size, n)
+                batch_idx = indices[start:end]
 
-            # Combat-aware eta scales for this batch
-            if use_phase and phase_array is not None:
-                batch_phase = phase_array[batch_idx]
-                scales = self.combat_schedule.get_batch_scales(batch_phase)
-                phase_actor_scale = scales["actor"]
-                phase_critic_scale = scales["critic"]
-            else:
-                phase_actor_scale = 1.0
-                phase_critic_scale = 1.0
+                obs_b = data["obs"][batch_idx]
+                actions_b = data["actions"][batch_idx]
+                old_log_probs_b = data["log_probs"][batch_idx]
+                advantages_b = data["advantages"][batch_idx]
+                returns_b = data["returns"][batch_idx]
+                old_values_b = data["values"][batch_idx]
 
-            # Evaluate actions with current policy
-            new_log_probs_b, entropy_b, new_values_b = self.network.get_action_and_value(
-                obs_b, action=actions_b
-            )
+                # Combat-aware eta scales for this batch
+                if use_phase and phase_array is not None:
+                    batch_phase = phase_array[batch_idx]
+                    scales = self.combat_schedule.get_batch_scales(batch_phase)
+                    phase_actor_scale = scales["actor"]
+                    phase_critic_scale = scales["critic"]
+                else:
+                    phase_actor_scale = 1.0
+                    phase_critic_scale = 1.0
 
-            # Policy loss (clipped surrogate)
-            ratio = torch.exp(new_log_probs_b - old_log_probs_b)
-            surr1 = ratio * advantages_b
-            surr2 = (
-                torch.clamp(ratio, 1.0 - self.clip_coef, 1.0 + self.clip_coef)
-                * advantages_b
-            )
-            policy_loss = -torch.min(surr1, surr2).mean()
-
-            # Value loss (clipped)
-            value_pred_clipped = old_values_b + torch.clamp(
-                new_values_b - old_values_b, -self.clip_coef, self.clip_coef
-            )
-            value_loss1 = (new_values_b - returns_b).pow(2)
-            value_loss2 = (value_pred_clipped - returns_b).pow(2)
-            value_loss = 0.5 * torch.max(value_loss1, value_loss2).mean()
-
-            # ---- Intentional Critic Update (ICU) ----
-            scale_critic = 1.0
-            if self.use_intentional_critic:
-                # Gradient of value predictions w.r.t. network parameters
-                value_grad = torch.autograd.grad(
-                    new_values_b.sum(),
-                    self.network.parameters(),
-                    retain_graph=True,
-                    create_graph=False,
-                    allow_unused=True,
-                )
-                value_grad_norm_sq = self._grad_norm_sq([g for g in value_grad if g is not None])
-
-                td_residual = returns_b - new_values_b
-                eta_critic_eff = (
-                    self.eta_critic
-                    * phase_critic_scale
-                    * td_residual.abs().mean().item()
-                )
-                alpha_v = eta_critic_eff / (value_grad_norm_sq + self.iu_eps)
-                scale_critic = alpha_v / self.lr
-
-            # ---- Intentional Actor Update (IAU) ----
-            scale_actor = 1.0
-            if self.use_intentional_actor:
-                # Gradient of log probabilities w.r.t. network parameters
-                log_prob_grad = torch.autograd.grad(
-                    new_log_probs_b.sum(),
-                    self.network.parameters(),
-                    retain_graph=True,
-                    create_graph=False,
-                    allow_unused=True,
-                )
-                log_prob_grad_norm_sq = self._grad_norm_sq([g for g in log_prob_grad if g is not None])
-
-                adv_abs_mean = advantages_b.abs().mean().item()
-                self.ema_abs_adv = (
-                    self.beta_adv * self.ema_abs_adv
-                    + (1.0 - self.beta_adv) * adv_abs_mean
-                )
-                adv_norm = adv_abs_mean / (self.ema_abs_adv + self.iu_eps)
-
-                eta_actor_eff = (
-                    self.eta_actor * phase_actor_scale * adv_norm
-                )
-                alpha_pi = eta_actor_eff / (log_prob_grad_norm_sq + self.iu_eps)
-                scale_actor = alpha_pi / self.lr
-
-            # Total loss with scaled actor/critic terms
-            entropy = entropy_b.mean()
-            loss = (
-                scale_actor * policy_loss
-                + scale_critic * self.value_coef * value_loss
-                - scale_actor * self.entropy_coef * entropy
-            )
-
-            # Optimization step
-            self.optimizer.zero_grad()
-            loss.backward()
-            nn.utils.clip_grad_norm_(self.network.parameters(), self.max_grad_norm)
-            self.optimizer.step()
-
-            # Stats
-            with torch.no_grad():
-                approx_kl = ((ratio - 1.0) - torch.log(ratio + 1e-8)).mean().item()
-                clip_fraction = (
-                    (abs(ratio - 1.0) > self.clip_coef).float().mean().item()
-                )
-                explained_var = 1.0 - torch.var(returns_b - new_values_b) / (
-                    torch.var(returns_b) + 1e-8
+                # Evaluate actions with current policy
+                new_log_probs_b, entropy_b, new_values_b = self.network.get_action_and_value(
+                    obs_b, action=actions_b
                 )
 
-            total_policy_loss += policy_loss.item()
-            total_value_loss += value_loss.item()
-            total_entropy += entropy.item()
-            total_approx_kl += approx_kl
-            total_clip_fraction += clip_fraction
-            total_scale_actor += scale_actor
-            total_scale_critic += scale_critic
-            num_minibatches += 1
+                # Policy loss (clipped surrogate)
+                ratio = torch.exp(new_log_probs_b - old_log_probs_b)
+                surr1 = ratio * advantages_b
+                surr2 = (
+                    torch.clamp(ratio, 1.0 - self.clip_coef, 1.0 + self.clip_coef)
+                    * advantages_b
+                )
+                policy_loss = -torch.min(surr1, surr2).mean()
+
+                # Value loss (clipped)
+                value_pred_clipped = old_values_b + torch.clamp(
+                    new_values_b - old_values_b, -self.clip_coef, self.clip_coef
+                )
+                value_loss1 = (new_values_b - returns_b).pow(2)
+                value_loss2 = (value_pred_clipped - returns_b).pow(2)
+                value_loss = 0.5 * torch.max(value_loss1, value_loss2).mean()
+
+                # ---- Intentional Critic Update (ICU) ----
+                scale_critic = 1.0
+                if self.use_intentional_critic:
+                    # Gradient of value predictions w.r.t. network parameters
+                    value_grad = torch.autograd.grad(
+                        new_values_b.sum(),
+                        self.network.parameters(),
+                        retain_graph=True,
+                        create_graph=False,
+                        allow_unused=True,
+                    )
+                    value_grad_norm_sq = self._grad_norm_sq([g for g in value_grad if g is not None])
+
+                    td_residual = returns_b - new_values_b
+                    eta_critic_eff = (
+                        self.eta_critic
+                        * phase_critic_scale
+                        * td_residual.abs().mean().item()
+                    )
+                    alpha_v = eta_critic_eff / (value_grad_norm_sq + self.iu_eps)
+                    scale_critic = alpha_v / self.lr
+
+                # ---- Intentional Actor Update (IAU) ----
+                scale_actor = 1.0
+                if self.use_intentional_actor:
+                    # Gradient of log probabilities w.r.t. network parameters
+                    log_prob_grad = torch.autograd.grad(
+                        new_log_probs_b.sum(),
+                        self.network.parameters(),
+                        retain_graph=True,
+                        create_graph=False,
+                        allow_unused=True,
+                    )
+                    log_prob_grad_norm_sq = self._grad_norm_sq([g for g in log_prob_grad if g is not None])
+
+                    adv_abs_mean = advantages_b.abs().mean().item()
+                    self.ema_abs_adv = (
+                        self.beta_adv * self.ema_abs_adv
+                        + (1.0 - self.beta_adv) * adv_abs_mean
+                    )
+                    adv_norm = adv_abs_mean / (self.ema_abs_adv + self.iu_eps)
+
+                    eta_actor_eff = (
+                        self.eta_actor * phase_actor_scale * adv_norm
+                    )
+                    alpha_pi = eta_actor_eff / (log_prob_grad_norm_sq + self.iu_eps)
+                    scale_actor = alpha_pi / self.lr
+
+                # Total loss with scaled actor/critic terms
+                entropy = entropy_b.mean()
+                loss = (
+                    scale_actor * policy_loss
+                    + scale_critic * self.value_coef * value_loss
+                    - scale_actor * self.entropy_coef * entropy
+                )
+
+                # Optimization step
+                self.optimizer.zero_grad()
+                loss.backward()
+                nn.utils.clip_grad_norm_(self.network.parameters(), self.max_grad_norm)
+                self.optimizer.step()
+
+                # Stats
+                with torch.no_grad():
+                    approx_kl = ((ratio - 1.0) - torch.log(ratio + 1e-8)).mean().item()
+                    clip_fraction = (
+                        (abs(ratio - 1.0) > self.clip_coef).float().mean().item()
+                    )
+                    explained_var = 1.0 - torch.var(returns_b - new_values_b) / (
+                        torch.var(returns_b) + 1e-8
+                    )
+
+                total_policy_loss += policy_loss.item()
+                total_value_loss += value_loss.item()
+                total_entropy += entropy.item()
+                total_approx_kl += approx_kl
+                total_clip_fraction += clip_fraction
+                total_scale_actor += scale_actor
+                total_scale_critic += scale_critic
+                num_minibatches += 1
 
         self.total_updates += 1
         self.buffer.clear()

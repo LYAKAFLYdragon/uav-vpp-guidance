@@ -12,7 +12,7 @@ import numpy as np
 from scipy import stats
 
 
-ROOT = Path("outputs/method_innovation_compare")
+DEFAULT_ROOT = Path("outputs/method_innovation_compare")
 ALGORITHMS = {
     "baseline": "Baseline PPO",
     "cr_ppo": "CR-PPO",
@@ -250,7 +250,19 @@ def plot_stability_bars(summary):
     print(f"Saved {path}")
 
 
+def _parse_args():
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--output-root", type=str, default=None)
+    args = parser.parse_args()
+    if args.output_root:
+        global ROOT
+        ROOT = Path(args.output_root)
+    return args
+
+
 def main():
+    _parse_args()
     ROOT.mkdir(parents=True, exist_ok=True)
     summary = {}
     for key in ALGORITHMS:

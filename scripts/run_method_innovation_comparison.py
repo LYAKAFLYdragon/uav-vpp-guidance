@@ -93,15 +93,27 @@ ALGORITHMS = {
 }
 
 
-def build_config(base_path, overrides, total_timesteps=None, seed=0):
-    base = load_yaml_config(str(base_path))
-    includes = base.pop("includes", [])
+def _load_config_recursive(path, visited=None):
+    """Load a YAML config and recursively resolve its ``includes``."""
+    if visited is None:
+        visited = set()
+    path = Path(path).resolve()
+    if path in visited:
+        raise ValueError(f"Cyclic include detected: {path}")
+    visited.add(path)
+
+    cfg = load_yaml_config(str(path))
+    includes = cfg.pop("includes", [])
     merged = {}
     for inc in includes:
-        inc_full = Path(base_path).parent / inc
+        inc_full = path.parent / inc
         if inc_full.exists():
-            merged = merge_config(merged, load_yaml_config(str(inc_full)))
-    cfg = merge_config(merged, base)
+            merged = merge_config(merged, _load_config_recursive(inc_full, visited))
+    return merge_config(merged, cfg)
+
+
+def build_config(base_path, overrides, total_timesteps=None, seed=0):
+    cfg = _load_config_recursive(base_path)
     cfg = merge_config(cfg, overrides)
     if total_timesteps is not None:
         cfg.setdefault("ppo", {})["total_timesteps"] = total_timesteps

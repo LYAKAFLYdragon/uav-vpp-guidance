@@ -1,0 +1,7 @@
+# Base config for Intentional PPO eta sweep.
+# The grid values are applied by scripts/run_method_innovation_tuning.py.
+includes:
+  - method_innovation_comparison.yaml
+
+experiment:
+  name: method_innovation_tuning_eta

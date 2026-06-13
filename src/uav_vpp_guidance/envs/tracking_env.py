@@ -30,6 +30,7 @@ from ..guidance.overload_rollrate import CommandPostProcessor
 from ..guidance.gain_config import GuidanceGains
 from ..flight_control.command_limiter import clip_command
 from ..flight_control.command_filter import MultiChannelCommandFilter
+from ..flight_control.actuator_dynamics import ActuatorDynamics
 from ..flight_control.low_level_controller import LowLevelController
 from ..trajectory_prediction import (
     TrajectoryPredictorAdapter,
@@ -196,6 +197,15 @@ class CloseRangeTrackingEnv:
             **config.get("guidance", {}).get("gains", {})
         )
 
+        # Actuator dynamics model (lag / delay / rate limit / saturation).
+        # Placed after the command filter and before the backend step so it is
+        # shared by simple and JSBSim backends.
+        actuator_config = config.get("actuator_dynamics", {})
+        self._actuator_dynamics = ActuatorDynamics(
+            actuator_config,
+            dt=self.env_config.get("high_level_dt", 1.0 / self.decision_freq),
+        )
+
         # Trajectory prediction adapter
         self.trajectory_predictor_adapter = None
         self._predictor_init_failed = False
@@ -261,6 +271,7 @@ class CloseRangeTrackingEnv:
             self._guidance_pn.reset()
         self._mode_switch_latched = False
         self._command_filter.reset()
+        self._actuator_dynamics.reset()
         if self._low_level_controller is not None:
             self._low_level_controller.reset()
 
@@ -691,12 +702,15 @@ class CloseRangeTrackingEnv:
         clipped_command = clip_command(raw_command, limits)
         filtered_command = self._apply_command_filter(clipped_command)
 
+        # 6b. Actuator dynamics (lag / delay / rate limit / saturation)
+        actuated_command = self._actuator_dynamics.step(filtered_command)
+
         # 7. 环境 step
         actuator_info = {}
         if self._backend == "jsbsim":
-            actuator_info = self._step_jsbsim(filtered_command)
+            actuator_info = self._step_jsbsim(actuated_command)
         else:
-            self._step_simple(filtered_command)
+            self._step_simple(actuated_command)
 
         # 8. 获取 step 后的新状态（post-step）
         own_state_post, target_state_post = self._get_current_states()
@@ -748,6 +762,7 @@ class CloseRangeTrackingEnv:
         info = {
             "virtual_point": _serialize_vp(virtual_point),
             "guidance_command": filtered_command,
+            "actuated_command": actuated_command,
             "raw_command": raw_command,
             "reward_terms": reward_terms,
             "termination_info": term_info,

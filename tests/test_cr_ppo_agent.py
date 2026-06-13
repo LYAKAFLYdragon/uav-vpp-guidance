@@ -6,7 +6,7 @@ import numpy as np
 import pytest
 import torch
 
-from uav_vpp_guidance.agents.cr_ppo_agent import CRPPOAgent
+from uav_vpp_guidance.ablations.cr_ppo.cr_ppo_agent import CRPPOAgent
 
 
 class TestCRPPOAgent:

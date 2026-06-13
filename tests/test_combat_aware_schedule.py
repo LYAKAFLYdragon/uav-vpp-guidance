@@ -5,7 +5,7 @@ Tests for the combat-aware intentional update schedule.
 import numpy as np
 import pytest
 
-from uav_vpp_guidance.training.combat_aware_schedule import CombatAwareSchedule
+from uav_vpp_guidance.ablations.cais_only.combat_aware_schedule import CombatAwareSchedule
 
 
 class TestCombatAwareSchedule:

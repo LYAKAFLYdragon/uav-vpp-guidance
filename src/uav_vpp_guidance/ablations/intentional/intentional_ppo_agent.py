@@ -23,8 +23,8 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from .ppo_agent import PPOAgent
-from ..training.combat_aware_schedule import CombatAwareSchedule
+from ...agents.ppo_agent import PPOAgent
+from ..cais_only.combat_aware_schedule import CombatAwareSchedule
 
 
 class IntentionalPPOAgent(PPOAgent):

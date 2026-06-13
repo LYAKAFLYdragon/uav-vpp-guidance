@@ -5,7 +5,7 @@ Tests for the Intentional Updates PPO agent.
 import numpy as np
 import pytest
 
-from uav_vpp_guidance.agents.intentional_ppo_agent import IntentionalPPOAgent
+from uav_vpp_guidance.ablations.intentional.intentional_ppo_agent import IntentionalPPOAgent
 
 
 class TestIntentionalPPOAgent:

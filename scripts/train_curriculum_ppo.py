@@ -25,8 +25,8 @@ from uav_vpp_guidance.utils.seed import set_seed
 from uav_vpp_guidance.utils.swanlab_logger import SwanLabLogger
 from uav_vpp_guidance.envs.tracking_env import CloseRangeTrackingEnv
 from uav_vpp_guidance.agents.ppo_agent import PPOAgent
-from uav_vpp_guidance.agents.cr_ppo_agent import CRPPOAgent
-from uav_vpp_guidance.agents.intentional_ppo_agent import IntentionalPPOAgent
+from uav_vpp_guidance.ablations.cr_ppo.cr_ppo_agent import CRPPOAgent
+from uav_vpp_guidance.ablations.intentional.intentional_ppo_agent import IntentionalPPOAgent
 
 
 def load_experiment_config(config_path):

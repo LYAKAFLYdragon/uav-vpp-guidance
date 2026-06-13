@@ -18,7 +18,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from .ppo_agent import PPOAgent
+from ...agents.ppo_agent import PPOAgent
 
 
 class CRPPOAgent(PPOAgent):

@@ -85,6 +85,22 @@ class LOSRateGuidance:
         self.epsilon = float(params.get("epsilon", EPS))
         self.base_nz = float(params.get("base_nz", 1.0))
         self.capture_radius_m = float(params.get("capture_radius_m", 50.0))
+
+        # Terminal boundary layer: smoothly suppress high-gain LOS commands
+        # near the virtual point to avoid collision-singularity driven OOB/crash.
+        tbl = params.get("terminal_boundary_layer", {})
+        self.tbl_enabled = bool(tbl.get("enabled", False))
+        self.tbl_R_dead_m = float(tbl.get("R_dead_m", 500.0))
+        self.tbl_blend_scale = float(tbl.get("blend_scale", 125.0))
+        if self.tbl_enabled and self.tbl_R_dead_m <= 0.0:
+            raise ValueError(
+                f"terminal_boundary_layer.R_dead_m must be positive, got {self.tbl_R_dead_m}"
+            )
+        if self.tbl_enabled and self.tbl_blend_scale <= 0.0:
+            raise ValueError(
+                f"terminal_boundary_layer.blend_scale must be positive, got {self.tbl_blend_scale}"
+            )
+
         self.enable_internal_clip = bool(params.get("enable_internal_clip", True))
         self.enable_internal_filter = bool(params.get("enable_internal_filter", False))
         self.alpha_filter = float(gains.get("alpha_filter", 0.3))
@@ -186,11 +202,17 @@ class LOSRateGuidance:
 
         # 1. Heading error -> roll_rate_cmd
         heading_error = _stable_angle_diff(los_heading, own_heading)
-        current_roll = float(own_state.get("roll_rad", 0.0))
-        roll_rate_cmd = k_roll * heading_error - k_damp * current_roll
 
         # 2. Elevation -> nz_cmd (using arctan2 for stability)
         los_elevation = self._compute_stable_elevation(rel_pos, d_safe)
+
+        # 2b. Terminal boundary layer: suppress LOS-rate terms near VPP
+        sigma = self._compute_terminal_blend(distance)
+        heading_error *= sigma
+        los_elevation *= sigma
+
+        current_roll = float(own_state.get("roll_rad", 0.0))
+        roll_rate_cmd = k_roll * heading_error - k_damp * current_roll
         nz_cmd = self._compute_nz_cmd(los_elevation, distance, k_los, k_pos)
 
         # 3. Speed / throttle
@@ -320,6 +342,20 @@ class LOSRateGuidance:
         d_horiz = float(np.linalg.norm(rel_pos[:2]))
         # arctan2(y, x) where y = vertical, x = horizontal
         return float(np.arctan2(rel_pos[2], max(d_horiz, self.epsilon)))
+
+    def _compute_terminal_blend(self, distance: float) -> float:
+        """
+        Smooth blending factor for terminal boundary-layer protection.
+
+        Returns 1.0 far from the VPP and decreases to ~0.0 inside R_dead_m.
+        When disabled, always returns 1.0.
+        """
+        if not self.tbl_enabled:
+            return 1.0
+        if distance <= 0.0:
+            return 0.0
+        arg = (distance - self.tbl_R_dead_m / 2.0) / self.tbl_blend_scale
+        return float(0.5 * (1.0 + np.tanh(arg)))
 
     def _compute_nz_cmd(
         self,

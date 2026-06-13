@@ -403,6 +403,89 @@ class TestLOSRateGuidance:
             guidance.compute_command("not_a_dict", None, {"position_m": np.zeros(3)})
 
     # ------------------------------------------------------------------
+    # Terminal boundary layer
+    # ------------------------------------------------------------------
+
+    def test_terminal_boundary_layer_disabled_by_default(self):
+        guidance = LOSRateGuidance(config={})
+        assert guidance.tbl_enabled is False
+        assert guidance._compute_terminal_blend(50.0) == pytest.approx(1.0)
+
+    def test_terminal_boundary_layer_blend_shape(self):
+        config = {
+            "params": {
+                "terminal_boundary_layer": {
+                    "enabled": True,
+                    "R_dead_m": 500.0,
+                    "blend_scale": 125.0,
+                }
+            }
+        }
+        guidance = LOSRateGuidance(config=config)
+        assert guidance.tbl_enabled is True
+        # Far away -> full command
+        assert guidance._compute_terminal_blend(2000.0) == pytest.approx(1.0, abs=1e-3)
+        # At R_dead/2 -> 0.5
+        assert guidance._compute_terminal_blend(250.0) == pytest.approx(0.5, abs=1e-3)
+        # Very close -> near 0
+        assert guidance._compute_terminal_blend(0.0) == pytest.approx(0.0, abs=1e-9)
+        assert guidance._compute_terminal_blend(1.0) < 0.05
+
+    def test_terminal_boundary_layer_suppresses_commands(self):
+        config = {
+            "params": {
+                "terminal_boundary_layer": {
+                    "enabled": True,
+                    "R_dead_m": 500.0,
+                    "blend_scale": 125.0,
+                }
+            }
+        }
+        guidance = LOSRateGuidance(config=config)
+        gains = GuidanceGains(k_roll=2.0, k_los=2.0)
+        own_state = {
+            "position_m": np.array([0.0, 0.0, 5000.0]),
+            "velocity_vector_mps": np.array([200.0, 0.0, 0.0]),
+            "roll_rad": 0.0,
+        }
+        # VP to the right and above, close enough to trigger boundary layer
+        virtual_point_close = {"position_m": np.array([10.0, 200.0, 5100.0])}
+        cmd_close = guidance.compute_command(own_state, None, virtual_point_close, gains)
+
+        guidance.reset()
+        # Same direction but far away -> should produce larger commands
+        virtual_point_far = {"position_m": np.array([1000.0, 20000.0, 6000.0])}
+        cmd_far = guidance.compute_command(own_state, None, virtual_point_far, gains)
+
+        assert abs(cmd_close["roll_rate_cmd"]) < abs(cmd_far["roll_rate_cmd"])
+        assert cmd_close["nz_cmd"] < cmd_far["nz_cmd"]
+
+    def test_terminal_boundary_layer_invalid_config(self):
+        with pytest.raises(ValueError, match="R_dead_m must be positive"):
+            LOSRateGuidance(
+                config={
+                    "params": {
+                        "terminal_boundary_layer": {
+                            "enabled": True,
+                            "R_dead_m": 0.0,
+                        }
+                    }
+                }
+            )
+        with pytest.raises(ValueError, match="blend_scale must be positive"):
+            LOSRateGuidance(
+                config={
+                    "params": {
+                        "terminal_boundary_layer": {
+                            "enabled": True,
+                            "R_dead_m": 500.0,
+                            "blend_scale": 0.0,
+                        }
+                    }
+                }
+            )
+
+    # ------------------------------------------------------------------
     # Config loading
     # ------------------------------------------------------------------
 
@@ -418,6 +501,7 @@ class TestLOSRateGuidance:
         assert "target_speed_mps" in params
         assert "epsilon" in params
         assert "capture_radius_m" in params
+        assert "terminal_boundary_layer" in params
         assert "enable_internal_clip" in params
         assert "enable_internal_filter" in params
         assert "limits" in config["guidance"]

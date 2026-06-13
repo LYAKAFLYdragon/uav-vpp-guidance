@@ -50,6 +50,12 @@ def sample_scenario(config, rng):
 def run_evaluation(env, agent, config, num_episodes=10, seeds=None, save_trajectories=False, output_dir=None):
     if seeds is None:
         seeds = [0, 1, 2]
+
+    # Success range for time-to-first-contact metric
+    term_cfg = config.get("termination", config.get("env", {}))
+    success_range_m = float(term_cfg.get("success_range_m", 900.0))
+    high_level_dt = float(config.get("env", {}).get("high_level_dt", 0.2))
+
     all_episodes = []
     for seed in seeds:
         for ep in range(num_episodes):
@@ -62,7 +68,11 @@ def run_evaluation(env, agent, config, num_episodes=10, seeds=None, save_traject
             min_range = float("inf")
             final_range = 0.0
             final_ata = 0.0
+            first_contact_step = None
             reason = "timeout"
+            control_effort = 0.0
+            command_smoothness = 0.0
+            prev_cmd = None
             for step in range(env.max_steps):
                 obs_vec = obs["observation_vector"]
                 action = agent.get_deterministic_action(obs_vec)
@@ -75,6 +85,27 @@ def run_evaluation(env, agent, config, num_episodes=10, seeds=None, save_traject
                 min_range = min(min_range, range_m)
                 final_range = range_m
                 final_ata = ata_deg
+                if first_contact_step is None and range_m <= success_range_m:
+                    first_contact_step = step
+
+                # Control effort and smoothness from actuated command
+                cmd = info.get("actuated_command", info.get("guidance_command", {}))
+                if cmd:
+                    vec = np.array([
+                        cmd.get("nz_cmd", 0.0),
+                        cmd.get("roll_rate_cmd", 0.0),
+                        cmd.get("throttle_cmd", 0.0),
+                    ], dtype=np.float64)
+                    control_effort += float(np.linalg.norm(vec))
+                    if prev_cmd is not None:
+                        delta = np.array([
+                            cmd.get("nz_cmd", 0.0) - prev_cmd.get("nz_cmd", 0.0),
+                            cmd.get("roll_rate_cmd", 0.0) - prev_cmd.get("roll_rate_cmd", 0.0),
+                            cmd.get("throttle_cmd", 0.0) - prev_cmd.get("throttle_cmd", 0.0),
+                        ], dtype=np.float64)
+                        command_smoothness += float(np.linalg.norm(delta))
+                    prev_cmd = dict(cmd)
+
                 if terminated or truncated:
                     reason = info.get("reason", "unknown")
                     break
@@ -82,6 +113,11 @@ def run_evaluation(env, agent, config, num_episodes=10, seeds=None, save_traject
                 "seed": seed, "episode": ep, "return": ep_reward,
                 "length": ep_length, "min_range_m": min_range,
                 "final_range_m": final_range, "final_ata_deg": final_ata,
+                "time_to_first_contact_s": (
+                    first_contact_step * high_level_dt if first_contact_step is not None else np.nan
+                ),
+                "control_effort": control_effort,
+                "command_smoothness": command_smoothness,
                 "reason": reason,
                 "is_success": reason == "success",
                 "is_crash": reason == "crash",
@@ -95,6 +131,14 @@ def run_evaluation(env, agent, config, num_episodes=10, seeds=None, save_traject
     timeout_count = sum(1 for e in all_episodes if e["is_timeout"])
     returns = [e["return"] for e in all_episodes]
 
+    def _mean(vals):
+        clean = [v for v in vals if np.isfinite(v)]
+        return float(np.mean(clean)) if clean else np.nan
+
+    def _std(vals):
+        clean = [v for v in vals if np.isfinite(v)]
+        return float(np.std(clean, ddof=1)) if len(clean) > 1 else 0.0
+
     return {
         "num_episodes": len(all_episodes),
         "mean_return": float(np.mean(returns)) if returns else 0.0,
@@ -103,6 +147,16 @@ def run_evaluation(env, agent, config, num_episodes=10, seeds=None, save_traject
         "crash_rate": crash_count / max(1, len(all_episodes)),
         "out_of_bounds_rate": oob_count / max(1, len(all_episodes)),
         "timeout_rate": timeout_count / max(1, len(all_episodes)),
+        # Continuous metrics
+        "mean_final_range_m": _mean([e["final_range_m"] for e in all_episodes]),
+        "std_final_range_m": _std([e["final_range_m"] for e in all_episodes]),
+        "mean_min_range_m": _mean([e["min_range_m"] for e in all_episodes]),
+        "std_min_range_m": _std([e["min_range_m"] for e in all_episodes]),
+        "mean_final_ata_deg": _mean([e["final_ata_deg"] for e in all_episodes]),
+        "std_final_ata_deg": _std([e["final_ata_deg"] for e in all_episodes]),
+        "mean_time_to_first_contact_s": _mean([e["time_to_first_contact_s"] for e in all_episodes]),
+        "mean_control_effort": _mean([e["control_effort"] for e in all_episodes]),
+        "mean_command_smoothness": _mean([e["command_smoothness"] for e in all_episodes]),
     }
 
 
@@ -215,6 +269,11 @@ def train_ppo_curriculum(config, output_dir, smoke=False, algorithm="ppo"):
         eval_writer = csv.DictWriter(f_eval, fieldnames=[
             "step", "num_episodes", "mean_return", "std_return",
             "success_rate", "crash_rate", "out_of_bounds_rate", "timeout_rate",
+            "mean_final_range_m", "std_final_range_m",
+            "mean_min_range_m", "std_min_range_m",
+            "mean_final_ata_deg", "std_final_ata_deg",
+            "mean_time_to_first_contact_s",
+            "mean_control_effort", "mean_command_smoothness",
         ])
         eval_writer.writeheader()
 
@@ -341,6 +400,15 @@ def train_ppo_curriculum(config, output_dir, smoke=False, algorithm="ppo"):
                     "crash_rate": eval_metrics["crash_rate"],
                     "out_of_bounds_rate": eval_metrics["out_of_bounds_rate"],
                     "timeout_rate": eval_metrics["timeout_rate"],
+                    "mean_final_range_m": eval_metrics.get("mean_final_range_m", np.nan),
+                    "std_final_range_m": eval_metrics.get("std_final_range_m", np.nan),
+                    "mean_min_range_m": eval_metrics.get("mean_min_range_m", np.nan),
+                    "std_min_range_m": eval_metrics.get("std_min_range_m", np.nan),
+                    "mean_final_ata_deg": eval_metrics.get("mean_final_ata_deg", np.nan),
+                    "std_final_ata_deg": eval_metrics.get("std_final_ata_deg", np.nan),
+                    "mean_time_to_first_contact_s": eval_metrics.get("mean_time_to_first_contact_s", np.nan),
+                    "mean_control_effort": eval_metrics.get("mean_control_effort", np.nan),
+                    "mean_command_smoothness": eval_metrics.get("mean_command_smoothness", np.nan),
                 })
                 f_eval.flush()
                 print(

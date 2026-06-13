@@ -54,6 +54,67 @@ def compute_timeout_rate(outcomes):
     return sum(1 for o in outcomes if o == "timeout") / len(outcomes)
 
 
+def _safe_mean(values):
+    """Compute mean ignoring NaN/Inf; return NaN if no finite values."""
+    clean = [v for v in values if np.isfinite(v)]
+    return float(np.mean(clean)) if clean else float("nan")
+
+
+def _safe_std(values, ddof=1):
+    """Compute sample std ignoring NaN/Inf; return 0.0 if insufficient data."""
+    clean = [v for v in values if np.isfinite(v)]
+    return float(np.std(clean, ddof=ddof)) if len(clean) > 1 else 0.0
+
+
+def compute_continuous_metrics(episodes):
+    """
+    Compute continuous evaluation metrics from a list of episode dicts.
+
+    Expected episode keys (all optional):
+        - final_range_m
+        - min_range_m
+        - final_ata_deg
+        - time_to_first_contact_s
+        - control_effort
+        - command_smoothness
+        - return
+        - length
+
+    Returns:
+        dict: Aggregated continuous metrics with mean and std where applicable.
+    """
+    def _collect(key):
+        return [float(ep.get(key, float("nan"))) for ep in episodes]
+
+    final_ranges = _collect("final_range_m")
+    min_ranges = _collect("min_range_m")
+    final_atas = _collect("final_ata_deg")
+    ttfc = _collect("time_to_first_contact_s")
+    control_effort = _collect("control_effort")
+    smoothness = _collect("command_smoothness")
+    returns = _collect("return")
+    lengths = _collect("length")
+
+    return {
+        "mean_final_range_m": _safe_mean(final_ranges),
+        "std_final_range_m": _safe_std(final_ranges),
+        "mean_min_range_m": _safe_mean(min_ranges),
+        "std_min_range_m": _safe_std(min_ranges),
+        "mean_final_ata_deg": _safe_mean(final_atas),
+        "std_final_ata_deg": _safe_std(final_atas),
+        "mean_time_to_first_contact_s": _safe_mean(ttfc),
+        "std_time_to_first_contact_s": _safe_std(ttfc),
+        "mean_control_effort": _safe_mean(control_effort),
+        "std_control_effort": _safe_std(control_effort),
+        "mean_command_smoothness": _safe_mean(smoothness),
+        "std_command_smoothness": _safe_std(smoothness),
+        "mean_return": _safe_mean(returns),
+        "std_return": _safe_std(returns),
+        "mean_length": _safe_mean(lengths),
+        "std_length": _safe_std(lengths),
+    }
+
+
 def compute_success_rate_with_ci(episodes, ci=0.95):
     """
     Compute success rate with bootstrap confidence interval.

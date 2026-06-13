@@ -32,6 +32,10 @@ SEED_GLOB = [0, 1, 2, 3, 4]
 EVAL_METRICS = [
     "mean_return", "success_rate", "crash_rate",
     "out_of_bounds_rate", "timeout_rate",
+    # Continuous metrics
+    "mean_final_range_m", "mean_min_range_m",
+    "mean_final_ata_deg", "mean_time_to_first_contact_s",
+    "mean_control_effort", "mean_command_smoothness",
 ]
 UPDATE_METRICS_COMMON = [
     "policy_loss", "value_loss", "entropy",
@@ -306,6 +310,25 @@ def main():
         )
 
     md_lines.append("")
+    md_lines.append("## Continuous Evaluation Metrics")
+    md_lines.append("")
+    md_lines.append("| Algorithm | Final Range (m) | Min Range (m) | Final ATA (°) | Time-to-Contact (s) | Control Effort | Command Smoothness |")
+    md_lines.append("|-----------|-----------------|---------------|---------------|---------------------|----------------|--------------------|")
+    for key in ALGORITHMS:
+        if key not in summary:
+            continue
+        s = summary[key]
+        md_lines.append(
+            "| " + s['name'] + " | "
+            + f"{s.get('mean_final_range_m_mean', np.nan):.1f}+-{s.get('mean_final_range_m_std', 0):.1f} | "
+            + f"{s.get('mean_min_range_m_mean', np.nan):.1f}+-{s.get('mean_min_range_m_std', 0):.1f} | "
+            + f"{s.get('mean_final_ata_deg_mean', np.nan):.1f}+-{s.get('mean_final_ata_deg_std', 0):.1f} | "
+            + f"{s.get('mean_time_to_first_contact_s_mean', np.nan):.1f}+-{s.get('mean_time_to_first_contact_s_std', 0):.1f} | "
+            + f"{s.get('mean_control_effort_mean', np.nan):.1f}+-{s.get('mean_control_effort_std', 0):.1f} | "
+            + f"{s.get('mean_command_smoothness_mean', np.nan):.2f}+-{s.get('mean_command_smoothness_std', 0):.2f} |"
+        )
+
+    md_lines.append("")
     md_lines.append("## Stability Metrics (training update logs)")
     md_lines.append("")
     md_lines.append("| Algorithm | Policy Loss | Value Loss | Approx KL | Clip Fraction | Explained Var |")
@@ -359,6 +382,31 @@ def main():
             + f"{s.get('ttest_success_rate_t', np.nan):.3f} | "
             + f"{p:.4f} | {sig} |"
         )
+
+    # Pairwise t-tests on key continuous metrics
+    for metric in ["mean_min_range_m", "mean_final_range_m", "mean_control_effort"]:
+        for key in ALGORITHMS:
+            if key == baseline or key not in summary:
+                continue
+            t, p = ttest_pair(baseline, key, metric=metric)
+            summary[key][f"ttest_{metric}_t"] = t
+            summary[key][f"ttest_{metric}_p"] = p
+        md_lines.append("")
+        md_lines.append(f"## Pairwise t-test vs Baseline ({metric})")
+        md_lines.append("")
+        md_lines.append("| Algorithm | t-statistic | p-value | Significant (p<0.05) |")
+        md_lines.append("|-----------|-------------|---------|----------------------|")
+        for key in ALGORITHMS:
+            if key == baseline or key not in summary:
+                continue
+            s = summary[key]
+            p = s.get(f"ttest_{metric}_p", np.nan)
+            sig = "yes" if not np.isnan(p) and p < 0.05 else "no"
+            md_lines.append(
+                "| " + s['name'] + " | "
+                + f"{s.get(f'ttest_{metric}_t', np.nan):.3f} | "
+                + f"{p:.4f} | {sig} |"
+            )
 
     md_text = "\n".join(md_lines)
     print(md_text)

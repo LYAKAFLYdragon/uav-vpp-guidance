@@ -34,6 +34,12 @@ guidance:
     base_nz: 1.0
     # Capture radius: when distance to VPP is below this, blend to level flight
     capture_radius_m: 50.0
+    # Terminal boundary layer: suppress high-gain LOS commands near the VPP
+    # to avoid the collision singularity (R -> 0) in crossing geometries.
+    terminal_boundary_layer:
+      enabled: true
+      R_dead_m: 500.0
+      blend_scale: 125.0
     # Internal clipping guard (defense in depth)
     enable_internal_clip: true
     # Internal first-order filter (disable if caller already filters)

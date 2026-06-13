@@ -73,6 +73,21 @@ limits:
   throttle_min: 0.0
   throttle_max: 1.0
 
+# Actuator dynamics: injects lag / delay / rate limits between guidance
+# command and aircraft dynamics.
+actuator_dynamics:
+  enabled: true
+  tau_s:
+    nz_cmd: 0.2
+    roll_rate_cmd: 0.15
+    throttle_cmd: 0.1
+  delay_steps: 1
+  rate_limit_per_s:
+    nz_cmd: 35.0
+    roll_rate_cmd: 7.5
+    throttle_cmd: 2.0
+  apply_saturation: true
+
 reward:
   w_range: 0.5
   w_angle: 0.8
@@ -84,6 +99,10 @@ reward:
   terminal_failure: -200.0
   terminal_crash: -300.0
   min_altitude_m: 500.0
+  potential_based_shaping:
+    enabled: true
+    C: 0.001
+    gamma: 0.99
 
 policy:
   type: mlp

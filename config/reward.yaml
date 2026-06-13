@@ -20,3 +20,9 @@ reward:
   terminal_success: 200.0
   terminal_failure: -200.0
   terminal_crash: -300.0
+  # Potential-based reward shaping: dense distance-gradient signal to break
+  # sparse-reward plateaus in the quasi-realistic backend.
+  potential_based_shaping:
+    enabled: true
+    C: 0.001
+    gamma: 0.99

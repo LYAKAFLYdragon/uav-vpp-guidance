@@ -22,6 +22,7 @@ import numpy as np
 
 from uav_vpp_guidance.utils.config import load_yaml_config, merge_config
 from uav_vpp_guidance.utils.seed import set_seed
+from uav_vpp_guidance.utils.swanlab_logger import SwanLabLogger
 from uav_vpp_guidance.envs.tracking_env import CloseRangeTrackingEnv
 from uav_vpp_guidance.agents.ppo_agent import PPOAgent
 from uav_vpp_guidance.agents.cr_ppo_agent import CRPPOAgent
@@ -198,7 +199,7 @@ DEFAULT_CURRICULUM = [
 ]
 
 
-def train_ppo_curriculum(config, output_dir, smoke=False, algorithm="ppo"):
+def train_ppo_curriculum(config, output_dir, smoke=False, algorithm="ppo", swanlab_logger=None):
     checkpoint_dir = os.path.join(output_dir, "checkpoints")
     log_dir = os.path.join(output_dir, "logs")
     os.makedirs(checkpoint_dir, exist_ok=True)
@@ -385,6 +386,22 @@ def train_ppo_curriculum(config, output_dir, smoke=False, algorithm="ppo"):
                     "ema_abs_adv": update_stats.get("ema_abs_adv", ""),
                 })
                 f_up.flush()
+                if swanlab_logger is not None:
+                    swanlab_log = {
+                        "policy_loss": update_stats.get("policy_loss"),
+                        "value_loss": update_stats.get("value_loss"),
+                        "entropy": update_stats.get("entropy"),
+                        "approx_kl": update_stats.get("approx_kl"),
+                        "clip_fraction": update_stats.get("clip_fraction"),
+                        "explained_variance": update_stats.get("explained_variance"),
+                        "learning_rate": update_stats.get("learning_rate"),
+                    }
+                    # Optional algorithm-specific metrics
+                    for k in ["complexity", "scale_actor", "scale_critic", "ema_abs_adv"]:
+                        v = update_stats.get(k)
+                        if v is not None:
+                            swanlab_log[k] = v
+                    swanlab_logger.log({k: v for k, v in swanlab_log.items() if v is not None}, step=global_step)
                 print(
                     f"Step {global_step}/{total_timesteps} | Stage {current_stage} | "
                     f"Ep {episode_count} | Policy Loss: {update_stats.get('policy_loss', 0):.4f} | "
@@ -428,6 +445,17 @@ def train_ppo_curriculum(config, output_dir, smoke=False, algorithm="ppo"):
                     f"Crash: {eval_metrics['crash_rate']:.2%} | "
                     f"OOB: {eval_metrics['out_of_bounds_rate']:.2%}"
                 )
+                if swanlab_logger is not None:
+                    swanlab_logger.log({
+                        "eval/mean_return": eval_metrics.get("mean_return"),
+                        "eval/success_rate": eval_metrics.get("success_rate"),
+                        "eval/crash_rate": eval_metrics.get("crash_rate"),
+                        "eval/out_of_bounds_rate": eval_metrics.get("out_of_bounds_rate"),
+                        "eval/mean_min_range_m": eval_metrics.get("mean_min_range_m"),
+                        "eval/mean_final_ata_deg": eval_metrics.get("mean_final_ata_deg"),
+                        "eval/mean_control_effort": eval_metrics.get("mean_control_effort"),
+                        "eval/mean_command_smoothness": eval_metrics.get("mean_command_smoothness"),
+                    }, step=global_step)
 
                 # Per-scenario evaluation for curriculum gate
                 per_scenario_eval_episodes = int(
@@ -493,6 +521,9 @@ def main():
         choices=["true", "false"],
         help="Override config: enable/disable potential-based reward shaping",
     )
+    parser.add_argument("--use-swanlab", action="store_true", help="Enable SwanLab logging")
+    parser.add_argument("--swanlab-project", type=str, default=None, help="SwanLab project name")
+    parser.add_argument("--swanlab-exp", type=str, default=None, help="SwanLab experiment name")
     args = parser.parse_args()
 
     config = load_experiment_config(args.config)
@@ -513,7 +544,23 @@ def main():
     os.makedirs(output_dir, exist_ok=True)
     if args.device is not None:
         config.setdefault("ppo", {})["device"] = args.device
-    train_ppo_curriculum(config, output_dir, smoke=args.smoke, algorithm=args.algorithm)
+
+    swanlab_logger = None
+    if args.use_swanlab:
+        swanlab_logger = SwanLabLogger(
+            project=args.swanlab_project,
+            experiment=args.swanlab_exp,
+            config={"seed": seed, "algorithm": args.algorithm, "output_dir": output_dir, **config},
+            enabled=True,
+        )
+
+    try:
+        train_ppo_curriculum(
+            config, output_dir, smoke=args.smoke, algorithm=args.algorithm, swanlab_logger=swanlab_logger
+        )
+    finally:
+        if swanlab_logger is not None:
+            swanlab_logger.finish()
 
 
 if __name__ == "__main__":

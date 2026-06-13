@@ -100,9 +100,9 @@ def main():
     parser.add_argument(
         "--cem-mode",
         type=str,
-        default="standard",
+        default="ema",
         choices=["standard", "ema", "gd"],
-        help="CEM optimizer variant",
+        help="CEM optimizer variant (default: ema, per Theorem 3')",
     )
     parser.add_argument("--beta-ema", type=float, default=0.7, help="EMA smoothing factor (mode=ema)")
     parser.add_argument("--alpha-gd", type=float, default=0.05, help="GD step size (mode=gd)")

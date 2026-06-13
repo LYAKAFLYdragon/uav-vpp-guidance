@@ -6,7 +6,7 @@ We numerically compare the capture regions of two guidance strategies on a grid 
     \item \textbf{PN direct:} the same LOS-rate guidance law, but with the virtual point fixed at the instantaneous target position (zero learned offset).
 \end{itemize}
 
-The grid spans initial range $R \in [500, 5000]$~m (10 points), heading error $\eta \in [-180°, 180°]$ (12 points), and speed ratio $v_o/v_t \in [0.8, 1.5]$ (4 points), for 480 initial conditions with 10 Monte Carlo episodes per condition.
+The grid spans initial range $R \in [500, 5000]$~m (10 points), heading error $\eta \in [-180^{\circ}, 180^{\circ}]$ (12 points), and speed ratio $v_o/v_t \in [0.8, 1.5]$ (4 points), for 480 initial conditions with 10 Monte Carlo episodes per condition.
 
 \subsubsection{Overall comparison}
 
@@ -42,7 +42,7 @@ Table~\ref{tab:capture_region_sub} reports pooled success rates in sub-regions w
 Sub-region & Points & VPP SR & PN SR & $\Delta$ SR & $p$-value \\
 \midrule
 Overall & 480 & 29.17\% & 28.75\% & +0.42\% & 0.6690 \\
-High ATA ($|\eta| > 90°$) & 240 & 25.00\% & 24.17\% & +0.83\% & 0.5242 \\
+High ATA ($|\eta| > 90^{\circ}$) & 240 & 25.00\% & 24.17\% & +0.83\% & 0.5242 \\
 High speed ratio ($v_o/v_t > 1.2$) & 240 & 27.50\% & 26.67\% & +0.83\% & 0.5372 \\
 High ATA + close/mid range & 72 & 83.33\% & 80.56\% & +2.78\% & 0.1930 \\
 \bottomrule

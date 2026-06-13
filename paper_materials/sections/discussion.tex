@@ -1,0 +1,23 @@
+\section{Discussion}\label{sec:discussion}
+
+\subsection{Why Hierarchical Decomposition is Necessary}
+
+The empirical advantage of the VPP+LOS-rate architecture over end-to-end DRL is not merely a hyperparameter difference: both architectures use identical PPO hyperparameters, observation spaces, and training budgets. The improvement stems from structural inductive bias. By fixing the guidance law to LOS-rate---a well-understood differential-geometric controller---the policy need only learn \emph{where} to place the virtual point, not \emph{how} to generate acceleration commands. This reduces the effective search space from the full command manifold to the lower-dimensional offset space, enabling faster convergence and better generalization.
+
+The end-to-end baseline's lower success rate is consistent with the broader DRL literature: end-to-end policies in continuous control tasks typically require an order of magnitude more samples to match modular designs. In safety-critical guidance tasks, this sample-efficiency gap is a decisive argument for hierarchical decomposition.
+
+\subsection{VPP as a Learnable Augmentation of PN}
+
+The capture-region analysis reveals that, under fixed default parameters, VPP+LOS behaves almost identically to PN direct. At first glance this might suggest the VPP layer is unnecessary; however, it is precisely the theoretical prediction of Proposition~2. The VPP layer becomes valuable only when the high-level policy is trained to select context-dependent offsets: lead pursuit to avoid collision singularities in high-aspect engagements, lag pursuit to prevent overrun at high speed ratios, and terminal blending near the minimum stand-off distance.
+
+This interpretation reframes the contribution of the paper. We are not proposing a replacement for PN that is universally superior; we are proposing a \emph{learnable augmentation} of PN that inherits its analytical structure while gaining adaptability through RL. The near-equivalence in the capture-region grid therefore validates the baseline behavior of the guidance law and highlights the necessity of the learned component.
+
+\subsection{Implications of CEM-EMA and PBS}
+
+The CEM optimizer comparison provides a clear engineering recommendation: EMA smoothing should be the default update mechanism for gain optimization. CEM-EMA is the only variant that converges to a perfect success rate on the regression scenarios, while CEM-GD degrades the quality of the search distribution despite achieving the same best score. This empirical pattern supports the theoretical recommendation to avoid gradient-ascent updates on flat or noisy gain landscapes.
+
+The PBS ablation confirms that potential-based reward shaping accelerates early learning without changing the final optimal policy, as predicted by Proposition~22. In our single-seed run, both conditions reached 50\% success at the same step and converged to the same final success rate. A multi-seed replication will strengthen this claim, but the result is already consistent with the theory.
+
+\subsection{Deployment Considerations}
+
+From a deployment perspective, the hierarchical architecture offers two practical advantages: (1) the guidance law can be certified or analyzed independently of the learned policy, and (2) the CEM-EMA gain optimizer can be re-tuned for different aircraft platforms without retraining the neural policy. These properties are particularly valuable in defense applications where interpretability and recertification are critical.

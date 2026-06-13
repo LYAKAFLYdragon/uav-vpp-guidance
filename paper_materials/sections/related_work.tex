@@ -1,0 +1,33 @@
+\section{Related Work}\label{sec:related_work}
+
+\subsection{Classical Guidance Laws}
+
+Proportional navigation (PN) and its augmented variants have been the workhorse of missile and UAV guidance for decades. PN generates lateral acceleration proportional to the line-of-sight (LOS) rate and is analytically optimal against non-maneuvering targets under idealized assumptions. Augmented proportional navigation (APN) and differential-game (DG) guidance extend PN to maneuvering targets by accounting for target acceleration or by solving a two-player pursuit-evasion game. These methods provide strong analytical guarantees but rely on accurate kinematic models and can degrade when engagement geometries are highly nonlinear or when actuator delays and saturation are significant.
+
+\subsection{Data-Driven Guidance}
+
+Deep reinforcement learning has been applied to aerial combat, autonomous racing, and pursuit-evasion tasks with remarkable success in simulation. End-to-end policies map raw sensor observations directly to actuator commands, bypassing the need for hand-crafted guidance laws. However, this flexibility comes at the cost of sample efficiency and interpretability. End-to-end policies often require millions of environment steps and can learn brittle behaviors that fail under distribution shift. In safety-critical guidance, the inability to guarantee stability or interpret failure modes limits their deployability.
+
+\subsection{Hybrid and Hierarchical Methods}
+
+A growing body of work seeks to combine the analytical structure of classical guidance with the adaptability of learning. Virtual pursuit point (VPP) methods place an intermediate target point that a classical guidance law tracks, allowing a high-level policy to modulate engagement geometry without learning low-level dynamics from scratch. Mixed proportional navigation (MPN) similarly blends analytical and learned components. These hybrid approaches have shown promise, but most prior work treats the learned component as an incremental improvement over a fixed guidance law rather than rigorously establishing the necessity of the hierarchical decomposition itself.
+
+\subsection{Comparison with This Work}
+
+Table~\ref{tab:related_work_comparison} situates our approach relative to representative prior methods. Unlike pure PN or APN, our framework uses a learned VPP generator to adapt to geometry. Unlike end-to-end DRL, it preserves the LOS-rate guidance law, reducing sample complexity and improving interpretability. Unlike prior VPP methods, we provide a theoretical framework and controlled experiments that establish when and why the hierarchical decomposition is necessary.
+
+\begin{table}[t]
+\centering
+\caption{Comparison of guidance approaches.}
+\label{tab:related_work_comparison}
+\begin{tabular}{lccc}
+\toprule
+Approach & Analytical guarantee & Sample efficiency & Adaptive geometry \\
+\midrule
+PN / APN           & $\checkmark$ High & $\checkmark$ High (no learning) & $\times$ Fixed structure \\
+End-to-end DRL     & $\times$ None & $\times$ Low & $\checkmark$ High \\
+VPP + classical    & $\circ$ Partial & $\circ$ Medium & $\checkmark$ Medium \\
+\textbf{VPP + LOS-rate + CEM-EMA (ours)} & $\circ$ Partial & \textbf{$\checkmark$ High} & \textbf{$\checkmark$ High} \\
+\bottomrule
+\end{tabular}
+\end{table}

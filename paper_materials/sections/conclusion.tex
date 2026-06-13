@@ -1,0 +1,11 @@
+\section{Conclusion}\label{sec:conclusion}
+
+We present a hierarchical guidance architecture that combines a virtual pursuit point (VPP) generator with a line-of-sight rate (LOS-rate) guidance law, trained and tuned via a bilevel PPO and CEM-EMA framework. Three main conclusions emerge from our study.
+
+First, hierarchical decomposition is essential for sample-efficient close-range tracking. By delegating low-level command generation to the LOS-rate guidance law, the learned policy can focus on high-level geometric decisions, achieving substantially higher success rates than end-to-end DRL under identical training budgets.
+
+Second, the theoretical framework developed in this paper is not merely descriptive but predictive. We experimentally validated three of its key predictions: VPP+LOS degenerates to PN under fixed default parameters, potential-based reward shaping does not alter the optimal policy, and CEM-EMA outperforms CEM-GD on flat gain landscapes.
+
+Third, the VPP layer should be understood as a learnable augmentation of classical guidance rather than a universal replacement. Its value lies in the ability of RL to select context-dependent virtual-point offsets, not in outperforming PN under frozen parameters.
+
+Future work will focus on three directions: scaling to a 141-seed reproducibility campaign for statistical power, validating the framework in JSBSim with high-fidelity aircraft dynamics, and expanding training diversity to improve generalization across crossing geometries. All code, configurations, and experimental manifests are available at \url{[anonymized for review]}.

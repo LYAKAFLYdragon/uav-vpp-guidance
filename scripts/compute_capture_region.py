@@ -163,11 +163,11 @@ def main():
     all_results.extend(results)
 
     # Save
-    with open(os.path.join(args.output_dir, "raw_results.json"), "w") as f:
-        json.dump(all_results, f, indent=2)
+    with open(os.path.join(args.output_dir, "raw_results.json"), "w", encoding="utf-8") as f:
+        json.dump(all_results, f, indent=2, ensure_ascii=False)
 
     # Generate summary markdown
-    with open(os.path.join(args.output_dir, "summary.md"), "w") as f:
+    with open(os.path.join(args.output_dir, "summary.md"), "w", encoding="utf-8") as f:
         f.write("# Capture Region Numerical Analysis\n\n")
         f.write(f"Grid: {args.n_range} distances × {args.n_heading} headings × {args.n_speed} speed ratios = {len(grid)} points\n\n")
         f.write("| Method | Mean SR | Min SR | Max SR |\n")

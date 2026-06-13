@@ -12,7 +12,7 @@ import numpy as np
 from scipy import stats
 
 
-DEFAULT_ROOT = Path("outputs/method_innovation_compare")
+DEFAULT_ROOT = Path("outputs/method_innovation_comparison")
 ALGORITHMS = {
     "baseline": "Baseline PPO",
     "cr_ppo": "CR-PPO",

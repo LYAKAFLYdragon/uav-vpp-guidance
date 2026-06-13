@@ -121,10 +121,15 @@ def build_config(base_path, overrides, total_timesteps=None, seed=0):
     return cfg
 
 
-def run_single(base_path, output_root, algo_key, seed, total_timesteps, device, backend):
+def run_single(base_path, output_root, algo_key, seed, total_timesteps, device, backend, force=False):
     spec = ALGORITHMS[algo_key]
     output_dir = Path(output_root) / algo_key / f"seed{seed}"
     output_dir.mkdir(parents=True, exist_ok=True)
+
+    checkpoint = output_dir / "checkpoints" / "best.pt"
+    if checkpoint.exists() and not force:
+        print(f"[SKIP] {algo_key} seed={seed}: checkpoint already exists ({checkpoint}). Use --force to overwrite.")
+        return 0
 
     cfg = build_config(base_path, spec["config_overrides"], total_timesteps, seed)
     cfg_path = output_dir / "config.yaml"
@@ -153,16 +158,20 @@ def run_single(base_path, output_root, algo_key, seed, total_timesteps, device, 
 def main():
     parser = argparse.ArgumentParser(description="Run method-innovation comparison")
     parser.add_argument("--seeds", type=int, default=5, help="Number of random seeds")
-    parser.add_argument("--steps", type=int, default=50000, help="Total timesteps per run")
+    parser.add_argument("--steps", type=int, default=200000, help="Total timesteps per run")
     parser.add_argument("--device", type=str, default="cpu", choices=["cpu", "cuda"])
     parser.add_argument("--backend", type=str, default="simple", choices=["simple", "jsbsim"])
     parser.add_argument("--parallel", type=int, default=1, help="Number of parallel workers")
     parser.add_argument("--algos", type=str, default=None, help="Comma-separated algorithm keys to run")
     parser.add_argument("--config", type=str, default=str(BASE_CONFIG))
     parser.add_argument("--output-root", type=str, default=None)
+    parser.add_argument("--force", action="store_true", help="Overwrite existing checkpoints")
     args = parser.parse_args()
 
-    output_root = Path(args.output_root) if args.output_root else DEFAULT_OUTPUT_ROOT
+    if args.output_root:
+        output_root = Path(args.output_root)
+    else:
+        output_root = Path("outputs") / Path(args.config).stem
 
     algorithms = list(ALGORITHMS.keys())
     if args.algos:
@@ -171,7 +180,7 @@ def main():
             raise ValueError(f"No valid algorithms in {args.algos}")
 
     seed_list = list(range(args.seeds))
-    tasks = [(args.config, str(output_root), algo, seed, args.steps, args.device, args.backend)
+    tasks = [(args.config, str(output_root), algo, seed, args.steps, args.device, args.backend, args.force)
              for algo in algorithms for seed in seed_list]
 
     print(f"Running comparison: {algorithms} x {len(seed_list)} seeds x {args.steps} steps")

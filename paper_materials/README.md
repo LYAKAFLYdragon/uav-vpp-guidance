@@ -22,23 +22,29 @@ All models were trained from scratch for **200,000 PPO steps** under identical c
 
 ```
 paper_materials/
-├── paper.tex                         # Complete LaTeX paper draft
+├── paper.tex                                  # Complete LaTeX paper draft
 ├── figures/
-│   ├── fig1_method_comparison.png    # Bar chart from benchmark
-│   ├── fig2_training_curves.png      # Training curves (legacy)
-│   ├── fig3_comparison_boxplot.png   # Boxplot (legacy)
-│   ├── fig4_overall_success_rate.png # Overall success rate with SEM
-│   └── fig5_per_scenario_heatmap.png # Per-scenario heatmap (2 methods, identical)
+│   ├── fig1_method_comparison.png             # Bar chart from benchmark
+│   ├── fig2_training_curves.png               # Training curves (legacy)
+│   ├── fig3_comparison_boxplot.png            # Boxplot (legacy)
+│   ├── fig4_overall_success_rate.png          # Overall success rate with SEM
+│   ├── fig5_per_scenario_heatmap.png          # Per-scenario heatmap (legacy)
+│   ├── fig_inference_benchmark.png            # PPO vs CEM latency (new)
+│   └── fig_method_innovation_comparison.png   # Method-innovation bar chart (new)
 ├── tables/
-│   ├── table1_main_comparison.tex    # LaTeX Table 1 (real results)
-│   ├── table1_main_comparison.md     # Markdown backup
-│   ├── table_mcnemar.tex             # McNemar paired comparison
-│   └── table_per_scenario.tex        # Per-scenario breakdown
+│   ├── table1_main_comparison.tex             # LaTeX Table 1 (legacy real results)
+│   ├── table1_main_comparison.md              # Markdown backup
+│   ├── table_mcnemar.tex                      # McNemar paired comparison
+│   ├── table_per_scenario.tex                 # Per-scenario breakdown
+│   └── table_method_innovation_comparison.tex # Method-innovation comparison (new)
 ├── text/
-│   ├── discussion_crossing.tex       # Rewritten: functional equivalence
-│   └── results_summary.tex           # Rewritten: real results summary
+│   ├── discussion_crossing.tex                # Rewritten: functional equivalence
+│   └── results_summary.tex                    # Rewritten: real results summary
 └── scripts/
-    └── generate_heatmap.py             # Heatmap generation script
+    ├── generate_heatmap.py                    # Legacy heatmap
+    ├── plot_inference_benchmark.py            # PPO/CEM latency figure
+    ├── plot_method_innovation_comparison.py   # Method-innovation figure
+    └── generate_all_figures.py                # Regenerate all figures
 ```
 
 ## Data Provenance
@@ -64,8 +70,8 @@ paper_materials/
 ## Quick Reproduction
 
 ```bash
-# Regenerate heatmap
-python paper_materials/scripts/generate_heatmap.py
+# Regenerate all figures (legacy + current)
+python paper_materials/scripts/generate_all_figures.py
 
 # Re-run benchmark with real checkpoints
 python scripts/run_paper_benchmark.py \

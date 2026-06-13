@@ -32,7 +32,7 @@ email@domain.edu}
 \maketitle
 
 \begin{abstract}
-End-to-end deep reinforcement learning (DRL) has been proposed as a universal solution for autonomous UAV guidance, yet its sample efficiency and generalization remain critically limited in close-range tracking scenarios. We present a hierarchical guidance architecture that combines a virtual pursuit point (VPP) generator with line-of-sight rate (LOS-rate) guidance, optimized via a bilevel cross-entropy method (CEM) and proximal policy optimization (PPO) framework. A rigorous architecture comparison reveals that the hierarchical design achieves $75.0\%$ success rate, significantly outperforming the end-to-end DRL baseline at $56.7\%$ ($p < 0.05$, Cohen's $d = 4.36$). Ablation studies confirm that both the VPP layer and the LOS-rate guidance law contribute measurably to performance. Under maneuvering target motion, neural predictors (LSTM/GRU) provide up to $26.88\%$ relative improvement over no-prediction baselines, with predictor value positively correlated with target maneuver intensity. CEM gain optimization further improves success rate by $14.47\%$ over default gains. A dynamics-aware constraint on the virtual point generator eliminates crossing-geometry failures ($100\%$ vs $33.3\%$ baseline), revealing the bottleneck to be physical feasibility rather than training distribution. However, generalization to arbitrary crossing geometries remains unproven, and initial condition perturbations remain a vulnerability ($25.8\%$ under $\pm 20\%$ disturbance). These results establish the \emph{necessity} of hierarchical decomposition for sample-efficient guidance learning, while identifying adaptive constraint scheduling and adversarial domain randomization as critical directions for future work.
+End-to-end deep reinforcement learning (DRL) has been proposed as a universal solution for autonomous UAV guidance, yet its sample efficiency and generalization remain critically limited in close-range tracking scenarios. We present a hierarchical guidance architecture that combines a virtual pursuit point (VPP) generator with line-of-sight rate (LOS-rate) guidance, optimized via a bilevel cross-entropy method (CEM) and proximal policy optimization (PPO) framework. A rigorous architecture comparison reveals that the hierarchical design achieves $75.0\%$ success rate, significantly outperforming the end-to-end DRL baseline at $56.7\%$ ($p < 0.05$, Cohen's $d = 4.36$). Ablation studies confirm that both the VPP layer and the LOS-rate guidance law contribute measurably to performance. Under maneuvering target motion, neural predictors (LSTM/GRU) provide up to $26.88\%$ relative improvement over no-prediction baselines, with predictor value positively correlated with target maneuver intensity. CEM gain optimization further improves success rate by $14.47\%$ over default gains. A dynamics-aware constraint on the virtual point generator eliminates crossing-geometry failures ($100\%$ vs $33.3\%$ baseline), revealing the bottleneck to be physical feasibility rather than training distribution. However, generalization to arbitrary crossing geometries remains unproven, and initial condition perturbations remain a vulnerability ($25.8\%$ under $\pm 20\%$ disturbance). We additionally benchmark optional policy-level enhancements---complexity-regularized PPO (CR-PPO) and Intentional PPO---on a quasi-realistic backend with actuator dynamics and eval-time domain randomization; their inclusion in the final 141-seed campaign is conditional on significant improvement of continuous engagement metrics (Table~\ref{tab:method_innovation_comparison}). These results establish the \emph{necessity} of hierarchical decomposition for sample-efficient guidance learning, while identifying adaptive constraint scheduling, adversarial domain randomization, and selective policy regularization as critical directions for future work.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -53,6 +53,7 @@ Despite the intuitive appeal of hierarchical guidance, the literature lacks rigo
     \item We demonstrate \emph{hierarchical architecture necessity}: the VPP+LOS-rate design achieves $75.0\%$ success rate, significantly outperforming the end-to-end DRL baseline at $56.7\%$ ($p < 0.05$, Cohen's $d = 4.36$), establishing that decomposition is not merely convenient but essential for sample-efficient guidance learning.
     \item We validate \emph{predictor value stratification}: under maneuvering target motion, neural predictors (LSTM/GRU) provide up to $26.88\%$ relative improvement over no-prediction baselines, with predictor value positively correlated with target maneuver intensity---a principled answer to ``when does prediction help?''
     \item We show that CEM-PPO bilevel optimization improves guidance gains by $14.47\%$ over default parameters, demonstrating that the hierarchical architecture admits systematic gain tuning without retraining the policy.
+    \item We benchmark optional policy-level enhancements (CR-PPO and Intentional PPO) under a quasi-realistic backend with actuator dynamics and eval-time domain randomization; inclusion in the final 141-seed campaign is conditional on significant improvement of continuous engagement metrics.
     \item We honestly report \emph{limitations}: while crossing failures are eliminated by dynamics-aware constraints on the test geometries, generalization to arbitrary crossing configurations remains unproven; initial condition robustness requires further improvement ($25.8\%$ under $\pm 20\%$ perturbation); and all results are from the \texttt{simple} backend pending JSBSim validation. These identify concrete directions for future work.
 \end{enumerate}
 
@@ -84,6 +85,16 @@ We employ a bilevel optimization scheme:
 \end{itemize}
 
 The bilevel design allows systematic gain tuning without retraining the neural policy, a practical advantage for field deployment where gain recalibration may be needed for different aircraft platforms.
+
+\subsection{Optional Policy Enhancements}\label{sec:optional_enhancements}
+
+Beyond the hierarchical baseline, we evaluate two optional policy-level enhancements that may improve sample efficiency or robustness without changing the VPP+LOS-rate structure.
+
+\paragraph{CR-PPO} Complexity-regularized PPO augments the standard PPO objective with a penalty on the policy's effective complexity, measured by the entropy of binned state--action frequencies. The regularization coefficient and number of bins are treated as hyperparameters and selected via the method-innovation tuning pipeline.
+
+\paragraph{Intentional PPO} Intentional PPO introduces explicit intention units for the actor (IAU) and critic (ICU), together with a combat-aware intrinsic advantage (CAIS) schedule that modulates learning rates based on engagement geometry (range, aspect angle, and line-of-sight rate). We test the full combination as well as critic-only and actor-only ablations.
+
+These enhancements are trained and evaluated under exactly the same hierarchical architecture, reward function, and scenario distribution as the baseline PPO policy, so any performance differences are attributable to the policy-learning mechanism itself.
 
 \subsection{Guidance Environment}
 
@@ -263,6 +274,14 @@ Neural predictors provide $+9.3\%$ under weak maneuvers and up to $+26.9\%$ unde
 
 CEM gain optimization improves success rate from $60.2\%$ (default gains) to $74.7\%$ ($+14.47\%$). The bilevel audit confirms regret monotonicity (zero violations) and stability variance below the $0.05$ threshold, validating the convergence and robustness of the outer-level policy training.
 
+\subsection{Method-Innovation Comparison}\label{sec:method_innovation}
+
+Table~\ref{tab:method_innovation_comparison} compares the hierarchical baseline PPO policy against CR-PPO and three Intentional PPO variants on the quasi-realistic backend. Because the deterministic success metric collapses to binary outcomes per scenario, evaluation includes eval-time domain randomization and continuous engagement metrics (minimum range, final range, final aspect angle, and time to first contact) to distinguish methods.
+
+\input{tables/table_method_innovation_comparison}
+
+The comparison is intentionally exploratory: if a method significantly improves continuous metrics or success rate relative to the baseline, it will be included in the final 141-seed reproducibility campaign; otherwise the baseline PPO policy is retained as the primary result.
+
 \subsection{Computational Complexity}
 
 Table~\ref{tab:timing} reports inference and optimization latency on an Intel Core i7-12700H CPU.
@@ -314,7 +333,7 @@ We identify four limitations that bound the scope of our claims:
     
     \item \textbf{JSBSim transfer:} All quantitative results are from the \texttt{simple} backend. While the simple backend isolates architectural effects from aerodynamic modeling uncertainty, the Defense Technology readership will rightly demand JSBSim verification. We have implemented the JSBSim bridge and crossing-fix code, but large-scale Monte Carlo evaluation on JSBSim remains incomplete.
     
-    \item \textbf{Sample size:} Most experiments use $3$ random seeds. While this is standard for deep RL pilot studies, it is insufficient for publication-grade statistical power. We are currently scaling to $10$ seeds for the final submission.
+    \item \textbf{Sample size:} Most experiments use $3$ random seeds. While this is standard for deep RL pilot studies, it is insufficient for publication-grade statistical power. We are currently scaling the primary baseline to $141$ seeds and reserve $5$-seed comparisons for exploratory method-innovation screening.
 \end{enumerate}
 
 \section{Conclusion}\label{sec:conclusion}
@@ -325,6 +344,7 @@ We present a hierarchical VPP+LOS-rate guidance architecture with CEM-PPO bileve
     \item \textbf{Hierarchical necessity:} The VPP+LOS-rate design achieves $75.0\%$ success, significantly outperforming end-to-end DRL at $56.7\%$ ($p < 0.05$, Cohen's $d = 4.36$), establishing that architectural decomposition is essential for sample-efficient guidance learning.
     \item \textbf{Crossing breakthrough:} A dynamics-aware constraint on the virtual point generator eliminates crossing-geometry failures ($100\%$ vs $33.3\%$ baseline), revealing that the bottleneck is physical feasibility rather than training distribution or guidance-law selection.
     \item \textbf{Predictor stratification:} Neural predictor value scales monotonically with target maneuver intensity ($+9.3\%$ weak, $+26.9\%$ strong), providing a principled criterion for predictor deployment.
+    \item \textbf{Optional policy enhancements:} CR-PPO and Intentional PPO are evaluated on a quasi-realistic backend with continuous metrics; their final inclusion depends on the outcome of the 5-seed screening in Table~\ref{tab:method_innovation_comparison}.
 \end{enumerate}
 
 These results support the broader thesis that safety-critical aerial guidance should exploit the complementary strengths of classical control (analytical guarantees, computational efficiency) and deep reinforcement learning (adaptability to complex geometries), rather than relying on either alone. All code, configurations, and checkpoint registry are available at \url{[anonymized for review]}.

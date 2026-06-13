@@ -1,8 +1,8 @@
 {
-  "version": "1.0.0",
+  "version": "1.1.0",
   "project_root": "e:/uav-vpp-guidance",
   "backend": "simple",
-  "total_experiments": 93,
+  "total_experiments": 210,
   "groups": [
     {
       "group_id": "A",
@@ -17,7 +17,18 @@
           "description": "Hierarchical VPP+LOS-rate with CEM-optimized gains",
           "script": "python -m uav_vpp_guidance.training.train_no_prediction_vpp_ppo",
           "config": "config/experiment/train_no_prediction_vpp_ppo.yaml",
-          "seeds": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+          "seeds": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9
+          ],
           "budget_steps": 200000,
           "output_dir": "outputs/experiments/baseline_10seed_s{seed}",
           "hardware": "CPU",
@@ -30,7 +41,18 @@
           "description": "End-to-end DRL baseline without VPP or guidance law",
           "script": "python -m uav_vpp_guidance.training.train_end_to_end_ppo",
           "config": "config/experiment/train_end_to_end_ppo.yaml",
-          "seeds": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+          "seeds": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9
+          ],
           "budget_steps": 200000,
           "output_dir": "outputs/experiments/end_to_end_ppo_seed{seed}",
           "hardware": "CPU",
@@ -43,8 +65,27 @@
           "description": "VPP+LOS with zero virtual point offset",
           "script": "python -m uav_vpp_guidance.training.train_no_prediction_vpp_ppo",
           "config": "config/experiment/train_no_prediction_vpp_ppo.yaml",
-          "override_config": {"virtual_point": {"offset": [0.0, 0.0, 0.0]}},
-          "seeds": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+          "override_config": {
+            "virtual_point": {
+              "offset": [
+                0.0,
+                0.0,
+                0.0
+              ]
+            }
+          },
+          "seeds": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9
+          ],
           "budget_steps": 200000,
           "output_dir": "outputs/experiments/no_vpp_ppo_seed{seed}",
           "hardware": "CPU",
@@ -66,7 +107,18 @@
           "description": "Dynamics-aware VPP with max_heading_rate=0.2 rad/s",
           "script": "python -m uav_vpp_guidance.training.train_no_prediction_vpp_ppo",
           "config": "config/experiment/stage6f5_feasible_geometry_constrained.yaml",
-          "seeds": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+          "seeds": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9
+          ],
           "budget_steps": 200000,
           "output_dir": "outputs/experiments/constrained_10seed_s{seed}",
           "hardware": "CPU",
@@ -79,7 +131,18 @@
           "description": "Curriculum learning across scenario difficulties",
           "script": "python scripts/train_curriculum_ppo.py",
           "config": "config/experiment/train_curriculum_ppo.yaml",
-          "seeds": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+          "seeds": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9
+          ],
           "budget_steps": 200000,
           "output_dir": "outputs/experiments/curriculum_ppo_s{seed}",
           "hardware": "CPU",
@@ -92,7 +155,18 @@
           "description": "Hybrid PN/LOS-rate with mode switching",
           "script": "python -m uav_vpp_guidance.training.train_no_prediction_vpp_ppo",
           "config": "config/experiment/train_hybrid_mode_switch.yaml",
-          "seeds": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+          "seeds": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9
+          ],
           "budget_steps": 200000,
           "output_dir": "outputs/experiments/hybrid_mode_switch_s{seed}",
           "hardware": "CPU",
@@ -128,7 +202,9 @@
           "config": "config/experiment/stage6f5_feasible_geometry_constrained.yaml",
           "candidates": 12,
           "iterations": 20,
-          "seeds": [0],
+          "seeds": [
+            0
+          ],
           "output_dir": "outputs/experiments/p0b_bilevel_s0",
           "hardware": "CPU",
           "estimated_minutes": 60,
@@ -140,8 +216,27 @@
           "description": "Train without CEM gain optimization (fixed default gains)",
           "script": "python -m uav_vpp_guidance.training.train_no_prediction_vpp_ppo",
           "config": "config/experiment/train_no_prediction_vpp_ppo.yaml",
-          "override_config": {"guidance": {"gains": {"k_los": 1.0, "k_pos": 0.1, "k_damp": 0.5}}},
-          "seeds": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+          "override_config": {
+            "guidance": {
+              "gains": {
+                "k_los": 1.0,
+                "k_pos": 0.1,
+                "k_damp": 0.5
+              }
+            }
+          },
+          "seeds": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9
+          ],
           "budget_steps": 200000,
           "output_dir": "outputs/experiments/default_gains_seed{seed}",
           "hardware": "CPU",
@@ -163,8 +258,24 @@
           "description": "No prediction baseline on maneuvering targets",
           "script": "python -m uav_vpp_guidance.training.train_no_prediction_vpp_ppo",
           "config": "config/experiment/train_no_prediction_vpp_ppo.yaml",
-          "override_config": {"target": {"mode": "maneuver", "maneuver_intensity": "both"}},
-          "seeds": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+          "override_config": {
+            "target": {
+              "mode": "maneuver",
+              "maneuver_intensity": "both"
+            }
+          },
+          "seeds": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9
+          ],
           "budget_steps": 200000,
           "output_dir": "outputs/experiments/maneuver_no_pred_s{seed}",
           "hardware": "CPU",
@@ -177,8 +288,27 @@
           "description": "Constant-velocity predictor on maneuvering targets",
           "script": "python -m uav_vpp_guidance.training.train_no_prediction_vpp_ppo",
           "config": "config/experiment/train_no_prediction_vpp_ppo.yaml",
-          "override_config": {"predictor": {"type": "cv"}, "target": {"mode": "maneuver", "maneuver_intensity": "both"}},
-          "seeds": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+          "override_config": {
+            "predictor": {
+              "type": "cv"
+            },
+            "target": {
+              "mode": "maneuver",
+              "maneuver_intensity": "both"
+            }
+          },
+          "seeds": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9
+          ],
           "budget_steps": 200000,
           "output_dir": "outputs/experiments/maneuver_cv_s{seed}",
           "hardware": "CPU",
@@ -191,8 +321,27 @@
           "description": "Constant-acceleration predictor on maneuvering targets",
           "script": "python -m uav_vpp_guidance.training.train_no_prediction_vpp_ppo",
           "config": "config/experiment/train_no_prediction_vpp_ppo.yaml",
-          "override_config": {"predictor": {"type": "ca"}, "target": {"mode": "maneuver", "maneuver_intensity": "both"}},
-          "seeds": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+          "override_config": {
+            "predictor": {
+              "type": "ca"
+            },
+            "target": {
+              "mode": "maneuver",
+              "maneuver_intensity": "both"
+            }
+          },
+          "seeds": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9
+          ],
           "budget_steps": 200000,
           "output_dir": "outputs/experiments/maneuver_ca_s{seed}",
           "hardware": "CPU",
@@ -205,8 +354,28 @@
           "description": "Frozen LSTM predictor on maneuvering targets",
           "script": "python -m uav_vpp_guidance.training.train_no_prediction_vpp_ppo",
           "config": "config/experiment/train_no_prediction_vpp_ppo.yaml",
-          "override_config": {"predictor": {"type": "lstm", "frozen": true}, "target": {"mode": "maneuver", "maneuver_intensity": "both"}},
-          "seeds": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+          "override_config": {
+            "predictor": {
+              "type": "lstm",
+              "frozen": true
+            },
+            "target": {
+              "mode": "maneuver",
+              "maneuver_intensity": "both"
+            }
+          },
+          "seeds": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9
+          ],
           "budget_steps": 200000,
           "output_dir": "outputs/experiments/maneuver_lstm_s{seed}",
           "hardware": "CPU",
@@ -219,8 +388,28 @@
           "description": "Frozen GRU predictor on maneuvering targets",
           "script": "python -m uav_vpp_guidance.training.train_no_prediction_vpp_ppo",
           "config": "config/experiment/train_no_prediction_vpp_ppo.yaml",
-          "override_config": {"predictor": {"type": "gru", "frozen": true}, "target": {"mode": "maneuver", "maneuver_intensity": "both"}},
-          "seeds": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+          "override_config": {
+            "predictor": {
+              "type": "gru",
+              "frozen": true
+            },
+            "target": {
+              "mode": "maneuver",
+              "maneuver_intensity": "both"
+            }
+          },
+          "seeds": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9
+          ],
           "budget_steps": 200000,
           "output_dir": "outputs/experiments/maneuver_gru_s{seed}",
           "hardware": "CPU",
@@ -242,7 +431,18 @@
           "description": "Curriculum-style domain randomization training",
           "script": "python -m uav_vpp_guidance.training.train_no_prediction_vpp_ppo",
           "config": "config/experiment/train_no_prediction_vpp_ppo_domain_rand.yaml",
-          "seeds": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+          "seeds": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9
+          ],
           "budget_steps": 200000,
           "output_dir": "outputs/experiments/no_prediction_vpp_ppo_domain_rand_s{seed}",
           "hardware": "CPU",
@@ -255,7 +455,18 @@
           "description": "Control group without domain randomization",
           "script": "python -m uav_vpp_guidance.training.train_no_prediction_vpp_ppo",
           "config": "config/experiment/train_no_prediction_vpp_ppo.yaml",
-          "seeds": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+          "seeds": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9
+          ],
           "budget_steps": 200000,
           "output_dir": "outputs/experiments/no_prediction_vpp_ppo_control_s{seed}",
           "hardware": "CPU",
@@ -277,7 +488,13 @@
             "outputs/experiments/no_prediction_vpp_ppo_control_s1/checkpoints/best.pt",
             "outputs/experiments/no_prediction_vpp_ppo_control_s2/checkpoints/best.pt"
           ],
-          "scales": [0.0, 0.5, 1.0, 1.5, 2.0],
+          "scales": [
+            0.0,
+            0.5,
+            1.0,
+            1.5,
+            2.0
+          ],
           "episodes_per_scale": 30,
           "hardware": "CPU",
           "estimated_minutes": 60,
@@ -298,7 +515,11 @@
           "description": "600-point capture region grid",
           "script": "python scripts/compute_capture_region.py",
           "input_checkpoint": "outputs/experiments/baseline_10seed_s0/checkpoints/best.pt",
-          "grid": {"distances": 10, "headings": 12, "speed_ratios": 5},
+          "grid": {
+            "distances": 10,
+            "headings": 12,
+            "speed_ratios": 5
+          },
           "episodes_per_point": 5,
           "hardware": "CPU",
           "estimated_minutes": 90,
@@ -315,14 +536,3560 @@
           "paper_claim": "PPO inference <1ms, total control cycle <5ms"
         }
       ]
+    },
+    {
+      "group_id": "MI",
+      "name": "method_innovation_standard",
+      "description": "5-algorithm x 5-seed comparison on method_innovation_standard config",
+      "estimated_total_hours": 10.4,
+      "hardware": "CPU",
+      "experiments": [
+        {
+          "id": "MI_baseline_s0",
+          "name": "method_innovation_baseline_s0",
+          "description": "baseline on method_innovation_standard config, seed 0",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            0
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/method_innovation_comparison/baseline/seed0",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "Method innovation comparison (standard): baseline seed 0"
+        },
+        {
+          "id": "MI_baseline_s1",
+          "name": "method_innovation_baseline_s1",
+          "description": "baseline on method_innovation_standard config, seed 1",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            1
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/method_innovation_comparison/baseline/seed1",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "Method innovation comparison (standard): baseline seed 1"
+        },
+        {
+          "id": "MI_baseline_s2",
+          "name": "method_innovation_baseline_s2",
+          "description": "baseline on method_innovation_standard config, seed 2",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            2
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/method_innovation_comparison/baseline/seed2",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "Method innovation comparison (standard): baseline seed 2"
+        },
+        {
+          "id": "MI_baseline_s3",
+          "name": "method_innovation_baseline_s3",
+          "description": "baseline on method_innovation_standard config, seed 3",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            3
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/method_innovation_comparison/baseline/seed3",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "Method innovation comparison (standard): baseline seed 3"
+        },
+        {
+          "id": "MI_baseline_s4",
+          "name": "method_innovation_baseline_s4",
+          "description": "baseline on method_innovation_standard config, seed 4",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            4
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/method_innovation_comparison/baseline/seed4",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "Method innovation comparison (standard): baseline seed 4"
+        },
+        {
+          "id": "MI_cr_ppo_s0",
+          "name": "method_innovation_cr_ppo_s0",
+          "description": "cr_ppo on method_innovation_standard config, seed 0",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {
+            "ppo": {
+              "complexity_coef": 0.001,
+              "cr_n_bins": 8
+            }
+          },
+          "seeds": [
+            0
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/method_innovation_comparison/cr_ppo/seed0",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "Method innovation comparison (standard): cr_ppo seed 0"
+        },
+        {
+          "id": "MI_cr_ppo_s1",
+          "name": "method_innovation_cr_ppo_s1",
+          "description": "cr_ppo on method_innovation_standard config, seed 1",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {
+            "ppo": {
+              "complexity_coef": 0.001,
+              "cr_n_bins": 8
+            }
+          },
+          "seeds": [
+            1
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/method_innovation_comparison/cr_ppo/seed1",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "Method innovation comparison (standard): cr_ppo seed 1"
+        },
+        {
+          "id": "MI_cr_ppo_s2",
+          "name": "method_innovation_cr_ppo_s2",
+          "description": "cr_ppo on method_innovation_standard config, seed 2",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {
+            "ppo": {
+              "complexity_coef": 0.001,
+              "cr_n_bins": 8
+            }
+          },
+          "seeds": [
+            2
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/method_innovation_comparison/cr_ppo/seed2",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "Method innovation comparison (standard): cr_ppo seed 2"
+        },
+        {
+          "id": "MI_cr_ppo_s3",
+          "name": "method_innovation_cr_ppo_s3",
+          "description": "cr_ppo on method_innovation_standard config, seed 3",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {
+            "ppo": {
+              "complexity_coef": 0.001,
+              "cr_n_bins": 8
+            }
+          },
+          "seeds": [
+            3
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/method_innovation_comparison/cr_ppo/seed3",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "Method innovation comparison (standard): cr_ppo seed 3"
+        },
+        {
+          "id": "MI_cr_ppo_s4",
+          "name": "method_innovation_cr_ppo_s4",
+          "description": "cr_ppo on method_innovation_standard config, seed 4",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {
+            "ppo": {
+              "complexity_coef": 0.001,
+              "cr_n_bins": 8
+            }
+          },
+          "seeds": [
+            4
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/method_innovation_comparison/cr_ppo/seed4",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "Method innovation comparison (standard): cr_ppo seed 4"
+        },
+        {
+          "id": "MI_intentional_s0",
+          "name": "method_innovation_intentional_s0",
+          "description": "intentional on method_innovation_standard config, seed 0",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {
+            "ppo": {
+              "use_intentional_critic": true,
+              "use_intentional_actor": true,
+              "use_combat_aware_eta": true,
+              "eta_critic": 0.1,
+              "eta_actor": 0.01,
+              "iu_eps": 1e-08,
+              "beta_adv": 0.999
+            },
+            "combat_aware": {
+              "eta_actor": 0.01,
+              "eta_critic": 0.1,
+              "range_thresholds_m": [
+                3000.0,
+                6000.0
+              ],
+              "terminal_range_m": 1200.0,
+              "aspect_threshold_deg": 30.0
+            }
+          },
+          "seeds": [
+            0
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/method_innovation_comparison/intentional/seed0",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "Method innovation comparison (standard): intentional seed 0"
+        },
+        {
+          "id": "MI_intentional_s1",
+          "name": "method_innovation_intentional_s1",
+          "description": "intentional on method_innovation_standard config, seed 1",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {
+            "ppo": {
+              "use_intentional_critic": true,
+              "use_intentional_actor": true,
+              "use_combat_aware_eta": true,
+              "eta_critic": 0.1,
+              "eta_actor": 0.01,
+              "iu_eps": 1e-08,
+              "beta_adv": 0.999
+            },
+            "combat_aware": {
+              "eta_actor": 0.01,
+              "eta_critic": 0.1,
+              "range_thresholds_m": [
+                3000.0,
+                6000.0
+              ],
+              "terminal_range_m": 1200.0,
+              "aspect_threshold_deg": 30.0
+            }
+          },
+          "seeds": [
+            1
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/method_innovation_comparison/intentional/seed1",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "Method innovation comparison (standard): intentional seed 1"
+        },
+        {
+          "id": "MI_intentional_s2",
+          "name": "method_innovation_intentional_s2",
+          "description": "intentional on method_innovation_standard config, seed 2",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {
+            "ppo": {
+              "use_intentional_critic": true,
+              "use_intentional_actor": true,
+              "use_combat_aware_eta": true,
+              "eta_critic": 0.1,
+              "eta_actor": 0.01,
+              "iu_eps": 1e-08,
+              "beta_adv": 0.999
+            },
+            "combat_aware": {
+              "eta_actor": 0.01,
+              "eta_critic": 0.1,
+              "range_thresholds_m": [
+                3000.0,
+                6000.0
+              ],
+              "terminal_range_m": 1200.0,
+              "aspect_threshold_deg": 30.0
+            }
+          },
+          "seeds": [
+            2
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/method_innovation_comparison/intentional/seed2",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "Method innovation comparison (standard): intentional seed 2"
+        },
+        {
+          "id": "MI_intentional_s3",
+          "name": "method_innovation_intentional_s3",
+          "description": "intentional on method_innovation_standard config, seed 3",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {
+            "ppo": {
+              "use_intentional_critic": true,
+              "use_intentional_actor": true,
+              "use_combat_aware_eta": true,
+              "eta_critic": 0.1,
+              "eta_actor": 0.01,
+              "iu_eps": 1e-08,
+              "beta_adv": 0.999
+            },
+            "combat_aware": {
+              "eta_actor": 0.01,
+              "eta_critic": 0.1,
+              "range_thresholds_m": [
+                3000.0,
+                6000.0
+              ],
+              "terminal_range_m": 1200.0,
+              "aspect_threshold_deg": 30.0
+            }
+          },
+          "seeds": [
+            3
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/method_innovation_comparison/intentional/seed3",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "Method innovation comparison (standard): intentional seed 3"
+        },
+        {
+          "id": "MI_intentional_s4",
+          "name": "method_innovation_intentional_s4",
+          "description": "intentional on method_innovation_standard config, seed 4",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {
+            "ppo": {
+              "use_intentional_critic": true,
+              "use_intentional_actor": true,
+              "use_combat_aware_eta": true,
+              "eta_critic": 0.1,
+              "eta_actor": 0.01,
+              "iu_eps": 1e-08,
+              "beta_adv": 0.999
+            },
+            "combat_aware": {
+              "eta_actor": 0.01,
+              "eta_critic": 0.1,
+              "range_thresholds_m": [
+                3000.0,
+                6000.0
+              ],
+              "terminal_range_m": 1200.0,
+              "aspect_threshold_deg": 30.0
+            }
+          },
+          "seeds": [
+            4
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/method_innovation_comparison/intentional/seed4",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "Method innovation comparison (standard): intentional seed 4"
+        },
+        {
+          "id": "MI_intentional_c_s0",
+          "name": "method_innovation_intentional_c_s0",
+          "description": "intentional_c on method_innovation_standard config, seed 0",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {
+            "ppo": {
+              "use_intentional_critic": true,
+              "use_intentional_actor": false,
+              "use_combat_aware_eta": false,
+              "eta_critic": 0.1,
+              "eta_actor": 0.01,
+              "iu_eps": 1e-08,
+              "beta_adv": 0.999
+            }
+          },
+          "seeds": [
+            0
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/method_innovation_comparison/intentional_c/seed0",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "Method innovation comparison (standard): intentional_c seed 0"
+        },
+        {
+          "id": "MI_intentional_c_s1",
+          "name": "method_innovation_intentional_c_s1",
+          "description": "intentional_c on method_innovation_standard config, seed 1",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {
+            "ppo": {
+              "use_intentional_critic": true,
+              "use_intentional_actor": false,
+              "use_combat_aware_eta": false,
+              "eta_critic": 0.1,
+              "eta_actor": 0.01,
+              "iu_eps": 1e-08,
+              "beta_adv": 0.999
+            }
+          },
+          "seeds": [
+            1
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/method_innovation_comparison/intentional_c/seed1",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "Method innovation comparison (standard): intentional_c seed 1"
+        },
+        {
+          "id": "MI_intentional_c_s2",
+          "name": "method_innovation_intentional_c_s2",
+          "description": "intentional_c on method_innovation_standard config, seed 2",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {
+            "ppo": {
+              "use_intentional_critic": true,
+              "use_intentional_actor": false,
+              "use_combat_aware_eta": false,
+              "eta_critic": 0.1,
+              "eta_actor": 0.01,
+              "iu_eps": 1e-08,
+              "beta_adv": 0.999
+            }
+          },
+          "seeds": [
+            2
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/method_innovation_comparison/intentional_c/seed2",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "Method innovation comparison (standard): intentional_c seed 2"
+        },
+        {
+          "id": "MI_intentional_c_s3",
+          "name": "method_innovation_intentional_c_s3",
+          "description": "intentional_c on method_innovation_standard config, seed 3",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {
+            "ppo": {
+              "use_intentional_critic": true,
+              "use_intentional_actor": false,
+              "use_combat_aware_eta": false,
+              "eta_critic": 0.1,
+              "eta_actor": 0.01,
+              "iu_eps": 1e-08,
+              "beta_adv": 0.999
+            }
+          },
+          "seeds": [
+            3
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/method_innovation_comparison/intentional_c/seed3",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "Method innovation comparison (standard): intentional_c seed 3"
+        },
+        {
+          "id": "MI_intentional_c_s4",
+          "name": "method_innovation_intentional_c_s4",
+          "description": "intentional_c on method_innovation_standard config, seed 4",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {
+            "ppo": {
+              "use_intentional_critic": true,
+              "use_intentional_actor": false,
+              "use_combat_aware_eta": false,
+              "eta_critic": 0.1,
+              "eta_actor": 0.01,
+              "iu_eps": 1e-08,
+              "beta_adv": 0.999
+            }
+          },
+          "seeds": [
+            4
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/method_innovation_comparison/intentional_c/seed4",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "Method innovation comparison (standard): intentional_c seed 4"
+        },
+        {
+          "id": "MI_intentional_a_s0",
+          "name": "method_innovation_intentional_a_s0",
+          "description": "intentional_a on method_innovation_standard config, seed 0",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {
+            "ppo": {
+              "use_intentional_critic": false,
+              "use_intentional_actor": true,
+              "use_combat_aware_eta": false,
+              "eta_critic": 0.1,
+              "eta_actor": 0.01,
+              "iu_eps": 1e-08,
+              "beta_adv": 0.999
+            }
+          },
+          "seeds": [
+            0
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/method_innovation_comparison/intentional_a/seed0",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "Method innovation comparison (standard): intentional_a seed 0"
+        },
+        {
+          "id": "MI_intentional_a_s1",
+          "name": "method_innovation_intentional_a_s1",
+          "description": "intentional_a on method_innovation_standard config, seed 1",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {
+            "ppo": {
+              "use_intentional_critic": false,
+              "use_intentional_actor": true,
+              "use_combat_aware_eta": false,
+              "eta_critic": 0.1,
+              "eta_actor": 0.01,
+              "iu_eps": 1e-08,
+              "beta_adv": 0.999
+            }
+          },
+          "seeds": [
+            1
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/method_innovation_comparison/intentional_a/seed1",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "Method innovation comparison (standard): intentional_a seed 1"
+        },
+        {
+          "id": "MI_intentional_a_s2",
+          "name": "method_innovation_intentional_a_s2",
+          "description": "intentional_a on method_innovation_standard config, seed 2",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {
+            "ppo": {
+              "use_intentional_critic": false,
+              "use_intentional_actor": true,
+              "use_combat_aware_eta": false,
+              "eta_critic": 0.1,
+              "eta_actor": 0.01,
+              "iu_eps": 1e-08,
+              "beta_adv": 0.999
+            }
+          },
+          "seeds": [
+            2
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/method_innovation_comparison/intentional_a/seed2",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "Method innovation comparison (standard): intentional_a seed 2"
+        },
+        {
+          "id": "MI_intentional_a_s3",
+          "name": "method_innovation_intentional_a_s3",
+          "description": "intentional_a on method_innovation_standard config, seed 3",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {
+            "ppo": {
+              "use_intentional_critic": false,
+              "use_intentional_actor": true,
+              "use_combat_aware_eta": false,
+              "eta_critic": 0.1,
+              "eta_actor": 0.01,
+              "iu_eps": 1e-08,
+              "beta_adv": 0.999
+            }
+          },
+          "seeds": [
+            3
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/method_innovation_comparison/intentional_a/seed3",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "Method innovation comparison (standard): intentional_a seed 3"
+        },
+        {
+          "id": "MI_intentional_a_s4",
+          "name": "method_innovation_intentional_a_s4",
+          "description": "intentional_a on method_innovation_standard config, seed 4",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {
+            "ppo": {
+              "use_intentional_critic": false,
+              "use_intentional_actor": true,
+              "use_combat_aware_eta": false,
+              "eta_critic": 0.1,
+              "eta_actor": 0.01,
+              "iu_eps": 1e-08,
+              "beta_adv": 0.999
+            }
+          },
+          "seeds": [
+            4
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/method_innovation_comparison/intentional_a/seed4",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "Method innovation comparison (standard): intentional_a seed 4"
+        }
+      ]
+    },
+    {
+      "group_id": "MIH",
+      "name": "method_innovation_hard",
+      "description": "5-algorithm x 5-seed comparison on method_innovation_hard config",
+      "estimated_total_hours": 10.4,
+      "hardware": "CPU",
+      "experiments": [
+        {
+          "id": "MIH_baseline_s0",
+          "name": "method_innovation_baseline_s0",
+          "description": "baseline on method_innovation_hard config, seed 0",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison_hard.yaml",
+          "override_config": {},
+          "seeds": [
+            0
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/method_innovation_comparison_hard/baseline/seed0",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "Method innovation comparison (hard): baseline seed 0"
+        },
+        {
+          "id": "MIH_baseline_s1",
+          "name": "method_innovation_baseline_s1",
+          "description": "baseline on method_innovation_hard config, seed 1",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison_hard.yaml",
+          "override_config": {},
+          "seeds": [
+            1
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/method_innovation_comparison_hard/baseline/seed1",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "Method innovation comparison (hard): baseline seed 1"
+        },
+        {
+          "id": "MIH_baseline_s2",
+          "name": "method_innovation_baseline_s2",
+          "description": "baseline on method_innovation_hard config, seed 2",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison_hard.yaml",
+          "override_config": {},
+          "seeds": [
+            2
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/method_innovation_comparison_hard/baseline/seed2",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "Method innovation comparison (hard): baseline seed 2"
+        },
+        {
+          "id": "MIH_baseline_s3",
+          "name": "method_innovation_baseline_s3",
+          "description": "baseline on method_innovation_hard config, seed 3",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison_hard.yaml",
+          "override_config": {},
+          "seeds": [
+            3
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/method_innovation_comparison_hard/baseline/seed3",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "Method innovation comparison (hard): baseline seed 3"
+        },
+        {
+          "id": "MIH_baseline_s4",
+          "name": "method_innovation_baseline_s4",
+          "description": "baseline on method_innovation_hard config, seed 4",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison_hard.yaml",
+          "override_config": {},
+          "seeds": [
+            4
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/method_innovation_comparison_hard/baseline/seed4",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "Method innovation comparison (hard): baseline seed 4"
+        },
+        {
+          "id": "MIH_cr_ppo_s0",
+          "name": "method_innovation_cr_ppo_s0",
+          "description": "cr_ppo on method_innovation_hard config, seed 0",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison_hard.yaml",
+          "override_config": {
+            "ppo": {
+              "complexity_coef": 0.001,
+              "cr_n_bins": 8
+            }
+          },
+          "seeds": [
+            0
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/method_innovation_comparison_hard/cr_ppo/seed0",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "Method innovation comparison (hard): cr_ppo seed 0"
+        },
+        {
+          "id": "MIH_cr_ppo_s1",
+          "name": "method_innovation_cr_ppo_s1",
+          "description": "cr_ppo on method_innovation_hard config, seed 1",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison_hard.yaml",
+          "override_config": {
+            "ppo": {
+              "complexity_coef": 0.001,
+              "cr_n_bins": 8
+            }
+          },
+          "seeds": [
+            1
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/method_innovation_comparison_hard/cr_ppo/seed1",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "Method innovation comparison (hard): cr_ppo seed 1"
+        },
+        {
+          "id": "MIH_cr_ppo_s2",
+          "name": "method_innovation_cr_ppo_s2",
+          "description": "cr_ppo on method_innovation_hard config, seed 2",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison_hard.yaml",
+          "override_config": {
+            "ppo": {
+              "complexity_coef": 0.001,
+              "cr_n_bins": 8
+            }
+          },
+          "seeds": [
+            2
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/method_innovation_comparison_hard/cr_ppo/seed2",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "Method innovation comparison (hard): cr_ppo seed 2"
+        },
+        {
+          "id": "MIH_cr_ppo_s3",
+          "name": "method_innovation_cr_ppo_s3",
+          "description": "cr_ppo on method_innovation_hard config, seed 3",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison_hard.yaml",
+          "override_config": {
+            "ppo": {
+              "complexity_coef": 0.001,
+              "cr_n_bins": 8
+            }
+          },
+          "seeds": [
+            3
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/method_innovation_comparison_hard/cr_ppo/seed3",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "Method innovation comparison (hard): cr_ppo seed 3"
+        },
+        {
+          "id": "MIH_cr_ppo_s4",
+          "name": "method_innovation_cr_ppo_s4",
+          "description": "cr_ppo on method_innovation_hard config, seed 4",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison_hard.yaml",
+          "override_config": {
+            "ppo": {
+              "complexity_coef": 0.001,
+              "cr_n_bins": 8
+            }
+          },
+          "seeds": [
+            4
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/method_innovation_comparison_hard/cr_ppo/seed4",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "Method innovation comparison (hard): cr_ppo seed 4"
+        },
+        {
+          "id": "MIH_intentional_s0",
+          "name": "method_innovation_intentional_s0",
+          "description": "intentional on method_innovation_hard config, seed 0",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison_hard.yaml",
+          "override_config": {
+            "ppo": {
+              "use_intentional_critic": true,
+              "use_intentional_actor": true,
+              "use_combat_aware_eta": true,
+              "eta_critic": 0.1,
+              "eta_actor": 0.01,
+              "iu_eps": 1e-08,
+              "beta_adv": 0.999
+            },
+            "combat_aware": {
+              "eta_actor": 0.01,
+              "eta_critic": 0.1,
+              "range_thresholds_m": [
+                3000.0,
+                6000.0
+              ],
+              "terminal_range_m": 1200.0,
+              "aspect_threshold_deg": 30.0
+            }
+          },
+          "seeds": [
+            0
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/method_innovation_comparison_hard/intentional/seed0",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "Method innovation comparison (hard): intentional seed 0"
+        },
+        {
+          "id": "MIH_intentional_s1",
+          "name": "method_innovation_intentional_s1",
+          "description": "intentional on method_innovation_hard config, seed 1",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison_hard.yaml",
+          "override_config": {
+            "ppo": {
+              "use_intentional_critic": true,
+              "use_intentional_actor": true,
+              "use_combat_aware_eta": true,
+              "eta_critic": 0.1,
+              "eta_actor": 0.01,
+              "iu_eps": 1e-08,
+              "beta_adv": 0.999
+            },
+            "combat_aware": {
+              "eta_actor": 0.01,
+              "eta_critic": 0.1,
+              "range_thresholds_m": [
+                3000.0,
+                6000.0
+              ],
+              "terminal_range_m": 1200.0,
+              "aspect_threshold_deg": 30.0
+            }
+          },
+          "seeds": [
+            1
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/method_innovation_comparison_hard/intentional/seed1",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "Method innovation comparison (hard): intentional seed 1"
+        },
+        {
+          "id": "MIH_intentional_s2",
+          "name": "method_innovation_intentional_s2",
+          "description": "intentional on method_innovation_hard config, seed 2",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison_hard.yaml",
+          "override_config": {
+            "ppo": {
+              "use_intentional_critic": true,
+              "use_intentional_actor": true,
+              "use_combat_aware_eta": true,
+              "eta_critic": 0.1,
+              "eta_actor": 0.01,
+              "iu_eps": 1e-08,
+              "beta_adv": 0.999
+            },
+            "combat_aware": {
+              "eta_actor": 0.01,
+              "eta_critic": 0.1,
+              "range_thresholds_m": [
+                3000.0,
+                6000.0
+              ],
+              "terminal_range_m": 1200.0,
+              "aspect_threshold_deg": 30.0
+            }
+          },
+          "seeds": [
+            2
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/method_innovation_comparison_hard/intentional/seed2",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "Method innovation comparison (hard): intentional seed 2"
+        },
+        {
+          "id": "MIH_intentional_s3",
+          "name": "method_innovation_intentional_s3",
+          "description": "intentional on method_innovation_hard config, seed 3",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison_hard.yaml",
+          "override_config": {
+            "ppo": {
+              "use_intentional_critic": true,
+              "use_intentional_actor": true,
+              "use_combat_aware_eta": true,
+              "eta_critic": 0.1,
+              "eta_actor": 0.01,
+              "iu_eps": 1e-08,
+              "beta_adv": 0.999
+            },
+            "combat_aware": {
+              "eta_actor": 0.01,
+              "eta_critic": 0.1,
+              "range_thresholds_m": [
+                3000.0,
+                6000.0
+              ],
+              "terminal_range_m": 1200.0,
+              "aspect_threshold_deg": 30.0
+            }
+          },
+          "seeds": [
+            3
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/method_innovation_comparison_hard/intentional/seed3",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "Method innovation comparison (hard): intentional seed 3"
+        },
+        {
+          "id": "MIH_intentional_s4",
+          "name": "method_innovation_intentional_s4",
+          "description": "intentional on method_innovation_hard config, seed 4",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison_hard.yaml",
+          "override_config": {
+            "ppo": {
+              "use_intentional_critic": true,
+              "use_intentional_actor": true,
+              "use_combat_aware_eta": true,
+              "eta_critic": 0.1,
+              "eta_actor": 0.01,
+              "iu_eps": 1e-08,
+              "beta_adv": 0.999
+            },
+            "combat_aware": {
+              "eta_actor": 0.01,
+              "eta_critic": 0.1,
+              "range_thresholds_m": [
+                3000.0,
+                6000.0
+              ],
+              "terminal_range_m": 1200.0,
+              "aspect_threshold_deg": 30.0
+            }
+          },
+          "seeds": [
+            4
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/method_innovation_comparison_hard/intentional/seed4",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "Method innovation comparison (hard): intentional seed 4"
+        },
+        {
+          "id": "MIH_intentional_c_s0",
+          "name": "method_innovation_intentional_c_s0",
+          "description": "intentional_c on method_innovation_hard config, seed 0",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison_hard.yaml",
+          "override_config": {
+            "ppo": {
+              "use_intentional_critic": true,
+              "use_intentional_actor": false,
+              "use_combat_aware_eta": false,
+              "eta_critic": 0.1,
+              "eta_actor": 0.01,
+              "iu_eps": 1e-08,
+              "beta_adv": 0.999
+            }
+          },
+          "seeds": [
+            0
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/method_innovation_comparison_hard/intentional_c/seed0",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "Method innovation comparison (hard): intentional_c seed 0"
+        },
+        {
+          "id": "MIH_intentional_c_s1",
+          "name": "method_innovation_intentional_c_s1",
+          "description": "intentional_c on method_innovation_hard config, seed 1",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison_hard.yaml",
+          "override_config": {
+            "ppo": {
+              "use_intentional_critic": true,
+              "use_intentional_actor": false,
+              "use_combat_aware_eta": false,
+              "eta_critic": 0.1,
+              "eta_actor": 0.01,
+              "iu_eps": 1e-08,
+              "beta_adv": 0.999
+            }
+          },
+          "seeds": [
+            1
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/method_innovation_comparison_hard/intentional_c/seed1",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "Method innovation comparison (hard): intentional_c seed 1"
+        },
+        {
+          "id": "MIH_intentional_c_s2",
+          "name": "method_innovation_intentional_c_s2",
+          "description": "intentional_c on method_innovation_hard config, seed 2",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison_hard.yaml",
+          "override_config": {
+            "ppo": {
+              "use_intentional_critic": true,
+              "use_intentional_actor": false,
+              "use_combat_aware_eta": false,
+              "eta_critic": 0.1,
+              "eta_actor": 0.01,
+              "iu_eps": 1e-08,
+              "beta_adv": 0.999
+            }
+          },
+          "seeds": [
+            2
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/method_innovation_comparison_hard/intentional_c/seed2",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "Method innovation comparison (hard): intentional_c seed 2"
+        },
+        {
+          "id": "MIH_intentional_c_s3",
+          "name": "method_innovation_intentional_c_s3",
+          "description": "intentional_c on method_innovation_hard config, seed 3",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison_hard.yaml",
+          "override_config": {
+            "ppo": {
+              "use_intentional_critic": true,
+              "use_intentional_actor": false,
+              "use_combat_aware_eta": false,
+              "eta_critic": 0.1,
+              "eta_actor": 0.01,
+              "iu_eps": 1e-08,
+              "beta_adv": 0.999
+            }
+          },
+          "seeds": [
+            3
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/method_innovation_comparison_hard/intentional_c/seed3",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "Method innovation comparison (hard): intentional_c seed 3"
+        },
+        {
+          "id": "MIH_intentional_c_s4",
+          "name": "method_innovation_intentional_c_s4",
+          "description": "intentional_c on method_innovation_hard config, seed 4",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison_hard.yaml",
+          "override_config": {
+            "ppo": {
+              "use_intentional_critic": true,
+              "use_intentional_actor": false,
+              "use_combat_aware_eta": false,
+              "eta_critic": 0.1,
+              "eta_actor": 0.01,
+              "iu_eps": 1e-08,
+              "beta_adv": 0.999
+            }
+          },
+          "seeds": [
+            4
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/method_innovation_comparison_hard/intentional_c/seed4",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "Method innovation comparison (hard): intentional_c seed 4"
+        },
+        {
+          "id": "MIH_intentional_a_s0",
+          "name": "method_innovation_intentional_a_s0",
+          "description": "intentional_a on method_innovation_hard config, seed 0",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison_hard.yaml",
+          "override_config": {
+            "ppo": {
+              "use_intentional_critic": false,
+              "use_intentional_actor": true,
+              "use_combat_aware_eta": false,
+              "eta_critic": 0.1,
+              "eta_actor": 0.01,
+              "iu_eps": 1e-08,
+              "beta_adv": 0.999
+            }
+          },
+          "seeds": [
+            0
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/method_innovation_comparison_hard/intentional_a/seed0",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "Method innovation comparison (hard): intentional_a seed 0"
+        },
+        {
+          "id": "MIH_intentional_a_s1",
+          "name": "method_innovation_intentional_a_s1",
+          "description": "intentional_a on method_innovation_hard config, seed 1",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison_hard.yaml",
+          "override_config": {
+            "ppo": {
+              "use_intentional_critic": false,
+              "use_intentional_actor": true,
+              "use_combat_aware_eta": false,
+              "eta_critic": 0.1,
+              "eta_actor": 0.01,
+              "iu_eps": 1e-08,
+              "beta_adv": 0.999
+            }
+          },
+          "seeds": [
+            1
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/method_innovation_comparison_hard/intentional_a/seed1",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "Method innovation comparison (hard): intentional_a seed 1"
+        },
+        {
+          "id": "MIH_intentional_a_s2",
+          "name": "method_innovation_intentional_a_s2",
+          "description": "intentional_a on method_innovation_hard config, seed 2",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison_hard.yaml",
+          "override_config": {
+            "ppo": {
+              "use_intentional_critic": false,
+              "use_intentional_actor": true,
+              "use_combat_aware_eta": false,
+              "eta_critic": 0.1,
+              "eta_actor": 0.01,
+              "iu_eps": 1e-08,
+              "beta_adv": 0.999
+            }
+          },
+          "seeds": [
+            2
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/method_innovation_comparison_hard/intentional_a/seed2",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "Method innovation comparison (hard): intentional_a seed 2"
+        },
+        {
+          "id": "MIH_intentional_a_s3",
+          "name": "method_innovation_intentional_a_s3",
+          "description": "intentional_a on method_innovation_hard config, seed 3",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison_hard.yaml",
+          "override_config": {
+            "ppo": {
+              "use_intentional_critic": false,
+              "use_intentional_actor": true,
+              "use_combat_aware_eta": false,
+              "eta_critic": 0.1,
+              "eta_actor": 0.01,
+              "iu_eps": 1e-08,
+              "beta_adv": 0.999
+            }
+          },
+          "seeds": [
+            3
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/method_innovation_comparison_hard/intentional_a/seed3",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "Method innovation comparison (hard): intentional_a seed 3"
+        },
+        {
+          "id": "MIH_intentional_a_s4",
+          "name": "method_innovation_intentional_a_s4",
+          "description": "intentional_a on method_innovation_hard config, seed 4",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison_hard.yaml",
+          "override_config": {
+            "ppo": {
+              "use_intentional_critic": false,
+              "use_intentional_actor": true,
+              "use_combat_aware_eta": false,
+              "eta_critic": 0.1,
+              "eta_actor": 0.01,
+              "iu_eps": 1e-08,
+              "beta_adv": 0.999
+            }
+          },
+          "seeds": [
+            4
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/method_innovation_comparison_hard/intentional_a/seed4",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "Method innovation comparison (hard): intentional_a seed 4"
+        }
+      ]
+    },
+    {
+      "group_id": "CAMPAIGN",
+      "name": "baseline_141_seed_campaign",
+      "description": "Large-scale baseline PPO reproducibility campaign (141 seeds)",
+      "estimated_total_hours": 58.8,
+      "hardware": "CPU",
+      "experiments": [
+        {
+          "id": "CAMPAIGN_s0",
+          "name": "baseline_141seed_s0",
+          "description": "Baseline PPO 141-seed campaign, seed 0",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            0
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed0",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 0"
+        },
+        {
+          "id": "CAMPAIGN_s1",
+          "name": "baseline_141seed_s1",
+          "description": "Baseline PPO 141-seed campaign, seed 1",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            1
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed1",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 1"
+        },
+        {
+          "id": "CAMPAIGN_s2",
+          "name": "baseline_141seed_s2",
+          "description": "Baseline PPO 141-seed campaign, seed 2",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            2
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed2",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 2"
+        },
+        {
+          "id": "CAMPAIGN_s3",
+          "name": "baseline_141seed_s3",
+          "description": "Baseline PPO 141-seed campaign, seed 3",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            3
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed3",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 3"
+        },
+        {
+          "id": "CAMPAIGN_s4",
+          "name": "baseline_141seed_s4",
+          "description": "Baseline PPO 141-seed campaign, seed 4",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            4
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed4",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 4"
+        },
+        {
+          "id": "CAMPAIGN_s5",
+          "name": "baseline_141seed_s5",
+          "description": "Baseline PPO 141-seed campaign, seed 5",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            5
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed5",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 5"
+        },
+        {
+          "id": "CAMPAIGN_s6",
+          "name": "baseline_141seed_s6",
+          "description": "Baseline PPO 141-seed campaign, seed 6",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            6
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed6",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 6"
+        },
+        {
+          "id": "CAMPAIGN_s7",
+          "name": "baseline_141seed_s7",
+          "description": "Baseline PPO 141-seed campaign, seed 7",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            7
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed7",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 7"
+        },
+        {
+          "id": "CAMPAIGN_s8",
+          "name": "baseline_141seed_s8",
+          "description": "Baseline PPO 141-seed campaign, seed 8",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            8
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed8",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 8"
+        },
+        {
+          "id": "CAMPAIGN_s9",
+          "name": "baseline_141seed_s9",
+          "description": "Baseline PPO 141-seed campaign, seed 9",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            9
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed9",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 9"
+        },
+        {
+          "id": "CAMPAIGN_s10",
+          "name": "baseline_141seed_s10",
+          "description": "Baseline PPO 141-seed campaign, seed 10",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            10
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed10",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 10"
+        },
+        {
+          "id": "CAMPAIGN_s11",
+          "name": "baseline_141seed_s11",
+          "description": "Baseline PPO 141-seed campaign, seed 11",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            11
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed11",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 11"
+        },
+        {
+          "id": "CAMPAIGN_s12",
+          "name": "baseline_141seed_s12",
+          "description": "Baseline PPO 141-seed campaign, seed 12",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            12
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed12",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 12"
+        },
+        {
+          "id": "CAMPAIGN_s13",
+          "name": "baseline_141seed_s13",
+          "description": "Baseline PPO 141-seed campaign, seed 13",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            13
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed13",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 13"
+        },
+        {
+          "id": "CAMPAIGN_s14",
+          "name": "baseline_141seed_s14",
+          "description": "Baseline PPO 141-seed campaign, seed 14",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            14
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed14",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 14"
+        },
+        {
+          "id": "CAMPAIGN_s15",
+          "name": "baseline_141seed_s15",
+          "description": "Baseline PPO 141-seed campaign, seed 15",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            15
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed15",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 15"
+        },
+        {
+          "id": "CAMPAIGN_s16",
+          "name": "baseline_141seed_s16",
+          "description": "Baseline PPO 141-seed campaign, seed 16",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            16
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed16",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 16"
+        },
+        {
+          "id": "CAMPAIGN_s17",
+          "name": "baseline_141seed_s17",
+          "description": "Baseline PPO 141-seed campaign, seed 17",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            17
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed17",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 17"
+        },
+        {
+          "id": "CAMPAIGN_s18",
+          "name": "baseline_141seed_s18",
+          "description": "Baseline PPO 141-seed campaign, seed 18",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            18
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed18",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 18"
+        },
+        {
+          "id": "CAMPAIGN_s19",
+          "name": "baseline_141seed_s19",
+          "description": "Baseline PPO 141-seed campaign, seed 19",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            19
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed19",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 19"
+        },
+        {
+          "id": "CAMPAIGN_s20",
+          "name": "baseline_141seed_s20",
+          "description": "Baseline PPO 141-seed campaign, seed 20",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            20
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed20",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 20"
+        },
+        {
+          "id": "CAMPAIGN_s21",
+          "name": "baseline_141seed_s21",
+          "description": "Baseline PPO 141-seed campaign, seed 21",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            21
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed21",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 21"
+        },
+        {
+          "id": "CAMPAIGN_s22",
+          "name": "baseline_141seed_s22",
+          "description": "Baseline PPO 141-seed campaign, seed 22",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            22
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed22",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 22"
+        },
+        {
+          "id": "CAMPAIGN_s23",
+          "name": "baseline_141seed_s23",
+          "description": "Baseline PPO 141-seed campaign, seed 23",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            23
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed23",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 23"
+        },
+        {
+          "id": "CAMPAIGN_s24",
+          "name": "baseline_141seed_s24",
+          "description": "Baseline PPO 141-seed campaign, seed 24",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            24
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed24",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 24"
+        },
+        {
+          "id": "CAMPAIGN_s25",
+          "name": "baseline_141seed_s25",
+          "description": "Baseline PPO 141-seed campaign, seed 25",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            25
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed25",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 25"
+        },
+        {
+          "id": "CAMPAIGN_s26",
+          "name": "baseline_141seed_s26",
+          "description": "Baseline PPO 141-seed campaign, seed 26",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            26
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed26",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 26"
+        },
+        {
+          "id": "CAMPAIGN_s27",
+          "name": "baseline_141seed_s27",
+          "description": "Baseline PPO 141-seed campaign, seed 27",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            27
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed27",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 27"
+        },
+        {
+          "id": "CAMPAIGN_s28",
+          "name": "baseline_141seed_s28",
+          "description": "Baseline PPO 141-seed campaign, seed 28",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            28
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed28",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 28"
+        },
+        {
+          "id": "CAMPAIGN_s29",
+          "name": "baseline_141seed_s29",
+          "description": "Baseline PPO 141-seed campaign, seed 29",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            29
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed29",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 29"
+        },
+        {
+          "id": "CAMPAIGN_s30",
+          "name": "baseline_141seed_s30",
+          "description": "Baseline PPO 141-seed campaign, seed 30",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            30
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed30",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 30"
+        },
+        {
+          "id": "CAMPAIGN_s31",
+          "name": "baseline_141seed_s31",
+          "description": "Baseline PPO 141-seed campaign, seed 31",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            31
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed31",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 31"
+        },
+        {
+          "id": "CAMPAIGN_s32",
+          "name": "baseline_141seed_s32",
+          "description": "Baseline PPO 141-seed campaign, seed 32",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            32
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed32",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 32"
+        },
+        {
+          "id": "CAMPAIGN_s33",
+          "name": "baseline_141seed_s33",
+          "description": "Baseline PPO 141-seed campaign, seed 33",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            33
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed33",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 33"
+        },
+        {
+          "id": "CAMPAIGN_s34",
+          "name": "baseline_141seed_s34",
+          "description": "Baseline PPO 141-seed campaign, seed 34",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            34
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed34",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 34"
+        },
+        {
+          "id": "CAMPAIGN_s35",
+          "name": "baseline_141seed_s35",
+          "description": "Baseline PPO 141-seed campaign, seed 35",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            35
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed35",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 35"
+        },
+        {
+          "id": "CAMPAIGN_s36",
+          "name": "baseline_141seed_s36",
+          "description": "Baseline PPO 141-seed campaign, seed 36",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            36
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed36",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 36"
+        },
+        {
+          "id": "CAMPAIGN_s37",
+          "name": "baseline_141seed_s37",
+          "description": "Baseline PPO 141-seed campaign, seed 37",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            37
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed37",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 37"
+        },
+        {
+          "id": "CAMPAIGN_s38",
+          "name": "baseline_141seed_s38",
+          "description": "Baseline PPO 141-seed campaign, seed 38",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            38
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed38",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 38"
+        },
+        {
+          "id": "CAMPAIGN_s39",
+          "name": "baseline_141seed_s39",
+          "description": "Baseline PPO 141-seed campaign, seed 39",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            39
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed39",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 39"
+        },
+        {
+          "id": "CAMPAIGN_s40",
+          "name": "baseline_141seed_s40",
+          "description": "Baseline PPO 141-seed campaign, seed 40",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            40
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed40",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 40"
+        },
+        {
+          "id": "CAMPAIGN_s41",
+          "name": "baseline_141seed_s41",
+          "description": "Baseline PPO 141-seed campaign, seed 41",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            41
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed41",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 41"
+        },
+        {
+          "id": "CAMPAIGN_s42",
+          "name": "baseline_141seed_s42",
+          "description": "Baseline PPO 141-seed campaign, seed 42",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            42
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed42",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 42"
+        },
+        {
+          "id": "CAMPAIGN_s43",
+          "name": "baseline_141seed_s43",
+          "description": "Baseline PPO 141-seed campaign, seed 43",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            43
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed43",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 43"
+        },
+        {
+          "id": "CAMPAIGN_s44",
+          "name": "baseline_141seed_s44",
+          "description": "Baseline PPO 141-seed campaign, seed 44",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            44
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed44",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 44"
+        },
+        {
+          "id": "CAMPAIGN_s45",
+          "name": "baseline_141seed_s45",
+          "description": "Baseline PPO 141-seed campaign, seed 45",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            45
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed45",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 45"
+        },
+        {
+          "id": "CAMPAIGN_s46",
+          "name": "baseline_141seed_s46",
+          "description": "Baseline PPO 141-seed campaign, seed 46",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            46
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed46",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 46"
+        },
+        {
+          "id": "CAMPAIGN_s47",
+          "name": "baseline_141seed_s47",
+          "description": "Baseline PPO 141-seed campaign, seed 47",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            47
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed47",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 47"
+        },
+        {
+          "id": "CAMPAIGN_s48",
+          "name": "baseline_141seed_s48",
+          "description": "Baseline PPO 141-seed campaign, seed 48",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            48
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed48",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 48"
+        },
+        {
+          "id": "CAMPAIGN_s49",
+          "name": "baseline_141seed_s49",
+          "description": "Baseline PPO 141-seed campaign, seed 49",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            49
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed49",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 49"
+        },
+        {
+          "id": "CAMPAIGN_s50",
+          "name": "baseline_141seed_s50",
+          "description": "Baseline PPO 141-seed campaign, seed 50",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            50
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed50",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 50"
+        },
+        {
+          "id": "CAMPAIGN_s51",
+          "name": "baseline_141seed_s51",
+          "description": "Baseline PPO 141-seed campaign, seed 51",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            51
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed51",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 51"
+        },
+        {
+          "id": "CAMPAIGN_s52",
+          "name": "baseline_141seed_s52",
+          "description": "Baseline PPO 141-seed campaign, seed 52",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            52
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed52",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 52"
+        },
+        {
+          "id": "CAMPAIGN_s53",
+          "name": "baseline_141seed_s53",
+          "description": "Baseline PPO 141-seed campaign, seed 53",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            53
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed53",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 53"
+        },
+        {
+          "id": "CAMPAIGN_s54",
+          "name": "baseline_141seed_s54",
+          "description": "Baseline PPO 141-seed campaign, seed 54",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            54
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed54",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 54"
+        },
+        {
+          "id": "CAMPAIGN_s55",
+          "name": "baseline_141seed_s55",
+          "description": "Baseline PPO 141-seed campaign, seed 55",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            55
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed55",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 55"
+        },
+        {
+          "id": "CAMPAIGN_s56",
+          "name": "baseline_141seed_s56",
+          "description": "Baseline PPO 141-seed campaign, seed 56",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            56
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed56",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 56"
+        },
+        {
+          "id": "CAMPAIGN_s57",
+          "name": "baseline_141seed_s57",
+          "description": "Baseline PPO 141-seed campaign, seed 57",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            57
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed57",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 57"
+        },
+        {
+          "id": "CAMPAIGN_s58",
+          "name": "baseline_141seed_s58",
+          "description": "Baseline PPO 141-seed campaign, seed 58",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            58
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed58",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 58"
+        },
+        {
+          "id": "CAMPAIGN_s59",
+          "name": "baseline_141seed_s59",
+          "description": "Baseline PPO 141-seed campaign, seed 59",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            59
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed59",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 59"
+        },
+        {
+          "id": "CAMPAIGN_s60",
+          "name": "baseline_141seed_s60",
+          "description": "Baseline PPO 141-seed campaign, seed 60",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            60
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed60",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 60"
+        },
+        {
+          "id": "CAMPAIGN_s61",
+          "name": "baseline_141seed_s61",
+          "description": "Baseline PPO 141-seed campaign, seed 61",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            61
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed61",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 61"
+        },
+        {
+          "id": "CAMPAIGN_s62",
+          "name": "baseline_141seed_s62",
+          "description": "Baseline PPO 141-seed campaign, seed 62",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            62
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed62",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 62"
+        },
+        {
+          "id": "CAMPAIGN_s63",
+          "name": "baseline_141seed_s63",
+          "description": "Baseline PPO 141-seed campaign, seed 63",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            63
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed63",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 63"
+        },
+        {
+          "id": "CAMPAIGN_s64",
+          "name": "baseline_141seed_s64",
+          "description": "Baseline PPO 141-seed campaign, seed 64",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            64
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed64",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 64"
+        },
+        {
+          "id": "CAMPAIGN_s65",
+          "name": "baseline_141seed_s65",
+          "description": "Baseline PPO 141-seed campaign, seed 65",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            65
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed65",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 65"
+        },
+        {
+          "id": "CAMPAIGN_s66",
+          "name": "baseline_141seed_s66",
+          "description": "Baseline PPO 141-seed campaign, seed 66",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            66
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed66",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 66"
+        },
+        {
+          "id": "CAMPAIGN_s67",
+          "name": "baseline_141seed_s67",
+          "description": "Baseline PPO 141-seed campaign, seed 67",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            67
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed67",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 67"
+        },
+        {
+          "id": "CAMPAIGN_s68",
+          "name": "baseline_141seed_s68",
+          "description": "Baseline PPO 141-seed campaign, seed 68",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            68
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed68",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 68"
+        },
+        {
+          "id": "CAMPAIGN_s69",
+          "name": "baseline_141seed_s69",
+          "description": "Baseline PPO 141-seed campaign, seed 69",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            69
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed69",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 69"
+        },
+        {
+          "id": "CAMPAIGN_s70",
+          "name": "baseline_141seed_s70",
+          "description": "Baseline PPO 141-seed campaign, seed 70",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            70
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed70",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 70"
+        },
+        {
+          "id": "CAMPAIGN_s71",
+          "name": "baseline_141seed_s71",
+          "description": "Baseline PPO 141-seed campaign, seed 71",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            71
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed71",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 71"
+        },
+        {
+          "id": "CAMPAIGN_s72",
+          "name": "baseline_141seed_s72",
+          "description": "Baseline PPO 141-seed campaign, seed 72",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            72
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed72",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 72"
+        },
+        {
+          "id": "CAMPAIGN_s73",
+          "name": "baseline_141seed_s73",
+          "description": "Baseline PPO 141-seed campaign, seed 73",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            73
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed73",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 73"
+        },
+        {
+          "id": "CAMPAIGN_s74",
+          "name": "baseline_141seed_s74",
+          "description": "Baseline PPO 141-seed campaign, seed 74",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            74
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed74",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 74"
+        },
+        {
+          "id": "CAMPAIGN_s75",
+          "name": "baseline_141seed_s75",
+          "description": "Baseline PPO 141-seed campaign, seed 75",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            75
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed75",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 75"
+        },
+        {
+          "id": "CAMPAIGN_s76",
+          "name": "baseline_141seed_s76",
+          "description": "Baseline PPO 141-seed campaign, seed 76",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            76
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed76",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 76"
+        },
+        {
+          "id": "CAMPAIGN_s77",
+          "name": "baseline_141seed_s77",
+          "description": "Baseline PPO 141-seed campaign, seed 77",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            77
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed77",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 77"
+        },
+        {
+          "id": "CAMPAIGN_s78",
+          "name": "baseline_141seed_s78",
+          "description": "Baseline PPO 141-seed campaign, seed 78",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            78
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed78",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 78"
+        },
+        {
+          "id": "CAMPAIGN_s79",
+          "name": "baseline_141seed_s79",
+          "description": "Baseline PPO 141-seed campaign, seed 79",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            79
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed79",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 79"
+        },
+        {
+          "id": "CAMPAIGN_s80",
+          "name": "baseline_141seed_s80",
+          "description": "Baseline PPO 141-seed campaign, seed 80",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            80
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed80",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 80"
+        },
+        {
+          "id": "CAMPAIGN_s81",
+          "name": "baseline_141seed_s81",
+          "description": "Baseline PPO 141-seed campaign, seed 81",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            81
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed81",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 81"
+        },
+        {
+          "id": "CAMPAIGN_s82",
+          "name": "baseline_141seed_s82",
+          "description": "Baseline PPO 141-seed campaign, seed 82",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            82
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed82",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 82"
+        },
+        {
+          "id": "CAMPAIGN_s83",
+          "name": "baseline_141seed_s83",
+          "description": "Baseline PPO 141-seed campaign, seed 83",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            83
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed83",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 83"
+        },
+        {
+          "id": "CAMPAIGN_s84",
+          "name": "baseline_141seed_s84",
+          "description": "Baseline PPO 141-seed campaign, seed 84",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            84
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed84",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 84"
+        },
+        {
+          "id": "CAMPAIGN_s85",
+          "name": "baseline_141seed_s85",
+          "description": "Baseline PPO 141-seed campaign, seed 85",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            85
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed85",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 85"
+        },
+        {
+          "id": "CAMPAIGN_s86",
+          "name": "baseline_141seed_s86",
+          "description": "Baseline PPO 141-seed campaign, seed 86",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            86
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed86",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 86"
+        },
+        {
+          "id": "CAMPAIGN_s87",
+          "name": "baseline_141seed_s87",
+          "description": "Baseline PPO 141-seed campaign, seed 87",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            87
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed87",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 87"
+        },
+        {
+          "id": "CAMPAIGN_s88",
+          "name": "baseline_141seed_s88",
+          "description": "Baseline PPO 141-seed campaign, seed 88",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            88
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed88",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 88"
+        },
+        {
+          "id": "CAMPAIGN_s89",
+          "name": "baseline_141seed_s89",
+          "description": "Baseline PPO 141-seed campaign, seed 89",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            89
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed89",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 89"
+        },
+        {
+          "id": "CAMPAIGN_s90",
+          "name": "baseline_141seed_s90",
+          "description": "Baseline PPO 141-seed campaign, seed 90",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            90
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed90",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 90"
+        },
+        {
+          "id": "CAMPAIGN_s91",
+          "name": "baseline_141seed_s91",
+          "description": "Baseline PPO 141-seed campaign, seed 91",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            91
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed91",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 91"
+        },
+        {
+          "id": "CAMPAIGN_s92",
+          "name": "baseline_141seed_s92",
+          "description": "Baseline PPO 141-seed campaign, seed 92",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            92
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed92",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 92"
+        },
+        {
+          "id": "CAMPAIGN_s93",
+          "name": "baseline_141seed_s93",
+          "description": "Baseline PPO 141-seed campaign, seed 93",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            93
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed93",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 93"
+        },
+        {
+          "id": "CAMPAIGN_s94",
+          "name": "baseline_141seed_s94",
+          "description": "Baseline PPO 141-seed campaign, seed 94",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            94
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed94",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 94"
+        },
+        {
+          "id": "CAMPAIGN_s95",
+          "name": "baseline_141seed_s95",
+          "description": "Baseline PPO 141-seed campaign, seed 95",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            95
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed95",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 95"
+        },
+        {
+          "id": "CAMPAIGN_s96",
+          "name": "baseline_141seed_s96",
+          "description": "Baseline PPO 141-seed campaign, seed 96",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            96
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed96",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 96"
+        },
+        {
+          "id": "CAMPAIGN_s97",
+          "name": "baseline_141seed_s97",
+          "description": "Baseline PPO 141-seed campaign, seed 97",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            97
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed97",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 97"
+        },
+        {
+          "id": "CAMPAIGN_s98",
+          "name": "baseline_141seed_s98",
+          "description": "Baseline PPO 141-seed campaign, seed 98",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            98
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed98",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 98"
+        },
+        {
+          "id": "CAMPAIGN_s99",
+          "name": "baseline_141seed_s99",
+          "description": "Baseline PPO 141-seed campaign, seed 99",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            99
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed99",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 99"
+        },
+        {
+          "id": "CAMPAIGN_s100",
+          "name": "baseline_141seed_s100",
+          "description": "Baseline PPO 141-seed campaign, seed 100",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            100
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed100",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 100"
+        },
+        {
+          "id": "CAMPAIGN_s101",
+          "name": "baseline_141seed_s101",
+          "description": "Baseline PPO 141-seed campaign, seed 101",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            101
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed101",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 101"
+        },
+        {
+          "id": "CAMPAIGN_s102",
+          "name": "baseline_141seed_s102",
+          "description": "Baseline PPO 141-seed campaign, seed 102",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            102
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed102",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 102"
+        },
+        {
+          "id": "CAMPAIGN_s103",
+          "name": "baseline_141seed_s103",
+          "description": "Baseline PPO 141-seed campaign, seed 103",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            103
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed103",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 103"
+        },
+        {
+          "id": "CAMPAIGN_s104",
+          "name": "baseline_141seed_s104",
+          "description": "Baseline PPO 141-seed campaign, seed 104",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            104
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed104",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 104"
+        },
+        {
+          "id": "CAMPAIGN_s105",
+          "name": "baseline_141seed_s105",
+          "description": "Baseline PPO 141-seed campaign, seed 105",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            105
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed105",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 105"
+        },
+        {
+          "id": "CAMPAIGN_s106",
+          "name": "baseline_141seed_s106",
+          "description": "Baseline PPO 141-seed campaign, seed 106",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            106
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed106",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 106"
+        },
+        {
+          "id": "CAMPAIGN_s107",
+          "name": "baseline_141seed_s107",
+          "description": "Baseline PPO 141-seed campaign, seed 107",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            107
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed107",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 107"
+        },
+        {
+          "id": "CAMPAIGN_s108",
+          "name": "baseline_141seed_s108",
+          "description": "Baseline PPO 141-seed campaign, seed 108",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            108
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed108",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 108"
+        },
+        {
+          "id": "CAMPAIGN_s109",
+          "name": "baseline_141seed_s109",
+          "description": "Baseline PPO 141-seed campaign, seed 109",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            109
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed109",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 109"
+        },
+        {
+          "id": "CAMPAIGN_s110",
+          "name": "baseline_141seed_s110",
+          "description": "Baseline PPO 141-seed campaign, seed 110",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            110
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed110",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 110"
+        },
+        {
+          "id": "CAMPAIGN_s111",
+          "name": "baseline_141seed_s111",
+          "description": "Baseline PPO 141-seed campaign, seed 111",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            111
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed111",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 111"
+        },
+        {
+          "id": "CAMPAIGN_s112",
+          "name": "baseline_141seed_s112",
+          "description": "Baseline PPO 141-seed campaign, seed 112",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            112
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed112",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 112"
+        },
+        {
+          "id": "CAMPAIGN_s113",
+          "name": "baseline_141seed_s113",
+          "description": "Baseline PPO 141-seed campaign, seed 113",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            113
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed113",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 113"
+        },
+        {
+          "id": "CAMPAIGN_s114",
+          "name": "baseline_141seed_s114",
+          "description": "Baseline PPO 141-seed campaign, seed 114",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            114
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed114",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 114"
+        },
+        {
+          "id": "CAMPAIGN_s115",
+          "name": "baseline_141seed_s115",
+          "description": "Baseline PPO 141-seed campaign, seed 115",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            115
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed115",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 115"
+        },
+        {
+          "id": "CAMPAIGN_s116",
+          "name": "baseline_141seed_s116",
+          "description": "Baseline PPO 141-seed campaign, seed 116",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            116
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed116",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 116"
+        },
+        {
+          "id": "CAMPAIGN_s117",
+          "name": "baseline_141seed_s117",
+          "description": "Baseline PPO 141-seed campaign, seed 117",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            117
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed117",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 117"
+        },
+        {
+          "id": "CAMPAIGN_s118",
+          "name": "baseline_141seed_s118",
+          "description": "Baseline PPO 141-seed campaign, seed 118",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            118
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed118",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 118"
+        },
+        {
+          "id": "CAMPAIGN_s119",
+          "name": "baseline_141seed_s119",
+          "description": "Baseline PPO 141-seed campaign, seed 119",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            119
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed119",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 119"
+        },
+        {
+          "id": "CAMPAIGN_s120",
+          "name": "baseline_141seed_s120",
+          "description": "Baseline PPO 141-seed campaign, seed 120",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            120
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed120",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 120"
+        },
+        {
+          "id": "CAMPAIGN_s121",
+          "name": "baseline_141seed_s121",
+          "description": "Baseline PPO 141-seed campaign, seed 121",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            121
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed121",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 121"
+        },
+        {
+          "id": "CAMPAIGN_s122",
+          "name": "baseline_141seed_s122",
+          "description": "Baseline PPO 141-seed campaign, seed 122",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            122
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed122",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 122"
+        },
+        {
+          "id": "CAMPAIGN_s123",
+          "name": "baseline_141seed_s123",
+          "description": "Baseline PPO 141-seed campaign, seed 123",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            123
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed123",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 123"
+        },
+        {
+          "id": "CAMPAIGN_s124",
+          "name": "baseline_141seed_s124",
+          "description": "Baseline PPO 141-seed campaign, seed 124",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            124
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed124",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 124"
+        },
+        {
+          "id": "CAMPAIGN_s125",
+          "name": "baseline_141seed_s125",
+          "description": "Baseline PPO 141-seed campaign, seed 125",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            125
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed125",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 125"
+        },
+        {
+          "id": "CAMPAIGN_s126",
+          "name": "baseline_141seed_s126",
+          "description": "Baseline PPO 141-seed campaign, seed 126",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            126
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed126",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 126"
+        },
+        {
+          "id": "CAMPAIGN_s127",
+          "name": "baseline_141seed_s127",
+          "description": "Baseline PPO 141-seed campaign, seed 127",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            127
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed127",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 127"
+        },
+        {
+          "id": "CAMPAIGN_s128",
+          "name": "baseline_141seed_s128",
+          "description": "Baseline PPO 141-seed campaign, seed 128",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            128
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed128",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 128"
+        },
+        {
+          "id": "CAMPAIGN_s129",
+          "name": "baseline_141seed_s129",
+          "description": "Baseline PPO 141-seed campaign, seed 129",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            129
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed129",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 129"
+        },
+        {
+          "id": "CAMPAIGN_s130",
+          "name": "baseline_141seed_s130",
+          "description": "Baseline PPO 141-seed campaign, seed 130",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            130
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed130",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 130"
+        },
+        {
+          "id": "CAMPAIGN_s131",
+          "name": "baseline_141seed_s131",
+          "description": "Baseline PPO 141-seed campaign, seed 131",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            131
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed131",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 131"
+        },
+        {
+          "id": "CAMPAIGN_s132",
+          "name": "baseline_141seed_s132",
+          "description": "Baseline PPO 141-seed campaign, seed 132",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            132
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed132",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 132"
+        },
+        {
+          "id": "CAMPAIGN_s133",
+          "name": "baseline_141seed_s133",
+          "description": "Baseline PPO 141-seed campaign, seed 133",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            133
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed133",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 133"
+        },
+        {
+          "id": "CAMPAIGN_s134",
+          "name": "baseline_141seed_s134",
+          "description": "Baseline PPO 141-seed campaign, seed 134",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            134
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed134",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 134"
+        },
+        {
+          "id": "CAMPAIGN_s135",
+          "name": "baseline_141seed_s135",
+          "description": "Baseline PPO 141-seed campaign, seed 135",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            135
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed135",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 135"
+        },
+        {
+          "id": "CAMPAIGN_s136",
+          "name": "baseline_141seed_s136",
+          "description": "Baseline PPO 141-seed campaign, seed 136",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            136
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed136",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 136"
+        },
+        {
+          "id": "CAMPAIGN_s137",
+          "name": "baseline_141seed_s137",
+          "description": "Baseline PPO 141-seed campaign, seed 137",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            137
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed137",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 137"
+        },
+        {
+          "id": "CAMPAIGN_s138",
+          "name": "baseline_141seed_s138",
+          "description": "Baseline PPO 141-seed campaign, seed 138",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            138
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed138",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 138"
+        },
+        {
+          "id": "CAMPAIGN_s139",
+          "name": "baseline_141seed_s139",
+          "description": "Baseline PPO 141-seed campaign, seed 139",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            139
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed139",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 139"
+        },
+        {
+          "id": "CAMPAIGN_s140",
+          "name": "baseline_141seed_s140",
+          "description": "Baseline PPO 141-seed campaign, seed 140",
+          "script": "python scripts/train_curriculum_ppo.py",
+          "config": "config/method_innovation_comparison.yaml",
+          "override_config": {},
+          "seeds": [
+            140
+          ],
+          "budget_steps": 50000,
+          "output_dir": "outputs/baseline_141seed/seed140",
+          "hardware": "CPU",
+          "estimated_minutes_per_seed": 25,
+          "paper_claim": "141-seed baseline campaign seed 140"
+        }
+      ]
     }
   ],
   "aggregation": {
     "scripts": [
-      {"name": "aggregate_10seed_results.py", "output": "docs/results/10seed_evaluation/summary_10seed_full.md"},
-      {"name": "aggregate_crossing_generalization.py", "output": "docs/results/crossing_generalization/full_grid_summary.md"},
-      {"name": "aggregate_domain_rand.py", "output": "docs/results/domain_randomization/distributed_summary.md"},
-      {"name": "aggregate_predictor_stratification.py", "output": "docs/results/predictor_stratification/10seed_summary.md"}
+      {
+        "name": "aggregate_10seed_results.py",
+        "output": "docs/results/10seed_evaluation/summary_10seed_full.md"
+      },
+      {
+        "name": "aggregate_crossing_generalization.py",
+        "output": "docs/results/crossing_generalization/full_grid_summary.md"
+      },
+      {
+        "name": "aggregate_domain_rand.py",
+        "output": "docs/results/domain_randomization/distributed_summary.md"
+      },
+      {
+        "name": "aggregate_predictor_stratification.py",
+        "output": "docs/results/predictor_stratification/10seed_summary.md"
+      }
     ]
-  }
+  },
+  "notes": "v1.1.0 adds method-innovation comparison (MI/MIH) and the 141-seed baseline campaign (CAMPAIGN). Legacy groups A-F are retained for reference."
 }

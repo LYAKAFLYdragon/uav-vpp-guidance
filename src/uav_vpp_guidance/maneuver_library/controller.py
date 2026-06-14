@@ -25,8 +25,8 @@ class ControllerGains:
     # Yaw coordination
     Kp_beta: float = 1.0
     # Speed/throttle channel
-    Kp_v: float = 0.005
-    Ki_v: float = 0.0001
+    Kp_v: float = 0.02
+    Ki_v: float = 0.0005
 
 
 class InnerLoopController:
@@ -93,7 +93,7 @@ class InnerLoopController:
             throttle = 0.5
 
         return ControlCommand(
-            elevator=float(np.clip(elevator, -1.0, 1.0)),
+            elevator=float(np.clip(-elevator, -1.0, 1.0)),
             aileron=float(np.clip(aileron, -1.0, 1.0)),
             rudder=float(np.clip(rudder, -1.0, 1.0)),
             throttle=float(np.clip(throttle, 0.0, 1.0)),

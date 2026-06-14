@@ -46,6 +46,7 @@ class CoordinatedTurn(Maneuver):
         n_req = 1.0 / math.cos(abs(self.bank_angle))
         return ManeuverSetpoint(
             phi_ref=self._sign * self.bank_angle,
+            theta_ref=0.0,
             nz_ref=n_req,
             velocity_ref=self.velocity_ref,
         )

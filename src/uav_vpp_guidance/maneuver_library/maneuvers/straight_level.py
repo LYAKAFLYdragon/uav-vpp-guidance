@@ -33,6 +33,7 @@ class StraightLevel(Maneuver):
         super().update(state, dt)
         return ManeuverSetpoint(
             phi_ref=0.0,
+            theta_ref=0.0,
             nz_ref=1.0,
             velocity_ref=self.velocity_ref,
         )

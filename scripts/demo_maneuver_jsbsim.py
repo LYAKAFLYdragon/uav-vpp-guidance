@@ -58,6 +58,19 @@ def apply_command(fdm, cmd):
     fdm.set_property_value("fcs/throttle-cmd-norm", cmd.throttle)
 
 
+def set_initial_conditions(fdm, altitude_m, vt_mps, theta_deg=0.0, phi_deg=0.0, psi_deg=0.0):
+    """Set JSBSim initial conditions before run_ic()."""
+    M2FT = 3.28084
+    fdm.set_property_value("ic/h-sl-ft", altitude_m * M2FT)
+    fdm.set_property_value("ic/vt-fps", vt_mps * M2FT)
+    fdm.set_property_value("ic/theta-deg", theta_deg)
+    fdm.set_property_value("ic/phi-deg", phi_deg)
+    fdm.set_property_value("ic/psi-deg", psi_deg)
+    fdm.set_property_value("ic/lat-gc-deg", 0.0)
+    fdm.set_property_value("ic/long-gc-deg", 0.0)
+    fdm.set_property_value("ic/gamma-deg", 0.0)
+
+
 def main():
     parser = argparse.ArgumentParser(description="JSBSim maneuver demo")
     parser.add_argument("--maneuver", type=str, default="loop",
@@ -67,6 +80,12 @@ def main():
     parser.add_argument("--output", type=Path, default=Path("outputs/maneuver_demo/log.csv"))
     parser.add_argument("--params", type=str, default="{}",
                         help="JSON dict of maneuver parameters")
+    parser.add_argument("--altitude-m", type=float, default=5000.0,
+                        help="Initial altitude (m)")
+    parser.add_argument("--vt-mps", type=float, default=250.0,
+                        help="Initial true airspeed (m/s)")
+    parser.add_argument("--settle-steps", type=int, default=600,
+                        help="Steps to let the aircraft settle before starting maneuver")
     args = parser.parse_args()
 
     import json
@@ -83,12 +102,21 @@ def main():
     fdm = jsbsim.FGFDMExec(str(root))
     fdm.load_model("f16")
     fdm.set_dt(args.dt)
+    set_initial_conditions(fdm, args.altitude_m, args.vt_mps)
     fdm.run_ic()  # run initial conditions
 
     maneuver = ManeuverLibrary.create(args.maneuver, params)
     executor = ManeuverExecutor(InnerLoopController())
 
+    # Trim the aircraft for the requested flight condition.
+    fdm.set_property_value("simulation/do_simple_trim", 1)
+    # Run a short stabilization period while holding the trimmed controls.
+    for _ in range(min(args.settle_steps, 120)):
+        fdm.run()
+
     state = build_flight_state(fdm)
+    print(f"Initial state: alt={state.altitude_m:.1f}m, vt={state.velocity_mps:.1f}m/s, "
+          f"phi={np.degrees(state.phi_rad):.1f}deg, theta={np.degrees(state.theta_rad):.1f}deg")
     if not executor.select(maneuver, state):
         print(f"Maneuver {args.maneuver} cannot enter from current state.")
         return

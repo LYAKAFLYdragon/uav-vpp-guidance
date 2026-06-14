@@ -16,12 +16,12 @@ from typing import Optional, Tuple
 
 from .jsbsim_env import JSBSimEnv, neu2lla
 from .simple_point_mass_env import SimplePointMassEnv
-from .observation import compute_relative_geometry, build_observation
+from .observation import compute_relative_geometry, build_observation, ObservationBuilder
 from .reward import RewardCalculator
 from .termination import TerminationChecker
 from ..virtual_point.generator import VirtualPointGenerator
 from ..virtual_point.no_vpp_guidance import NoVPPGuidance
-from ..guidance.los_rate_guidance import LOSRateGuidance
+from ..guidance.los_rate_guidance import LOSRateGuidance, _extract_position as _extract_position_for_vp_error
 from ..guidance.proportional_navigation import ProportionalNavigationGuidance
 from ..guidance.hybrid_guidance import HybridGuidance
 from ..guidance.overload_rollrate import CommandPostProcessor
@@ -183,6 +183,14 @@ class CloseRangeTrackingEnv:
         self.reward_calculator = RewardCalculator(config)
         self.termination_checker = TerminationChecker(self.env_config)
 
+        # Observation builder (supports temporal features, gains, VP error, scenario)
+        self._observation_builder = ObservationBuilder(config)
+
+        # Per-episode state cached for observation enhancement and dynamic offsets
+        self._initial_range_m = None
+        self._current_scenario_type = None
+        self._last_virtual_point = None
+
         # Command filter (three independent channels)
         filter_alpha = (
             config.get("guidance", {}).get("gains", {}).get("alpha_filter", 0.3)
@@ -263,6 +271,8 @@ class CloseRangeTrackingEnv:
         self._sim_time_s = 0.0
         self.reward_calculator.reset()
         self.termination_checker.reset()
+        self._observation_builder.reset()
+        self._last_virtual_point = None
         if hasattr(self.guidance, "reset"):
             self.guidance.reset()
         if self._guidance_pn is not None and hasattr(self._guidance_pn, "reset"):
@@ -276,6 +286,21 @@ class CloseRangeTrackingEnv:
         if self.trajectory_predictor_adapter is not None:
             self.trajectory_predictor_adapter.reset()
         self._prediction_error_tracker.reset()
+
+        # Cache scenario metadata for dynamic offset scaling and observation enhancement.
+        self._current_scenario_type = None
+        self._initial_range_m = 2000.0
+        if scenario is not None:
+            self._current_scenario_type = _get_scenario_attr(scenario, "name")
+            own_pos = _get_scenario_attr(scenario, "own_init", {}).get(
+                "position_m", np.array([0.0, 0.0, 5000.0])
+            )
+            target_pos = _get_scenario_attr(scenario, "target_init", {}).get(
+                "position_m", np.array([2000.0, 0.0, 5000.0])
+            )
+            self._initial_range_m = float(
+                np.linalg.norm(np.asarray(own_pos) - np.asarray(target_pos))
+            )
 
         if self._backend == "jsbsim":
             self._reset_jsbsim(scenario)
@@ -625,8 +650,10 @@ class CloseRangeTrackingEnv:
                 trajectory_predictor_adapter=None,  # generator 不直接调用 predictor
                 predicted_target_position=predicted_target_pos,
                 return_info=True,
+                initial_range_m=self._initial_range_m,
             )
             virtual_point, vp_info = vp_result
+            self._last_virtual_point = virtual_point
             direct_track_mode_effective = False
             virtual_point_source = "vpp_policy"
         else:
@@ -972,15 +999,31 @@ class CloseRangeTrackingEnv:
         own_state, target_state = self._get_current_states()
         rel_state = compute_relative_geometry(own_state, target_state)
 
+        # Compute VPP tracking error if a virtual point was generated this step.
+        guidance_state = None
+        if self._last_virtual_point is not None:
+            try:
+                own_pos = _extract_position_for_vp_error(own_state)
+                vp_pos = _extract_position_for_vp_error(self._last_virtual_point)
+                guidance_state = {"vp_tracking_error": vp_pos - own_pos}
+            except Exception:
+                guidance_state = None
+
+        # 同时返回展平向量（供策略网络使用）
+        obs_vec = self._observation_builder.build(
+            own_state,
+            target_state,
+            guidance_state=guidance_state,
+            gains=self.current_gains,
+            scenario_type=self._current_scenario_type,
+        )
+
         obs_dict = {
             "own_state": own_state,
             "target_state": target_state,
             "relative_state": rel_state,
+            "observation_vector": obs_vec,
         }
-
-        # 同时返回展平向量（供策略网络使用）
-        obs_vec = build_observation(own_state, target_state)
-        obs_dict["observation_vector"] = obs_vec
         return obs_dict
 
     # ------------------------------------------------------------------
@@ -1066,11 +1109,11 @@ class CloseRangeTrackingEnv:
 # ---------------------------------------------------------------------------
 
 
-def _get_scenario_attr(scenario, key):
+def _get_scenario_attr(scenario, key, default=None):
     """Get attribute from scenario dict or object."""
     if isinstance(scenario, dict):
-        return scenario.get(key)
-    return getattr(scenario, key, None)
+        return scenario.get(key, default)
+    return getattr(scenario, key, default)
 
 
 def _get_attr(obj, key, default):

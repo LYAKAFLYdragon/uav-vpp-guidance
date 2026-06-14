@@ -1,0 +1,24 @@
+# Enhanced No-Prediction VPP PPO baseline with audit-recommended fixes enabled.
+# This config includes the standard baseline and turns on:
+#   - dynamic offset scaling
+#   - temporal observation features
+#   - VPP tracking error observation
+#
+# Use this config for ablation studies against train_no_prediction_vpp_ppo.yaml.
+includes:
+  - train_no_prediction_vpp_ppo.yaml
+
+experiment:
+  name: no_prediction_vpp_ppo_enhanced
+
+virtual_point:
+  dynamic_offset_scale: 0.5
+
+observation:
+  temporal:
+    enabled: true
+    history_length: 2
+    dt: 0.2
+  include_gains: false
+  include_vp_error: true
+  include_scenario: false

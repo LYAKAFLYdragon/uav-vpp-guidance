@@ -46,7 +46,7 @@ class TestTurnRatePenalty:
         assert terms["reward_turn"] == pytest.approx(0.0, abs=1e-6)
 
     def test_penalty_for_large_heading_error(self):
-        """Large heading error (crossing-like) should incur penalty."""
+        """Large heading error while closing should incur penalty."""
         config = {
             "reward": {
                 "w_turn_rate": 1.0,
@@ -57,6 +57,7 @@ class TestTurnRatePenalty:
         info = {
             "relative_state": {
                 "range_m": 2000.0,
+                "range_rate_mps": -100.0,  # closing
                 "los_azimuth_rad": math.pi / 2,  # 90° to the right
                 "ata_rad": math.pi / 2,
                 "aa_rad": math.pi / 2,
@@ -77,6 +78,7 @@ class TestTurnRatePenalty:
         base_info = {
             "relative_state": {
                 "range_m": 2000.0,
+                "range_rate_mps": -100.0,  # closing
                 "los_azimuth_rad": math.pi / 2,
                 "ata_rad": math.pi / 2,
                 "aa_rad": math.pi / 2,

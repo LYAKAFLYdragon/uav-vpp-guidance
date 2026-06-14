@@ -56,6 +56,16 @@ virtual_point:
   dynamics_aware: true
   max_heading_rate: 0.3
   lookahead_steps: 5
+  # dynamic_offset_scale: 0.5
+
+observation:
+  temporal:
+    enabled: false
+    history_length: 2
+    dt: 0.2
+  include_gains: false
+  include_vp_error: false
+  include_scenario: false
 
 guidance:
   mode: los_rate

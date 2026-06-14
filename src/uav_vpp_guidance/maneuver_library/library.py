@@ -10,7 +10,10 @@ from .maneuvers.dive import Dive
 from .maneuvers.loop import Loop
 from .maneuvers.barrel_roll import BarrelRoll
 from .maneuvers.high_yoyo import HighYoYo
+from .maneuvers.immelmann import Immelmann
 from .maneuvers.low_yoyo import LowYoYo
+from .maneuvers.scissors import Scissors
+from .maneuvers.split_s import SplitS
 
 
 class ManeuverLibrary:
@@ -24,6 +27,9 @@ class ManeuverLibrary:
         BarrelRoll.name: BarrelRoll,
         HighYoYo.name: HighYoYo,
         LowYoYo.name: LowYoYo,
+        Scissors.name: Scissors,
+        SplitS.name: SplitS,
+        Immelmann.name: Immelmann,
     }
 
     @classmethod

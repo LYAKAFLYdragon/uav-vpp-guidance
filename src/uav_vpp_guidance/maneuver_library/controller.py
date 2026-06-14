@@ -17,10 +17,11 @@ class ControllerGains:
     # Roll channel
     Kp_phi: float = 2.0
     Kd_p: float = 0.5
-    # Pitch rate channel
+    # Pitch rate / pitch angle channel
     Kp_q: float = 1.5
     Ki_q: float = 0.05
     Kd_q: float = 0.1
+    Kp_theta: float = 1.0
     # Yaw coordination
     Kp_beta: float = 1.0
     # Speed/throttle channel
@@ -57,9 +58,12 @@ class InnerLoopController:
         else:
             aileron = -self.gains.Kd_p * state.p_rps
 
-        # --- Elevator: track pitch rate or load factor ---
-        if setpoint.q_ref is not None:
-            q_err = setpoint.q_ref - state.q_rps
+        # --- Elevator: track pitch rate, pitch angle, or load factor ---
+        q_ref = setpoint.q_ref
+        if q_ref is None and setpoint.theta_ref is not None:
+            q_ref = self.gains.Kp_theta * self._shortest_angle(setpoint.theta_ref, state.theta_rad)
+        if q_ref is not None:
+            q_err = q_ref - state.q_rps
             self._q_int += q_err * dt
             self._q_int = float(np.clip(self._q_int, -1.0, 1.0))
             elevator = self.gains.Kp_q * q_err + self.gains.Ki_q * self._q_int - self.gains.Kd_q * state.q_rps

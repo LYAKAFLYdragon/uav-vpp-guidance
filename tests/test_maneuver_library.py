@@ -104,3 +104,46 @@ def test_executor_runs_maneuver(cruise_state):
         )
         cmd = executor.update(state, 0.05)
         assert -1.0 <= cmd.aileron <= 1.0
+
+
+def test_new_maneuvers_register():
+    names = ManeuverLibrary.list_maneuvers()
+    for name in ["scissors", "split_s", "immelmann"]:
+        assert name in names
+        m = ManeuverLibrary.create(name)
+        assert m.name == name
+
+
+def test_split_s_phases():
+    from uav_vpp_guidance.maneuver_library.maneuvers.split_s import SplitS
+
+    state = FlightState(velocity_mps=350.0, altitude_m=8000.0)
+    m = SplitS({"entry_speed_mps": 350.0, "nz_pull": 5.0})
+    assert m.can_enter(state)
+    m.enter(state)
+    assert m._phase == "roll"
+    # Roll phase commands inverted wings.
+    sp = m.update(state, 0.05)
+    assert sp.phi_ref == pytest.approx(math.pi)
+
+
+def test_immelmann_phases():
+    from uav_vpp_guidance.maneuver_library.maneuvers.immelmann import Immelmann
+
+    state = FlightState(velocity_mps=350.0, altitude_m=5000.0)
+    m = Immelmann({"entry_speed_mps": 350.0, "nz_pull": 5.0})
+    assert m.can_enter(state)
+    m.enter(state)
+    assert m._phase == "pull"
+    sp = m.update(state, 0.05)
+    assert sp.q_ref is not None
+
+
+def test_scissors_reversal(cruise_state):
+    from uav_vpp_guidance.maneuver_library.maneuvers.scissors import Scissors
+
+    m = Scissors({"cycles": 1, "turn_angle_deg": 90.0})
+    m.enter(cruise_state)
+    sp = m.update(cruise_state, 0.05)
+    assert abs(sp.phi_ref) == pytest.approx(math.radians(60.0))
+    assert sp.throttle_ref == pytest.approx(0.6)

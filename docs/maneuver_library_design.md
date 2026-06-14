@@ -11,6 +11,9 @@
 - 桶滚（Barrel Roll）
 - 高 Yo-Yo
 - 低 Yo-Yo
+- 剪式（Scissors）
+- Split-S
+- Immelmann
 
 该库与现有 `CloseRangeTrackingEnv` / JSBSim 后端解耦：输入为归一化的飞机状态 `FlightState`，输出为归一化的舵面/油门指令 `ControlCommand`，可直接驱动 JSBSim 的 `fcs/*-cmd-norm` 属性。
 
@@ -70,6 +73,9 @@ src/uav_vpp_guidance/maneuver_library/
 | **桶滚** | `phi_ref` 线性扫过 360°，`nz_ref=1.2g` | 时间≥2π/roll_rate | 速度≥200 m/s，高度≥1500 m | ⚠️ 中（需方向舵协调，防止掉高度） |
 | **高 Yo-Yo** | 两阶段：爬升转弯→俯冲恢复 | 速度/高度触发 | 速度、高度充裕 | ⚠️ 中（能量管理复杂，参数需调） |
 | **低 Yo-Yo** | 两阶段：俯冲转弯→爬升恢复 | 速度触发 | 高度充裕 | ⚠️ 中（同上） |
+| **剪式** | 左右急转交替，`phi_ref=±bank`，`nz_ref=1/cos(bank)+margin` | 完成指定周期数 | 速度与高度裕度 | ⚠️ 中（当前为自包含模式） |
+| **Split-S** | 滚转 180° → 拉杆半筋斗 | 滚转恢复水平 | 速度≥300 m/s，高度裕度 | ⚠️ 中（能量/高度需求高） |
+| **Immelmann** | 拉杆半筋斗 → 顶端滚转 180° | 滚转恢复水平 | 速度≥300 m/s，顶端高度裕度 | ⚠️ 中（顶端能量低，滚转可能失速） |
 
 ---
 
@@ -95,6 +101,9 @@ src/uav_vpp_guidance/maneuver_library/
 | 桶滚 | ✅ 支持 | ⚠️ 原型实现 | 滚转过程中机头下掉；需方向舵协调 |
 | 高 Yo-Yo | ✅ 支持 | ⚠️ 原型实现 | 阶段切换依赖速度阈值，需大量调参 |
 | 低 Yo-Yo | ✅ 支持 | ⚠️ 原型实现 | 同上 |
+| 剪式 | ✅ 支持 | ⚠️ 原型实现 | 当前为固定左右急转模式，未结合对手态势 |
+| Split-S | ✅ 支持 | ⚠️ 原型实现 | 能量/高度不足会导致无法改出 |
+| Immelmann | ✅ 支持 | ⚠️ 原型实现 | 顶端速度低，滚转可能失速 |
 
 ### 4.3 当前未解决的问题
 
@@ -164,6 +173,8 @@ SituationEvaluator  →  TacticalManeuverSelector  →  ManeuverExecutor  →  J
 3. **改进方向舵协调**：用协调转弯公式 `rudder ≈ f(beta, phi)` 或引入侧滑角 PID。
 4. **为筋斗/桶滚增加基于姿态的程序控制**（而非仅依赖速率 PID）。
 5. **把高/低 Yo-Yo 从两阶段状态机扩展为带目标航向变化的完整能量管理机动**。
+6. **为剪式机动引入对手相对态势输入**（如 target bearing/closure），实现真正的防御性剪刀机动。
+7. **为 Split-S / Immelmann 增加顶端姿态监控**，防止在改出阶段失速。
 6. **与现有 `CloseRangeTrackingEnv` 集成**，让 RL/专家策略可以调用机动库。
 
 ---
@@ -171,5 +182,5 @@ SituationEvaluator  →  TacticalManeuverSelector  →  ManeuverExecutor  →  J
 ## 8. 结论
 
 - **物理可行性**：JSBSim F-16 模型有能力完成本库所列的全部机动。
-- **实现成熟度**：直线平飞、协调转弯、俯冲已实现并可单元测试；筋斗、桶滚、高/低 Yo-Yo 是**原型实现**，需在 JSBSim 上迭代调参。
+- **实现成熟度**：直线平飞、协调转弯、俯冲已实现并可单元测试；筋斗、桶滚、高/低 Yo-Yo、剪式、Split-S、Immelmann 是**原型实现**，需在 JSBSim 上迭代调参。
 - **主要障碍**：不是飞机模型能力，而是**内环控制器鲁棒性、攻角/速度包线保护、以及 JSBSim 实测验证**。

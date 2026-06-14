@@ -53,6 +53,9 @@ virtual_point:
   d_lat_range: [-800.0, 800.0]
   d_vert_range: [-500.0, 500.0]
   smoothing_alpha: 0.3
+  dynamics_aware: true
+  max_heading_rate: 0.3
+  lookahead_steps: 5
 
 guidance:
   mode: los_rate

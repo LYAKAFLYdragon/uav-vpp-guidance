@@ -115,9 +115,29 @@ class TestRewardCalculator:
         calc = RewardCalculator(config={})
         assert calc.pbs_enabled is False
 
-    def test_angle_reward_uses_max_ata_aa(self):
-        """angle_reward should use max(ATA, AA) / 180, not (ATA+AA)/180."""
+    def test_angle_reward_default_quadratic_sum(self):
+        """angle_reward should use the quadratic_sum formula by default."""
         calc = RewardCalculator(config={"reward": {"w_angle": 0.8}})
+        info = {
+            "relative_state": {
+                "range_m": 1000.0,
+                "ata_rad": np.deg2rad(10.0),
+                "aa_rad": np.deg2rad(15.0),
+            },
+            "own_state": {"altitude_m": 5000.0},
+            "command": {"nz_cmd": 0.0, "roll_rate_cmd": 0.0, "throttle_cmd": 0.0},
+        }
+        _, terms = calc.compute(info)
+        ata_norm = min(1.0, 10.0 / 90.0)
+        aa_norm = min(1.0, 15.0 / 90.0)
+        expected = -0.8 * (ata_norm ** 2 + aa_norm ** 2) / 2.0
+        assert terms["reward_angle"] == pytest.approx(expected)
+
+    def test_angle_reward_max_ata_aa_option(self):
+        """max_ata_aa formula can be requested explicitly."""
+        calc = RewardCalculator(config={
+            "reward": {"w_angle": 0.8, "angle_reward_formula": "max_ata_aa"}
+        })
         info = {
             "relative_state": {
                 "range_m": 1000.0,

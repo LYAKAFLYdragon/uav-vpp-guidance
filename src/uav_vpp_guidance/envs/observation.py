@@ -118,7 +118,8 @@ def build_observation(own_state, target_state, guidance_state=None, gains=None):
     target_alt = _get_altitude(target_state)
 
     # 归一化参考值
-    ref_range = 5000.0
+    # ref_range 从 5000 改为 3000，避免近距离场景（800-2000m）信号过度压缩。
+    ref_range = 3000.0
     ref_range_rate = 200.0
     ref_alt = 10000.0
     ref_speed = 400.0

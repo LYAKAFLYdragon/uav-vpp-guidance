@@ -48,8 +48,8 @@ class VirtualPointGenerator:
         self.d_long_range = config.get("d_long_range", [-1500.0, 1500.0])
         self.d_lat_range = config.get("d_lat_range", [-800.0, 800.0])
         self.d_vert_range = config.get("d_vert_range", [-500.0, 500.0])
-        self.tau_pred_range = config.get("tau_pred_range", [0.0, 3.0])
-        self.speed_bias_range = config.get("speed_bias_range", [-80.0, 80.0])
+        # NOTE: 5-D action space (tau_pred + speed_bias) is deprecated.
+        # Only the canonical 3-D offset action space is supported.
         self.smoothing_alpha = config.get("smoothing_alpha", 0.3)
         self.lead_distance_m = config.get("lead_distance_m", 500.0)
         # Dynamics-aware constraint: clip virtual points to feasible heading sector

@@ -10,6 +10,9 @@ virtual_point:
   tau_pred_range: [0.0, 3.0]
   speed_bias_range: [-80.0, 80.0]
   smoothing_alpha: 0.3
+  dynamics_aware: true          # clip VPP to feasible heading sector
+  max_heading_rate: 0.3         # F-16 typical max heading rate (rad/s)
+  lookahead_steps: 5
 
 guidance:
   mode: los_rate

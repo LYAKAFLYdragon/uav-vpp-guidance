@@ -48,9 +48,14 @@ class VirtualPointGenerator:
         self.d_long_range = config.get("d_long_range", [-1500.0, 1500.0])
         self.d_lat_range = config.get("d_lat_range", [-800.0, 800.0])
         self.d_vert_range = config.get("d_vert_range", [-500.0, 500.0])
-        self.tau_pred_range = config.get("tau_pred_range", [0.0, 3.0])
-        self.speed_bias_range = config.get("speed_bias_range", [-80.0, 80.0])
+        # NOTE: 5-D action space (tau_pred + speed_bias) is deprecated.
+        # Only the canonical 3-D offset action space is supported.
         self.smoothing_alpha = config.get("smoothing_alpha", 0.3)
+        # Dynamic offset scaling: when initial_range_m is provided and
+        # dynamic_offset_scale is set, the offset ranges are scaled proportionally
+        # to the initial scenario range. This prevents the policy from selecting
+        # VPPs behind the target in close-range scenarios.
+        self.dynamic_offset_scale = config.get("dynamic_offset_scale", None)
         self.lead_distance_m = config.get("lead_distance_m", 500.0)
         # Dynamics-aware constraint: clip virtual points to feasible heading sector
         self.dynamics_aware = config.get("dynamics_aware", False)
@@ -69,6 +74,7 @@ class VirtualPointGenerator:
         trajectory_predictor_adapter=None,
         predicted_target_position=None,
         return_info: bool = False,
+        initial_range_m: float = None,
     ):
         """
         Convert normalized policy action to a virtual pursuit point.
@@ -85,6 +91,9 @@ class VirtualPointGenerator:
             predicted_target_position (np.ndarray, optional):
                 外部传入的预测目标位置（优先于 adapter）。
             return_info (bool): 若为 True，额外返回 info 字典。
+            initial_range_m (float, optional): Initial scenario range used for
+                dynamic offset scaling. If dynamic_offset_scale is set, the
+                offset ranges are clamped relative to this range.
 
         Returns:
             dict or tuple: 默认返回 virtual_point dict；
@@ -92,12 +101,30 @@ class VirtualPointGenerator:
         """
         action = np.asarray(action, dtype=np.float64)
 
+        # Determine effective offset ranges, optionally scaled by initial range.
+        d_long_range = self.d_long_range
+        d_lat_range = self.d_lat_range
+        d_vert_range = self.d_vert_range
+        if (
+            self.dynamic_offset_scale is not None
+            and initial_range_m is not None
+            and initial_range_m > 0.0
+        ):
+            scale = float(self.dynamic_offset_scale)
+            half_range = scale * initial_range_m
+            d_long_range = [-half_range, half_range]
+            # Preserve aspect ratio of lateral/vertical ranges.
+            lat_half = half_range * abs(self.d_lat_range[1]) / max(abs(self.d_long_range[1]), 1e-8)
+            vert_half = half_range * abs(self.d_vert_range[1]) / max(abs(self.d_long_range[1]), 1e-8)
+            d_lat_range = [-lat_half, lat_half]
+            d_vert_range = [-vert_half, vert_half]
+
         # 将 action 前 3 维映射为实际偏移量
         offset = np.array(
             [
-                self._rescale(action[0], self.d_long_range),
-                self._rescale(action[1], self.d_lat_range),
-                self._rescale(action[2], self.d_vert_range),
+                self._rescale(action[0], d_long_range),
+                self._rescale(action[1], d_lat_range),
+                self._rescale(action[2], d_vert_range),
             ],
             dtype=np.float64,
         )

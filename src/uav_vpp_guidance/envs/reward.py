@@ -63,8 +63,8 @@ class RewardCalculator:
         self.terminal_failure = self.config.get("terminal_failure", -200.0)
         self.terminal_crash = self.config.get("terminal_crash", -300.0)
 
-        # Angle reward formula ("max_ata_aa" recommended for JSBSim)
-        self.angle_reward_formula = self.config.get("angle_reward_formula", "max_ata_aa")
+        # Angle reward formula ("quadratic_sum" recommended)
+        self.angle_reward_formula = self.config.get("angle_reward_formula", "quadratic_sum")
 
         # Turn-rate penalty config (crossing-scenario aware)
         trp = self.config.get("turn_rate_penalty", {})
@@ -126,7 +126,14 @@ class RewardCalculator:
         # AA: 本机速度与本机-目标视线的夹角，越小表示本机正对目标
         ata_deg = np.rad2deg(ata_rad)
         aa_deg = np.rad2deg(aa_rad)
-        if self.angle_reward_formula == "max_ata_aa":
+        if self.angle_reward_formula == "quadratic_sum":
+            # Audit-recommended formula: separately penalize ATA and AA using
+            # a quadratic mapping that saturates beyond 90°. This has a clear
+            # physical interpretation and avoids the meaningless (ATA+AA) sum.
+            ata_norm = min(1.0, ata_deg / 90.0)
+            aa_norm = min(1.0, aa_deg / 90.0)
+            angle_error = (ata_norm ** 2 + aa_norm ** 2) / 2.0
+        elif self.angle_reward_formula == "max_ata_aa":
             # Use max(ATA, AA) to guarantee monotonic [-w_angle, 0] mapping.
             angle_error = max(ata_deg, aa_deg) / 180.0
         else:
@@ -173,13 +180,17 @@ class RewardCalculator:
         # 8. 存活奖励：每步小额正奖励，帮助端到端基线避免早期出界
         reward_alive = self.w_alive
 
-        # 9. 过冲惩罚：当距离已经小于理想下界且还在继续接近时惩罚
-        # 这防止飞机飞过目标导致坠毁/越界
+        # 9. 过冲惩罚：当距离已经小于理想下界的一半且还在继续接近时惩罚
+        # 这防止飞机飞过目标导致坠毁/越界，同时避免在成功边界（理想区间）
+        # 附近犹豫。触发阈值默认使用 ideal_range_min * 0.5，可通过配置覆盖。
         reward_overshoot = 0.0
         if self.w_overshoot > 0.0:
-            if range_m < self.ideal_range_min and range_rate_mps < 0.0:
+            overshoot_threshold_m = float(
+                self.config.get("overshoot_range_threshold_m", self.ideal_range_min * 0.5)
+            )
+            if range_m < overshoot_threshold_m and range_rate_mps < 0.0:
                 # 越接近目标、速度越快，惩罚越大
-                proximity_factor = (self.ideal_range_min - range_m) / self.ideal_range_min
+                proximity_factor = (overshoot_threshold_m - range_m) / overshoot_threshold_m
                 reward_overshoot = -self.w_overshoot * proximity_factor * (-range_rate_mps / 200.0)
 
         # 10. 边界接近惩罚：防止飞出 max_range 或极端高度

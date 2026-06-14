@@ -259,9 +259,8 @@ def _parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--output-root", type=str, default=None)
     args = parser.parse_args()
-    if args.output_root:
-        global ROOT
-        ROOT = Path(args.output_root)
+    global ROOT
+    ROOT = Path(args.output_root) if args.output_root else DEFAULT_ROOT
     return args
 
 

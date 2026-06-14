@@ -46,17 +46,19 @@ UAV guidance, close-range tracking, virtual pursuit point, bilevel optimization,
 \input{sections/related_work.tex}
 \section{Methods}\label{sec:methods}
 
-\subsection{Hierarchical Architecture}
+\subsection{Hierarchical Architecture}\label{sec:hierarchical_architecture}
 
 Our guidance system decomposes the close-range tracking problem into three hierarchical layers (Fig.~\ref{fig:architecture}):
 \begin{enumerate}
-    \item \textbf{Virtual Pursuit Point (VPP) generator:} A PPO policy outputs a relative offset $\Delta p$ in the target's body frame. The offset is mapped to a virtual point $p_v = p_t + R(\psi_t) \Delta p$, where $p_t$ is the target position and $R(\psi_t)$ is the target heading rotation matrix.
-    \item \textbf{LOS-rate guidance law:} Given the virtual point, a classical line-of-sight rate guidance law generates acceleration commands:
-    \begin{equation}
-        a_{cmd} = k_{los} \dot{\lambda} \times v_{own} + k_{pos}(p_v - p_{own}) + k_{damp}(v_v - v_{own}),
-    \end{equation}
-    where $\dot{\lambda}$ is the LOS rate, $k_{los}$, $k_{pos}$, $k_{damp}$ are guidance gains optimized via CEM.
-    \item \textbf{Low-level controller:} A command filter and saturation limiter map the guidance command to actuator inputs.
+    \item \textbf{Virtual Pursuit Point (VPP) generator:} A PPO policy outputs a relative offset $\Delta p$ in the target's body frame. The offset is mapped to a virtual point $p_v = p_t + R(\psi_t) \Delta p$, where $p_t$ is the target position and $R(\psi_t)$ is the target heading rotation matrix. The canonical action space is three-dimensional (longitudinal, lateral, and vertical offsets), as frozen in \texttt{config/canonical/virtual\_point.yaml}.
+    \item \textbf{LOS-rate guidance law:} Given the virtual point, the implemented LOS-rate guidance law (\texttt{LOSRateGuidance}) generates a three-loop command vector:
+    \begin{align}
+        \omega_{cmd} &= k_{roll}\,\psi_{err} - k_{damp}\,\phi_{own}, \label{eq:roll_cmd}\\
+        n_{z,cmd} &= n_{z,0} + k_{los}\,\lambda_{el} + k_{pos}\,\frac{\|p_v - p_{own}\|}{d_{scale}}, \label{eq:nz_cmd}\\
+        \delta_{t,cmd} &= \delta_{t,0} + k_{speed}\,\frac{v_{err}}{v_{scale}}, \label{eq:throttle_cmd}
+    \end{align}
+    where $\psi_{err}$ is the heading error to the virtual point, $\phi_{own}$ is the current roll angle, $\lambda_{el}$ is the LOS elevation angle, and $v_{err}$ is the speed error. The five gains $g = [k_{los}, k_{pos}, k_{damp}, k_{roll}, k_{speed}]$ are optimized via CEM (\S\ref{sec:bilevel}); fixed parameters $n_{z,0}$, $\delta_{t,0}$, $d_{scale}$, $v_{scale}$, and the command filter coefficient $\alpha_{filter}$ are frozen in \texttt{config/canonical/guidance.yaml}. An idealized translational-acceleration model ($a_{cmd} = k_{los} \dot{\lambda} \times v_{own} + \dots$) is used elsewhere as an analytical intuition for stability and degeneration arguments, but the actual closed-loop behavior is governed by the command chain in Eq.~\eqref{eq:roll_cmd}--\eqref{eq:throttle_cmd}.
+    \item \textbf{Low-level controller:} A command filter, saturation limiter, and actuator dynamics map the guidance commands to aircraft control surface and throttle inputs.
 \end{enumerate}
 
 \begin{figure}[t]
@@ -72,20 +74,45 @@ Our guidance system decomposes the close-range tracking problem into three hiera
 \node[block, right=of ctrl] (own) {Ownship\ dynamics};
 \draw[arrow] (target) -- (vpp);
 \draw[arrow] (vpp) -- node[above,font=\small] {$p_v$} (los);
-\draw[arrow] (los) -- node[above,font=\small] {$a_{cmd}$} (ctrl);
+\draw[arrow] (los) -- node[above,font=\small] {$(\omega,n_z,\delta_t)$} (ctrl);
 \draw[arrow] (ctrl) -- (own);
 \end{tikzpicture}
-\caption{Hierarchical guidance architecture. The learned VPP generator selects a virtual point; a classical LOS-rate law and low-level controller generate and track acceleration commands.}
+\caption{Hierarchical guidance architecture. The learned VPP generator selects a virtual point; the LOS-rate guidance law produces roll-rate, normal-overload, and throttle commands, which the low-level controller tracks.}
 \label{fig:architecture}
 \end{figure}
 
 This decomposition isolates the policy's responsibility to high-level geometric decision-making (where to place the virtual point) while preserving the analytical structure of the guidance law for command generation.
 
-\subsection{Bilevel Optimization Framework}
+\subsection{Notation and Canonical Gain Space}\label{sec:notation}
+
+Table~\ref{tab:symbols} summarizes the notation used in the paper and the canonical five-dimensional CEM gain space. Fixed parameters that are not optimized by CEM are listed in \texttt{config/canonical/guidance.yaml}.
+
+\begin{table}[t]
+\centering
+\caption{Canonical symbols and CEM-optimized gain space.}
+\label{tab:symbols}
+\begin{tabular}{lll}
+\toprule
+Symbol & Description & Canonical range \\
+\midrule
+$g$ & CEM-optimized gain vector & $[k_{los}, k_{pos}, k_{damp}, k_{roll}, k_{speed}]$ \\
+$k_{los}$ & LOS elevation gain & $[0.5, 4.0]$ \\
+$k_{pos}$ & Position error gain & $[0.1, 2.0]$ \\
+$k_{damp}$ & Roll damping gain & $[0.2, 3.0]$ \\
+$k_{roll}$ & Roll-rate gain & $[0.5, 2.0]$ \\
+$k_{speed}$ & Speed tracking gain & $[0.1, 1.0]$ \\
+$\alpha_{filter}$ & Command filter coefficient (fixed) & $0.3$ \\
+$n_{z,0}$ & Base normal overload (fixed) & $1.0$ \\
+$\delta_{t,0}$ & Base throttle command (fixed) & $0.7$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Bilevel Optimization Framework}\label{sec:bilevel}
 
 We employ a bilevel optimization scheme:
 \begin{itemize}
-    \item \textbf{Inner level (CEM):} Cross-entropy method optimizes guidance gains $[k_{los}, k_{pos}, k_{damp}]$ over 12 candidates and 20 iterations, maximizing evaluation success rate.
+    \item \textbf{Inner level (CEM):} Cross-entropy method optimizes the five-dimensional guidance gain vector $g = [k_{los}, k_{pos}, k_{damp}, k_{roll}, k_{speed}]$ over 12 candidates and 20 iterations, maximizing evaluation success rate. The search bounds and fixed parameters are frozen in \texttt{config/canonical/gain\_space.yaml}; EMA smoothing is the default update rule, while the CEM-GD variant is deprecated (\S\ref{sec:cem_variants}).
     \item \textbf{Outer level (PPO):} Proximal policy optimization trains the VPP policy with the CEM-optimized gains fixed. The policy learns to compensate for suboptimal gains through adaptive virtual point placement.
 \end{itemize}
 
@@ -101,13 +128,9 @@ Beyond the hierarchical baseline, we evaluate two optional policy-level enhancem
 
 These enhancements are trained and evaluated under exactly the same hierarchical architecture, reward function, and scenario distribution as the baseline PPO policy, so any performance differences are attributable to the policy-learning mechanism itself.
 
-\subsection{Guidance Environment}
+\subsection{Guidance Environment}\label{sec:guidance_env}
 
-[Rest of original Methods section...]
-
-\subsection{Guidance Environment}
-
-We formulate close-range tracking as a partially observable Markov decision process (POMDP). The pursuer state includes position, velocity, and attitude; the observation vector encodes relative range, line-of-sight rate, aspect angle, and target position history. The action space is three-dimensional: normal acceleration command $n_z$, roll-rate command $p$, and throttle command $\delta_t$. Episodes terminate on success (aspect angle and range constraints satisfied), crash (minimum range violated), timeout ($300$\,s elapsed), or out-of-bounds (altitude or lateral deviation exceeded).
+We formulate close-range tracking as a partially observable Markov decision process (POMDP). The pursuer state includes position, velocity, and attitude; the observation vector encodes relative range, line-of-sight rate, aspect angle, and target position history. In the hierarchical VPP+LOS-rate architecture, the learned policy outputs a three-dimensional virtual-point offset (longitudinal, lateral, vertical); the LOS-rate guidance law then converts this geometric target into roll-rate, normal-overload, and throttle commands. The end-to-end baseline directly outputs the same three control commands without the VPP layer. Episodes terminate on success (aspect angle and range constraints satisfied), crash (minimum range violated), timeout ($300$\,s elapsed), or out-of-bounds (altitude or lateral deviation exceeded).
 
 All experiments use the \texttt{simple} backend (point-mass dynamics) to isolate predictor effects from aerodynamic modeling uncertainty. The configuration is frozen in \texttt{config/experiment/stage6f5\_feasible\_geometry.yaml}. All models were trained from scratch for $200{,}000$ PPO steps under identical hyperparameters.
 
@@ -136,7 +159,7 @@ Parametric (CA) & Hand-crafted & $\hat{p} = p_0 + v\Delta t + \frac{1}{2}\hat{a}
 
 \subsection{Training Protocol}
 
-Each policy is trained with PPO for $200{,}000$ environment steps across $3$ random seeds. The reward function combines a sparse terminal success bonus with dense shaping terms for range minimization, aspect-angle alignment, and control effort penalties. Hyperparameters (learning rate $3 \times 10^{-4}$, clip ratio $0.2$, GAE $\lambda = 0.95$) are fixed across all methods to ensure a fair comparison. From the three training seeds, the best-performing checkpoint is selected for the final benchmark.
+Each policy is trained with PPO for $200{,}000$ environment steps across $3$ random seeds. The reward function is a dense per-step mixture of range, aspect-angle, safety, saturation, smoothness, turn-rate, closing-rate, and alive bonuses, plus sparse terminal events for success, failure, and crash (see \texttt{docs/reward\_audit.md}). Potential-based shaping is disabled in the canonical configuration and is treated only as an optional ablation. Hyperparameters (learning rate $3 \times 10^{-4}$, clip ratio $0.2$, GAE $\lambda = 0.95$) are fixed across all methods to ensure a fair comparison. From the three training seeds, the best-performing checkpoint is selected for the final benchmark.
 
 Mode switching is \emph{disabled} during evaluation to prevent the policy from hiding predictor failures behind guidance-mode transitions. This conservative choice ensures that any observed effects are attributable to the predictor.
 
@@ -337,7 +360,7 @@ CEM-EMA is the only variant that converges to a perfect success rate (1.0000), w
 \input{sections/discussion.tex}
 \section{Limitations and Future Work}\label{sec:limitation}
 
-We identify four limitations that bound the scope of our claims:
+We identify limitations that bound the scope of our claims. The first four are empirical; the remaining five are honesty declarations aligning the paper with the frozen implementation in \texttt{config/canonical/} and \texttt{docs/status.md}.
 
 \begin{enumerate}
     \item \textbf{Crossing geometry generalization:} The dynamics-constrained design achieves $100\%$ on the standard crossing scenarios, but systematic variation of range and lateral offset reveals a narrow generalization window. Both baseline and constrained policies fail on geometries that deviate by more than $\approx 20\%$ from the training distribution. Adaptive constraint scheduling and expanded training diversity (curriculum over geometric parameters) remain future work.
@@ -347,6 +370,16 @@ We identify four limitations that bound the scope of our claims:
     \item \textbf{JSBSim transfer:} All quantitative results are from the \texttt{simple} backend. While the simple backend isolates architectural effects from aerodynamic modeling uncertainty, the Defense Technology readership will rightly demand JSBSim verification. We have implemented the JSBSim bridge and crossing-fix code, but large-scale Monte Carlo evaluation on JSBSim remains incomplete.
     
     \item \textbf{Sample size:} Most experiments use $3$ random seeds. While this is standard for deep RL pilot studies, it is insufficient for publication-grade statistical power. We are currently scaling the primary baseline to $141$ seeds and reserve $5$-seed comparisons for exploratory method-innovation screening.
+    
+    \item \textbf{Guidance-law scope:} The theoretical analysis uses an idealized translational-acceleration model for analytical tractability. The implemented guidance law (\texttt{LOSRateGuidance}) outputs roll-rate, normal-overload, and throttle commands, as specified in \texttt{config/canonical/guidance.yaml}. The idealized model provides physical intuition; the actual closed-loop behavior is determined by the command-chain implementation in Eq.~\eqref{eq:roll_cmd}--\eqref{eq:throttle_cmd}.
+    
+    \item \textbf{Reward design:} The repository uses a dense reward mixture (range, angle, safety, saturation, smoothness, turn-rate, closing-rate, alive) plus sparse terminal events for success, failure, and crash (see \texttt{docs/reward\_audit.md}). Potential-based shaping is an optional theoretical enhancement, not a necessity. The Phase~2 A2' ablation (3 seeds, simple backend, standard PPO) found no statistically significant difference between dense-only and dense + PBS ($p = 0.785$); PBS therefore remains disabled in the canonical configuration.
+    
+    \item \textbf{CEM convergence:} Theorem~2' provides a heuristic scaling intuition for CEM sample complexity, not a rigorous guarantee. The lower-level objective is a noisy episodic estimate with discontinuous success/failure structure.
+    
+    \item \textbf{Bilevel equilibrium:} Proposition~10' frames the strategy-gain pipeline as a conceptual Stackelberg lens, not a proved property. The lower level is solved approximately by CEM, and multiple good gain settings typically exist.
+    
+    \item \textbf{PPO convergence:} Theorem~4' is a conditional statement under idealized assumptions. The actual implementation uses a fixed learning rate and a deep neural network policy space, which do not satisfy all stated assumptions.
 \end{enumerate}
 
 \input{sections/conclusion.tex}

@@ -1,0 +1,21 @@
+\begin{table}[t]
+\centering
+\caption{Method-innovation comparison on the quasi-realistic backend (5 seeds, eval-time domain randomization, $N = 20$ episodes per scenario). Values show mean~$\pm$~SD across seeds. No method improves the deterministic success rate, which collapses to $36.67\%$ for all conditions; CR-PPO and Intentional PPO-C achieve slightly smaller minimum range ($^*p<0.05$ vs Baseline PPO).}
+\label{tab:method_innovation_comparison}
+\begin{tabular}{lcccccc}
+\toprule
+Method & Success Rate (\%) & Mean Return & $\bar{d}_{\min}$ (m) & $\bar{d}_{f}$ (m) & $\bar{\theta}_{f}$ ($^\circ$) & $\bar{t}_{\text{contact}}$ (s) \\
+\midrule
+Baseline PPO              & $36.67 \pm 0.00$ & $-267.8 \pm 1.5$ & $676.1 \pm 28.5$ & $7937.6 \pm 2.4$ & $90.2 \pm 0.6$ & $1.04 \pm 0.01$ \\
+CR-PPO                    & $36.67 \pm 0.00$ & $-268.8 \pm 1.7$ & $634.1 \pm 18.1^*$ & $7937.1 \pm 3.4$ & $89.6 \pm 0.3$ & $1.02 \pm 0.01$ \\
+Intentional PPO (full)    & $36.67 \pm 0.00$ & $-270.6 \pm 2.8$ & $678.8 \pm 42.3$ & $7939.1 \pm 4.1$ & $90.3 \pm 0.6$ & $1.03 \pm 0.01$ \\
+Intentional PPO (critic only) & $36.67 \pm 0.00$ & $-269.4 \pm 1.8$ & $632.3 \pm 14.4^*$ & $7940.6 \pm 2.4$ & $90.1 \pm 0.5$ & $1.03 \pm 0.00$ \\
+Intentional PPO (actor only)  & $36.67 \pm 0.00$ & $-239.1 \pm 36.9$ & $679.0 \pm 53.1$ & $7939.2 \pm 3.6$ & $90.1 \pm 0.5$ & $1.03 \pm 0.01$ \\
+\bottomrule
+\end{tabular}
+\begin{tablenotes}
+\small
+\item Significance assessed with paired $t$-tests on continuous metrics vs Baseline PPO; $^*p<0.05$.
+\item Continuous metrics are averaged across all evaluation episodes: minimum range ($\bar{d}_{\min}$), final range ($\bar{d}_{f}$), final aspect angle ($\bar{\theta}_{f}$), and time to first contact ($\bar{t}_{\text{contact}}$).
+\end{tablenotes}
+\end{table}

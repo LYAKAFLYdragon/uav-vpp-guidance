@@ -1,0 +1,18 @@
+\begin{table}[t]
+\centering
+\caption{Architecture comparison on canonical geometries (per-seed success rates).}
+\label{tab:architecture_comparison_exact}
+\begin{tabular}{lcccc}
+\toprule
+Method & Overall & Favorable & Neutral & Disadvantage \\
+\midrule
+No-VPP (zero offset) & $73.3 \pm 0.0\%$ & $70.0 \pm 0.0\%$ & $80.0 \pm 0.0\%$ & $70.0 \pm 0.0\%$ \\
+VPP + LOS-rate & $70.0 \pm 0.0\%$ & $60.0 \pm 0.0\%$ & $80.0 \pm 0.0\%$ & $70.0 \pm 0.0\%$ \\
+\bottomrule
+\end{tabular}
+\begin{tablenotes}
+\small
+\item Exact canonical geometries. Per-seed success rates are reported transparently; if all seeds share the same value, the environment/evaluation was deterministic for this condition.
+\item Statistical tests: Welch's $t$-test on per-seed success rates; McNemar exact test on paired episodes; Mann-Whitney $U$ on episode returns.
+\end{tablenotes}
+\end{table}

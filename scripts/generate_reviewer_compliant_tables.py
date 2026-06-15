@@ -372,7 +372,7 @@ def format_architecture_table(
     lines.append("\\begin{tablenotes}")
     lines.append("\\small")
     lines.append(f"\\item {note}")
-    lines.append("\\item Statistical tests: Welch's \\$t\\$-test on per-seed success rates; McNemar exact test on paired episodes; Mann-Whitney \\$U\\$ on episode returns.")
+    lines.append("\\item Statistical tests: Welch's $t$-test on per-seed success rates; McNemar exact test on paired episodes; Mann-Whitney $U$ on episode returns.")
     lines.append("\\end{tablenotes}")
     lines.append("\\end{table}")
     return "\n".join(lines), seed_sr
@@ -771,7 +771,7 @@ def main():
             label="tab:vpp_ablation",
             methods_order=["No-VPP (zero offset)", "VPP + LOS-rate"],
             baseline_method="No-VPP (zero offset)",
-            note="Paired comparisons use McNemar exact test on matched episodes; unpaired comparisons use Welch's \\$t\\$-test on per-seed success rates and Mann-Whitney \\$U\\$ on episode returns.",
+            note="Paired comparisons use McNemar exact test on matched episodes; unpaired comparisons use Welch's $t$-test on per-seed success rates and Mann-Whitney $U$ on episode returns.",
         )
         (tables_dir / "table_vpp_ablation.tex").write_text(tex, encoding="utf-8")
         seed_sr.to_csv(tables_dir / "table_vpp_ablation_per_seed.csv", index=False)

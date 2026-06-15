@@ -16,6 +16,7 @@ from typing import Optional, Tuple
 
 from .jsbsim_env import JSBSimEnv, neu2lla
 from .simple_point_mass_env import SimplePointMassEnv
+from .target_dynamics import create_target_dynamics
 from .observation import compute_relative_geometry, build_observation, ObservationBuilder
 from .reward import RewardCalculator
 from .termination import TerminationChecker
@@ -116,6 +117,15 @@ class CloseRangeTrackingEnv:
             self._low_level_controller = None
             self._simple_env = SimplePointMassEnv(self.env_config)
             self._backend = "simple"
+
+        # Maneuvering-target controller for JSBSim backend.
+        # Simple backend already handles target_mode internally; for JSBSim we
+        # drive the target kinematically using the same target_dynamics models.
+        self._target_dynamics = None
+        self._target_kinematic_state = None
+        target_mode = self.env_config.get("target_mode", "constant_velocity")
+        if self._backend == "jsbsim" and target_mode != "constant_velocity":
+            self._target_dynamics = create_target_dynamics(self.env_config)
 
         # Submodules
         vp_config = config.get(
@@ -439,7 +449,13 @@ class CloseRangeTrackingEnv:
                 own_init = self._scenario_to_jsbsim_init(own_scenario)
             if target_scenario is not None:
                 target_init = self._scenario_to_jsbsim_init(target_scenario)
-        self.jsbsim_env.reset({self.own_uid: own_init, self.target_uid: target_init})
+        states = self.jsbsim_env.reset(
+            {self.own_uid: own_init, self.target_uid: target_init}
+        )
+        if self._target_dynamics is not None:
+            self._target_kinematic_state = self._jsbsim_state_to_target_state(
+                states[self.target_uid]
+            )
 
     def _reset_simple(self, scenario=None):
         own_init = {
@@ -956,6 +972,18 @@ class CloseRangeTrackingEnv:
 
     def _step_jsbsim(self, command):
         """在 JSBSim 后端执行控制，返回 actuator info。"""
+        high_level_dt = self.env_config.get("high_level_dt", 0.2)
+
+        # Drive the maneuvering target kinematically before stepping ownship.
+        if self._target_dynamics is not None and self._target_kinematic_state is not None:
+            self._target_dynamics.update_state(
+                self._target_kinematic_state, high_level_dt, self._sim_time_s
+            )
+            target_init = self._target_state_to_jsbsim_init(
+                self._target_kinematic_state
+            )
+            self.jsbsim_env.apply_aircraft_ic_state(self.target_uid, target_init)
+
         # Get current aircraft state for the low-level controller
         states = self.jsbsim_env.get_state()
         own_state_raw = states[self.own_uid]
@@ -1104,6 +1132,65 @@ class CloseRangeTrackingEnv:
         if hasattr(self, "_simple_env") and self._simple_env is not None:
             if hasattr(self._simple_env, "close"):
                 self._simple_env.close()
+
+    # ------------------------------------------------------------------
+    # JSBSim maneuvering-target helpers
+    # ------------------------------------------------------------------
+
+    def _jsbsim_state_to_target_state(self, jsbsim_state: dict) -> dict:
+        """Convert a JSBSim aircraft state dict into target_dynamics state."""
+        pos = jsbsim_state.get("position_m")
+        if pos is None:
+            pos = jsbsim_state.get("position_neu", np.zeros(3))
+        vel = jsbsim_state.get("velocity_vector_mps")
+        if vel is None:
+            vel_ned = jsbsim_state.get("velocity_ned", np.zeros(3))
+            vel = np.array([vel_ned[0], vel_ned[1], -vel_ned[2]], dtype=np.float64)
+        vn, ve, vu = float(vel[0]), float(vel[1]), float(vel[2])
+        speed = float(np.hypot(vn, ve))
+        heading = float(np.arctan2(ve, vn))
+        return {
+            "position_m": np.asarray(pos, dtype=np.float64),
+            "velocity_vector_mps": np.array([vn, ve, vu], dtype=np.float64),
+            "speed_mps": speed,
+            "heading_rad": heading,
+            "altitude_m": float(pos[2]),
+        }
+
+    def _target_state_to_jsbsim_init(self, target_state: dict) -> dict:
+        """Convert a target_dynamics state dict into JSBSim IC properties."""
+        pos = np.asarray(target_state.get("position_m", np.zeros(3)), dtype=np.float64)
+        heading_rad = float(target_state.get("heading_rad", 0.0))
+        speed_mps = float(target_state.get("speed_mps", 0.0))
+
+        h_sl_ft = float(pos[2]) / 0.3048
+        psi_deg = float(np.rad2deg(heading_rad))
+        u_fps = speed_mps / 0.3048
+
+        result = {
+            "ic/h-sl-ft": h_sl_ft,
+            "ic/psi-true-deg": psi_deg,
+            "ic/u-fps": u_fps,
+            "ic/v-fps": 0.0,
+            "ic/w-fps": 0.0,
+            "ic/theta-deg": 0.0,
+            "ic/phi-deg": 0.0,
+            "ic/roc-fpm": 0.0,
+        }
+
+        if self.jsbsim_env is not None and len(pos) >= 2:
+            origin = getattr(self.jsbsim_env, "origin", (120.0, 60.0, 0.0))
+            lon0, lat0, alt0 = origin
+            try:
+                lon_deg, lat_deg, _alt_m = neu2lla(
+                    float(pos[0]), float(pos[1]), float(pos[2]), lon0, lat0, alt0
+                )
+                result["ic/long-gc-deg"] = float(lon_deg)
+                result["ic/lat-geod-deg"] = float(lat_deg)
+            except Exception:
+                pass
+
+        return result
 
 
 # ---------------------------------------------------------------------------

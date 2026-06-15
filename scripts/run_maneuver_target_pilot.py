@@ -53,7 +53,7 @@ def load_experiment_config(config_path: str) -> dict:
     return merge_config(merged, base_config)
 
 
-def train_method(key: str, output_dir: str, device: str, smoke: bool) -> Path:
+def train_method(key: str, output_dir: str, device: str, smoke: bool, timesteps: int | None) -> Path:
     cfg_path = METHODS[key]["config"]
     print(f"\n{'='*60}")
     print(f"Training {METHODS[key]['name']} -> {output_dir}")
@@ -68,6 +68,8 @@ def train_method(key: str, output_dir: str, device: str, smoke: bool) -> Path:
     ]
     if smoke:
         cmd.append("--smoke")
+    if timesteps is not None:
+        cmd.extend(["--total-timesteps", str(timesteps)])
     subprocess.run(cmd, check=True)
     return Path(output_dir) / "checkpoints" / "best.pt"
 
@@ -132,7 +134,7 @@ def _summarize(records: list) -> dict:
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--timesteps", type=int, default=None, help="Override ppo.total_timesteps")
+    parser.add_argument("--timesteps", type=int, default=None, help="Override ppo.total_timesteps (e.g. 50000)")
     parser.add_argument("--episodes", type=int, default=20, help="Episodes per scenario for eval")
     parser.add_argument("--device", type=str, default="cpu", choices=["cpu", "cuda"])
     parser.add_argument("--smoke", action="store_true", help="Smoke mode (512 steps)")
@@ -149,9 +151,7 @@ def main():
         checkpoint = Path(output_dir) / "checkpoints" / "best.pt"
 
         if not args.skip_train and (args.retrain or not checkpoint.exists()):
-            # Optionally override timesteps via a temporary config is too complex;
-            # instead rely on the config value. If user wants fewer steps, edit config.
-            train_method(key, output_dir, args.device, args.smoke)
+            train_method(key, output_dir, args.device, args.smoke, args.timesteps)
         else:
             if args.skip_train and not checkpoint.exists():
                 print(f"WARNING: checkpoint not found for {key}, skipping eval")

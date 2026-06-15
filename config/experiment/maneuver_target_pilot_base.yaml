@@ -70,6 +70,18 @@ observation:
   include_vp_error: false
   include_scenario: false
 
+reward:
+  # Stronger safety signal to prevent the VPP policy from diving into the
+  # ground while chasing maneuvering targets.
+  w_safety: 5.0
+  w_boundary: 2.0
+  w_overshoot: 2.0
+  boundary_alt_min_m: 1500.0
+  boundary_alt_max_m: 9000.0
+  terminal_crash: -1500.0
+  ideal_range_min: 900.0
+  ideal_range_max: 1200.0
+
 policy:
   type: mlp
   hidden_sizes: [128, 128]

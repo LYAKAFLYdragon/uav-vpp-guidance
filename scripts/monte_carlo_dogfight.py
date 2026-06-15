@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Monte-Carlo close-range air combat evaluation.
 
-Red (target/bandit) is the maneuver-library expert system.
+Red (target/bandit) is selected via the config (maneuver-library expert system or CloseAirCombat hierarchical RL).
 Blue (ownship) flies one of four simple maneuvers:
     straight, turn, dive, climb.
 

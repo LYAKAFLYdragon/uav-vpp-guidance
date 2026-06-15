@@ -66,10 +66,12 @@ def _resolve_config(config_path: str, allow_missing_includes: bool = False) -> d
 def _build_gain_space(config: dict) -> GainSpace:
     gain_bounds = config.get("guidance", {}).get("gain_space", {
         "k_los": [0.1, 3.0],
-        "k_pos": [0.1, 2.0],
+        "k_damp": [0.1, 3.0],
         "k_roll": [0.1, 3.0],
         "k_speed": [0.0, 1.0],
     })
+    # k_pos is deprecated and fixed at 0.
+    gain_bounds.pop("k_pos", None)
     return GainSpace(gain_bounds)
 
 

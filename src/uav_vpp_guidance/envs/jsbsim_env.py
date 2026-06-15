@@ -217,6 +217,27 @@ class _JSBSimAircraft:
 
         self._update_state()
 
+    def apply_ic_state(self, init_state: Dict[str, float]):
+        """
+        Re-apply a set of initial-condition properties at runtime.
+
+        This is useful for kinematically overriding one aircraft (e.g. a
+        maneuvering target) while leaving the simulation clock intact.
+        """
+        if self.jsbsim_exec is None:
+            raise RuntimeError("Aircraft not initialized. Call reload() first.")
+        for key, value in init_state.items():
+            self.set_property_value(key, float(value))
+        success = self.jsbsim_exec.run_ic()
+        if not success:
+            raise RuntimeError("JSBSim failed to apply IC state.")
+        propulsion = self.jsbsim_exec.get_propulsion()
+        n_engines = propulsion.get_num_engines()
+        for j in range(n_engines):
+            propulsion.get_engine(j).init_running()
+        propulsion.get_steady_state()
+        self._update_state()
+
     def _close_exec(self):
         """Release the FGFDMExec reference."""
         self.jsbsim_exec = None
@@ -477,6 +498,15 @@ class JSBSimEnv:
             init_state = aircraft_states.get(uid, {})
             ac.reload(init_state)
         return self.get_state()
+
+    def apply_aircraft_ic_state(self, uid: str, init_state: Dict[str, float]):
+        """
+        Re-apply an IC state dict to a registered aircraft.
+        """
+        ac = self._aircraft.get(uid)
+        if ac is None:
+            raise ValueError(f"Aircraft {uid} not found.")
+        ac.apply_ic_state(init_state)
 
     def step(self, control_inputs: Optional[Dict[str, Dict[str, float]]] = None) -> Dict[str, dict]:
         """

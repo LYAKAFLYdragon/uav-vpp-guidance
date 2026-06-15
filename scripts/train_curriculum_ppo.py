@@ -63,11 +63,12 @@ def run_evaluation(env, agent, config, num_episodes=10, seeds=None, save_traject
             ep_seed = seed * 10000 + ep
             rng = np.random.default_rng(ep_seed)
             scenario = sample_scenario(config, rng)
-            # Apply eval-time domain randomization if requested. The environment
-            # reset() call seeds the domain-randomization RNG from ep_seed and
-            # perturbs the scenario internally, so we only set the scale here.
+            # Apply eval-time domain randomization if requested. A fixed
+            # evaluation RNG makes results reproducible while still perturbing
+            # initial conditions across episodes.
             if domain_rand_scale > 0.0 and hasattr(env, "set_domain_rand_scale"):
                 env.set_domain_rand_scale(domain_rand_scale)
+                scenario = env._apply_domain_randomization(scenario)
             obs = env.reset(scenario=scenario, seed=ep_seed)
             ep_reward = 0.0
             ep_length = 0
@@ -176,6 +177,7 @@ def evaluate_scenarios(env, agent, scenarios, num_episodes=5, seed_base=1000, do
             ep_seed = seed_base + hash(name) % 10000 + ep
             if domain_rand_scale > 0.0 and hasattr(env, "set_domain_rand_scale"):
                 env.set_domain_rand_scale(domain_rand_scale)
+                scenario = env._apply_domain_randomization(scenario)
             obs = env.reset(scenario=scenario, seed=ep_seed)
             for step in range(env.max_steps):
                 action = agent.get_deterministic_action(obs["observation_vector"])
@@ -297,7 +299,6 @@ def train_ppo_curriculum(config, output_dir, smoke=False, algorithm="ppo", swanl
         start_time = time.time()
         update_num = 0
         current_stage = 0
-        applied_stage = -1
 
         while global_step < total_timesteps:
             # Determine current curriculum stage
@@ -320,16 +321,6 @@ def train_ppo_curriculum(config, output_dir, smoke=False, algorithm="ppo", swanl
             else:
                 allowed_names = stage_spec[1]
             active_scenarios = {k: v for k, v in all_scenarios.items() if k in allowed_names}
-
-            # Apply opponent / success-criterion changes when entering a new stage.
-            if current_stage != applied_stage and isinstance(stage_spec, dict) and hasattr(env, "apply_curriculum_stage"):
-                desc = stage_spec.get("description", "")
-                print(
-                    f"*** Applying curriculum stage {current_stage}: "
-                    f"{desc} ***"
-                )
-                env.apply_curriculum_stage(stage_spec)
-                applied_stage = current_stage
 
             for step in range(rollout_steps):
                 obs_dict = obs
@@ -537,7 +528,7 @@ def main():
         "--total-timesteps",
         type=int,
         default=None,
-        help="Override config ppo.total_timesteps",
+        help="Override total training timesteps",
     )
     args = parser.parse_args()
 

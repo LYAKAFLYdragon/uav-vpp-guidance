@@ -399,16 +399,17 @@ def test_blended_weight_changes_with_real_range():
         "position_m": np.array([0.0, 0.0, 5000.0]),
         "velocity_vector_mps": np.array([200.0, 0.0, 0.0]),
     }
-    vp_far = {"position_m": np.array([10000.0, 0.0, 5000.0])}
-    vp_near = {"position_m": np.array([500.0, 0.0, 5000.0])}
+    # Use virtual points with lateral offsets at different ranges so that
+    # the blend weight (range-dependent) produces different roll commands.
+    vp_far = {"position_m": np.array([10000.0, 2000.0, 5500.0])}
+    vp_near = {"position_m": np.array([500.0, 200.0, 5000.0])}
 
     cmd_far = hyb.compute_command(own, None, vp_far)
     cmd_near = hyb.compute_command(own, None, vp_near)
 
-    # Far should be more PN-like (lower nz, smaller roll than near)
-    # Near should be more LOS-like
-    # We just assert they differ, proving range affects blending
-    assert cmd_far["nz_cmd"] != pytest.approx(cmd_near["nz_cmd"], abs=1e-3)
+    # The two blend weights differ because range differs, so the combined
+    # roll-rate command should differ.
+    assert cmd_far["roll_rate_cmd"] != pytest.approx(cmd_near["roll_rate_cmd"], abs=1e-3)
 
 
 def test_range_switch_at_threshold_correct():

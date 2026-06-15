@@ -30,11 +30,15 @@ CANONICAL_COMMANDS = ("nz_cmd", "roll_rate_cmd", "throttle_cmd")
 #: space in ``config/canonical/gain_space.yaml``.
 CANONICAL_OPTIMIZED_GAINS = (
     "k_los",
-    "k_pos",
     "k_damp",
     "k_roll",
     "k_speed",
 )
+
+#: k_pos is deprecated.  The distance-proportional normal-overload term it
+#: controlled has been removed from the canonical LOS-rate guidance law.
+CANONICAL_DEPRECATED_GAINS = ("k_pos",)
+
 
 
 #: Names of the fixed guidance parameters (not optimized by CEM).
@@ -60,19 +64,17 @@ Inputs:
   - own_state: own aircraft state (position, velocity, attitude)
   - target_state: reserved for future extensions; currently unused
   - virtual_point: VPP position (3-D spatial offset from target)
-  - gains: CEM-optimized gain vector g = (k_los, k_pos, k_damp, k_roll, k_speed)
+  - gains: CEM-optimized gain vector g = (k_los, k_damp, k_roll, k_speed)
 
 Outputs:
   - roll_rate_cmd = k_roll * heading_error - k_damp * current_roll
-  - nz_cmd        = base_nz
-                    + k_los  * los_elevation
-                    + k_pos  * (distance / distance_scale_m)
+  - nz_cmd        = base_nz + k_los * los_elevation
   - throttle_cmd  = base_throttle
                     + k_speed * (speed_error / speed_error_scale_mps)
 
 Fixed parameters (from config):
   - base_nz, base_throttle
-  - distance_scale_m, speed_error_scale_mps
+  - speed_error_scale_mps
   - alpha_filter (command smoothing, if internal filter enabled)
   - k_energy (reserved, currently unused by LOSRateGuidance)
 

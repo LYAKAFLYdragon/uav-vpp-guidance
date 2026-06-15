@@ -265,8 +265,8 @@ class TestLOSRateGuidance:
     # ------------------------------------------------------------------
 
     def test_compute_command_huge_distance(self):
-        """Distance = 1e5 m: nz proportional term should not explode."""
-        guidance = LOSRateGuidance(config={"gains": {"k_pos": 0.5}})
+        """Distance = 1e5 m: nz should stay finite and not grow with distance."""
+        guidance = LOSRateGuidance(config={})
         own_state = {
             "position_m": np.array([0.0, 0.0, 5000.0]),
             "velocity_vector_mps": np.array([200.0, 0.0, 0.0]),
@@ -275,8 +275,8 @@ class TestLOSRateGuidance:
         virtual_point = {"position_m": np.array([1e5, 0.0, 5000.0])}
         cmd = guidance.compute_command(own_state, None, virtual_point)
         assert np.isfinite(cmd["nz_cmd"])
-        # nz = 1.0 + 0 + 0.5 * (1e5 / 2000) = 1.0 + 25 = 26 -> clipped to 7.0
-        assert cmd["nz_cmd"] == pytest.approx(7.0, abs=1e-6)
+        # nz depends only on elevation (level flight -> base_nz)
+        assert cmd["nz_cmd"] == pytest.approx(1.0, abs=1e-6)
 
     # ------------------------------------------------------------------
     # Capture radius
@@ -453,8 +453,9 @@ class TestLOSRateGuidance:
         cmd_close = guidance.compute_command(own_state, None, virtual_point_close, gains)
 
         guidance.reset()
-        # Same direction but far away -> should produce larger commands
-        virtual_point_far = {"position_m": np.array([1000.0, 20000.0, 6000.0])}
+        # Same direction and similar elevation, but far away -> TBL is inactive,
+        # so the LOS term is unsuppressed and the command is larger.
+        virtual_point_far = {"position_m": np.array([1000.0, 2000.0, 6000.0])}
         cmd_far = guidance.compute_command(own_state, None, virtual_point_far, gains)
 
         assert abs(cmd_close["roll_rate_cmd"]) < abs(cmd_far["roll_rate_cmd"])

@@ -19,7 +19,11 @@ guidance:
   gains:
     # CEM-optimized variables (must match config/canonical/gain_space.yaml).
     k_los: 1.0
-    k_pos: 0.5
+    # k_pos is deprecated: the distance-proportional normal-overload term was
+    # removed because it caused continuous climb when the range to the virtual
+    # point increased (e.g. the ``disadvantage`` scenario).  Kept at 0 for
+    # backward compatibility with existing configs/checkpoints.
+    k_pos: 0.0
     k_damp: 0.2
     k_roll: 1.0
     k_speed: 0.2
@@ -30,6 +34,7 @@ guidance:
   # LOS-rate guidance parameters (previously hard-coded magic numbers)
   params:
     # Distance scaling for nz_cmd proportional term (m)
+    # Deprecated: the distance-proportional nz term has been removed.
     distance_scale_m: 2000.0
     # Target speed reference for throttle logic (m/s)
     target_speed_mps: 250.0

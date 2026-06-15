@@ -14,7 +14,8 @@ class GuidanceGains:
 
     Attributes:
         k_los: LOS-rate gain.
-        k_pos: Position error gain.
+        k_pos: Deprecated.  Was used for a distance-proportional normal-overload
+            term that has been removed from the guidance law.
         k_damp: Damping gain.
         k_roll: Roll-rate gain.
         k_speed: Speed tracking gain.
@@ -23,7 +24,7 @@ class GuidanceGains:
     """
 
     k_los: float = 1.0
-    k_pos: float = 0.5
+    k_pos: float = 0.0
     k_damp: float = 0.2
     k_roll: float = 1.0
     k_speed: float = 0.2

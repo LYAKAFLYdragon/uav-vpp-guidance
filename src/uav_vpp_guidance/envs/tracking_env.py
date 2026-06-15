@@ -900,8 +900,10 @@ class CloseRangeTrackingEnv:
         if closing_speed < speed_thresh:
             return False, f"closing_speed_{closing_speed:.1f}_mps"
 
-        # Low-aspect: tail-chase or head-on (aa near 0°)
-        if aspect_abs_deg <= aspect_thresh:
+        # Low-aspect: tail-chase (aa near 180°) or head-on (aa near 0°).
+        # Use the smaller deviation from either extreme so both are accepted.
+        low_aspect_deviation = min(aspect_abs_deg, 180.0 - aspect_abs_deg)
+        if low_aspect_deviation <= aspect_thresh:
             return True, "gate_active"
 
         # High-aspect: crossing (aa near 90°)

@@ -1,17 +1,20 @@
 # Canonical gain-search space for CEM optimization.
 #
-# CEM optimized variables (5-D):
-#   g = (k_los, k_pos, k_damp, k_roll, k_speed)
+# CEM optimized variables (4-D):
+#   g = (k_los, k_damp, k_roll, k_speed)
+#
+# k_pos is deprecated: the distance-proportional normal-overload term was removed
+# from LOS-rate guidance because it caused continuous climb in increasing-range
+# geometries (e.g. the ``disadvantage`` offset-tail-chase scenario).
 #
 # Fixed parameters (set in config/canonical/guidance.yaml, NOT searched):
 #   alpha_filter : command-filter smoothing factor
 #   k_energy     : energy-compensation gain
 
 gain_space:
-  names: [k_los, k_pos, k_damp, k_roll, k_speed]
+  names: [k_los, k_damp, k_roll, k_speed]
   bounds:
     k_los: [0.5, 4.0]
-    k_pos: [0.1, 2.0]
     k_damp: [0.2, 3.0]
     k_roll: [0.5, 2.0]
     k_speed: [0.1, 1.0]
@@ -19,6 +22,7 @@ gain_space:
   fixed:
     alpha_filter: 0.3
     k_energy: 0.1
+    k_pos: 0.0
 
 gain_optimizer:
   type: cem_ema

@@ -52,7 +52,8 @@ class LOSRateGuidance:
         """
         Args:
             config (dict): Guidance configuration dictionary. Expected keys:
-                - gains: dict with k_los, k_pos, k_damp, k_roll, k_speed
+                - gains: dict with k_los, k_damp, k_roll, k_speed
+                  (k_pos is deprecated and no longer used)
                 - params: dict with distance_scale_m, target_speed_mps,
                   speed_error_scale_mps, base_throttle, epsilon, base_nz,
                   capture_radius_m, enable_internal_clip, enable_internal_filter
@@ -367,10 +368,17 @@ class LOSRateGuidance:
         """
         Compute normal overload command.
 
-        nz = base_nz + k_los * elevation + k_pos * (distance / distance_scale)
+        nz = base_nz + k_los * elevation
+
+        The previous distance-proportional term ``k_pos * (distance / distance_scale)``
+        caused continuous climb in scenarios where the range to the virtual point
+        increased (e.g. the ``disadvantage`` offset-tail-chase geometry).  Normal
+        overload should respond to the elevation angle of the LOS, not to horizontal
+        distance.  k_pos is retained in the signature for backward compatibility but
+        is no longer used.
         """
-        proportional_term = k_pos * (distance / self.distance_scale_m)
-        return self.base_nz + k_los * los_elevation + proportional_term
+        _ = distance, k_pos  # kept for API compatibility; no longer used
+        return self.base_nz + k_los * los_elevation
 
     def _compute_throttle_cmd(
         self,

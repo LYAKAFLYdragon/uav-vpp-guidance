@@ -37,6 +37,7 @@ class NoVPPGuidance:
         trajectory_predictor_adapter=None,
         predicted_target_position=None,
         return_info: bool = False,
+        initial_range_m: float = None,
     ):
         """
         Convert policy action to a virtual pursuit point.

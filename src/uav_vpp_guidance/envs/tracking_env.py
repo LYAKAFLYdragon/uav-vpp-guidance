@@ -19,6 +19,8 @@ from .simple_point_mass_env import SimplePointMassEnv
 from .observation import compute_relative_geometry, build_observation, ObservationBuilder
 from .reward import RewardCalculator
 from .termination import TerminationChecker
+from .bandit_controller import BanditManeuverController, build_bandit_flight_state
+from .missile_model import EngagementTracker
 from ..virtual_point.generator import VirtualPointGenerator
 from ..virtual_point.no_vpp_guidance import NoVPPGuidance
 from ..guidance.los_rate_guidance import LOSRateGuidance, _extract_position as _extract_position_for_vp_error
@@ -78,6 +80,16 @@ class CloseRangeTrackingEnv:
 
         # Backend initialization
         strict_backend = self.env_config.get("strict_backend", False)
+        self._bandit_config = self.env_config.get("bandit", {})
+        self._bandit_enabled = (
+            requested_backend == "jsbsim" and self._bandit_config.get("enabled", False)
+        )
+        self._bandit_controller: BanditManeuverController | None = None
+        self._missile_tracker: EngagementTracker | None = None
+        self._bandit_sim_time_s = 0.0
+        self._own_controller = None
+        self._own_info = {}
+
         if requested_backend == "jsbsim":
             try:
                 self.jsbsim_env = JSBSimEnv(self.env_config)
@@ -86,10 +98,63 @@ class CloseRangeTrackingEnv:
                 self.jsbsim_env.add_aircraft(
                     self.own_uid, {"model": self.aircraft_model}
                 )
+                # Trim the target/bandit aircraft if it will be flown by the
+                # maneuver library open-loop.
+                target_aircraft_config = {"model": self.aircraft_model}
+                if self._bandit_enabled:
+                    target_aircraft_config["trim_on_reset"] = True
                 self.jsbsim_env.add_aircraft(
-                    self.target_uid, {"model": self.aircraft_model}
+                    self.target_uid, target_aircraft_config
                 )
                 self._backend = "jsbsim"
+
+                if self._bandit_enabled:
+                    controller_type = self._bandit_config.get("controller_type", "maneuver_library")
+                    if controller_type == "close_air_combat":
+                        from .close_air_combat_controller import CloseAirCombatBanditController
+
+                        self._bandit_controller = CloseAirCombatBanditController(
+                            self._bandit_config.get("close_air_combat", {}),
+                            jsbsim_env=self.jsbsim_env,
+                            target_uid=self.target_uid,
+                            own_uid=self.own_uid,
+                        )
+                    elif controller_type == "maneuver_library":
+                        self._bandit_controller = BanditManeuverController(self._bandit_config)
+                    else:
+                        raise ValueError(
+                            f"Unknown bandit controller_type: {controller_type}. "
+                            "Use 'maneuver_library' or 'close_air_combat'."
+                        )
+                    if self._bandit_config.get("missile", {}).get("enabled", False):
+                        self._missile_tracker = EngagementTracker(
+                            self._bandit_config["missile"]
+                        )
+
+                # Optional ownship maneuver/RL controller.
+                # When set, it overrides the guidance/low-level chain for ownship.
+                own_controller_type = self.env_config.get("own", {}).get("controller_type")
+                if own_controller_type == "close_air_combat":
+                    from .close_air_combat_controller import CloseAirCombatBanditController
+
+                    self._own_controller = CloseAirCombatBanditController(
+                        self._bandit_config.get("close_air_combat", {}),
+                        jsbsim_env=self.jsbsim_env,
+                        target_uid=self.own_uid,  # controls ownship
+                        own_uid=self.target_uid,
+                    )
+                elif own_controller_type == "maneuver_library":
+                    from .sideswap_controller import SideSwapController
+
+                    self._own_controller = SideSwapController(
+                        BanditManeuverController(self._bandit_config)
+                    )
+                elif own_controller_type is not None:
+                    raise ValueError(
+                        f"Unknown own controller_type: {own_controller_type}. "
+                        "Use 'maneuver_library' or 'close_air_combat'."
+                    )
+
                 self._low_level_controller = LowLevelController(
                     config.get("guidance", {}).get("gains", {})
                 )
@@ -109,6 +174,9 @@ class CloseRangeTrackingEnv:
                 )
                 self.jsbsim_env = None
                 self._low_level_controller = None
+                self._bandit_controller = None
+                self._missile_tracker = None
+                self._bandit_enabled = False
                 self._simple_env = SimplePointMassEnv(self.env_config)
                 self._backend = "simple"
         else:
@@ -181,7 +249,8 @@ class CloseRangeTrackingEnv:
             self.command_post_processor = CommandPostProcessor(processor_config)
 
         self.reward_calculator = RewardCalculator(config)
-        self.termination_checker = TerminationChecker(self.env_config)
+        term_cfg = {**(config.get("termination") or {}), **self.env_config}
+        self.termination_checker = TerminationChecker(term_cfg)
 
         # Observation builder (supports temporal features, gains, VP error, scenario)
         self._observation_builder = ObservationBuilder(config)
@@ -307,6 +376,29 @@ class CloseRangeTrackingEnv:
         else:
             self._reset_simple(scenario)
 
+        self._bandit_sim_time_s = 0.0
+        if self._missile_tracker is not None:
+            self._missile_tracker.reset()
+        if self._bandit_controller is not None:
+            own_state, bandit_state = self._get_current_states()
+            bandit_aircraft = self.jsbsim_env._aircraft[self.target_uid]
+            bandit_flight_state = self._build_bandit_flight_state(bandit_state, bandit_aircraft)
+            self._bandit_info = self._bandit_controller.reset(
+                own_state, bandit_state, bandit_flight_state, sim_time=0.0
+            )
+        else:
+            self._bandit_info = {}
+
+        if self._own_controller is not None:
+            own_state, bandit_state = self._get_current_states()
+            own_aircraft = self.jsbsim_env._aircraft[self.own_uid]
+            own_flight_state = self._build_bandit_flight_state(own_state, own_aircraft)
+            self._own_info = self._own_controller.reset(
+                own_state, bandit_state, own_flight_state, sim_time=0.0
+            )
+        else:
+            self._own_info = {}
+
         obs = self._get_observation()
         return obs
 
@@ -336,6 +428,73 @@ class CloseRangeTrackingEnv:
             hysteresis_range_m=hysteresis_range_m,
             hysteresis_ata_deg=hysteresis_ata_deg,
         )
+
+    def set_bandit_config(self, bandit_config: dict):
+        """Recreate the bandit controller from a new bandit config.
+
+        This lets curriculum learning switch opponents (e.g. from CAC default to
+        CAC tuned v2 to maneuver library) without recreating the whole JSBSim
+        environment. The new controller is reset against the current states.
+        """
+        self._bandit_config = dict(bandit_config)
+        self.env_config["bandit"] = self._bandit_config
+        if self.jsbsim_env is None:
+            self._bandit_controller = None
+            return
+        self._bandit_enabled = bool(self._bandit_config.get("enabled", False))
+        if not self._bandit_enabled:
+            self._bandit_controller = None
+            return
+
+        controller_type = self._bandit_config.get("controller_type", "maneuver_library")
+        if controller_type == "close_air_combat":
+            from .close_air_combat_controller import CloseAirCombatBanditController
+
+            self._bandit_controller = CloseAirCombatBanditController(
+                self._bandit_config.get("close_air_combat", {}),
+                jsbsim_env=self.jsbsim_env,
+                target_uid=self.target_uid,
+                own_uid=self.own_uid,
+            )
+        elif controller_type == "maneuver_library":
+            self._bandit_controller = BanditManeuverController(self._bandit_config)
+        else:
+            raise ValueError(
+                f"Unknown bandit controller_type: {controller_type}. "
+                "Use 'maneuver_library' or 'close_air_combat'."
+            )
+
+        own_state, bandit_state = self._get_current_states()
+        bandit_aircraft = self.jsbsim_env._aircraft[self.target_uid]
+        bandit_flight_state = self._build_bandit_flight_state(bandit_state, bandit_aircraft)
+        self._bandit_info = self._bandit_controller.reset(
+            own_state, bandit_state, bandit_flight_state, sim_time=self._sim_time_s
+        )
+
+    def apply_curriculum_stage(self, stage_config: dict):
+        """Apply a curriculum stage configuration to the live environment.
+
+        This updates the opponent (bandit) controller and success criteria
+        according to the stage. Scenario scheduling is handled by the training
+        loop, not here.
+        """
+        # Bandit / opponent configuration
+        bandit_config = stage_config.get("env", {}).get("bandit")
+        if bandit_config is None:
+            bandit_config = stage_config.get("bandit_config") or stage_config.get("bandit")
+        if bandit_config is not None:
+            self.set_bandit_config(bandit_config)
+
+        # Success criteria from either a dedicated block or the termination block
+        success_cfg = stage_config.get("success_criteria", stage_config.get("termination", {}))
+        if success_cfg:
+            self.set_success_criteria(
+                success_range_m=success_cfg.get("success_range_m"),
+                success_ata_deg=success_cfg.get("success_ata_deg"),
+                success_hold_time_s=success_cfg.get("success_hold_time_s"),
+                hysteresis_range_m=success_cfg.get("hysteresis_range_m"),
+                hysteresis_ata_deg=success_cfg.get("hysteresis_ata_deg"),
+            )
 
     def _apply_domain_randomization(self, scenario: dict) -> dict:
         """
@@ -734,6 +893,8 @@ class CloseRangeTrackingEnv:
         actuator_info = {}
         if self._backend == "jsbsim":
             actuator_info = self._step_jsbsim(actuated_command)
+            if self._missile_tracker is not None:
+                actuator_info["missiles"] = self._missile_tracker.check_hits()["missiles"]
         else:
             self._step_simple(actuated_command)
 
@@ -928,6 +1089,43 @@ class CloseRangeTrackingEnv:
         done, term_info = self.termination_checker.check(
             own_state, target_state, rel_state, self.current_step
         )
+
+        # Bandit crash / out-of-bounds counts as ownship success.
+        if not done and self._bandit_enabled:
+            bandit_alt = float(target_state.get("altitude_m", 0.0))
+            min_alt = float(getattr(self.termination_checker, "min_altitude_m", 500.0))
+            max_alt = float(getattr(self.termination_checker, "max_altitude_m", 15000.0))
+            if bandit_alt < min_alt or bandit_alt > max_alt:
+                done = True
+                term_info["terminated"] = True
+                term_info["is_success"] = True
+                term_info["is_crash"] = False
+                term_info["is_out_of_bounds"] = False
+                term_info["is_timeout"] = False
+                term_info["reason"] = "bandit_out_of_bounds"
+
+        # Missile hit termination.
+        if not done and self._missile_tracker is not None:
+            hit_info = self._missile_tracker.check_hits()
+            if hit_info["own_hit"]:
+                done = True
+                term_info["terminated"] = True
+                term_info["is_crash"] = True
+                term_info["is_success"] = False
+                term_info["is_out_of_bounds"] = False
+                term_info["is_timeout"] = False
+                term_info["reason"] = "bandit_missile_hit"
+                term_info["hit_by"] = "bandit"
+            elif hit_info["bandit_hit"]:
+                done = True
+                term_info["terminated"] = True
+                term_info["is_success"] = True
+                term_info["is_crash"] = False
+                term_info["is_out_of_bounds"] = False
+                term_info["is_timeout"] = False
+                term_info["reason"] = "own_missile_hit"
+                term_info["hit_by"] = "own"
+
         if done:
             if term_info.get("is_timeout"):
                 # Timeout is a time-limit truncation, not a task termination.
@@ -952,34 +1150,123 @@ class CloseRangeTrackingEnv:
         else:
             return self._simple_env.get_state()
 
+    def _build_bandit_flight_state(
+        self, bandit_state: dict, bandit_aircraft
+    ) -> "FlightState":
+        """Build a maneuver-library FlightState from the JSBSim bandit aircraft."""
+        alpha = float(bandit_aircraft.get_property_value("aero/alpha-rad"))
+        beta = float(bandit_aircraft.get_property_value("aero/beta-rad"))
+        mach = float(bandit_aircraft.get_property_value("velocities/mach"))
+        return build_bandit_flight_state(bandit_state, alpha, beta, mach)
+
     def _step_jsbsim(self, command):
         """在 JSBSim 后端执行控制，返回 actuator info。"""
-        # Get current aircraft state for the low-level controller
         states = self.jsbsim_env.get_state()
         own_state_raw = states[self.own_uid]
 
-        # Use low-level controller to map guidance commands to JSBSim properties
-        actuator_output = self._low_level_controller.compute_actuator(
-            command, own_state_raw
-        )
+        # Default ownship input from the guidance/low-level chain.
+        if self._own_controller is None:
+            actuator_output = self._low_level_controller.compute_actuator(
+                command, own_state_raw
+            )
+            default_own_inputs = {
+                self.own_uid: {
+                    k: v for k, v in actuator_output.items() if k.startswith("fcs/")
+                }
+            }
+        else:
+            actuator_output = {}
+            default_own_inputs = {}
+            own_aircraft = self.jsbsim_env._aircraft[self.own_uid]
 
-        # Extract JSBSim properties
-        jsbsim_props = {
-            k: v for k, v in actuator_output.items() if k.startswith("fcs/")
-        }
-        control_inputs = {self.own_uid: jsbsim_props}
+        bandit_info = dict(self._bandit_info) if self._bandit_info else {}
+        own_info = dict(self._own_info) if self._own_info else {}
+        difficulty = self._bandit_config.get("difficulty", "medium")
+
+        if self._bandit_controller is not None:
+            bandit_aircraft = self.jsbsim_env._aircraft[self.target_uid]
 
         for _ in range(self._sim_steps_per_decision):
-            self.jsbsim_env.step(control_inputs)
-            control_inputs = None
+            # --- ownship control ---
+            if self._own_controller is not None:
+                own_flight_state = self._build_bandit_flight_state(
+                    own_state_raw, own_aircraft
+                )
+                own_cmd, own_info = self._own_controller.update(
+                    own_state_raw,
+                    states[self.target_uid],
+                    own_flight_state,
+                    sim_time=self._bandit_sim_time_s,
+                    dt=self.jsbsim_env.dt,
+                )
+                own_inputs = {
+                    self.own_uid: {
+                        "fcs/aileron-cmd-norm": float(own_cmd.aileron),
+                        "fcs/elevator-cmd-norm": float(own_cmd.elevator),
+                        "fcs/rudder-cmd-norm": float(own_cmd.rudder),
+                        "fcs/throttle-cmd-norm": float(own_cmd.throttle),
+                    }
+                }
+            else:
+                own_inputs = default_own_inputs
 
-        return {
+            # --- bandit control ---
+            if self._bandit_controller is not None:
+                bandit_state = states[self.target_uid]
+                bandit_flight_state = self._build_bandit_flight_state(
+                    bandit_state, bandit_aircraft
+                )
+                bandit_cmd, bandit_info = self._bandit_controller.update(
+                    own_state_raw,
+                    bandit_state,
+                    bandit_flight_state,
+                    sim_time=self._bandit_sim_time_s,
+                    dt=self.jsbsim_env.dt,
+                )
+                bandit_inputs = {
+                    self.target_uid: {
+                        "fcs/aileron-cmd-norm": float(bandit_cmd.aileron),
+                        "fcs/elevator-cmd-norm": float(bandit_cmd.elevator),
+                        "fcs/rudder-cmd-norm": float(bandit_cmd.rudder),
+                        "fcs/throttle-cmd-norm": float(bandit_cmd.throttle),
+                    }
+                }
+            else:
+                bandit_inputs = {}
+
+            control_inputs = {**own_inputs, **bandit_inputs}
+            states = self.jsbsim_env.step(control_inputs)
+            own_state_raw = states[self.own_uid]
+            self._bandit_sim_time_s += self.jsbsim_env.dt
+
+            if self._missile_tracker is not None:
+                self._missile_tracker.step(self.jsbsim_env.dt, states)
+                self._missile_tracker.check_launch(
+                    states[self.target_uid],
+                    states[self.own_uid],
+                    side="bandit",
+                    sim_time=self._bandit_sim_time_s,
+                    difficulty=difficulty,
+                )
+
+        self._bandit_info = bandit_info
+        self._own_info = own_info
+
+        info = {
             "elevator_cmd": actuator_output.get("fcs/elevator-cmd-norm", np.nan),
             "aileron_cmd": actuator_output.get("fcs/aileron-cmd-norm", np.nan),
             "rudder_cmd": actuator_output.get("fcs/rudder-cmd-norm", np.nan),
             "throttle_actual": actuator_output.get("fcs/throttle-cmd-norm", np.nan),
             "saturation_flag": actuator_output.get("saturation_flag", False),
         }
+        if bandit_info:
+            info["bandit_maneuver"] = bandit_info.get("bandit_maneuver")
+            info["bandit_command"] = bandit_info.get("bandit_command")
+            info["bandit_situation"] = bandit_info.get("situation")
+        if own_info:
+            info["own_maneuver"] = own_info.get("bandit_maneuver")
+            info["own_command"] = own_info.get("bandit_command")
+        return info
 
     def _step_simple(self, command):
         """在简化后端执行控制。"""

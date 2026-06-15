@@ -87,6 +87,11 @@ class ManeuverSetpoint:
     throttle_ref: Optional[float] = None
     velocity_ref: Optional[float] = None
 
+    # Optional flight-envelope limits for the controller to enforce.
+    min_altitude_m: Optional[float] = None
+    min_speed_mps: Optional[float] = None
+    max_alpha_rad: Optional[float] = None
+
 
 class Maneuver:
     """Abstract base class for a maneuver primitive."""

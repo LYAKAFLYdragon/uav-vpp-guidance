@@ -92,6 +92,23 @@ class InnerLoopController:
         else:
             throttle = 0.5
 
+        # --- Envelope protection (applied after nominal command computation) ---
+        # Positive raw elevator -> command nose-up in this controller sign convention.
+        if setpoint.max_alpha_rad is not None and state.alpha_rad > setpoint.max_alpha_rad:
+            elevator = min(elevator, -0.2)
+
+        if setpoint.min_speed_mps is not None and state.velocity_mps < setpoint.min_speed_mps:
+            throttle = 1.0
+            # Avoid a strong nose-up command that would further bleed speed.
+            elevator = min(elevator, 0.2)
+
+        if setpoint.min_altitude_m is not None and state.altitude_m < setpoint.min_altitude_m:
+            # Hard wings-level pull-up override.
+            aileron = 0.0
+            rudder = 0.0
+            throttle = 1.0
+            elevator = max(elevator, 0.8)
+
         return ControlCommand(
             elevator=float(np.clip(-elevator, -1.0, 1.0)),
             aileron=float(np.clip(aileron, -1.0, 1.0)),

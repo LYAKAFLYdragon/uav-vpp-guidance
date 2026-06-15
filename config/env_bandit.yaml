@@ -1,0 +1,73 @@
+includes:
+  - env.yaml
+
+backend: jsbsim
+
+env:
+  bandit:
+    enabled: true
+    # Controller selection:
+    #   'maneuver_library' -> BanditManeuverController (rule-based maneuver library).
+    #   'close_air_combat' -> CloseAirCombatBanditController (hierarchical PPO).
+    controller_type: maneuver_library
+    difficulty: medium
+    fallback_maneuver: straight_level
+
+    # Optional: hierarchical RL opponent from CloseAirCombat_control.
+    # Only used when controller_type == 'close_air_combat'.
+    close_air_combat:
+      project_root: "E:/CloseAirCombat_control"
+      high_level_model: "baseline_results/checkpoints/proposed_ppo.zip"
+      low_level_actor: "results/SingleControl/1/heading/ppo/v1/wandb/run-20240530_084912-70pgl4xt/files/actor_latest.pt"
+      device: cpu
+      # Optional: tune the tactical guidance setpoints to make the agent more/less
+      # aggressive. Default CAC behavior is "close in" (lag 800 m, lead 5000 m).
+      # Increase these distances to make it behave more like a "position-and-separate"
+      # opponent (harder in the no-weapon close-range metric).
+      # guidance_config: {}  # uncomment and set keys to override defaults.
+
+    selector:
+      reaction_time_s: 3.0
+      selector_noise: 0.1
+      min_altitude_m: 1500.0
+      min_speed_mps: 120.0
+      # Anti-repetition and parameter perturbation settings.
+      history_window: 3
+      history_switch_prob: 0.5
+      param_perturb_scale: 0.1
+      # Emergency interruption: bypass reaction time when opponent is very close
+      # and closing fast on the bandit's tail.
+      emergency_range_m: 1000.0
+      emergency_closure_mps: 80.0
+      # Loaded maneuver set for the close-range dogfight baseline.
+      # jink is implemented and registered in ManeuverLibrary but deliberately
+      # not loaded (most useful for terminal missile/gun evasion); enable it
+      # later if needed.
+      allowed_maneuvers:
+        - straight_level
+        - coordinated_turn
+        - barrel_roll
+        - dive
+        - high_yoyo
+        - low_yoyo
+        - scissors
+        - break_turn
+        - displacement_roll
+        - vertical_scissors
+        - defensive_spiral
+        - extension
+      situation:
+        max_weapon_range_m: 8000.0
+        min_weapon_range_m: 500.0
+        tail_angle_thresh_deg: 30.0
+    # Close-range dogfight baseline: missiles are disabled by design.
+    missile:
+      enabled: false
+      max_range_m: 8000.0
+      min_range_m: 500.0
+      fov_deg: 30.0
+      max_g: 30.0
+      speed_mps: 600.0
+      kill_radius_m: 15.0
+      launch_cooldown_s: 5.0
+      launch_probability: 0.05

@@ -299,6 +299,7 @@ def train_ppo_curriculum(config, output_dir, smoke=False, algorithm="ppo", swanl
         start_time = time.time()
         update_num = 0
         current_stage = 0
+        applied_stage = -1
 
         while global_step < total_timesteps:
             # Determine current curriculum stage
@@ -321,6 +322,15 @@ def train_ppo_curriculum(config, output_dir, smoke=False, algorithm="ppo", swanl
             else:
                 allowed_names = stage_spec[1]
             active_scenarios = {k: v for k, v in all_scenarios.items() if k in allowed_names}
+
+            # Apply opponent / success-criterion changes when entering a new stage.
+            if current_stage != applied_stage and hasattr(env, "apply_curriculum_stage"):
+                print(
+                    f"*** Applying curriculum stage {current_stage}: "
+                    f"{stage_spec.get('description', '')} ***"
+                )
+                env.apply_curriculum_stage(stage_spec)
+                applied_stage = current_stage
 
             for step in range(rollout_steps):
                 obs_dict = obs

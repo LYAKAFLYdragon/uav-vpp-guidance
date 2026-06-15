@@ -200,6 +200,14 @@ class _JSBSimAircraft:
         if not success:
             raise RuntimeError("JSBSim failed to initialize simulation conditions.")
 
+        # Optional full trim for aircraft that will be flown open-loop
+        # (e.g., a maneuver-library-driven bandit).
+        if self.config.get("trim_on_reset", False):
+            try:
+                self.jsbsim_exec.set_property_value("simulation/do_simple_trim", 1)
+            except Exception:
+                pass
+
         # Init propulsion (engines to running state)
         propulsion = self.jsbsim_exec.get_propulsion()
         n_engines = propulsion.get_num_engines()

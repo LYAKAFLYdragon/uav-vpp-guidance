@@ -41,6 +41,7 @@ class Dive(Maneuver):
             theta_ref=theta_ref,
             nz_ref=nz_ref,
             velocity_ref=self.velocity_ref,
+            min_altitude_m=self.target_altitude - 100.0,
         )
 
     def is_complete(self, state: FlightState) -> bool:

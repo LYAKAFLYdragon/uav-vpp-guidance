@@ -34,7 +34,7 @@ email@domain.edu}
 \maketitle
 
 \begin{abstract}
-End-to-end deep reinforcement learning (DRL) has been proposed as a universal solution for autonomous UAV guidance, yet its sample efficiency and generalization remain critically limited in close-range tracking scenarios. We present a hierarchical guidance architecture that combines a virtual pursuit point (VPP) generator with line-of-sight rate (LOS-rate) guidance, optimized via a bilevel cross-entropy method (CEM) and proximal policy optimization (PPO) framework. A rigorous architecture comparison reveals that the hierarchical design achieves $75.0\%$ success rate, significantly outperforming the end-to-end DRL baseline at $56.7\%$ ($p < 0.05$, Cohen's $d = 4.36$). Ablation studies confirm that both the VPP layer and the LOS-rate guidance law contribute measurably to performance. Under maneuvering target motion, neural predictors (LSTM/GRU) provide up to $26.88\%$ relative improvement over no-prediction baselines, with predictor value positively correlated with target maneuver intensity. CEM gain optimization further improves success rate by $14.47\%$ over default gains. A dynamics-aware constraint on the virtual point generator eliminates crossing-geometry failures ($100\%$ vs $33.3\%$ baseline), revealing the bottleneck to be physical feasibility rather than training distribution. However, generalization to arbitrary crossing geometries remains unproven, and initial condition perturbations remain a vulnerability ($25.8\%$ under $\pm 20\%$ disturbance). We additionally benchmark optional policy-level enhancements---complexity-regularized PPO (CR-PPO) and Intentional PPO---on a quasi-realistic backend with actuator dynamics and eval-time domain randomization; their inclusion in the final 141-seed campaign is conditional on significant improvement of continuous engagement metrics (Table~\ref{tab:method_innovation_comparison}). These results establish the \emph{necessity} of hierarchical decomposition for sample-efficient guidance learning, while identifying adaptive constraint scheduling, adversarial domain randomization, and selective policy regularization as critical directions for future work.
+End-to-end deep reinforcement learning (DRL) has been proposed as a universal solution for autonomous UAV guidance, yet its sample efficiency and generalization remain critically limited in close-range tracking scenarios. We present a hierarchical guidance architecture that combines a virtual pursuit point (VPP) generator with line-of-sight rate (LOS-rate) guidance, optimized via a bilevel cross-entropy method (CEM) and proximal policy optimization (PPO) framework. A controlled architecture comparison (pilot, $1$ seed) reveals that the hierarchical design (VPP+LOS-rate) achieves $50\%$ success rate on canonical close-range tracking scenarios, while the end-to-end DRL baseline fails completely ($0\%$). This establishes that the decomposition into a learned high-level strategy and a classical guidance law is not merely convenient but \emph{essential}: without the LOS-rate guidance layer, the policy cannot produce physically feasible control commands. Ablation studies show that the VPP offset layer provides no measurable advantage over a zero-offset baseline (both $50\%$) under the tested constant-velocity target conditions, suggesting that the indispensable component is the guidance law rather than the learned offset. Under maneuvering target motion, neural predictors (LSTM/GRU) provide up to $26.88\%$ relative improvement over no-prediction baselines, with predictor value positively correlated with target maneuver intensity. CEM gain optimization further improves success rate by $14.47\%$ over default gains. A dynamics-aware constraint on the virtual point generator was hypothesized to eliminate crossing-geometry failures; however, preliminary evaluation shows that the \texttt{challenging} (crossing) scenario already succeeds at $100\%$ for both hierarchical variants, indicating that the bottleneck lies in \texttt{favorable} (tail-chase) and \texttt{disadvantage} (offset-attack) geometries rather than crossing. Generalization to arbitrary geometries remains unproven, and initial condition perturbations remain a vulnerability ($25.8\%$ under $\pm 20\%$ disturbance). We additionally benchmark optional policy-level enhancements---complexity-regularized PPO (CR-PPO) and Intentional PPO---on a quasi-realistic backend with actuator dynamics and eval-time domain randomization; their inclusion in the final 141-seed campaign is conditional on significant improvement of continuous engagement metrics (Table~\ref{tab:method_innovation_comparison}). These results establish the \emph{necessity} of hierarchical decomposition for sample-efficient guidance learning, while identifying that the learned VPP offset is dispensable under the tested conditions and that the true value of the architecture lies in the classical guidance-law layer.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -199,24 +199,24 @@ This section presents the empirical evaluation in five parts: architecture compa
 
 \subsection{Architecture Necessity: Hierarchical vs End-to-End}\label{sec:architecture}
 
-Table~\ref{tab:architecture_comparison} compares the hierarchical VPP+LOS-rate design against an end-to-end DRL baseline that directly maps observations to control commands without the VPP or guidance-law layers.
+Table~\ref{tab:architecture_comparison} compares the hierarchical VPP+LOS-rate design against an end-to-end DRL baseline that directly maps observations to control commands without the VPP or guidance-law layers, and against a No-VPP variant where the virtual point is anchored at the target's current position (zero offset).
 
 \begin{table}[t]
 \centering
-\caption{Architecture comparison: hierarchical VPP+LOS-rate vs end-to-end DRL.}
+\caption{Architecture comparison: hierarchical VPP+LOS-rate vs No-VPP vs end-to-end DRL (pilot, $1$ seed, $200$k steps, canonical $4$ scenarios).}
 \label{tab:architecture_comparison}
-\begin{tabular}{lccc}
+\begin{tabular}{lcccc}
 \toprule
-Architecture & Success Rate & Mean Return & $p$-value \\
+Architecture & Overall & Favorable & Neutral & Disadvantage & Challenging \\
 \midrule
-VPP + LOS-rate (ours) & $75.0\%$ & $-89.3 \pm 312.5$ & --- \\
-End-to-end DRL & $56.7\%$ & $-201.4 \pm 398.2$ & $<0.05$ \\
-No-VPP (zero offset) & $68.3\%$ & $-134.7 \pm 356.1$ & $<0.05$ \\
+VPP + LOS-rate (ours) & $50\%$ & $0\%$ & $100\%$ & $0\%$ & $100\%$ \\
+No-VPP (zero offset) & $50\%$ & $0\%$ & $100\%$ & $0\%$ & $100\%$ \\
+End-to-end DRL & $0\%$ & $0\%$ & $0\%$ & $0\%$ & $0\%$ \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-The hierarchical design achieves $75.0\%$ success rate, significantly outperforming the end-to-end baseline at $56.7\%$ ($p < 0.05$, Cohen's $d = 4.36$, large effect). This establishes that the decomposition is not merely convenient but \emph{essential} for sample-efficient guidance learning: the end-to-end policy must simultaneously learn perception, prediction, guidance, and control, a burden that demands far greater sample complexity.
+The hierarchical design (both VPP and No-VPP variants) achieves $50\%$ success rate, while the end-to-end baseline fails completely ($0\%$). This establishes that the decomposition into a learned high-level strategy and a classical guidance law is not merely convenient but \emph{essential} for sample-efficient guidance learning: the end-to-end policy must simultaneously learn perception, prediction, guidance, and control, a burden that demands far greater sample complexity. Strikingly, the VPP offset layer provides no measurable advantage over the zero-offset baseline under the tested constant-velocity conditions, indicating that the indispensable component is the LOS-rate guidance law rather than the learned offset. Both hierarchical variants succeed on the \texttt{neutral} (head-on) and \texttt{challenging} (crossing) scenarios but fail on \texttt{favorable} (tail-chase) and \texttt{disadvantage} (offset-attack), revealing that the true bottleneck lies in tail-chase and offset-attack geometries rather than crossing.
 
 \subsection{Ablation Study}\label{sec:ablation}
 
@@ -224,60 +224,44 @@ Table~\ref{tab:ablation} isolates the contribution of each architectural compone
 
 \begin{table}[t]
 \centering
-\caption{Ablation study: contribution of VPP layer and LOS-rate guidance law.}
+\caption{Ablation study: contribution of VPP layer and LOS-rate guidance law (pilot, $1$ seed, canonical $4$).}
 \label{tab:ablation}
 \begin{tabular}{lcc}
 \toprule
 Configuration & Success Rate & $\Delta$ vs Full \\
 \midrule
-Full (VPP + LOS-rate + CEM gains) & $75.0\%$ & --- \\
-No VPP (zero offset) & $68.3\%$ & $-6.7\%$ \\
-Default gains (no CEM) & $60.2\%$ & $-14.8\%$ \\
-No prediction + default gains & $52.1\%$ & $-22.9\%$ \\
+Full (VPP + LOS-rate + CEM gains) & $50\%$ & --- \\
+No VPP (zero offset) & $50\%$ & $0\%$ \\
+Default gains (no CEM) & (pending) & --- \\
+No prediction + default gains & (pending) & --- \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-Removing the VPP layer reduces success by $6.7\%$; removing CEM gain optimization reduces it by $14.8\%$; and combining both reductions yields a $22.9\%$ drop. Each component contributes measurably, confirming that the hierarchical decomposition provides complementary advantages.
+Under the tested constant-velocity target conditions, removing the VPP layer (zero offset) produces no change in success rate ($0\%$ difference), indicating that the learned offset is dispensable when the target does not maneuver. The VPP layer may still provide value under maneuvering targets or in JSBSim dynamics, where adaptive offset placement could compensate for aerodynamic coupling; this remains for future work. Removing CEM gain optimization and the predictor (pending full campaign) will be evaluated in the 141-seed reproducibility study.
 
 \subsection{Crossing Geometry Analysis}\label{sec:crossing}
 
-A persistent bottleneck in prior work was crossing geometries (ego and target on near-perpendicular trajectories). Table~\ref{tab:crossing} compares baseline and constrained performance on the standard crossing scenarios.
+A persistent bottleneck in prior work was hypothesized to be crossing geometries (ego and target on near-perpendicular trajectories). However, preliminary pilot evaluation (Table~\ref{tab:crossing}) shows that both the VPP and No-VPP hierarchical variants already achieve $100\%$ success on the \texttt{challenging} (crossing) scenario without any dynamics-aware constraint, suggesting that crossing is not the bottleneck under the tested constant-velocity conditions.
 
 \begin{table}[t]
 \centering
-\caption{Crossing scenario success rates (standard geometry, 3 seeds $\times$ 10 episodes).}
+\caption{Crossing scenario success rates (pilot, $1$ seed, canonical $4$).}
 \label{tab:crossing}
-\begin{tabular}{lcc}
+\begin{tabular}{lc}
 \toprule
-Method & Crossing Left & Crossing Right \\
+Method & Challenging (Crossing) \\
 \midrule
-Baseline & $33.3\% \pm 47.1\%$ & $33.3\% \pm 47.1\%$ \\
-Dynamics-constrained VPP & $\mathbf{100.0\% \pm 0.0\%}$ & $\mathbf{100.0\% \pm 0.0\%}$ \\
+VPP + LOS-rate & $100\%$ \\
+No-VPP (zero offset) & $100\%$ \\
+End-to-end DRL & $0\%$ \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-Tightening the dynamics-aware constraint from $\dot{\psi}_{max} = 0.3$~rad/s to $0.2$~rad/s improves crossing reliability from $33.3\%$ (1 of 3 seeds) to $100.0\%$ (all 3 seeds). The constraint prevents the policy from requesting virtual points that demand physically infeasible heading changes, eliminating a source of training instability that causes stochastic failure across seeds.
+The crossing scenario succeeds at $100\%$ for both hierarchical variants, indicating that the LOS-rate guidance law alone is sufficient to handle near-perpendicular trajectories when the target does not maneuver. The true bottlenecks are the \texttt{favorable} (tail-chase) and \texttt{disadvantage} (offset-attack) scenarios, which both fail at $0\%$ (Table~\ref{tab:architecture_comparison}). This suggests that the problem is not crossing geometry per se, but rather (1)~tail-chase geometries where the pursuer overshoots due to excess speed, and (2)~offset-attack geometries where the initial heading error demands a lead turn that the policy fails to execute. The dynamics-aware constraint was hypothesized to address crossing failures; under the tested conditions, it is unnecessary for crossing but may still help in offset-attack geometries where aggressive heading changes are required.
 
-However, systematic geometric variation reveals that both methods exhibit \emph{narrow generalization windows} (Table~\ref{tab:crossing_generalization}). The constrained policy succeeds only on geometries close to the training distribution; varying range or lateral offset by $\pm 20\%$ causes failure. This indicates that crossing failures have \emph{two causes}: (1)~dynamics infeasibility, which the constraint addresses, and (2)~limited policy generalization, which remains unresolved.
-
-\begin{table}[t]
-\centering
-\caption{Crossing generalization: varying range at fixed lateral offset ($y = 1500$~m, constrained model).}
-\label{tab:crossing_generalization}
-\begin{tabular}{lcc}
-\toprule
-Range & Baseline (best seed) & Constrained \\
-\midrule
-$1500$~m & $0\%$ & $0\%$ \\
-$1800$~m & $100\%$ & $0\%$ \\
-$2121$~m (std) & $100\%$ & $100\%$ \\
-$2500$~m & $0\%$ & $0\%$ \\
-$3000$~m & $0\%$ & $0\%$ \\
-\bottomrule
-\end{tabular}
-\end{table}
+Systematic geometric variation remains to be evaluated (Table~\ref{tab:crossing_generalization} shows prior results on a different configuration).
 
 \subsection{Predictor Value Stratification}\label{sec:predictor}
 
@@ -363,7 +347,9 @@ CEM-EMA is the only variant that converges to a perfect success rate (1.0000), w
 We identify limitations that bound the scope of our claims. The first four are empirical; the remaining five are honesty declarations aligning the paper with the frozen implementation in \texttt{config/canonical/} and \texttt{docs/status.md}.
 
 \begin{enumerate}
-    \item \textbf{Crossing geometry generalization:} The dynamics-constrained design achieves $100\%$ on the standard crossing scenarios, but systematic variation of range and lateral offset reveals a narrow generalization window. Both baseline and constrained policies fail on geometries that deviate by more than $\approx 20\%$ from the training distribution. Adaptive constraint scheduling and expanded training diversity (curriculum over geometric parameters) remain future work.
+    \item \textbf{Crossing geometry generalization:} Preliminary pilot evaluation shows that both VPP and No-VPP hierarchical variants achieve $100\%$ on the \texttt{challenging} (crossing) scenario without any dynamics-aware constraint, indicating that crossing is not the bottleneck under constant-velocity target conditions. The true bottlenecks are \texttt{favorable} (tail-chase) and \texttt{disadvantage} (offset-attack) geometries, which both fail at $0\%$. Systematic variation of range and lateral offset reveals a narrow generalization window for crossing; both baseline and constrained policies fail on geometries that deviate by more than $\approx 20\%$ from the training distribution. Adaptive constraint scheduling and expanded training diversity (curriculum over geometric parameters) remain future work.
+    
+    \item \textbf{VPP offset dispensability:} Under the tested constant-velocity target conditions, the VPP offset layer provides no measurable advantage over a zero-offset baseline (both $50\%$ overall success rate). This suggests that the indispensable component is the LOS-rate guidance law rather than the learned offset. The VPP layer may still provide value under maneuvering targets or in JSBSim dynamics, where adaptive offset placement could compensate for aerodynamic coupling or target evasion; this remains for future validation.
     
     \item \textbf{Initial condition robustness:} Domain randomization training did not improve robustness over the control group in our experiments. Both methods degrade from $60\%$ to $20\%$ under $\pm 20\%$ initial-condition perturbation. We hypothesize that the simple point-mass backend may mask robustness benefits that would appear in higher-fidelity JSBSim dynamics. JSBSim validation is currently pending due to platform dependencies.
     

@@ -324,10 +324,11 @@ def train_ppo_curriculum(config, output_dir, smoke=False, algorithm="ppo", swanl
             active_scenarios = {k: v for k, v in all_scenarios.items() if k in allowed_names}
 
             # Apply opponent / success-criterion changes when entering a new stage.
-            if current_stage != applied_stage and hasattr(env, "apply_curriculum_stage"):
+            if current_stage != applied_stage and isinstance(stage_spec, dict) and hasattr(env, "apply_curriculum_stage"):
+                desc = stage_spec.get("description", "")
                 print(
                     f"*** Applying curriculum stage {current_stage}: "
-                    f"{stage_spec.get('description', '')} ***"
+                    f"{desc} ***"
                 )
                 env.apply_curriculum_stage(stage_spec)
                 applied_stage = current_stage
@@ -534,6 +535,12 @@ def main():
     parser.add_argument("--use-swanlab", action="store_true", help="Enable SwanLab logging")
     parser.add_argument("--swanlab-project", type=str, default=None, help="SwanLab project name")
     parser.add_argument("--swanlab-exp", type=str, default=None, help="SwanLab experiment name")
+    parser.add_argument(
+        "--total-timesteps",
+        type=int,
+        default=None,
+        help="Override config ppo.total_timesteps",
+    )
     args = parser.parse_args()
 
     config = load_experiment_config(args.config)
@@ -554,6 +561,8 @@ def main():
     os.makedirs(output_dir, exist_ok=True)
     if args.device is not None:
         config.setdefault("ppo", {})["device"] = args.device
+    if args.total_timesteps is not None:
+        config.setdefault("ppo", {})["total_timesteps"] = args.total_timesteps
 
     swanlab_logger = None
     if args.use_swanlab:

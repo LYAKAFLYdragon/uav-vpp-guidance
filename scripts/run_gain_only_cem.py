@@ -28,8 +28,26 @@ from uav_vpp_guidance.gain_optimizer.gain_space import GainSpace
 from uav_vpp_guidance.guidance.gain_config import GuidanceGains
 
 
-def load_config(config_path: str) -> dict:
-    full_config = yaml.safe_load(Path(config_path).read_text(encoding="utf-8"))
+PROJECT_ROOT = Path(__file__).parent.parent
+
+
+def _merge_config(base, override):
+    merged = dict(base)
+    for key, value in override.items():
+        if key in merged and isinstance(merged[key], dict) and isinstance(value, dict):
+            merged[key] = _merge_config(merged[key], value)
+        else:
+            merged[key] = value
+    return merged
+
+
+def _load_yaml(path: Path) -> dict:
+    return yaml.safe_load(path.read_text(encoding="utf-8"))
+
+
+def load_config(config_path: str, dry_run: bool = False) -> dict:
+    config_path = Path(config_path)
+    full_config = _load_yaml(config_path)
     method_override = full_config.get("methods", {}).get("no_prediction", {})
     base_config = copy.deepcopy(full_config)
     for k, v in method_override.items():
@@ -37,6 +55,30 @@ def load_config(config_path: str) -> dict:
             base_config[k].update(copy.deepcopy(v))
         else:
             base_config[k] = copy.deepcopy(v)
+
+    # In dry-run mode, canonical guidance/reward/gain_space configs may be passed
+    # directly. Merge with the remaining canonical defaults so the environment can
+    # initialize without an explicit experiment config.
+    if dry_run and "env" not in base_config:
+        canonical_dir = PROJECT_ROOT / "config" / "canonical"
+        for name in ("reward", "virtual_point", "gain_space"):
+            base_config = _merge_config(base_config, _load_yaml(canonical_dir / f"{name}.yaml"))
+        base_config = _merge_config(base_config, _load_yaml(PROJECT_ROOT / "config" / "env.yaml"))
+        base_config = _merge_config(
+            base_config, _load_yaml(PROJECT_ROOT / "config" / "success_criteria" / "medium.yaml")
+        )
+        # Minimal PPO placeholders so agent init does not fail
+        base_config.setdefault("ppo", {})
+        base_config["ppo"].setdefault("hidden_dims", [256, 256])
+        base_config["ppo"].setdefault("activation", "relu")
+        base_config["ppo"].setdefault("lr", 3e-4)
+        base_config["ppo"].setdefault("gamma", 0.99)
+        base_config["ppo"].setdefault("gae_lambda", 0.95)
+        base_config["ppo"].setdefault("clip_epsilon", 0.2)
+        base_config["ppo"].setdefault("value_coef", 0.5)
+        base_config["ppo"].setdefault("entropy_coef", 0.01)
+        base_config["ppo"].setdefault("max_grad_norm", 0.5)
+
     return base_config
 
 
@@ -46,10 +88,18 @@ def build_gain_space(config: dict) -> GainSpace:
     Prefers ``guidance.gain_space``, falls back to top-level ``gain_space``,
     and finally to the canonical 5-D search space documented in
     config/canonical/gain_space.yaml.
+
+    Accepts both the compact bounds dict (name -> [min, max]) and the full
+    canonical ``gain_space`` block that contains ``names``, ``bounds`` and
+    ``fixed`` sub-keys.
     """
     gain_bounds = config.get("guidance", {}).get("gain_space")
     if gain_bounds is None:
-        gain_bounds = config.get("gain_space")
+        gain_space = config.get("gain_space")
+        if isinstance(gain_space, dict) and "bounds" in gain_space:
+            gain_bounds = gain_space["bounds"]
+        else:
+            gain_bounds = gain_space
     if gain_bounds is None:
         gain_bounds = {
             "k_los": [0.5, 4.0],
@@ -99,7 +149,7 @@ def make_evaluator(env: CloseRangeTrackingEnv, agent: PPOAgent, scenarios: list,
 def main():
     parser = argparse.ArgumentParser(description="Gain-only CEM optimization")
     parser.add_argument("--config", type=str, default="config/experiment/stage6f5_feasible_geometry.yaml")
-    parser.add_argument("--checkpoint", type=str, required=True, help="Path to frozen PPO checkpoint")
+    parser.add_argument("--checkpoint", type=str, default=None, help="Path to frozen PPO checkpoint")
     parser.add_argument("--n-iter", type=int, default=50)
     parser.add_argument("--candidates", type=int, default=12)
     parser.add_argument("--elite-ratio", type=float, default=0.25)
@@ -116,13 +166,29 @@ def main():
     )
     parser.add_argument("--beta-ema", type=float, default=0.7, help="EMA smoothing factor (mode=ema)")
     parser.add_argument("--alpha-gd", type=float, default=0.05, help="GD step size (mode=gd)")
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Validate config, env, policy, and optimizer initialization only. "
+             "Allows missing checkpoint when combined with --allow-random-init.",
+    )
+    parser.add_argument(
+        "--allow-random-init",
+        action="store_true",
+        help="Allow optimization from random initialization when checkpoint is missing. "
+             "Results will be marked invalid_for_paper.",
+    )
     args = parser.parse_args()
 
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
+    if args.dry_run and args.checkpoint is None and not args.allow_random_init:
+        args.allow_random_init = True
+        print("[Dry-run] Enabling --allow-random-init because no checkpoint was provided.")
+
     # Load config
-    config = load_config(args.config)
+    config = load_config(args.config, dry_run=args.dry_run)
     config["backend"] = "simple"
     config["env"]["backend"] = "simple"
     config["env"]["use_jsbsim"] = False
@@ -147,7 +213,18 @@ def main():
     obs = env.reset(seed=0)
     obs_dim = int(obs["observation_vector"].shape[0])
     agent = PPOAgent(obs_dim=obs_dim, action_dim=3, config=config, device="cpu")
-    agent.load(args.checkpoint)
+    checkpoint = args.checkpoint
+    if checkpoint is None:
+        checkpoint = config.get("policy_checkpoint")
+    checkpoint_exists = Path(checkpoint).exists() if checkpoint else False
+    if checkpoint_exists:
+        agent.load(checkpoint)
+        print(f"Loaded checkpoint: {checkpoint}")
+    elif args.dry_run or args.allow_random_init:
+        print(f"WARNING: Checkpoint not found: {checkpoint}. Using random initialization.")
+    else:
+        print(f"ERROR: Checkpoint not found: {checkpoint}")
+        sys.exit(1)
 
     # Build gain space and CEM
     gain_space = build_gain_space(config)
@@ -170,6 +247,26 @@ def main():
 
     # Create evaluator
     evaluator = make_evaluator(env, agent, scenarios, tuple(args.seeds))
+
+    if args.dry_run:
+        print("[Dry-run] CEM initialization OK. Running a single evaluator call...")
+        sample_gains = gain_space.sample(1, seed=0)[0]
+        sample_gains_dict = gain_space.vector_to_gains(sample_gains)
+        _ = evaluator(sample_gains_dict)
+        print("[Dry-run] Single evaluator call OK.")
+        print("[Dry-run] Skipping full optimization.")
+        results = {
+            "dry_run": True,
+            "best_gains": gain_space.vector_to_gains(gain_space.sample(1, seed=0)[0]),
+            "best_score": None,
+            "n_iterations": 0,
+            "note": "Dry-run: full optimization skipped.",
+        }
+        result_path = output_dir / "cem_results.json"
+        result_path.write_text(json.dumps(results, indent=2), encoding="utf-8")
+        print(f"\nSaved dry-run results: {result_path}")
+        env.close()
+        return
 
     # Run optimization
     print(f"Starting CEM optimization: {args.n_iter} iterations")

@@ -70,10 +70,18 @@ def _build_gain_space(config: dict) -> GainSpace:
     Prefers ``guidance.gain_space``, falls back to top-level ``gain_space``,
     and finally to the canonical 5-D search space documented in
     config/canonical/gain_space.yaml.
+
+    Accepts both the compact bounds dict (name -> [min, max]) and the full
+    canonical ``gain_space`` block that contains ``names``, ``bounds`` and
+    ``fixed`` sub-keys.
     """
     gain_bounds = config.get("guidance", {}).get("gain_space")
     if gain_bounds is None:
-        gain_bounds = config.get("gain_space")
+        gain_space = config.get("gain_space")
+        if isinstance(gain_space, dict) and "bounds" in gain_space:
+            gain_bounds = gain_space["bounds"]
+        else:
+            gain_bounds = gain_space
     if gain_bounds is None:
         gain_bounds = {
             "k_los": [0.5, 4.0],

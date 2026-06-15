@@ -27,6 +27,7 @@ Stability notes:
 """
 
 import logging
+import math
 from typing import Dict, Any, Optional
 
 import numpy as np
@@ -86,6 +87,30 @@ class LOSRateGuidance:
         self.epsilon = float(params.get("epsilon", EPS))
         self.base_nz = float(params.get("base_nz", 1.0))
         self.capture_radius_m = float(params.get("capture_radius_m", 50.0))
+
+        # Optional altitude-hold term in nz_cmd to prevent descending spiral
+        # in aggressive turning scenarios (e.g. JSBSim F-16 disadvantage).
+        altitude_hold = params.get("altitude_hold", {})
+        self.altitude_hold_enabled = bool(altitude_hold.get("enabled", False))
+        self.k_alt = float(altitude_hold.get("k_alt", 0.0))
+        self.altitude_reference_m = float(
+            altitude_hold.get("altitude_reference_m", 5000.0)
+        )
+        self.altitude_hold_min_m = float(
+            altitude_hold.get("min_altitude_m", 500.0)
+        )
+
+        # Optional roll-angle protection: attenuate roll-rate command when the
+        # aircraft is already heavily banked.  Prevents high-fidelity aircraft
+        # (e.g. JSBSim F-16) from rolling past ~90° and entering a spiral dive.
+        roll_prot = params.get("roll_angle_protection", {})
+        self.roll_angle_protection_enabled = bool(roll_prot.get("enabled", False))
+        self.max_roll_rad = float(roll_prot.get("max_roll_rad", np.deg2rad(60.0)))
+        self.roll_attenuation_power = float(roll_prot.get("attenuation_power", 2.0))
+        if self.roll_angle_protection_enabled and self.max_roll_rad <= 0.0:
+            raise ValueError(
+                f"roll_angle_protection.max_roll_rad must be positive, got {self.max_roll_rad}"
+            )
 
         # Terminal boundary layer: smoothly suppress high-gain LOS commands
         # near the virtual point to avoid collision-singularity driven OOB/crash.
@@ -214,7 +239,34 @@ class LOSRateGuidance:
 
         current_roll = float(own_state.get("roll_rad", 0.0))
         roll_rate_cmd = k_roll * heading_error - k_damp * current_roll
-        nz_cmd = self._compute_nz_cmd(los_elevation, distance, k_los, k_pos)
+
+        # Roll-angle protection: actively limit bank angle and roll back to
+        # wings-level if it exceeds the configured maximum.  A passive
+        # attenuation is not enough for high-fidelity aircraft because
+        # aerodynamic/momentum coupling can keep rolling past 90°.
+        if self.roll_angle_protection_enabled:
+            roll_abs = abs(float(current_roll))
+            if roll_abs > self.max_roll_rad:
+                # Command maximum roll rate back toward wings level.
+                roll_rate_cmd = -np.sign(current_roll) * self.roll_rate_max
+            else:
+                attenuation = 1.0 - (roll_abs / self.max_roll_rad) ** self.roll_attenuation_power
+                roll_rate_cmd *= float(max(0.0, attenuation))
+
+        own_alt = float(
+            own_state.get("altitude_m", _extract_position(own_state)[2])
+        )
+        nz_cmd = self._compute_nz_cmd(
+            los_elevation, distance, k_los, k_pos, own_alt
+        )
+
+        # 2c. Bank-angle load-factor compensation (applied after altitude-hold
+        # so the aircraft can maintain level flight while banked).
+        cos_roll = math.cos(float(current_roll))
+        if cos_roll > 0.1:
+            nz_cmd += 1.0 / cos_roll - 1.0
+        else:
+            nz_cmd += self.nz_max - self.base_nz
 
         # 3. Speed / throttle
         target_speed = self._extract_target_speed(target_state)
@@ -364,11 +416,12 @@ class LOSRateGuidance:
         distance: float,
         k_los: float,
         k_pos: float,
+        own_altitude: Optional[float] = None,
     ) -> float:
         """
         Compute normal overload command.
 
-        nz = base_nz + k_los * elevation
+        nz = base_nz + k_los * elevation + k_alt * (alt_ref - alt)
 
         The previous distance-proportional term ``k_pos * (distance / distance_scale)``
         caused continuous climb in scenarios where the range to the virtual point
@@ -376,9 +429,21 @@ class LOSRateGuidance:
         overload should respond to the elevation angle of the LOS, not to horizontal
         distance.  k_pos is retained in the signature for backward compatibility but
         is no longer used.
+
+        The optional altitude-hold term adds upward normal overload when the
+        aircraft drops below ``altitude_reference_m``.  This mitigates descending
+        spiral caused by steep bank angles in high-fidelity dynamics.
         """
         _ = distance, k_pos  # kept for API compatibility; no longer used
-        return self.base_nz + k_los * los_elevation
+        nz = self.base_nz + k_los * los_elevation
+        if self.altitude_hold_enabled and own_altitude is not None:
+            alt_error = self.altitude_reference_m - own_altitude
+            # Only add upward correction when below reference or close to floor.
+            if own_altitude < self.altitude_reference_m or own_altitude < (
+                self.altitude_hold_min_m + 500.0
+            ):
+                nz += self.k_alt * alt_error
+        return nz
 
     def _compute_throttle_cmd(
         self,

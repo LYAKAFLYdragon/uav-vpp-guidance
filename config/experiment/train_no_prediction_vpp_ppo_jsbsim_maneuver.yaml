@@ -69,6 +69,16 @@ guidance:
     k_roll: 1.0
     k_speed: 0.2
     alpha_filter: 0.3
+  params:
+    altitude_hold:
+      enabled: true
+      k_alt: 0.002
+      altitude_reference_m: 5000.0
+      min_altitude_m: 500.0
+    roll_angle_protection:
+      enabled: true
+      max_roll_rad: 1.3963  # 80 deg; allows enough turn rate for disadvantage
+      attenuation_power: 2.0
 
 limits:
   nz_min: -2.0

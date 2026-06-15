@@ -524,6 +524,12 @@ def main():
     parser.add_argument("--use-swanlab", action="store_true", help="Enable SwanLab logging")
     parser.add_argument("--swanlab-project", type=str, default=None, help="SwanLab project name")
     parser.add_argument("--swanlab-exp", type=str, default=None, help="SwanLab experiment name")
+    parser.add_argument(
+        "--total-timesteps",
+        type=int,
+        default=None,
+        help="Override total training timesteps",
+    )
     args = parser.parse_args()
 
     config = load_experiment_config(args.config)
@@ -544,6 +550,8 @@ def main():
     os.makedirs(output_dir, exist_ok=True)
     if args.device is not None:
         config.setdefault("ppo", {})["device"] = args.device
+    if args.total_timesteps is not None:
+        config.setdefault("ppo", {})["total_timesteps"] = args.total_timesteps
 
     swanlab_logger = None
     if args.use_swanlab:

@@ -356,6 +356,13 @@ class CloseRangeTrackingEnv:
             self.trajectory_predictor_adapter.reset()
         self._prediction_error_tracker.reset()
 
+        # Seed the domain-randomization RNG with the episode seed so that
+        # different training/evaluation seeds produce different initial-condition
+        # perturbations. This fixes the zero-cross-seed variance reported by
+        # reviewers (all seeds previously shared the fixed RNG seed 42).
+        if seed is not None:
+            self._domain_rand_rng = np.random.default_rng(int(seed))
+
         # Cache scenario metadata for dynamic offset scaling and observation enhancement.
         self._current_scenario_type = None
         self._initial_range_m = 2000.0

@@ -120,6 +120,9 @@ evaluation:
   eval_episodes: 10
   seeds: [0, 1, 2]
   save_trajectories: true
+  # Eval-time domain randomization: perturbs initial conditions per episode so
+  # that independent seeds produce non-degenerate success-rate variance.
+  domain_rand_scale: 0.15
 
 checkpoint:
   save_interval: 10000

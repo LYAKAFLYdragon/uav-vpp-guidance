@@ -63,12 +63,11 @@ def run_evaluation(env, agent, config, num_episodes=10, seeds=None, save_traject
             ep_seed = seed * 10000 + ep
             rng = np.random.default_rng(ep_seed)
             scenario = sample_scenario(config, rng)
-            # Apply eval-time domain randomization if requested. A fixed
-            # evaluation RNG makes results reproducible while still perturbing
-            # initial conditions across episodes.
+            # Apply eval-time domain randomization if requested. The environment
+            # reset() call seeds the domain-randomization RNG from ep_seed and
+            # perturbs the scenario internally, so we only set the scale here.
             if domain_rand_scale > 0.0 and hasattr(env, "set_domain_rand_scale"):
                 env.set_domain_rand_scale(domain_rand_scale)
-                scenario = env._apply_domain_randomization(scenario)
             obs = env.reset(scenario=scenario, seed=ep_seed)
             ep_reward = 0.0
             ep_length = 0
@@ -177,7 +176,6 @@ def evaluate_scenarios(env, agent, scenarios, num_episodes=5, seed_base=1000, do
             ep_seed = seed_base + hash(name) % 10000 + ep
             if domain_rand_scale > 0.0 and hasattr(env, "set_domain_rand_scale"):
                 env.set_domain_rand_scale(domain_rand_scale)
-                scenario = env._apply_domain_randomization(scenario)
             obs = env.reset(scenario=scenario, seed=ep_seed)
             for step in range(env.max_steps):
                 action = agent.get_deterministic_action(obs["observation_vector"])

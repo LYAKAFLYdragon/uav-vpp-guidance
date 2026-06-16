@@ -54,11 +54,17 @@ env:
         tail_angle_thresh_deg: 30.0
 
   # Termination thresholds (fixed, no success-criterion curriculum for pilot)
-  success_range_m: 900.0
-  success_ata_deg: 25.0
-  success_hold_time_s: 0.2
-  hysteresis_range_m: 950.0
-  hysteresis_ata_deg: 30.0
+  success_range_m: 1000.0
+  success_ata_deg: 30.0
+  success_hold_time_s: 0.0
+  hysteresis_range_m: 1100.0
+  hysteresis_ata_deg: 35.0
+  # Raise the crash floor so the policy learns earlier that low-altitude
+  # dives are not rewarded.  The reward safety term is aligned to the same
+  # reference below.
+  min_altitude_m: 700.0
+  max_altitude_m: 15000.0
+  max_range_m: 12000.0
 
 trajectory_prediction:
   enabled: false
@@ -73,14 +79,30 @@ observation:
 reward:
   # Stronger safety signal to prevent the VPP policy from diving into the
   # ground while chasing maneuvering targets.
-  w_safety: 5.0
-  w_boundary: 2.0
-  w_overshoot: 2.0
-  boundary_alt_min_m: 1500.0
+  # Geometry weights are reduced relative to the safety/boundary terms so the
+  # agent prioritizes staying alive over aggressive closure.
+  w_range: 0.3
+  w_angle: 0.5
+  w_safety: 8.0
+  w_boundary: 4.0
+  w_overshoot: 1.0
+  w_alive: 0.2
+  min_altitude_m: 700.0
+  boundary_alt_min_m: 2000.0
   boundary_alt_max_m: 9000.0
-  terminal_crash: -1500.0
+  boundary_range_m: 10000.0
+  terminal_crash: -3000.0
+  terminal_failure: -200.0
   ideal_range_min: 900.0
-  ideal_range_max: 1200.0
+  ideal_range_max: 1300.0
+  overshoot_range_threshold_m: 600.0
+  # Potential-based shaping encourages aggressive closure; disable it for the
+  # maneuvering-target pilot so the agent learns from the explicit range/angle
+  # and safety terms instead.
+  potential_based_shaping:
+    enabled: false
+    C: 0.001
+    gamma: 0.99
 
 policy:
   type: mlp

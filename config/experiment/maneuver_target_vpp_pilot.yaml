@@ -11,10 +11,12 @@ virtual_point:
   anchor_mode: current_target
   return_info: true
   action_dim: 3
-  d_long_range: [-1500.0, 1500.0]
-  d_lat_range: [-800.0, 800.0]
-  d_vert_range: [-500.0, 500.0]
-  smoothing_alpha: 0.3
+  # Tighten the VPP offset authority to prevent the policy from placing the
+  # virtual point far below/behind the target and diving into the ground.
+  d_long_range: [-1000.0, 1000.0]
+  d_lat_range: [-600.0, 600.0]
+  d_vert_range: [-300.0, 300.0]
+  smoothing_alpha: 0.5
   dynamics_aware: true
-  max_heading_rate: 0.3
+  max_heading_rate: 0.2
   lookahead_steps: 5

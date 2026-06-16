@@ -1,0 +1,19 @@
+\begin{table}[t]
+\centering
+\caption{JSBSim F-16 validation success rates (\%) on four close-range tracking scenarios with maneuvering targets. VPP results use curriculum training and are averaged over $16$ random seeds ($5$ existing + $11$ new), $20$ evaluation episodes per seed. No-VPP uses a hard-coded zero virtual-point offset. The No-VPP mild-disadvantage timeout is rescued to $100\%$ by injecting a fixed $+500$~m lateral offset (see \S\ref{sec:jsbsim_validation}).}
+\label{tab:jsbsim_maneuver}
+\begin{tabular}{lcccc}
+\toprule
+Method & Favorable & Neutral & Disadvantage & Challenging \\
+\midrule
+\multicolumn{5}{l}{\textit{Mild sinusoidal target ($1\,g$, $0.3\,\mathrm{rad/s}$)}} \\
+VPP (curriculum, 16 seeds) & $100.0$ & $100.0$ & $\mathbf{100.0}$ & $100.0$ \\
+No-VPP (zero offset)       & $100.0$ & $100.0$ & $0.0$ (timeout)  & $100.0$ \\
+No-VPP + fixed lateral offset & $100.0$ & $100.0$ & $100.0$ & $100.0$ \\
+\midrule
+\multicolumn{5}{l}{\textit{Strong weaving target ($3\,g$, $0.8\,\mathrm{rad/s}$)}} \\
+VPP (curriculum, 5 seeds)  & $100.0$ & $100.0$ & $\mathbf{100.0}$ & $100.0$ \\
+No-VPP (zero offset)       & $100.0$ & $100.0$ & $100.0$          & $100.0$ \\
+\bottomrule
+\end{tabular}
+\end{table}

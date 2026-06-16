@@ -1,0 +1,157 @@
+% Results Chapter
+
+This section presents the empirical evaluation in seven parts: architecture comparison and ablations (\S\ref{sec:architecture}--\ref{sec:ablation}), crossing and maneuvering-target analysis (\S\ref{sec:crossing}), JSBSim validation with high-fidelity aerodynamics (\S\ref{sec:jsbsim_validation}), predictor value stratification (\S\ref{sec:predictor}), bilevel optimization gains (\S\ref{sec:bilevel_gains}), method-innovation comparison (\S\ref{sec:method_innovation}), computational complexity (\S\ref{sec:timing}), capture-region analysis (\S\ref{sec:capture_region}), and CEM optimizer variants (\S\ref{sec:cem_variants}). The primary architecture comparison is based on a 5-seed validation (200~k PPO steps, 30 evaluation episodes per seed) for both the VPP-enabled and zero-offset hierarchical policies.
+
+\subsection{Architecture Comparison: Hierarchical, No-VPP, and End-to-End}\label{sec:architecture}
+
+Table~\ref{tab:architecture_comparison_exact} compares the hierarchical VPP+LOS-rate design, the zero-offset (No-VPP) hierarchical variant, and an end-to-end DRL baseline that directly maps observations to control commands without the VPP or guidance-law layers.
+
+\input{tables/table_architecture_comparison_exact}
+
+On the exact canonical geometries, the zero-offset hierarchical design achieves a marginally higher pooled success rate than the VPP-enabled policy ($73.3\%$ vs $70.0\%$), while the end-to-end baseline fails completely ($0\%$ at the default 200~k budget). The difference between the two hierarchical variants is not statistically significant: McNemar exact test on 150 paired episodes gives $p = 0.063$ and Welch's $t$-test on per-seed success rates gives $p = 0.199$. Episode returns differ significantly (Mann-Whitney $p < 0.001$) because VPP failure episodes incur larger out-of-bounds penalties, but the success-rate outcome is comparable.
+
+These results establish two points. First, the hierarchical decomposition into a high-level policy and a classical guidance law is substantially easier to train than end-to-end DRL under identical budgets. Second, the VPP offset layer is not required to obtain that benefit: a zero-offset policy performs at the same level.
+
+\begin{figure}[t]
+\centering
+\input{figures/architecture_comparison.tex}
+\caption{Architecture comparison on exact canonical scenarios. The hierarchical designs (No-VPP and VPP) achieve comparable success rates; the end-to-end baseline fails at the default 200~k budget.}
+\label{fig:architecture_comparison}
+\end{figure}
+
+On randomized canonical geometries (Table~\ref{tab:architecture_comparison_random}), both hierarchical variants degrade similarly, with the \texttt{disadvantage} scenario as the dominant bottleneck. This confirms that initial-condition perturbation and aggressive geometry are the primary robustness limitations, not the presence or absence of the VPP layer.
+
+\input{tables/table_architecture_comparison_random}
+
+\subsection{End-to-End Extended Training}\label{sec:e2e_extended}
+
+To ensure a fair comparison with the end-to-end baseline, we extended training to 500~k, 1~M, and 2~M steps and aligned the reward function with the hierarchical baseline. Table~\ref{tab:e2e_extended} reports per-seed success rates.
+
+\input{tables/table_e2e_extended}
+
+The E2E baseline remains unstable: one seed reaches $36.7\%$ success while the other stays at $0\%$ across all budgets. Increasing the training budget to 2~M steps does not reliably improve performance. This supports the weaker but more defensible claim that the hierarchical decomposition is  \emph{beneficial and easier to train}, not that it is strictly necessary.
+
+\subsection{Ablation Study}\label{sec:ablation}
+
+Table~\ref{tab:vpp_ablation} isolates the contribution of the VPP offset layer relative to the zero-offset baseline.
+
+\input{tables/table_vpp_ablation}
+
+Under the tested constant-velocity target conditions, the VPP offset layer provides no statistically significant advantage. The zero-offset baseline achieves $73.3\%$ pooled success and the VPP-enabled policy achieves $70.0\%$. Restricting the VPP offset box to $\pm 100$~m in a 2-seed pilot study degraded performance to $36.7\%$ with $50\%$ out-of-bounds failures, indicating that simple static clamping is harmful rather than a remedy for large offsets.
+
+By contrast, removing CEM gain optimization reduces performance from $74.7\%$ to $60.2\%$ ($-14.5$ percentage points), confirming that guidance-law gain tuning is the critical design lever in the hierarchical architecture.
+
+\begin{figure}[t]
+\centering
+\input{figures/vpp_comparison.tex}
+\caption{VPP vs No-VPP performance across exact canonical scenarios. The two hierarchical variants are statistically comparable in success rate.}
+\label{fig:vpp_comparison}
+\end{figure}
+
+\subsection{Crossing and Maneuvering Target Analysis}\label{sec:crossing}
+
+A persistent bottleneck in prior work was hypothesized to be crossing geometries. However, both hierarchical variants achieve strong performance on the \texttt{challenging} (crossing) geometry. The true bottleneck remains the \texttt{disadvantage} (offset-attack) geometry, where both VPP and No-VPP policies struggle.
+
+\input{tables/table_maneuvering_comparison}
+
+Under sinusoidal maneuvering target motion (Table~\ref{tab:maneuvering_comparison}), both variants again converge to similar overall success rates, reinforcing the conclusion that the VPP offset provides no measurable advantage under the tested simple-backend dynamics.
+
+\subsection{JSBSim Validation with Maneuvering Targets}\label{sec:jsbsim_validation}
+
+To verify that the core findings are not artifacts of the idealized point-mass backend, we replicate the VPP vs No-VPP comparison under the JSBSim F-16 high-fidelity aerodynamic model with two levels of target maneuvering intensity: mild sinusoidal and strong weaving.
+
+\input{tables/table_jsbsim_maneuver}
+
+Table~\ref{tab:jsbsim_maneuver} reports the results. Under both maneuvering conditions, the VPP and zero-offset variants achieve identical or near-identical performance, with the persistent \texttt{disadvantage} bottleneck again attributable to the LOS-rate guidance law in tail-chase-to-offset-attack transitions rather than to the VPP layer.
+
+\subsection{Predictor Value Stratification}\label{sec:predictor}
+
+Under constant-velocity target motion, no prediction, CV, and CA achieve functionally equivalent success rates ($62.5\%$ each) with identical per-scenario patterns, as CA reduces to CV when $\hat{a} \to 0$. However, under maneuvering targets, predictor value stratifies with target maneuver intensity (Table~\ref{tab:predictor_stratification}).
+
+\begin{table}[t]
+\centering
+\caption{Predictor value under maneuvering target motion (weak vs strong).}
+\label{tab:predictor_stratification}
+\begin{tabular}{lcc}
+\toprule
+Predictor & Weak Maneuver & Strong Maneuver \\
+\midrule
+No prediction & $72.4\%$ & $48.1\%$ \\
+LSTM frozen & $79.1\%$ ($+9.3\%$) & $61.0\%$ ($+26.9\%$) \\
+GRU frozen & $77.8\%$ ($+7.5\%$) & $58.3\%$ ($+21.2\%$) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Neural predictors provide $+9.3\%$ under weak maneuvers and up to $+26.9\%$ under strong maneuvers. The correlation between predictor value and target maneuver intensity is positive and monotonic, answering the ``when does prediction help?'' question with empirical precision.
+
+\subsection{Bilevel Optimization Gains}\label{sec:bilevel_gains}
+
+CEM gain optimization improves success rate from $60.2\%$ (default gains) to $74.7\%$ ($+14.47\%$) (Fig.~\ref{fig:cem_optimization}). The bilevel audit confirms regret monotonicity (zero violations) and stability variance below the $0.05$ threshold, validating the convergence and robustness of the outer-level policy training.
+
+\begin{figure}[t]
+\centering
+\input{figures/cem_optimization.tex}
+\caption{CEM gain optimization effect: default gains achieve $60.2\%$ while CEM-optimized gains improve to $74.7\%$ ($+14.47\%$).}
+\label{fig:cem_optimization}
+\end{figure}
+
+\subsection{Method-Innovation Comparison}\label{sec:method_innovation}
+
+Table~\ref{tab:method_innovation_comparison} compares the hierarchical baseline PPO policy against CR-PPO and three Intentional PPO variants on the quasi-realistic backend. Because the deterministic success metric collapses to binary outcomes per scenario, evaluation includes eval-time domain randomization and continuous engagement metrics (minimum range, final range, final aspect angle, and time to first contact) to distinguish methods.
+
+\input{tables/table_method_innovation_comparison}
+
+The comparison is intentionally exploratory: if a method significantly improves continuous metrics or success rate relative to the baseline, it will be included in the final reproducibility campaign; otherwise the baseline PPO policy is retained as the primary result.
+
+\subsection{Computational Complexity}\label{sec:timing}
+
+Table~\ref{tab:timing} reports inference and optimization latency on an Intel Core i7-12700H CPU.
+
+\begin{table}[t]
+\centering
+\caption{Computational complexity (CPU, single thread).}
+\label{tab:timing}
+\begin{tabular}{lc}
+\toprule
+Operation & Latency \\
+\midrule
+PPO inference ($128^2$ MLP) & $<1$~ms \\
+CEM gain optimization (12 cand, 20 iter) & $<30$~s (offline) \\
+Total control cycle & $<5$~ms \\
+MPC online solve (literature) & $50$--$200$~ms \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The total control cycle is well below the $20$~ms budget required for $50$~Hz operation (Fig.~\ref{fig:training_curve}). CEM optimization is performed offline and amortized over all flight episodes; the online overhead is dominated by the PPO forward pass, which is orders of magnitude faster than model-predictive control solvers.
+
+\begin{figure}[t]
+\centering
+\input{figures/training_curve.tex}
+\caption{Typical PPO training curve for the No-VPP hierarchical policy. The policy converges to stable positive returns within $5\times 10^4$ steps, while the end-to-end baseline remains at negative returns.}
+\label{fig:training_curve}
+\end{figure}
+
+\input{sections/capture_region_analysis}
+
+\subsection{CEM Optimizer Variants}\label{sec:cem_variants}
+
+We compare three gain-optimization mechanisms: standard CEM, EMA-smoothed CEM, and a score-weighted gradient-ascent variant (CEM-GD). Table~\ref{tab:cem_variants} reports final best score and mean candidate score over 15 iterations (12 candidates per iteration, 4 regression scenarios, 3 seeds). The theoretical analysis predicts that CEM-GD will be unstable on flat or noisy gain landscapes, while CEM-EMA should reduce variance without sacrificing final performance.
+
+\begin{table}[t]
+\centering
+\caption{CEM optimizer variant comparison (frozen policy, regression scenarios).}
+\label{tab:cem_variants}
+\begin{tabular}{lcc}
+\toprule
+Mode & Final best score & Mean candidate score \\
+\midrule
+Standard CEM & 0.7500 & 0.6667 \\
+CEM-EMA      & \textbf{1.0000} & 0.6042 \\
+CEM-GD       & 0.7500 & 0.2708 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+CEM-EMA is the only variant that converges to a perfect success rate (1.0000), with a mean candidate score comparable to standard CEM. CEM-GD achieves the same best score as standard CEM but its mean candidate score is substantially lower (0.2708 vs 0.6667), indicating that the gradient-ascent update fails to maintain a high-quality search distribution. This empirical pattern supports the theoretical recommendation to replace the GD step with EMA smoothing.

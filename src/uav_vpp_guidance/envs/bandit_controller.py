@@ -5,7 +5,7 @@ from typing import Dict, Any, Tuple
 
 import numpy as np
 
-from ..maneuver_library import InnerLoopController, ManeuverExecutor, ManeuverLibrary
+from ..maneuver_library import InnerLoopController, ManeuverExecutor, ManeuverLibrary, ManeuverTelemetry
 from ..maneuver_library.base import ControlCommand, FlightState, Maneuver
 from .bandit_selector import BanditManeuverSelector
 
@@ -29,6 +29,7 @@ class BanditManeuverController:
         self.fallback_name = str(self.config.get("fallback_maneuver", "straight_level"))
         self.fallback = ManeuverLibrary.create(self.fallback_name, {})
         self._executor: ManeuverExecutor | None = None
+        self._telemetry = ManeuverTelemetry()
         self._current_maneuver_name: str | None = None
         self._maneuver_start_t: float = 0.0
 
@@ -48,16 +49,23 @@ class BanditManeuverController:
         Returns:
             dict: Info dict with keys "bandit_maneuver", "situation".
         """
-        self._executor = ManeuverExecutor(InnerLoopController())
+        self._telemetry.reset()
+        self._executor = ManeuverExecutor(
+            InnerLoopController(), telemetry=self._telemetry
+        )
         self._executor.set_fallback(self.fallback)
 
         maneuver = self.selector.select_initial(own_state, bandit_state, sim_time)
         if maneuver is None:
             maneuver = self.fallback
-        self._enter_maneuver(maneuver, bandit_flight_state, sim_time)
+        self._enter_maneuver(maneuver, bandit_flight_state, sim_time, reason="initial")
 
         situation = self.selector.evaluator.evaluate(own_state, bandit_state)
-        return {"bandit_maneuver": self._current_maneuver_name, "situation": situation}
+        return {
+            "bandit_maneuver": self._current_maneuver_name,
+            "situation": situation,
+            "maneuver_telemetry": self._telemetry.summary(),
+        }
 
     def update(
         self,
@@ -87,7 +95,9 @@ class BanditManeuverController:
                 own_state, bandit_state, sim_time
             )
             if emergency_maneuver is not None:
-                self._enter_maneuver(emergency_maneuver, bandit_flight_state, sim_time)
+                self._enter_maneuver(
+                    emergency_maneuver, bandit_flight_state, sim_time, reason="emergency"
+                )
         else:
             # Decide whether to switch maneuvers.
             elapsed = sim_time - self._maneuver_start_t
@@ -99,7 +109,9 @@ class BanditManeuverController:
                 sim_time,
             )
             if new_maneuver is not None:
-                self._enter_maneuver(new_maneuver, bandit_flight_state, sim_time)
+                self._enter_maneuver(
+                    new_maneuver, bandit_flight_state, sim_time, reason="switch"
+                )
 
         # Step executor: if current maneuver completed, it transitions to fallback.
         command = self._executor.update(bandit_flight_state, dt)
@@ -113,6 +125,7 @@ class BanditManeuverController:
                 "rudder": command.rudder,
                 "throttle": command.throttle,
             },
+            "maneuver_telemetry": self._telemetry.summary(),
         }
         return command, info
 
@@ -120,13 +133,19 @@ class BanditManeuverController:
     # Helpers
     # ------------------------------------------------------------------
 
-    def _enter_maneuver(self, maneuver: Maneuver, bandit_flight_state: FlightState, sim_time: float):
+    def _enter_maneuver(
+        self,
+        maneuver: Maneuver,
+        bandit_flight_state: FlightState,
+        sim_time: float,
+        reason: str = "switch",
+    ):
         if maneuver.can_enter(bandit_flight_state):
-            self._executor.select(maneuver, bandit_flight_state)
+            self._executor.select(maneuver, bandit_flight_state, reason=reason)
             self._current_maneuver_name = maneuver.name
         else:
             # Fallback to safe maneuver if entry conditions not met.
-            self._executor.select(self.fallback, bandit_flight_state)
+            self._executor.select(self.fallback, bandit_flight_state, reason="fallback")
             self._current_maneuver_name = self.fallback.name
         self._maneuver_start_t = sim_time
 

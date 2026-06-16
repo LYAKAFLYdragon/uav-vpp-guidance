@@ -205,6 +205,15 @@ class BanditManeuverSelector:
         self._last_select_t = -1e9
         self._current_maneuver_name: Optional[str] = None
 
+        # Temporal stability: minimum time a maneuver must run before it can be
+        # replaced by a non-emergency switch.
+        self.min_dwell_time_s = float(self.config.get("min_dwell_time_s", 2.0))
+        # Cooldown: after leaving a maneuver, wait this long before selecting it
+        # again. Reduces exploitable repetition and manic switching.
+        self.maneuver_cooldown_s = float(self.config.get("maneuver_cooldown_s", 5.0))
+        self._maneuver_cooldown_expiry: Dict[str, float] = {}
+        self._current_maneuver_start_t: float = -1e9
+
     # ------------------------------------------------------------------
     # Public API
     # ------------------------------------------------------------------
@@ -218,8 +227,10 @@ class BanditManeuverSelector:
         """Pick the first maneuver after reset."""
         situation = self.evaluator.evaluate(own_state, bandit_state)
         name = self._rule_select(situation, bandit_state)
+        name = self._apply_temporal_constraints(name, sim_time, force=True)
         name = self._select_with_history(name)
         self._last_select_t = sim_time
+        self._current_maneuver_start_t = sim_time
         self._current_maneuver_name = name
         self._record_history(name)
         return self._create_maneuver(name)
@@ -238,8 +249,13 @@ class BanditManeuverSelector:
         """
         self._current_maneuver_name = current_maneuver_name
 
-        # Respect reaction time to avoid manic switching.
-        if sim_time - self._last_select_t < self.reaction_time_s and elapsed_in_maneuver < 5.0:
+        # Respect reaction time and minimum dwell time to avoid manic switching.
+        if (
+            sim_time - self._last_select_t < self.reaction_time_s
+            and elapsed_in_maneuver < 5.0
+        ):
+            return None
+        if elapsed_in_maneuver < self.min_dwell_time_s:
             return None
 
         situation = self.evaluator.evaluate(own_state, bandit_state)
@@ -250,12 +266,15 @@ class BanditManeuverSelector:
         if self.rng.random() < self.selector_noise:
             desired = self.rng.choice(self.allowed_maneuvers)
 
+        desired = self._apply_temporal_constraints(desired, sim_time, force=False)
         desired = self._select_with_history(desired)
 
         if desired == current_maneuver_name:
             return None
 
+        self._mark_cooldown(current_maneuver_name, sim_time)
         self._last_select_t = sim_time
+        self._current_maneuver_start_t = sim_time
         self._current_maneuver_name = desired
         self._record_history(desired)
         return self._create_maneuver(desired)
@@ -273,8 +292,11 @@ class BanditManeuverSelector:
         """
         situation = self.evaluator.evaluate(own_state, bandit_state)
         name = self._emergency_maneuver(situation)
+        name = self._apply_temporal_constraints(name, sim_time, force=True)
         name = self._select_with_history(name)
+        self._mark_cooldown(self._current_maneuver_name, sim_time)
         self._last_select_t = sim_time
+        self._current_maneuver_start_t = sim_time
         self._current_maneuver_name = name
         self._record_history(name)
         return self._create_maneuver(name)
@@ -369,6 +391,54 @@ class BanditManeuverSelector:
     def _record_history(self, name: str):
         """Record a maneuver selection for anti-repetition."""
         self._history.append(name)
+
+    def _mark_cooldown(self, name: Optional[str], sim_time: float):
+        """Put a maneuver on cooldown after leaving it."""
+        if name is None or self.maneuver_cooldown_s <= 0.0:
+            return
+        self._maneuver_cooldown_expiry[name] = sim_time + self.maneuver_cooldown_s
+
+    def _is_in_cooldown(self, name: str, sim_time: float) -> bool:
+        """Return True if ``name`` is currently on cooldown."""
+        if self.maneuver_cooldown_s <= 0.0:
+            return False
+        expiry = self._maneuver_cooldown_expiry.get(name, -1e9)
+        return sim_time < expiry
+
+    def _apply_temporal_constraints(
+        self, desired: str, sim_time: float, force: bool = False
+    ) -> str:
+        """Respect maneuver cooldowns. If ``force`` is True, ignore cooldown.
+
+        Falls back to the same-tactical-class alternatives not on cooldown,
+        then to any allowed maneuver not on cooldown, then finally to the
+        fallback ``straight_level``.
+        """
+        if force or not self._is_in_cooldown(desired, sim_time):
+            return desired
+
+        desired_class = _CLASS_MAP.get(desired, "neutral")
+        alternatives = [
+            m
+            for m in self.allowed_maneuvers
+            if m != desired
+            and not self._is_in_cooldown(m, sim_time)
+            and _CLASS_MAP.get(m, "neutral") == desired_class
+        ]
+        if alternatives:
+            return self.rng.choice(alternatives)
+
+        # Broaden search to any allowed maneuver not on cooldown.
+        alternatives = [
+            m
+            for m in self.allowed_maneuvers
+            if m != desired and not self._is_in_cooldown(m, sim_time)
+        ]
+        if alternatives:
+            return self.rng.choice(alternatives)
+
+        # Last resort: straight and level is always safe and never on cooldown.
+        return "straight_level"
 
     def _select_with_history(self, desired: str) -> str:
         """Return a maneuver name, avoiding exact repetition when possible.

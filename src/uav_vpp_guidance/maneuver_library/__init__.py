@@ -9,6 +9,7 @@ from .base import FlightState, ControlCommand, ManeuverSetpoint, Maneuver, Maneu
 from .controller import InnerLoopController
 from .executor import ManeuverExecutor
 from .library import ManeuverLibrary
+from .telemetry import ManeuverTelemetry
 
 __all__ = [
     "FlightState",
@@ -19,4 +20,5 @@ __all__ = [
     "InnerLoopController",
     "ManeuverExecutor",
     "ManeuverLibrary",
+    "ManeuverTelemetry",
 ]

@@ -72,8 +72,8 @@ def test_new_dogfight_maneuvers_are_registered():
         assert name in names
 
 
-def test_break_turn_completion_is_state_dependent():
-    """break_turn completes after the aircraft heading reaches the target."""
+def test_break_turn_phases_and_completion():
+    """break_turn progresses through entry/execute/exit and completes after rollout."""
     maneuver = ManeuverLibrary.create("break_turn", {"heading_change_deg": 90.0})
     state = FlightState(
         velocity_mps=300.0,
@@ -85,14 +85,29 @@ def test_break_turn_completion_is_state_dependent():
     )
     assert maneuver.can_enter(state)
     maneuver.enter(state)
+    assert maneuver.phase() == "entry"
     assert not maneuver.is_complete(state)
-    # Simulate a heading change directly.
+
+    # Roll in and reach the target heading (within execute phase).
     state.psi_rad = math.radians(95.0)
+    maneuver.update(state, dt=2.0)
+    assert maneuver.phase() == "execute"
+    assert not maneuver.is_complete(state)
+
+    # Let the exit/roll-out phase finish.
+    maneuver.update(state, dt=2.0)
+    assert maneuver.phase() == "exit"
     assert maneuver.is_complete(state)
 
 
-def test_displacement_roll_has_three_phases():
-    """displacement_roll rolls in, holds, and rolls out over its lifetime."""
+def test_maneuver_phase_exposes_internal_state():
+    """Maneuvers with internal phase strings expose them through ``phase()``."""
+    maneuver = ManeuverLibrary.create("high_yoyo")
+    assert maneuver.phase() == "climb"
+
+
+def test_displacement_roll_has_five_phases():
+    """displacement_roll exposes entry -> roll_in -> hold -> roll_out -> exit."""
     maneuver = ManeuverLibrary.create(
         "displacement_roll",
         {"roll_target_deg": 90.0, "roll_rate_dps": 90.0, "hold_time_s": 1.0},
@@ -100,16 +115,20 @@ def test_displacement_roll_has_three_phases():
     state = FlightState(velocity_mps=300.0, altitude_m=5000.0)
     assert maneuver.can_enter(state)
     maneuver.enter(state)
+    assert maneuver.phase() == "entry"
 
-    # Roll in phase at t=0.25s should be about 22.5 deg.
-    sp = maneuver.update(state, dt=0.25)
+    # Roll in phase at t=0.5s should be well into the roll.
+    sp = maneuver.update(state, dt=0.5)
+    assert maneuver.phase() == "roll_in"
     assert sp.phi_ref is not None
     assert abs(sp.phi_ref) > math.radians(20.0)
 
-    # Hold phase at t=1.0s should be at the target bank.
-    sp = maneuver.update(state, dt=1.0)
+    # Hold phase at t=1.25s should be at the target bank.
+    sp = maneuver.update(state, dt=0.75)
+    assert maneuver.phase() == "hold"
     assert abs(sp.phi_ref) == pytest.approx(math.radians(90.0), abs=0.01)
 
-    # Roll out phase at t=1.75s should be decreasing.
-    sp = maneuver.update(state, dt=1.75)
+    # Roll out phase at t=2.5s should be decreasing.
+    sp = maneuver.update(state, dt=1.25)
+    assert maneuver.phase() == "roll_out"
     assert abs(sp.phi_ref) < math.radians(90.0)

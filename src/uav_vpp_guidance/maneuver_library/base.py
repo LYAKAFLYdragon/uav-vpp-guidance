@@ -104,6 +104,46 @@ class Maneuver:
         self._start_t: Optional[float] = None
         self._elapsed = 0.0
 
+    def _envelope_limit(
+        self,
+        param_keys: tuple[str, ...],
+        attr_aliases: tuple[str, ...] = (),
+    ) -> Optional[float]:
+        """Resolve a numeric envelope limit from params or subclass attributes.
+
+        Searches ``self.params`` first, then instance attributes (including
+        common aliases such as ``min_altitude`` for ``min_altitude_m``).  This
+        lets existing maneuvers that store limits as ``self.min_altitude``
+        participate in the automatic abort guard without extra boilerplate.
+        """
+        for key in param_keys:
+            value = self.params.get(key)
+            if value is not None:
+                try:
+                    return float(value)
+                except (TypeError, ValueError):
+                    continue
+        for attr in attr_aliases:
+            value = getattr(self, attr, None)
+            if isinstance(value, (int, float)) and not isinstance(value, bool):
+                return float(value)
+        return None
+
+    def _refresh_envelope_limits(self):
+        """Re-read envelope limits so subclass attributes are visible."""
+        self._min_altitude_m = self._envelope_limit(
+            ("min_altitude_m",), ("min_altitude",)
+        )
+        self._min_speed_mps = self._envelope_limit(
+            ("min_speed_mps",), ("min_speed",)
+        )
+        self._max_alpha_rad = self._envelope_limit(
+            ("max_alpha_rad", "max_alpha_deg"), ("max_alpha",)
+        )
+        if "max_alpha_deg" in self.params and self._max_alpha_rad is not None:
+            # If the param was given in degrees, convert to radians.
+            self._max_alpha_rad = math.radians(self._max_alpha_rad)
+
     def can_enter(self, state: FlightState) -> bool:
         """Return True if the maneuver can safely start from ``state``."""
         return True
@@ -129,6 +169,46 @@ class Maneuver:
     def abort(self):
         """Trigger an abort; the executor should return to a safe fallback."""
         self.state = ManeuverState.ABORT
+
+    def abort_guard(self, state: FlightState) -> bool:
+        """Subclass hook for maneuver-specific abort conditions.
+
+        Return True to force an abort (e.g., target overshoot, unsafe attitude).
+        """
+        return False
+
+    def should_abort(self, state: FlightState) -> bool:
+        """Return True if the active maneuver must abort for safety reasons.
+
+        Checks, in order:
+        1. Maneuver-specific abort guard (``abort_guard``).
+        2. Hard altitude floor (``min_altitude_m``).
+        3. Hard speed floor (``min_speed_mps``).
+        4. Angle-of-attack ceiling (``max_alpha_rad``).
+
+        Already-terminal states (COMPLETE, ABORT) never abort again.
+        """
+        if self.state in (ManeuverState.COMPLETE, ManeuverState.ABORT):
+            return False
+        # Subclasses set limits as attributes after ``super().__init__``; refresh
+        # at decision time so those values are visible.
+        self._refresh_envelope_limits()
+        if self.abort_guard(state):
+            return True
+        if self._min_altitude_m is not None and state.altitude_m < self._min_altitude_m:
+            return True
+        if self._min_speed_mps is not None and state.velocity_mps < self._min_speed_mps:
+            return True
+        if self._max_alpha_rad is not None and state.alpha_rad > self._max_alpha_rad:
+            return True
+        return False
+
+    def phase(self) -> str:
+        """Return the current maneuver phase as a human-readable string."""
+        internal = getattr(self, "_phase", None)
+        if internal is not None:
+            return str(internal)
+        return self.state.name.lower()
 
     def _heading_error(self, target: float, current: float) -> float:
         """Shortest signed heading error in [-pi, pi]."""

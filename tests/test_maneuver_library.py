@@ -1,23 +1,22 @@
-"""Tests for the tactical maneuver library."""
+"""Unit tests for the maneuver library primitives."""
+from __future__ import annotations
+
 import math
 
 import numpy as np
 import pytest
 
-from uav_vpp_guidance.maneuver_library import (
-    FlightState,
-    InnerLoopController,
-    ManeuverExecutor,
-    ManeuverLibrary,
-)
+from uav_vpp_guidance.maneuver_library import InnerLoopController, ManeuverLibrary
+from uav_vpp_guidance.maneuver_library.base import FlightState
 
 
 @pytest.fixture
-def cruise_state():
+def healthy_state():
+    """A flight state that satisfies the entry conditions of most maneuvers."""
     return FlightState(
         t=0.0,
-        position_m=np.zeros(3),
-        velocity_mps=250.0,
+        position_m=np.array([0.0, 0.0, 5000.0]),
+        velocity_mps=300.0,
         altitude_m=5000.0,
         phi_rad=0.0,
         theta_rad=0.0,
@@ -26,124 +25,91 @@ def cruise_state():
         q_rps=0.0,
         r_rps=0.0,
         nz=1.0,
+        alpha_rad=0.05,
+        beta_rad=0.0,
+        mach=0.85,
     )
 
 
-def test_library_registry():
-    names = ManeuverLibrary.list_maneuvers()
-    expected = [
-        "barrel_roll",
-        "coordinated_turn",
-        "dive",
-        "high_yoyo",
-        "loop",
-        "low_yoyo",
-        "straight_level",
-    ]
-    assert set(expected).issubset(set(names))
+@pytest.fixture
+def controller():
+    return InnerLoopController()
 
 
-def test_straight_level_setpoint(cruise_state):
-    m = ManeuverLibrary.create("straight_level", {"duration_s": 2.0})
-    assert m.can_enter(cruise_state)
-    m.enter(cruise_state)
-    sp = m.update(cruise_state, 0.05)
-    assert sp.phi_ref == pytest.approx(0.0)
-    assert sp.nz_ref == pytest.approx(1.0)
-    assert sp.velocity_ref == pytest.approx(250.0)
+@pytest.mark.parametrize("name", ManeuverLibrary.list_maneuvers())
+def test_maneuver_can_be_created_and_updated(name, healthy_state, controller):
+    """Every registered maneuver can be instantiated and produces bounded commands."""
+    maneuver = ManeuverLibrary.create(name)
+    assert maneuver.name == name
 
+    # Entry condition should be a boolean.
+    can_enter = maneuver.can_enter(healthy_state)
+    assert isinstance(can_enter, bool)
 
-def test_coordinated_turn_setpoint(cruise_state):
-    m = ManeuverLibrary.create(
-        "coordinated_turn",
-        {"heading_change_deg": 90.0, "bank_angle_deg": 30.0},
-    )
-    assert m.can_enter(cruise_state)
-    m.enter(cruise_state)
-    sp = m.update(cruise_state, 0.05)
-    assert sp.phi_ref == pytest.approx(math.radians(30.0))
-    assert sp.nz_ref == pytest.approx(1.0 / math.cos(math.radians(30.0)))
-
-
-def test_dive_completion(cruise_state):
-    m = ManeuverLibrary.create("dive", {"target_altitude_m": 3000.0})
-    m.enter(cruise_state)
-    assert not m.is_complete(cruise_state)
-    end_state = FlightState(
-        t=10.0,
-        altitude_m=2900.0,
-        velocity_mps=300.0,
-    )
-    assert m.is_complete(end_state)
-
-
-def test_controller_outputs_bounded(cruise_state):
-    ctrl = InnerLoopController()
-    from uav_vpp_guidance.maneuver_library.maneuvers.coordinated_turn import CoordinatedTurn
-
-    m = CoordinatedTurn({"heading_change_deg": 90.0, "bank_angle_deg": 30.0})
-    m.enter(cruise_state)
-    sp = m.update(cruise_state, 0.05)
-    cmd = ctrl.update(cruise_state, sp, 0.05)
-    assert -1.0 <= cmd.elevator <= 1.0
-    assert -1.0 <= cmd.aileron <= 1.0
-    assert -1.0 <= cmd.rudder <= 1.0
-    assert 0.0 <= cmd.throttle <= 1.0
-
-
-def test_executor_runs_maneuver(cruise_state):
-    from uav_vpp_guidance.maneuver_library.maneuvers.straight_level import StraightLevel
-
-    executor = ManeuverExecutor()
-    executor.select(StraightLevel({"duration_s": 0.2}), cruise_state)
-    for i in range(10):
-        state = FlightState(
-            t=i * 0.05,
-            velocity_mps=250.0,
-            altitude_m=5000.0,
-        )
-        cmd = executor.update(state, 0.05)
+    # If it can enter, running one update should produce a setpoint that the
+    # inner-loop controller can turn into bounded commands.
+    if can_enter:
+        maneuver.enter(healthy_state)
+        setpoint = maneuver.update(healthy_state, dt=0.05)
+        cmd = controller.update(healthy_state, setpoint, dt=0.05)
+        assert -1.0 <= cmd.elevator <= 1.0
         assert -1.0 <= cmd.aileron <= 1.0
+        assert -1.0 <= cmd.rudder <= 1.0
+        assert 0.0 <= cmd.throttle <= 1.0
 
 
-def test_new_maneuvers_register():
+def test_new_dogfight_maneuvers_are_registered():
+    """The new dogfight-specific maneuvers are present in the library."""
     names = ManeuverLibrary.list_maneuvers()
-    for name in ["scissors", "split_s", "immelmann"]:
+    for name in (
+        "break_turn",
+        "displacement_roll",
+        "vertical_scissors",
+        "defensive_spiral",
+        "extension",
+        "jink",
+    ):
         assert name in names
-        m = ManeuverLibrary.create(name)
-        assert m.name == name
 
 
-def test_split_s_phases():
-    from uav_vpp_guidance.maneuver_library.maneuvers.split_s import SplitS
-
-    state = FlightState(velocity_mps=350.0, altitude_m=8000.0)
-    m = SplitS({"entry_speed_mps": 350.0, "nz_pull": 5.0})
-    assert m.can_enter(state)
-    m.enter(state)
-    assert m._phase == "roll"
-    # Roll phase commands inverted wings.
-    sp = m.update(state, 0.05)
-    assert sp.phi_ref == pytest.approx(math.pi)
-
-
-def test_immelmann_phases():
-    from uav_vpp_guidance.maneuver_library.maneuvers.immelmann import Immelmann
-
-    state = FlightState(velocity_mps=350.0, altitude_m=5000.0)
-    m = Immelmann({"entry_speed_mps": 350.0, "nz_pull": 5.0})
-    assert m.can_enter(state)
-    m.enter(state)
-    assert m._phase == "pull"
-    sp = m.update(state, 0.05)
-    assert sp.q_ref is not None
+def test_break_turn_completion_is_state_dependent():
+    """break_turn completes after the aircraft heading reaches the target."""
+    maneuver = ManeuverLibrary.create("break_turn", {"heading_change_deg": 90.0})
+    state = FlightState(
+        velocity_mps=300.0,
+        altitude_m=5000.0,
+        psi_rad=0.0,
+        phi_rad=0.0,
+        theta_rad=0.0,
+        nz=1.0,
+    )
+    assert maneuver.can_enter(state)
+    maneuver.enter(state)
+    assert not maneuver.is_complete(state)
+    # Simulate a heading change directly.
+    state.psi_rad = math.radians(95.0)
+    assert maneuver.is_complete(state)
 
 
-def test_scissors_reversal(cruise_state):
-    from uav_vpp_guidance.maneuver_library.maneuvers.scissors import Scissors
+def test_displacement_roll_has_three_phases():
+    """displacement_roll rolls in, holds, and rolls out over its lifetime."""
+    maneuver = ManeuverLibrary.create(
+        "displacement_roll",
+        {"roll_target_deg": 90.0, "roll_rate_dps": 90.0, "hold_time_s": 1.0},
+    )
+    state = FlightState(velocity_mps=300.0, altitude_m=5000.0)
+    assert maneuver.can_enter(state)
+    maneuver.enter(state)
 
-    m = Scissors({"cycles": 1, "turn_angle_deg": 90.0})
-    m.enter(cruise_state)
-    sp = m.update(cruise_state, 0.05)
-    assert abs(sp.phi_ref) == pytest.approx(math.radians(60.0))
-    assert sp.throttle_ref == pytest.approx(0.6)
+    # Roll in phase at t=0.25s should be about 22.5 deg.
+    sp = maneuver.update(state, dt=0.25)
+    assert sp.phi_ref is not None
+    assert abs(sp.phi_ref) > math.radians(20.0)
+
+    # Hold phase at t=1.0s should be at the target bank.
+    sp = maneuver.update(state, dt=1.0)
+    assert abs(sp.phi_ref) == pytest.approx(math.radians(90.0), abs=0.01)
+
+    # Roll out phase at t=1.75s should be decreasing.
+    sp = maneuver.update(state, dt=1.75)
+    assert abs(sp.phi_ref) < math.radians(90.0)

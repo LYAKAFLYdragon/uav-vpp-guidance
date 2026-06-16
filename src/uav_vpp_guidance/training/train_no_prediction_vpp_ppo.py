@@ -49,15 +49,22 @@ def sample_scenario(config, rng):
     return scenarios[name]
 
 
-def run_evaluation(env, agent, config, num_episodes=10, seeds=None, save_trajectories=False, output_dir=None):
+def run_evaluation(env, agent, config, num_episodes=10, seeds=None, save_trajectories=False, output_dir=None, domain_rand_scale=0.0):
     """
     Evaluate a trained policy.
+
+    Args:
+        domain_rand_scale: If > 0, the environment perturbs initial conditions
+            internally during reset() using an RNG seeded by the episode seed.
 
     Returns:
         dict: Aggregated evaluation metrics.
     """
     if seeds is None:
         seeds = [0, 1, 2]
+
+    if domain_rand_scale > 0.0 and hasattr(env, "set_domain_rand_scale"):
+        env.set_domain_rand_scale(domain_rand_scale)
 
     all_episodes = []
     for seed in seeds:
@@ -474,6 +481,7 @@ def train_ppo(config, output_dir, smoke=False):
                             seeds=eval_cfg.get("seeds", [0, 1, 2]),
                             save_trajectories=eval_cfg.get("save_trajectories", False),
                             output_dir=output_dir,
+                            domain_rand_scale=eval_cfg.get("domain_rand_scale", 0.0),
                         )
                         eval_row = {
                             "step": global_step,

@@ -115,6 +115,23 @@ def write_subregion_summary(df, output_path):
     lines.append("")
     lines.append("## Interpretation")
     lines.append("")
+    overall_row = df[df["name"] == "Overall"]
+    if not overall_row.empty:
+        overall_diff = overall_row.iloc[0]["sr_diff_mean"]
+        overall_p = overall_row.iloc[0]["fisher_pvalue"]
+        lines.append(
+            f"Overall, VPP+LOS-rate achieved a {overall_diff:+.2%} higher success rate than PN direct "
+            f"(Fisher exact test $p={overall_p:.4f}$)."
+        )
+        if overall_p >= 0.05:
+            lines.append(
+                "This difference is **not statistically significant**. The capture-region analysis "
+                "therefore does not provide evidence that the learned VPP offset improves capture "
+                "probability over classical PN under the tested grid and frozen default gains."
+            )
+        else:
+            lines.append("This difference is statistically significant at the $p<0.05$ level.")
+    lines.append("")
     adv = df[df["significant"] & (df["sr_diff_mean"] > 0)]
     if len(adv) > 0:
         lines.append("VPP significantly outperforms PN in the following sub-regions:")
@@ -123,7 +140,12 @@ def write_subregion_summary(df, output_path):
     else:
         lines.append("No sub-region shows a statistically significant VPP advantage in this grid.")
     lines.append("")
-    lines.append("This pattern supports the theoretical interpretation that VPP+LOS is an *adaptive* augmentation of PN: under benign geometries it degenerates to PN-like behavior, while its dynamic advantage manifests in high-aspect, high-speed, or close-range conditions.")
+    lines.append(
+        "These results should be reported honestly: a non-significant overall difference means the "
+        "frozen-policy VPP layer does not demonstrate a measurable capture-region advantage in this "
+        "evaluation, and any claim that VPP 'validates' PN-like behavior must be framed as "
+        "degeneration/alignment rather than an empirical performance improvement."
+    )
     output_path.write_text("\n".join(lines), encoding="utf-8")
     print(f"Saved sub-region summary to {output_path}")
 

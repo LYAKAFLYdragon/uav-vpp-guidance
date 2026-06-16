@@ -60,6 +60,8 @@ class Scissors(Maneuver):
             phi_ref=self._sign * self.bank_angle,
             nz_ref=n_req,
             throttle_ref=self.throttle,
+            min_altitude_m=1000.0,
+            min_speed_mps=120.0,
         )
 
     def is_complete(self, state: FlightState) -> bool:

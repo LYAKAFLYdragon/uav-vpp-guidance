@@ -8,6 +8,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 
 from scipy import stats
 
@@ -182,6 +183,13 @@ def ttest_pair(algo_a, algo_b, metric="success_rate"):
             vals_b.append(ev_b[metric])
     if len(vals_a) < 2 or len(vals_b) < 2:
         return np.nan, np.nan
+    # Use non-parametric Mann-Whitney U when variance is zero (reviewer concern)
+    if np.std(vals_a) == 0.0 and np.std(vals_b) == 0.0:
+        try:
+            u, p = stats.mannwhitneyu(vals_a, vals_b, alternative="two-sided")
+            return float(np.nan), float(p)
+        except Exception:
+            return np.nan, np.nan
     t, p = stats.ttest_ind(vals_a, vals_b, equal_var=False)
     return float(t), float(p)
 
@@ -407,6 +415,13 @@ def main():
                 + f"{p:.4f} | {sig} |"
             )
 
+    md_lines.append("")
+    md_lines.append("## Reviewer Transparency Notes")
+    md_lines.append("")
+    md_lines.append("- Per-seed results are saved in `per_seed_results.csv`.")
+    md_lines.append("- A success-rate standard deviation of 0.0 across seeds indicates that evaluation was deterministic across seeds (same initial conditions and no domain-randomization seeding). This is addressed in `src/uav_vpp_guidance/envs/tracking_env.py` by seeding the domain-randomization RNG from the episode seed.")
+    md_lines.append("- If no algorithm shows a statistically significant improvement over the Baseline PPO, these results should be reported as negative results (e.g., in supplementary material) rather than as a primary contribution.")
+
     md_text = "\n".join(md_lines)
     print(md_text)
 
@@ -414,6 +429,20 @@ def main():
     with open(md_path, "w", encoding="utf-8") as f:
         f.write(md_text)
     print(f"\nSaved markdown summary to {md_path}")
+
+    # Per-seed raw results (reviewer request for data transparency)
+    per_seed_rows = []
+    for algo in ALGORITHMS:
+        for seed in SEED_GLOB:
+            ev = final_eval_metrics(algo, seed)
+            if ev is None:
+                continue
+            per_seed_rows.append({"algorithm": ALGORITHMS[algo], "seed": seed, **ev})
+    per_seed_df = pd.DataFrame(per_seed_rows)
+    if not per_seed_df.empty:
+        per_seed_path = ROOT / "per_seed_results.csv"
+        per_seed_df.to_csv(per_seed_path, index=False, encoding="utf-8")
+        print(f"Saved per-seed results to {per_seed_path}")
 
     csv_path = ROOT / "summary.csv"
     all_update_keys = UPDATE_METRICS_COMMON.copy()

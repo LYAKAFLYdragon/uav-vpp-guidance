@@ -279,6 +279,8 @@ class CloseRangeTrackingEnv:
         self.current_step = 0
         self._episode_count += 1
         self._sim_time_s = 0.0
+        if seed is not None:
+            self._domain_rand_rng = np.random.default_rng(seed)
         self.reward_calculator.reset()
         self.termination_checker.reset()
         self._observation_builder.reset()

@@ -86,6 +86,8 @@ def main():
                         help="Initial true airspeed (m/s)")
     parser.add_argument("--settle-steps", type=int, default=600,
                         help="Steps to let the aircraft settle before starting maneuver")
+    parser.add_argument("--pre-accel-s", type=float, default=0.0,
+                        help="Seconds of full-throttle acceleration before selecting the maneuver")
     args = parser.parse_args()
 
     import json
@@ -113,6 +115,16 @@ def main():
     # Run a short stabilization period while holding the trimmed controls.
     for _ in range(min(args.settle_steps, 120)):
         fdm.run()
+
+    # Optional pre-maneuver acceleration to reach entry energy.
+    if args.pre_accel_s > 0.0:
+        pre_steps = int(round(args.pre_accel_s / args.dt))
+        for _ in range(pre_steps):
+            fdm.set_property_value("fcs/elevator-cmd-norm", 0.0)
+            fdm.set_property_value("fcs/aileron-cmd-norm", 0.0)
+            fdm.set_property_value("fcs/rudder-cmd-norm", 0.0)
+            fdm.set_property_value("fcs/throttle-cmd-norm", 1.0)
+            fdm.run()
 
     state = build_flight_state(fdm)
     print(f"Initial state: alt={state.altitude_m:.1f}m, vt={state.velocity_mps:.1f}m/s, "

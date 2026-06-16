@@ -1,0 +1,12 @@
+includes:
+  - env_bandit.yaml
+
+env:
+  bandit:
+    controller_type: close_air_combat
+    close_air_combat:
+      guidance_config:
+        # Make CAC prefer larger separation, closer to maneuver-library behavior.
+        desired_range_lag: 3000.0
+        desired_range_lead: 8000.0
+        lag_distance: 1500.0

@@ -49,8 +49,8 @@ def parse_args():
     parser.add_argument(
         "--seeds",
         type=int,
-        default=3,
-        help="Number of independent training seeds (default: 3).",
+        default=5,
+        help="Number of independent training seeds (default: 5).",
     )
     parser.add_argument(
         "--output-root",

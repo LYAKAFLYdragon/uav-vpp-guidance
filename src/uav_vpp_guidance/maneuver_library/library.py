@@ -14,6 +14,12 @@ from .maneuvers.immelmann import Immelmann
 from .maneuvers.low_yoyo import LowYoYo
 from .maneuvers.scissors import Scissors
 from .maneuvers.split_s import SplitS
+from .maneuvers.break_turn import BreakTurn
+from .maneuvers.displacement_roll import DisplacementRoll
+from .maneuvers.vertical_scissors import VerticalScissors
+from .maneuvers.defensive_spiral import DefensiveSpiral
+from .maneuvers.extension import Extension
+from .maneuvers.jink import Jink
 
 
 class ManeuverLibrary:
@@ -30,6 +36,12 @@ class ManeuverLibrary:
         Scissors.name: Scissors,
         SplitS.name: SplitS,
         Immelmann.name: Immelmann,
+        BreakTurn.name: BreakTurn,
+        DisplacementRoll.name: DisplacementRoll,
+        VerticalScissors.name: VerticalScissors,
+        DefensiveSpiral.name: DefensiveSpiral,
+        Extension.name: Extension,
+        Jink.name: Jink,
     }
 
     @classmethod

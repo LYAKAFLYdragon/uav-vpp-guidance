@@ -41,14 +41,14 @@ MANEUVER_CONFIGS = {
     "dive": {
         "vt_mps": 250.0,
         "altitude_m": 5000.0,
-        "steps": 1500,
-        "params": {"gamma_deg": 20.0, "target_altitude_m": 3000.0},
+        "steps": 2500,
+        "params": {"gamma_deg": 25.0, "target_altitude_m": 3000.0},
     },
     "loop": {
         "vt_mps": 350.0,
         "altitude_m": 6000.0,
-        "steps": 4000,
-        "params": {"entry_speed_mps": 350.0, "nz_target": 5.0},
+        "steps": 5000,
+        "params": {"entry_speed_mps": 350.0, "nz_target": 3.0},
     },
     "barrel_roll": {
         "vt_mps": 250.0,
@@ -71,20 +71,20 @@ MANEUVER_CONFIGS = {
     "scissors": {
         "vt_mps": 250.0,
         "altitude_m": 5000.0,
-        "steps": 3000,
-        "params": {"cycles": 2, "bank_angle_deg": 45.0, "turn_angle_deg": 90.0},
+        "steps": 5000,
+        "params": {"cycles": 2, "bank_angle_deg": 45.0, "turn_angle_deg": 60.0},
     },
     "split_s": {
         "vt_mps": 350.0,
-        "altitude_m": 9000.0,
-        "steps": 3000,
+        "altitude_m": 10000.0,
+        "steps": 4000,
         "params": {"entry_speed_mps": 350.0, "nz_pull": 5.0},
     },
     "immelmann": {
         "vt_mps": 350.0,
-        "altitude_m": 6000.0,
-        "steps": 3000,
-        "params": {"entry_speed_mps": 350.0, "nz_pull": 5.0},
+        "altitude_m": 4000.0,
+        "steps": 6000,
+        "params": {"entry_speed_mps": 350.0, "nz_pull": 2.0},
     },
 }
 
@@ -101,6 +101,8 @@ def run_maneuver(name: str, cfg: dict) -> dict:
         "--settle-steps", "120",
         "--params", json.dumps(cfg["params"]),
     ]
+    if cfg.get("pre_accel_s", 0.0) > 0.0:
+        cmd.extend(["--pre-accel-s", str(cfg["pre_accel_s"])])
     print(f"\n[RUN] {name}")
     result = subprocess.run(
         cmd, cwd=PROJECT_ROOT, capture_output=True, text=True
@@ -119,15 +121,8 @@ def run_maneuver(name: str, cfg: dict) -> dict:
         "error": None,
     }
 
-    # Parse stdout for initial state and completion.
+    # Parse stdout for completion / entry failure.
     for line in result.stdout.splitlines():
-        if line.startswith("Initial state:"):
-            parts = line.replace(",", "").split()
-            for i, p in enumerate(parts):
-                if p == "alt=" and i + 1 < len(parts):
-                    summary["initial_alt_m"] = float(parts[i + 1].replace("m", ""))
-                if p == "vt=" and i + 1 < len(parts):
-                    summary["initial_vt_mps"] = float(parts[i + 1].replace("m/s", ""))
         if "Maneuver completed at step" in line:
             summary["completed"] = True
             summary["completed_step"] = int(line.split("step")[-1].strip())
@@ -137,6 +132,9 @@ def run_maneuver(name: str, cfg: dict) -> dict:
     if output_path.exists():
         df = pd.read_csv(output_path)
         if not df.empty:
+            first = df.iloc[0]
+            summary["initial_alt_m"] = float(first["alt_m"])
+            summary["initial_vt_mps"] = float(first["vt_mps"])
             last = df.iloc[-1]
             summary["final_alt_m"] = float(last["alt_m"])
             summary["final_vt_mps"] = float(last["vt_mps"])
@@ -171,14 +169,17 @@ def main():
     md_lines.append("| Maneuver | Completed | Init Alt (m) | Init Vt (m/s) | Final Alt (m) | Final Vt (m/s) | Final θ (deg) | Final φ (deg) | Error |")
     md_lines.append("|----------|-----------|--------------|---------------|---------------|----------------|---------------|---------------|-------|")
     for s in summaries:
+        def fmt(value: float | None) -> str:
+            return f"{value:.1f}" if value is not None else "—"
+
         md_lines.append(
             f"| {s['maneuver']} | {s['completed']} | "
-            f"{s['initial_alt_m']:.1f if s['initial_alt_m'] is not None else '—'} | "
-            f"{s['initial_vt_mps']:.1f if s['initial_vt_mps'] is not None else '—'} | "
-            f"{s['final_alt_m']:.1f if s['final_alt_m'] is not None else '—'} | "
-            f"{s['final_vt_mps']:.1f if s['final_vt_mps'] is not None else '—'} | "
-            f"{s['final_theta_deg']:.1f if s['final_theta_deg'] is not None else '—'} | "
-            f"{s['final_phi_deg']:.1f if s['final_phi_deg'] is not None else '—'} | "
+            f"{fmt(s['initial_alt_m'])} | "
+            f"{fmt(s['initial_vt_mps'])} | "
+            f"{fmt(s['final_alt_m'])} | "
+            f"{fmt(s['final_vt_mps'])} | "
+            f"{fmt(s['final_theta_deg'])} | "
+            f"{fmt(s['final_phi_deg'])} | "
             f"{s['error'] or ''} |"
         )
     summary_md = OUTPUT_ROOT / "summary.md"

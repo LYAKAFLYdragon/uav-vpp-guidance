@@ -1,0 +1,16 @@
+# Wave 2 curriculum ablation: emphasize closing rate
+includes:
+  - train_no_prediction_vpp_ppo_jsbsim_maneuver.yaml
+
+experiment:
+  name: wave2_vpp_jsbsim_maneuver_closing
+
+reward:
+  w_range: 0.5
+  w_angle: 0.8
+  w_energy: 0.2
+  w_safety: 2.0
+  w_saturation: 1.0
+  w_smooth: 0.1
+  w_turn_rate: 0.5
+  w_closing: 1.0

@@ -1,0 +1,20 @@
+\begin{table}[t]
+\centering
+\caption{End-to-end DRL extended training (2 seeds, aligned rewards).}
+\label{tab:e2e_extended}
+\begin{tabular}{lcccc}
+\toprule
+Training budget & Seed 0 & Seed 1 & Mean & Dominant failure mode \\
+\midrule
+200 k & 36.7\% & 0.0\% & 18.3\% & crash / OOB \\
+500 k & 0.0\% & 0.0\% & 0.0\% & crash / OOB \\
+1 M   & 36.7\% & 0.0\% & 18.3\% & OOB / crash \\
+2 M   & 36.7\% & 0.0\% & 18.3\% & OOB / crash \\
+\bottomrule
+\end{tabular}
+\begin{tablenotes}
+\small
+\item Per-seed success rates are computed from 30 evaluation episodes per seed.
+\item The reward function is aligned with the hierarchical baseline; even with extended training, the E2E baseline remains highly seed-sensitive.
+\end{tablenotes}
+\end{table}

@@ -16,6 +16,10 @@ class DisplacementRoll(Maneuver):
     being tracked in a straight line and to force an overshooting opponent to
     fly ahead.
 
+    This implementation exposes a full phase sequence for telemetry and
+    controllability: ``entry`` -> ``roll_in`` -> ``hold`` -> ``roll_out`` ->
+    ``exit``.
+
     Parameters
     ----------
     roll_target_deg : float
@@ -47,8 +51,11 @@ class DisplacementRoll(Maneuver):
         self.min_altitude = self.params.get("min_altitude_m", 1500.0)
         self.min_speed = self.params.get("min_speed_mps", 150.0)
         self._sign = 1.0 if self.roll_target >= 0 else -1.0
+        self._phase = "entry"
+        self._entry_duration_s = 0.2
         self._roll_in_end_t: float | None = None
         self._hold_end_t: float | None = None
+        self._roll_out_end_t: float | None = None
 
     def can_enter(self, state: FlightState) -> bool:
         return (
@@ -58,14 +65,16 @@ class DisplacementRoll(Maneuver):
 
     def enter(self, state: FlightState):
         super().enter(state)
+        self._phase = "entry"
         roll_in_time = abs(self.roll_target) / max(abs(self.roll_rate), 1e-6)
-        self._roll_in_end_t = self._elapsed + roll_in_time
+        self._roll_in_end_t = self._elapsed + self._entry_duration_s + roll_in_time
         self._hold_end_t = self._roll_in_end_t + self.hold_time
+        self._roll_out_end_t = self._hold_end_t + roll_in_time
 
     def update(self, state: FlightState, dt: float) -> ManeuverSetpoint:
         super().update(state, dt)
 
-        if self._roll_in_end_t is None or self._hold_end_t is None:
+        if self._roll_in_end_t is None or self._hold_end_t is None or self._roll_out_end_t is None:
             # Defensive: should have been set in enter().
             return ManeuverSetpoint(
                 theta_ref=0.0,
@@ -73,20 +82,27 @@ class DisplacementRoll(Maneuver):
                 throttle_ref=self.throttle,
             )
 
-        if self._elapsed < self._roll_in_end_t:
-            # Roll in to the target bank angle.
+        if self._elapsed < self._entry_duration_s:
+            self._phase = "entry"
             phi_ref = self._sign * self.roll_rate * self._elapsed
+        elif self._elapsed < self._roll_in_end_t:
+            self._phase = "roll_in"
+            roll_in_elapsed = self._elapsed - self._entry_duration_s
+            phi_ref = self._sign * self.roll_rate * roll_in_elapsed
             phi_ref = self._sign * min(abs(phi_ref), abs(self.roll_target))
         elif self._elapsed < self._hold_end_t:
-            # Hold the displaced attitude.
+            self._phase = "hold"
             phi_ref = self._sign * self.roll_target
-        else:
-            # Roll back to wings level.
+        elif self._elapsed < self._roll_out_end_t:
+            self._phase = "roll_out"
             roll_out_elapsed = self._elapsed - self._hold_end_t
             phi_ref = self._sign * (
                 abs(self.roll_target) - self.roll_rate * roll_out_elapsed
             )
             phi_ref = self._sign * max(0.0, abs(phi_ref))
+        else:
+            self._phase = "exit"
+            phi_ref = 0.0
 
         return ManeuverSetpoint(
             phi_ref=phi_ref,
@@ -98,8 +114,8 @@ class DisplacementRoll(Maneuver):
         )
 
     def is_complete(self, state: FlightState) -> bool:
-        if self._hold_end_t is None:
+        if self._roll_out_end_t is None:
             return False
-        roll_out_time = abs(self.roll_target) / max(abs(self.roll_rate), 1e-6)
-        complete_time = self._hold_end_t + roll_out_time
-        return self._elapsed >= complete_time and abs(state.phi_rad) < math.radians(10.0)
+        if self._elapsed < self._roll_out_end_t:
+            return False
+        return self._phase == "exit" or abs(state.phi_rad) < math.radians(10.0)

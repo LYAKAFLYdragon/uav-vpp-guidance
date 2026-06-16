@@ -11,6 +11,10 @@ class VerticalScissors(Maneuver):
     pitch reversals, used in very close-range dogfights to force an opponent
     to overshoot while trading altitude for turn rate.
 
+    The internal phase sequence is ``entry`` -> ``climb``/``dive`` reversals
+    -> ``exit``.  The entry/exit phases give the inner-loop controller time
+    to establish and recover wings-level attitude, respectively.
+
     Parameters
     ----------
     bank_angle_deg : float
@@ -46,7 +50,10 @@ class VerticalScissors(Maneuver):
         self._sign = 1.0
         self._target_psi: float | None = None
         self._completed_cycles = 0
-        self._phase = "climb"
+        self._phase = "entry"
+        self._entry_duration_s = 0.2
+        self._exit_duration_s = 0.5
+        self._exit_start_t: float | None = None
 
     def can_enter(self, state: FlightState) -> bool:
         n_req = 1.0 / math.cos(abs(self.bank_angle))
@@ -60,13 +67,23 @@ class VerticalScissors(Maneuver):
         super().enter(state)
         self._sign = 1.0
         self._completed_cycles = 0
-        self._phase = "climb"
+        self._phase = "entry"
+        self._exit_start_t = None
         self._target_psi = state.psi_rad + self._sign * self.turn_angle
 
     def update(self, state: FlightState, dt: float) -> ManeuverSetpoint:
         super().update(state, dt)
         n_req = 1.0 / math.cos(abs(self.bank_angle)) + 0.2
-        theta_ref = self.climb_angle if self._phase == "climb" else -self.dive_angle
+
+        if self._phase == "entry":
+            if self._elapsed >= self._entry_duration_s:
+                self._phase = "climb"
+            theta_ref = self.climb_angle
+        elif self._phase == "exit":
+            theta_ref = 0.0
+        else:
+            theta_ref = self.climb_angle if self._phase == "climb" else -self.dive_angle
+
         return ManeuverSetpoint(
             phi_ref=self._sign * self.bank_angle,
             theta_ref=theta_ref,
@@ -77,13 +94,18 @@ class VerticalScissors(Maneuver):
         )
 
     def is_complete(self, state: FlightState) -> bool:
+        if self._phase == "exit":
+            if self._exit_start_t is None:
+                self._exit_start_t = self._elapsed
+            return self._elapsed - self._exit_start_t >= self._exit_duration_s
         if self._target_psi is None:
             return False
         err = (self._target_psi - state.psi_rad + math.pi) % (2.0 * math.pi) - math.pi
         if abs(err) < math.radians(15.0):
             self._completed_cycles += 1
             if self._completed_cycles >= 2 * self.cycles:
-                return True
+                self._phase = "exit"
+                return False
             self._sign *= -1.0
             self._phase = "climb" if self._phase == "dive" else "dive"
             self._target_psi = state.psi_rad + self._sign * self.turn_angle

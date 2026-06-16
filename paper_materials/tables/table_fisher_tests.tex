@@ -1,0 +1,22 @@
+\begin{table}[t]
+\centering
+\small
+\caption{Fisher exact tests on pooled episode counts (5 seeds VPP/No-VPP, 2 seeds $\times$ 4 budgets E2E, 20 episodes per seed--scenario).}
+\label{tab:fisher_tests}
+\begin{tabular}{@{}llrrcl@{}}
+\toprule
+Comparison & Scenario & $n_{\text{VPP}}$ & $n_{\text{baseline}}$ & Odds Ratio & $p$-value \\
+\midrule
+VPP vs No-VPP & Disadvantage (SR)   & 20/100 & 0/100  & $\infty$ & $1.0 \times 10^{-6}$ \\
+VPP vs No-VPP & Disadvantage (Crash) & 20/100 & 100/100 & 0.0     & $6.5 \times 10^{-37}$ \\
+VPP vs E2E    & Challenging (SR)    & 100/100 & 120/160 & $\infty$ & $4.8 \times 10^{-10}$ \\
+VPP vs E2E    & Neutral (SR)        & 100/100 & 140/160 & $\infty$ & $5.0 \times 10^{-5}$ \\
+\bottomrule
+\end{tabular}
+\begin{tablenotes}
+\small
+\item All tests are two-sided. Episode-level pooling: VPP $n=100$ per scenario (5 seeds $\times$ 20 eps), No-VPP $n=100$, E2E $n=160$ (2 seeds $\times$ 4 budgets $\times$ 20 eps).
+\item Odds ratio $\infty$ indicates zero failures in the VPP group; 0.0 indicates zero successes in the baseline group.
+\item Seed-level paired $t$-test on the same comparisons: disadvantage $p=0.374$ (ns), challenging $p < 0.0001$ (significant), neutral $p=0.500$ (ns). The seed-level tests have low power due to high within-group VPP variance on disadvantage ($\sigma=44.7$~pp) and zero variance on challenging/neutral.
+\end{tablenotes}
+\end{table}

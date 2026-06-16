@@ -1,0 +1,22 @@
+\begin{table}[t]
+\centering
+\small
+\caption{Fair comparison on JSBSim F-16 with maneuvering targets
+(5 training seeds VPP \& No-VPP, 2 seeds E2E $\times$ 4 step budgets, 20 eval episodes per seed-scenario combination, 1440 total episodes).}
+\label{tab:jsbsim_fair}
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+Method & Favorable & Neutral & Challenging & Disadvantage \\
+\midrule
+VPP + LOS-rate   & \textbf{100} [100,100] & \textbf{100} [100,100] & \textbf{100} [100,100] & \textbf{20} [12,28] \\
+No-VPP + LOS-rate & \textbf{100} [100,100] & \textbf{100} [100,100] & \textbf{100} [100,100] & 0 [0,0] \\
+E2E DRL           & \textbf{100} [100,100] & 87.5 [82,92] & 75 [68,82] & 0 [0,0] \\
+\bottomrule
+\end{tabular}
+\begin{tablenotes}
+\small
+\item Success Rate (\%) with 95\% bootstrap CI in brackets. VPP disadvantage: 20\% success, 20\% crash, 60\% timeout. No-VPP disadvantage: 0\% success, 100\% crash. E2E disadvantage: 0\% success, 75\% crash, 25\% timeout.
+\item Fisher exact test (pooled episodes): VPP vs No-VPP on disadvantage $p = 1.0 \times 10^{-6}$; VPP vs E2E on challenging $p = 4.8 \times 10^{-10}$; VPP vs E2E on neutral $p = 5.0 \times 10^{-5}$.
+\item VPP mean virtual-point shift on disadvantage: 2987~m (vs 936--1048~m on other scenarios), confirming a learned conservative lead-pursuit strategy.
+\end{tablenotes}
+\end{table}

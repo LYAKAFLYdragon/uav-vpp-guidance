@@ -1,0 +1,34 @@
+\begin{table}[t]
+\centering
+\small
+\caption{Per-scenario crash and timeout rates on JSBSim F-16 (same 1440-episode evaluation).}
+\label{tab:jsbsim_crash_timeout}
+\begin{tabular}{@{}lccccc@{}}
+\toprule
+Method & Scenario & Success (\%) & Crash (\%) & Timeout (\%) & Mean Range (m) \\
+\midrule
+\multirow{4}{*}{VPP}
+  & Favorable    & 100 & 0   & 0   & 780 \\
+  & Neutral      & 100 & 0   & 0   & 879 \\
+  & Challenging  & 100 & 0   & 0   & 828 \\
+  & Disadvantage & 20  & 20  & 60  & 3790 \\
+\midrule
+\multirow{4}{*}{No-VPP}
+  & Favorable    & 100 & 0   & 0   & 780 \\
+  & Neutral      & 100 & 0   & 0   & 880 \\
+  & Challenging  & 100 & 0   & 0   & 827 \\
+  & Disadvantage & 0   & 100 & 0   & 7618 \\
+\midrule
+\multirow{4}{*}{E2E}
+  & Favorable    & 100 & 0   & 0   & 780 \\
+  & Neutral      & 87.5& 12.5& 0   & 2073 \\
+  & Challenging  & 75  & 12.5& 0   & 3474 \\
+  & Disadvantage & 0   & 75  & 25  & 6938 \\
+\bottomrule
+\end{tabular}
+\begin{tablenotes}
+\small
+\item VPP disadvantage: 60\% timeout rate reflects a conservative strategy that prioritizes altitude preservation (crash avoidance) over aggressive closure. Mean final range 3790~m confirms the policy maintains safe stand-off distance.
+\item E2E neutral/challenging crash rate (12.5\%): the end-to-end policy occasionally violates the stall margin, indicating lack of implicit flight-envelope awareness.
+\end{tablenotes}
+\end{table}

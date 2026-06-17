@@ -1,4 +1,4 @@
-This section reports the evidence currently available in the repository and separates it from the experiments that must still be run before final submission. The distinction is intentional. The paper's contribution is an auditable comparison protocol, so results that do not satisfy the frozen protocol are not treated as conclusive.
+This section reports the evidence currently available in the repository after the second revision round and separates completed formal runs from experiments that still require new checkpoints. The distinction is intentional. The paper's contribution is an auditable comparison protocol, so results that do not satisfy the frozen protocol are not treated as conclusive.
 
 \subsection{Auditable fair-comparison protocol}\label{sec:fair_protocol}
 
@@ -12,7 +12,7 @@ The final comparison protocol is defined by the following reproducible clauses.
     \item \textbf{Metrics:} every method is evaluated by success rate, crash rate, timeout/out-of-bounds rate, mean return, standard deviation, 95\% confidence interval, effect size, and an exact binary-outcome test when applicable.
 \end{enumerate}
 
-This protocol follows the reporting concerns raised for deep-RL experiments by Henderson et al.~\cite{henderson2018deep} and Patterson et al.~\cite{patterson2023empirical}. Results below are labeled according to whether they satisfy the protocol.
+This protocol follows the reporting concerns raised for deep-RL experiments by Henderson et al.~\cite{henderson2018deep} and Patterson et al.~\cite{patterson2023empirical}. Results below are labeled according to whether they satisfy the protocol. The current manuscript uses three evidence levels: the historical JSBSim fair-comparison matrix uses 5 VPP/No-VPP training seeds and 20 evaluation episodes per seed--scenario combination; the new external-baseline matrix uses 3 evaluation seeds, 10 episodes per seed, and four scenarios for pure pursuit, pure PN, APN1971, and a VPP reference; the new interface-ablation subset uses the same 3-seed evaluation protocol for full VPP, zero-offset No-VPP, and target-state-direct guidance. The latter two matrices are formal evaluation runs, but they do not replace the still-missing 10-training-seed JSBSim main matrix.
 
 \subsection{Simple-backend evidence: mechanism isolation}\label{sec:architecture}
 
@@ -32,9 +32,13 @@ Table~\ref{tab:vpp_ablation} reports the available VPP-vs-No-VPP evidence from t
 
 \input{tables/table_vpp_ablation}
 
-The result should be read as an interface diagnostic rather than as proof of general VPP advantage. When the lower-level guidance law is already sufficient, the offset can be neutral. In the adverse geometries where failures persist, the relevant question becomes whether prediction information is lost at the VPP--guidance interface. The new script \texttt{paper\_materials/scripts/run\_ablations.py} adds the required no-regret, no-gain-observation, no-safety-penalty, zero-offset, and target-state-direct interface ablations.
+The result should be read as an interface diagnostic rather than as proof of general VPP advantage. When the lower-level guidance law is already sufficient, the offset can be neutral. In the adverse geometries where failures persist, the relevant question becomes whether prediction information is lost at the VPP--guidance interface.
 
 \input{figures/vpp_comparison}
+
+The completed formal ablation subset evaluates full VPP, zero-offset No-VPP, and the target-state-direct guidance path using 3 evaluation seeds, 10 episodes per seed, and the four feasible-geometry scenarios (Fig.~\ref{fig:ablation_comparison}). All three methods achieve 90/120 successes (75.0\%, Wilson 95\% CI: 66.6--81.9\%). In favorable, neutral, and challenging geometries every method succeeds in all 30 episodes per scenario; in the disadvantage geometry every method fails by out-of-bounds termination in all 30 episodes. Fisher exact tests on pooled success counts therefore find no terminal-outcome difference against full VPP ($p=1.0$). Paired return tests show lower returns for zero-offset No-VPP and target-state-direct relative to full VPP ($p=5.25\times10^{-9}$, Cohen's $d=-0.575$), but this does not change the binary conclusion: direct target-state injection, as currently implemented, does not recover the disadvantage case. The no-regret, no-gain-observation, and no-safety-penalty ablations remain excluded from formal results because their trained checkpoints are not present in the repository.
+
+\input{figures/fig_ablation_comparison}
 
 \subsection{Corrected JSBSim regression evidence}\label{sec:jsbsim_validation}
 
@@ -81,7 +85,11 @@ These data support only a scoped statement: neural prediction is more useful und
 
 \subsection{External baselines and robustness experiments}\label{sec:external_and_robustness}
 
-The repository evidence already shows why external guidance baselines cannot be omitted: pure PN without VPP succeeds in selected high-energy tail-chase candidates where several VPP-based variants fail. The new \texttt{paper\_materials/scripts/run\_external\_baselines.py} evaluates pure pursuit, pure PN, and APN under the same scenario and metric schema. The new \texttt{paper\_materials/scripts/run\_robustness.py} evaluates wind, observation noise, actuator delay, and guidance-parameter sensitivity. Until these runs are executed with paper-safe checkpoints, the manuscript cannot claim that the bottleneck is exclusively in the predictor, the guidance law, or the physics of the geometry.
+The repository evidence already shows why external guidance baselines cannot be omitted: pure PN without VPP succeeds in selected high-energy tail-chase candidates where several VPP-based variants fail. The completed external-baseline matrix evaluates pure pursuit, pure PN, APN1971, and a VPP reference under the same feasible-geometry scenarios, metric schema, and 3-seed evaluation budget (Fig.~\ref{fig:external_baselines}). All four methods achieve 90/120 successes (75.0\%, Wilson 95\% CI: 66.6--81.9\%). As in the ablation subset, favorable, neutral, and challenging scenarios are solved by all methods, while the disadvantage scenario fails for all methods by out-of-bounds termination. Fisher exact tests against the VPP reference are therefore non-significant for terminal success ($p=1.0$). Paired return tests show lower returns for the classical baselines relative to the VPP reference ($p=5.25\times10^{-9}$, Cohen's $d=-0.575$), with the difference concentrated in the failed disadvantage episodes. APN1971 matches pure PN in this constant-velocity target suite because no nonzero target acceleration is exposed to the APN feed-forward term.
+
+\input{figures/fig_external_baselines}
+
+The new \texttt{paper\_materials/scripts/run\_robustness.py} evaluates wind, observation noise, actuator delay, and guidance-parameter sensitivity, but those runs remain proxy/smoke-level because wind and sensor perturbations are not yet wired into a true JSBSim wind/sensor interface. They are therefore not promoted to formal Defence Technology evidence in this revision.
 
 \subsection{Bilevel gain optimization and computational cost}\label{sec:bilevel_gains}
 

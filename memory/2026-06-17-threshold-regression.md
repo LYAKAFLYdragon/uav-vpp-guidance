@@ -82,10 +82,34 @@ For the audit-repair branch, the test is marked as an expected failure via
 green (`1068 passed, 18 skipped, 1 xfailed`) while documenting the checkpoint
 incompatibility.
 
+## Paper Impact Check
+
+Searched `paper_materials/` for references to the audit checkpoint or
+threshold runner:
+
+```bash
+grep -r "no_pred\|no_prediction\|threshold_runner\|ThresholdOptimization" paper_materials/
+```
+
+Results reference `outputs/experiments/stage6b_no_pred_s0/checkpoints/best.pt`
+and `outputs/experiments/no_prediction_vpp_ppo/checkpoints/best.pt`, but **not**
+`outputs/audit_no_pred_final/checkpoints/best.pt` and **not**
+`ThresholdOptimizationRunner`. Therefore this regression is **outside the main
+paper evidence chain** and can be treated as test-suite technical debt rather
+than a paper-blocking issue.
+
+## Decision
+
+- **P0 (done)**: Mark the test as `xfail` and document the root cause.
+- **P1 (done)**: Confirm the checkpoint is not referenced in the paper.
+- **P2**: **Defer retraining**. `audit_no_pred_final` is an internal audit
+  artifact; retraining it is low priority unless the audit pipeline itself
+  needs a green PASS verdict.
+- **P3 (done)**: Added a version comment in
+  `src/uav_vpp_guidance/envs/observation.py` to prevent future confusion.
+
 ## Follow-up
 
-- Retrain `outputs/audit_no_pred_final/checkpoints/best.pt` (or generate a new
-  audit checkpoint) under the corrected ATA/AA geometry.
-- Once the retrained checkpoint passes the threshold gate
-  `(aspect=25°, range=3000 m, speed=80 mps)`, remove the `xfail` marker from
-  `tests/test_threshold_runner.py`.
+- If the audit pipeline ever needs a PASS verdict here, retrain
+  `outputs/audit_no_pred_final/checkpoints/best.pt` under the corrected ATA/AA
+  geometry and remove the `xfail` marker from `tests/test_threshold_runner.py`.

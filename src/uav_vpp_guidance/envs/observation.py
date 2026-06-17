@@ -55,6 +55,12 @@ def compute_relative_geometry(own_state, target_state):
     los_azimuth_rad = np.arctan2(los_vector[1], los_vector[0])
     los_elevation_rad = np.arcsin(np.clip(los_vector[2], -1.0, 1.0))
 
+    # NOTE: Definitions corrected in commit 9d12306.
+    #   ata_rad = angle(own_velocity, LOS)   -- Antenna Train Angle
+    #   aa_rad  = angle(target_velocity, -LOS) -- Aspect Angle
+    # Checkpoints trained before this commit may fail under the corrected geometry
+    # because the success criterion (TerminationChecker) now uses true ata_rad.
+
     # ATA (Antenna Train Angle): angle between own velocity and line-of-sight
     # 即本机速度方向与目标视线的夹角。ATA 越小表示本机越正对目标。
     own_speed = float(np.linalg.norm(own_vel))

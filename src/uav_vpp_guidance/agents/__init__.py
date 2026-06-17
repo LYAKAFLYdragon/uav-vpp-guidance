@@ -6,8 +6,9 @@ end-to-end variants used by existing evaluations). Method-innovation agents
 :mod:`uav_vpp_guidance.ablations` and inherit from :class:`PPOAgent`.
 """
 
+from .adversarial_target_agent import AdversarialTargetAgent
 from .ppo_agent import PPOAgent
 from .standard_ppo_agent import StandardPPOAgent
 from .sac_agent import SACAgent
 
-__all__ = ["PPOAgent", "StandardPPOAgent", "SACAgent"]
+__all__ = ["AdversarialTargetAgent", "PPOAgent", "StandardPPOAgent", "SACAgent"]

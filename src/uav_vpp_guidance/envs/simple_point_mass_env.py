@@ -29,7 +29,7 @@
 """
 
 import numpy as np
-from typing import Tuple, Optional
+from typing import Any, Tuple, Optional
 
 from .target_dynamics import create_target_dynamics
 
@@ -72,48 +72,94 @@ class SimplePointMassEnv:
     # Reset
     # ------------------------------------------------------------------
 
-    def reset(self, own_init: Optional[dict] = None, target_init: Optional[dict] = None, scenario=None, seed=None):
+    def reset(
+        self,
+        scenario=None,
+        seed=None,
+        own_init: Optional[dict] = None,
+        target_init: Optional[dict] = None,
+    ):
         """
         重置本机和目标机状态。
 
         Args:
-            own_init (dict): 本机初始状态。
-            target_init (dict): 目标初始状态。
-            scenario: 场景对象（可选）。
-            seed: 随机种子（可选）。
+            scenario: 场景对象，可包含 ``own_init`` / ``target_init``。
+            seed: 随机种子（当前保留接口，未改变质点随机性）。
+            own_init (dict): 本机初始状态（优先级高于 scenario）。
+            target_init (dict): 目标初始状态（优先级高于 scenario）。
 
         Returns:
             tuple: (own_state, target_state)
         """
         self.time = 0.0
 
-        # 默认本机初始状态
+        # Resolve scenario-provided initial states
+        scenario_own = None
+        scenario_target = None
+        if scenario is not None:
+            if isinstance(scenario, dict):
+                scenario_own = scenario.get("own_init") or scenario.get("pursuer_init")
+                scenario_target = scenario.get("target_init")
+            else:
+                scenario_own = getattr(scenario, "own_init", None)
+                scenario_target = getattr(scenario, "target_init", None)
+
+        # Default own initial state
         if own_init is None:
-            own_init = {
-                "position_m": np.array([0.0, 0.0, 5000.0]),
-                "velocity_vector_mps": np.array([200.0, 0.0, 0.0]),
-                "heading_rad": 0.0,
-                "altitude_m": 5000.0,
-                "roll_rad": 0.0,
-                "pitch_rad": 0.0,
-                "yaw_rad": 0.0,
-                "nz": 1.0,
-            }
+            if scenario_own is not None:
+                own_init = self._scenario_init_to_simple(scenario_own)
+            else:
+                own_init = {
+                    "position_m": np.array([0.0, 0.0, 5000.0]),
+                    "velocity_vector_mps": np.array([200.0, 0.0, 0.0]),
+                    "heading_rad": 0.0,
+                    "altitude_m": 5000.0,
+                    "roll_rad": 0.0,
+                    "pitch_rad": 0.0,
+                    "yaw_rad": 0.0,
+                    "nz": 1.0,
+                }
         self.own_state = self._build_state(own_init)
         self._ensure_derived_fields(self.own_state)
 
-        # 默认目标初始状态
+        # Default target initial state
         if target_init is None:
-            target_init = {
-                "position_m": np.array([2000.0, 0.0, 5000.0]),
-                "velocity_vector_mps": np.array([200.0, 0.0, 0.0]),
-                "heading_rad": np.pi,
-                "altitude_m": 5000.0,
-            }
+            if scenario_target is not None:
+                target_init = self._scenario_init_to_simple(scenario_target)
+            else:
+                target_init = {
+                    "position_m": np.array([2000.0, 0.0, 5000.0]),
+                    "velocity_vector_mps": np.array([200.0, 0.0, 0.0]),
+                    "heading_rad": np.pi,
+                    "altitude_m": 5000.0,
+                }
         self.target_state = self._build_state(target_init)
         self._ensure_derived_fields(self.target_state)
 
         return self.own_state.copy(), self.target_state.copy()
+
+    @staticmethod
+    def _scenario_init_to_simple(init: Any) -> dict:
+        """Convert a scenario init object/dict to simple point-mass init dict."""
+        if init is None:
+            return {}
+        pos = init.get("position_m") if isinstance(init, dict) else getattr(init, "position_m", None)
+        vel = init.get("velocity_mps") if isinstance(init, dict) else getattr(init, "velocity_mps", None)
+        heading = init.get("heading_deg") if isinstance(init, dict) else getattr(init, "heading_deg", 0.0)
+        if pos is None:
+            pos = np.array([0.0, 0.0, 5000.0])
+        if vel is None:
+            vel = 200.0
+        return {
+            "position_m": np.asarray(pos, dtype=np.float64),
+            "velocity_vector_mps": np.array([
+                float(vel) * np.cos(np.deg2rad(float(heading))),
+                float(vel) * np.sin(np.deg2rad(float(heading))),
+                0.0,
+            ]),
+            "heading_rad": np.deg2rad(float(heading)),
+            "altitude_m": float(pos[2]) if hasattr(pos, "__len__") else 5000.0,
+        }
 
     @staticmethod
     def _build_state(init: dict) -> dict:

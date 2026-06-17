@@ -233,6 +233,9 @@ def evaluate_single_episode(env, agent, config, scenario=None, seed=0, save_traj
                 "time": step * high_level_dt,
                 "backend": env._backend,
                 "method": method_name,
+                "action_x": float(action[0]) if len(action) > 0 else np.nan,
+                "action_y": float(action[1]) if len(action) > 1 else np.nan,
+                "action_z": float(action[2]) if len(action) > 2 else np.nan,
                 "predictor_type": info.get("predictor_type", ""),
                 "prediction_enabled": int(info.get("prediction_enabled", False)),
                 "prediction_valid": int(info.get("prediction_valid", False)),
@@ -723,6 +726,10 @@ def main():
         agent = PPOAgent(obs_dim=obs_dim, action_dim=action_dim, config=method_config, device=device)
 
         if policy_type == "trained_ppo":
+            if loaded_policy_ckpt is None:
+                raise ValueError(
+                    f"No checkpoint was loaded for method '{method_name}' despite policy_type=trained_ppo"
+                )
             agent.load(loaded_policy_ckpt)
             print(f"  Loaded checkpoint from {loaded_policy_ckpt}")
 

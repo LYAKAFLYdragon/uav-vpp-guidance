@@ -1,0 +1,64 @@
+# Robustness Evaluation Configuration
+#
+# Usage:
+#   python scripts/evaluate_robustness.py --config config/adversarial/robustness_eval.yaml
+
+includes:
+  - ../env.yaml
+  - ../ppo.yaml
+  - ./perturbed_env.yaml
+
+experiment:
+  name: robustness_evaluation
+  seed: 42
+
+# Evaluation settings
+evaluation:
+  num_episodes: 30
+  seeds: [0, 1, 2]
+  perturbation_levels: [0.0, 0.25, 0.5, 0.75, 1.0]
+
+# Agent checkpoints
+checkpoints:
+  pursuer_baseline: "outputs/experiments/no_prediction_vpp_ppo_seed0/checkpoints/best.pt"
+  target_adversarial: "outputs/adversarial/training/target_agent_ppo/checkpoints/best.pt"
+  pursuer_adversarial: "outputs/adversarial/training/pursuer_adversarial/checkpoints/best.pt"
+
+# Target PPO hyperparameters (smaller network, same architecture)
+target_ppo:
+  learning_rate: 3.0e-4
+  gamma: 0.99
+  gae_lambda: 0.95
+  clip_coef: 0.2
+  entropy_coef: 1.0e-3
+  rollout_steps: 1024
+  minibatch_size: 256
+  update_epochs: 10
+  value_coef: 0.5
+  max_grad_norm: 0.5
+  normalize_advantage: true
+  device: cpu
+  total_timesteps: 500000
+
+# Per-checkpoint policy architectures.
+policies:
+  baseline_pursuer:
+    hidden_sizes: [128, 128]
+    activation: tanh
+    action_low: [-1.0, -1.0, -1.0]
+    action_high: [1.0, 1.0, 1.0]
+  adversarial_pursuer:
+    hidden_sizes: [128, 128]
+    activation: tanh
+    action_low: [-1.0, -1.0, -1.0]
+    action_high: [1.0, 1.0, 1.0]
+
+# Target policy network (smaller than pursuer's [256,256,128])
+target_policy:
+  hidden_sizes: [128, 128]
+  activation: tanh
+  action_low: [-1.0, -1.0, -1.0]
+  action_high: [1.0, 1.0, 1.0]
+
+# Output directory
+output_dir: "outputs/adversarial/robustness"

@@ -1,0 +1,65 @@
+# Adversarial Pursuer Fine-Tuning Configuration
+# Phase 2: Fine-tune pursuer against a frozen trained target agent.
+#
+# Usage:
+#   python scripts/train_adversarial_pursuer.py --config config/adversarial/train_pursuer.yaml
+
+includes:
+  - ../env.yaml
+  - ../ppo.yaml
+  - ../guidance.yaml
+  - ../reward.yaml
+
+experiment:
+  name: adversarial_pursuer_finetune
+  seed: 42
+
+# Training budget
+training:
+  total_timesteps: 300000
+  eval_interval: 10000
+  save_interval: 50000
+  smoke_timesteps: 5000
+
+# PPO hyperparameters (reduced LR for fine-tuning)
+ppo:
+  learning_rate: 1.0e-4
+  gamma: 0.99
+  gae_lambda: 0.95
+  clip_coef: 0.2
+  entropy_coef: 1.0e-3
+  rollout_steps: 1024
+  minibatch_size: 256
+  update_epochs: 10
+  value_coef: 0.5
+  max_grad_norm: 0.5
+  normalize_advantage: true
+  device: cpu
+  total_timesteps: 300000
+
+policy:
+  hidden_sizes: [128, 128]
+  activation: tanh
+  action_low: [-1.0, -1.0, -1.0]
+  action_high: [1.0, 1.0, 1.0]
+
+# Target policy network (must match target_agent_ppo checkpoint)
+target_policy:
+  hidden_sizes: [128, 128]
+  activation: tanh
+  action_low: [-1.0, -1.0, -1.0]
+  action_high: [1.0, 1.0, 1.0]
+
+# Scenario sampler for initial conditions
+scenario_sampler:
+  enabled: true
+  source: registry_set
+  set: smoke_test
+  seed: 42
+
+# Paths to pre-trained checkpoints
+pursuer_checkpoint: "outputs/experiments/no_prediction_vpp_ppo_seed0/checkpoints/best.pt"
+target_checkpoint: "outputs/adversarial/training/target_agent_ppo/checkpoints/best.pt"
+
+# Output directory
+output_dir: "outputs/adversarial/training/pursuer_adversarial"

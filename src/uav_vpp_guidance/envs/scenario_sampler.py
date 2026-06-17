@@ -6,6 +6,10 @@ Self-contained JSBSim integration.
 
 from dataclasses import dataclass
 
+import numpy as np
+
+from .scenario_registry import ScenarioRegistry
+
 
 @dataclass
 class AircraftInitState:
@@ -55,3 +59,46 @@ class ScenarioSampler:
         """
         # TODO: Implement scenario sampling based on legacy initial states.
         raise NotImplementedError("Implement scenario sampling based on legacy initial states.")
+
+
+def make_scenario_sampler(cfg: dict):
+    """
+    Build a lightweight scenario sampler.
+
+    Supported cfg keys:
+      enabled: bool (default True)
+      source: "registry_set" | "explicit_list" (default "registry_set")
+      set: str, used when source="registry_set" (default "smoke_test")
+      names: list[str], used when source="explicit_list"
+      seed: int (default None -> system random)
+
+    Returns an object with a ``sample()`` method, or None if disabled.
+    """
+    if not cfg.get("enabled", True):
+        return None
+
+    source = cfg.get("source", "registry_set")
+    if source == "registry_set":
+        pool = list(ScenarioRegistry.get_set(cfg.get("set", "smoke_test")).values())
+    elif source == "explicit_list":
+        pool = []
+        for name in cfg.get("names", []):
+            scenario = ScenarioRegistry.get(name)
+            if scenario is not None:
+                pool.append(scenario)
+    else:
+        pool = []
+
+    if not pool:
+        return None
+
+    rng = np.random.default_rng(cfg.get("seed"))
+
+    class _Sampler:
+        """Uniform random sampler over a frozen scenario pool."""
+
+        def sample(self):
+            idx = rng.integers(len(pool))
+            return pool[idx]
+
+    return _Sampler()

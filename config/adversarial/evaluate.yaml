@@ -1,0 +1,104 @@
+# Adversarial Evaluation Configuration
+#
+# Usage:
+#   python scripts/evaluate_adversarial.py --config config/adversarial/evaluate.yaml
+#
+# Evaluates all agent pairings across multiple scenario types and seeds.
+
+includes:
+  - ../env.yaml
+  - ../ppo.yaml
+  - ../guidance.yaml
+  - ../reward.yaml
+
+experiment:
+  name: adversarial_evaluation
+  seed: 42
+
+# Evaluation settings
+evaluation:
+  num_episodes: 30
+  seeds: [0, 1, 2]
+
+# Agent checkpoint paths
+checkpoints:
+  pursuer_baseline: "outputs/experiments/no_prediction_vpp_ppo_seed0/checkpoints/best.pt"
+  target_adversarial: "outputs/adversarial/training/target_agent_ppo/checkpoints/best.pt"
+  pursuer_adversarial: "outputs/adversarial/training/pursuer_adversarial/checkpoints/best.pt"
+
+# Environment settings
+env:
+  backend: jsbsim
+  use_jsbsim: true
+  sim_freq: 60
+  decision_freq: 5
+  max_high_level_steps: 512
+  high_level_dt: 0.2
+  aircraft_model: f16
+
+# Termination criteria
+termination:
+  success_range_m: 900.0
+  success_ata_deg: 25.0
+  success_hold_time_s: 0.2
+  min_altitude_m: 500.0
+  max_altitude_m: 15000.0
+  max_range_m: 8000.0
+
+# Scenario types to evaluate
+scenarios:
+  - tail_chase_2000m
+  - tail_chase_4000m
+  - head_on_4000m
+  - crossing_90deg_2000m
+  - offset_45deg_2000m
+
+# Limits
+limits:
+  nz_min: -2.0
+  nz_max: 7.0
+  roll_rate_min: -1.5
+  roll_rate_max: 1.5
+  throttle_min: 0.0
+  throttle_max: 1.0
+
+# Target PPO hyperparameters (smaller network, same architecture)
+target_ppo:
+  learning_rate: 3.0e-4
+  gamma: 0.99
+  gae_lambda: 0.95
+  clip_coef: 0.2
+  entropy_coef: 1.0e-3
+  rollout_steps: 1024
+  minibatch_size: 256
+  update_epochs: 10
+  value_coef: 0.5
+  max_grad_norm: 0.5
+  normalize_advantage: true
+  device: cpu
+  total_timesteps: 500000
+
+# Per-checkpoint policy architectures. The baseline pursuer was trained with
+# [128, 128] tanh, while the adversarial pursuer is fine-tuned with
+# [256, 256, 128] tanh.
+policies:
+  baseline_pursuer:
+    hidden_sizes: [128, 128]
+    activation: tanh
+    action_low: [-1.0, -1.0, -1.0]
+    action_high: [1.0, 1.0, 1.0]
+  adversarial_pursuer:
+    hidden_sizes: [128, 128]
+    activation: tanh
+    action_low: [-1.0, -1.0, -1.0]
+    action_high: [1.0, 1.0, 1.0]
+
+# Target policy network (smaller than pursuer's [256,256,128])
+target_policy:
+  hidden_sizes: [128, 128]
+  activation: tanh
+  action_low: [-1.0, -1.0, -1.0]
+  action_high: [1.0, 1.0, 1.0]
+
+# Output
+output_dir: "outputs/adversarial/evaluation"

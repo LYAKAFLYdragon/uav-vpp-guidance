@@ -1,0 +1,28 @@
+# Perturbed Environment Configuration
+# Wind disturbance, sensor noise, and actuator delay parameters.
+#
+# Usage:
+#   python scripts/evaluate_robustness.py --config config/adversarial/robustness_eval.yaml
+
+# Wind perturbation (Gaussian gusts applied each step)
+wind:
+  enabled: true
+  speed_std_mps: 5.0         # std of wind speed per axis (m/s)
+  direction_std_deg: 30.0    # std of wind direction change
+
+# Sensor noise (added to observation vector)
+sensor_noise:
+  enabled: true
+  position_noise_std_m: 10.0      # target position noise (m)
+  velocity_noise_std_mps: 5.0     # target velocity noise (m/s)
+  range_noise_std_m: 20.0         # range measurement noise (m)
+  angle_noise_std_deg: 1.0        # LOS angle noise (deg)
+
+# Actuator delay
+actuator_delay:
+  enabled: true
+  min_delay_steps: 0
+  max_delay_steps: 2
+
+# Perturbation scale levels for robustness sweep
+perturbation_levels: [0.0, 0.25, 0.5, 0.75, 1.0]

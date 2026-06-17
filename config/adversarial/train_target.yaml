@@ -1,0 +1,99 @@
+# Adversarial Target Agent Training Configuration
+# Phase 1: Train target (evader) against a frozen pre-trained pursuer.
+#
+# Usage:
+#   python scripts/train_adversarial_target.py --config config/adversarial/train_target.yaml
+
+includes:
+  - ../env.yaml
+  - ../ppo.yaml
+  - ../guidance.yaml
+  - ../reward.yaml
+
+experiment:
+  name: adversarial_target_training
+  seed: 42
+
+# Training budget
+training:
+  total_timesteps: 500000
+  eval_interval: 10000
+  save_interval: 50000
+  smoke_timesteps: 5000
+
+# Target PPO hyperparameters (smaller network, same architecture)
+target_ppo:
+  learning_rate: 3.0e-4
+  gamma: 0.99
+  gae_lambda: 0.95
+  clip_coef: 0.2
+  entropy_coef: 1.0e-3
+  rollout_steps: 1024
+  minibatch_size: 256
+  update_epochs: 10
+  value_coef: 0.5
+  max_grad_norm: 0.5
+  normalize_advantage: true
+  device: cpu
+  total_timesteps: 500000
+
+# Target policy network (smaller than pursuer's [256,256,128])
+target_policy:
+  hidden_sizes: [128, 128]
+  activation: tanh
+  action_low: [-1.0, -1.0, -1.0]
+  action_high: [1.0, 1.0, 1.0]
+
+# Target reward weights (escape-oriented)
+target_reward:
+  w_survival: 0.01
+  w_escaping: 0.1
+  w_energy: 0.05
+  w_range: 0.5
+  terminal_captured: -200.0
+  terminal_crash: -300.0
+  terminal_oob: -200.0
+  terminal_timeout: 50.0
+
+# Physical limits
+limits:
+  nz_min: -2.0
+  nz_max: 7.0
+  roll_rate_min: -1.5
+  roll_rate_max: 1.5
+  throttle_min: 0.0
+  throttle_max: 1.0
+
+# Environment settings
+env:
+  backend: jsbsim
+  use_jsbsim: true
+  sim_freq: 60
+  decision_freq: 5
+  max_high_level_steps: 512
+  high_level_dt: 0.2
+  aircraft_model: f16
+
+# Termination criteria
+termination:
+  success_range_m: 900.0
+  success_ata_deg: 25.0
+  success_hold_time_s: 0.2
+  hysteresis_range_m: 950.0
+  hysteresis_ata_deg: 30.0
+  min_altitude_m: 500.0
+  max_altitude_m: 15000.0
+  max_range_m: 8000.0
+
+# Scenario sampler for initial conditions
+scenario_sampler:
+  enabled: true
+  source: registry_set
+  set: smoke_test
+  seed: 42
+
+# Path to pre-trained pursuer checkpoint
+pursuer_checkpoint: "outputs/experiments/no_prediction_vpp_ppo_seed0/checkpoints/best.pt"
+
+# Output directory
+output_dir: "outputs/adversarial/training/target_agent_ppo"

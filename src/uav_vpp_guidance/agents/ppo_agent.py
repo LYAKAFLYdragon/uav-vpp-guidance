@@ -141,6 +141,18 @@ class PPOAgent:
             value (float): Value estimate.
             info (dict, optional): Extra environment info (ignored by base PPO).
         """
+        obs_arr = np.asarray(obs)
+        action_arr = np.asarray(action)
+        if not np.isfinite(obs_arr).all():
+            raise ValueError(f"Non-finite observation stored: {obs_arr}")
+        if not np.isfinite(action_arr).all():
+            raise ValueError(f"Non-finite action stored: {action_arr}")
+        if not np.isfinite(log_prob):
+            raise ValueError(f"Non-finite log_prob stored: {log_prob}")
+        if not np.isfinite(reward):
+            raise ValueError(f"Non-finite reward stored: {reward}")
+        if not np.isfinite(value):
+            raise ValueError(f"Non-finite value stored: {value}")
         self.buffer.add(obs, action, log_prob, reward, done, value)
         self.total_timesteps += 1
 
@@ -296,6 +308,17 @@ class PPOAgent:
         if not os.path.exists(path):
             raise FileNotFoundError(f"Checkpoint not found: {path}")
         checkpoint = torch.load(path, map_location=self.device)
+        ckpt_policy = checkpoint.get("config", {}).get("policy", {})
+        current_policy = self.config.get("policy", {})
+        if ckpt_policy and current_policy:
+            if (
+                ckpt_policy.get("hidden_sizes") != current_policy.get("hidden_sizes")
+                or ckpt_policy.get("activation") != current_policy.get("activation")
+            ):
+                raise RuntimeError(
+                    f"Checkpoint policy architecture {ckpt_policy} does not match "
+                    f"current policy {current_policy}. Please check the config."
+                )
         self.network.load_state_dict(checkpoint["network_state_dict"], strict=False)
         self.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
         self.total_updates = checkpoint.get("total_updates", 0)

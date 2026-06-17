@@ -3,7 +3,8 @@ LOS-rate-based guidance law with numerical stability protections.
 
 Inputs:
 - own aircraft state
-- target aircraft state (reserved for future extensions, currently unused)
+- target aircraft state (used for speed reference; optional direct guidance
+  ablation when guidance.params.target_state_direct.enabled is true)
 - virtual pursuit point
 - guidance gains and parameters
 
@@ -136,6 +137,27 @@ class LOSRateGuidance:
             params.get("use_distance_aware_speed", False)
         )
 
+        # Optional interface ablation: let the low-level guidance law directly
+        # consume target position/velocity by blending a target-state lead point
+        # into the virtual point. Disabled by default to preserve the canonical
+        # VPP-only lateral guidance interface.
+        direct = params.get("target_state_direct", {})
+        self.target_state_direct_enabled = bool(direct.get("enabled", False))
+        self.target_state_direct_blend = float(direct.get("blend", 1.0))
+        self.target_state_direct_lead_time_s = float(direct.get("lead_time_s", 1.0))
+        self.target_state_direct_auto_lead = bool(direct.get("auto_lead_time", False))
+        self.target_state_direct_min_lead_s = float(direct.get("min_lead_time_s", 0.0))
+        self.target_state_direct_max_lead_s = float(direct.get("max_lead_time_s", 3.0))
+        if not (0.0 <= self.target_state_direct_blend <= 1.0):
+            raise ValueError(
+                "target_state_direct.blend must be in [0, 1], "
+                f"got {self.target_state_direct_blend}"
+            )
+        if self.target_state_direct_max_lead_s < self.target_state_direct_min_lead_s:
+            raise ValueError(
+                "target_state_direct.max_lead_time_s must be >= min_lead_time_s"
+            )
+
         # Limits (prefer top-level limits block, fall back to defaults)
         limits = config.get("limits", {})
         self.nz_min = float(limits.get("nz_min", -2.0))
@@ -196,9 +218,17 @@ class LOSRateGuidance:
             dict: Command dictionary with keys 'nz_cmd', 'roll_rate_cmd',
                 'throttle_cmd'. All values are finite and clipped to limits.
         """
-        # Log once that target_state is unused (helps during debugging)
-        if target_state is not None and not self._warned_target_state_unused:
-            logger.debug("target_state is provided but unused by LOSRateGuidance")
+        # Log once that target_state is not used for lateral guidance in the
+        # canonical interface. Speed reference extraction may still use it.
+        if (
+            target_state is not None
+            and not self.target_state_direct_enabled
+            and not self._warned_target_state_unused
+        ):
+            logger.debug(
+                "target_state is provided but not used for direct lateral "
+                "guidance by LOSRateGuidance"
+            )
             self._warned_target_state_unused = True
 
         # Resolve gains
@@ -211,6 +241,7 @@ class LOSRateGuidance:
         own_pos = _extract_position(own_state)
         vp_pos = _extract_position(virtual_point)
         own_vel = _extract_velocity(own_state)
+        vp_pos = self._apply_target_state_direct(vp_pos, target_state, own_pos, own_vel)
 
         # ------------------------------------------------------------------
         # Relative geometry with safe epsilon
@@ -409,6 +440,53 @@ class LOSRateGuidance:
             return 0.0
         arg = (distance - self.tbl_R_dead_m / 2.0) / self.tbl_blend_scale
         return float(0.5 * (1.0 + np.tanh(arg)))
+
+    def _apply_target_state_direct(
+        self,
+        vp_pos: np.ndarray,
+        target_state: Optional[Dict[str, Any]],
+        own_pos: np.ndarray,
+        own_vel: np.ndarray,
+    ) -> np.ndarray:
+        """
+        Optional direct target-state guidance ablation.
+
+        The canonical VPP interface guides only to ``vp_pos``.  When this
+        ablation is enabled, the low-level law directly constructs a lead point
+        from target position and velocity, then blends it with the VPP.  This
+        tests whether target maneuver information helps only through virtual
+        point placement or also through the low-level guidance command.
+        """
+        if not self.target_state_direct_enabled or target_state is None:
+            return vp_pos
+
+        try:
+            target_pos = _extract_position(target_state)
+            target_vel = _extract_velocity(target_state)
+        except (TypeError, ValueError):
+            return vp_pos
+
+        lead_time = self.target_state_direct_lead_time_s
+        if self.target_state_direct_auto_lead:
+            rel_pos = target_pos - own_pos
+            distance = float(np.linalg.norm(rel_pos))
+            if distance > self.epsilon:
+                rel_unit = rel_pos / distance
+                rel_vel = target_vel - own_vel
+                closing_speed = -float(np.dot(rel_vel, rel_unit))
+                if closing_speed > self.epsilon:
+                    lead_time = distance / closing_speed
+
+        lead_time = float(
+            np.clip(
+                lead_time,
+                self.target_state_direct_min_lead_s,
+                self.target_state_direct_max_lead_s,
+            )
+        )
+        direct_point = target_pos + target_vel * lead_time
+        blend = self.target_state_direct_blend
+        return (1.0 - blend) * vp_pos + blend * direct_point
 
     def _compute_nz_cmd(
         self,

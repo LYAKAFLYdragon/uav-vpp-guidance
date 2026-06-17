@@ -1,18 +1,18 @@
 \begin{table}[t]
 \centering
-\caption{Architecture comparison on canonical geometries (per-seed success rates).}
+\caption{Architecture comparison on the simple backend (validation logs).}
 \label{tab:architecture_comparison_exact}
-\begin{tabular}{lcccc}
+\begin{tabular}{lccc}
 \toprule
-Method & Overall & Favorable & Neutral & Disadvantage \\
+Method & Seeds & Overall SR (\%) & 95\% CI (pp) \\
 \midrule
-No-VPP (zero offset) & $73.3 \pm 0.0\%$ & $70.0 \pm 0.0\%$ & $80.0 \pm 0.0\%$ & $70.0 \pm 0.0\%$ \\
-VPP + LOS-rate & $70.0 \pm 0.0\%$ & $60.0 \pm 0.0\%$ & $80.0 \pm 0.0\%$ & $70.0 \pm 0.0\%$ \\
+VPP & 5 & 70.0 & $\pm$ 0.0 \\
+No-VPP & 5 & 73.3 & $\pm$ 0.0 \\
+E2E & 2 & 18.3 & $\pm$ 35.9 \\
 \bottomrule
 \end{tabular}
 \begin{tablenotes}
 \small
-\item Exact canonical geometries. Per-seed success rates are reported transparently; if all seeds share the same value, the environment/evaluation was deterministic for this condition.
-\item Statistical tests: Welch's $t$-test on per-seed success rates; McNemar exact test on paired episodes; Mann-Whitney $U$ on episode returns.
+\item VPP and No-VPP use five validation seeds at 200~k PPO steps. E2E uses the aligned 200~k validation run with two seeds.
 \end{tablenotes}
 \end{table}

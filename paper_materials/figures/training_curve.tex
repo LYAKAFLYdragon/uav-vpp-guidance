@@ -1,1 +1,6 @@
-\includegraphics[width=0.85\columnwidth]{figures/training_curve.png}
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.9\columnwidth]{./figures/training_curve.pdf}
+\caption{PPO training curves. Lines show mean binned episode return; shaded regions show \(\pm\) one standard deviation across available seeds. VPP and No-VPP converge within $20$k steps and are continued at the converged mean through $200$k steps (shaded region); E2E uses the two available $200$k-step seeds and remains unstable.}
+\label{fig:training_curve}
+\end{figure}

@@ -248,3 +248,62 @@ class ProportionalNavigationGuidance:
             alpha * raw_rate + (1.0 - alpha) * self._filtered_los_rate
         )
         return self._filtered_los_rate
+
+
+class AugmentedProportionalNavigationGuidance(ProportionalNavigationGuidance):
+    """
+    Augmented PN baseline.
+
+    Adds a configurable target-acceleration feed-forward term to the PN
+    acceleration command. If the target state does not expose acceleration,
+    the method falls back to standard PN while preserving the APN configuration
+    path for fair-comparison bookkeeping.
+    """
+
+    def __init__(self, config: Optional[Dict[str, Any]] = None):
+        super().__init__(config)
+        params = (config or {}).get("params", {})
+        self.target_accel_gain = float(params.get("target_accel_gain", 0.5))
+        self.mode = "augmented_proportional_navigation"
+
+    def compute_command(
+        self,
+        own_state: Dict[str, Any],
+        target_state: Optional[Dict[str, Any]],
+        virtual_point: Dict[str, Any],
+        gains: Optional[Any] = None,
+    ) -> Dict[str, float]:
+        command = super().compute_command(own_state, target_state, virtual_point, gains)
+        target_accel = self._extract_target_acceleration(target_state)
+        if target_accel is None:
+            return command
+
+        gravity = 9.80665
+        accel_vertical = float(target_accel[2])
+        accel_horizontal = float(np.linalg.norm([target_accel[0], target_accel[1]]))
+        command["nz_cmd"] = float(
+            command["nz_cmd"] + self.target_accel_gain * accel_vertical / gravity
+        )
+        # Horizontal target acceleration is represented as additional turn demand.
+        command["roll_rate_cmd"] = float(
+            command["roll_rate_cmd"]
+            + self.target_accel_gain * np.clip(accel_horizontal / 100.0, -0.5, 0.5)
+        )
+        return command
+
+    @staticmethod
+    def _extract_target_acceleration(
+        target_state: Optional[Dict[str, Any]]
+    ) -> Optional[np.ndarray]:
+        if target_state is None:
+            return None
+        for key in (
+            "acceleration_mps2",
+            "acceleration_vector_mps2",
+            "acceleration",
+        ):
+            if key in target_state and target_state[key] is not None:
+                arr = np.asarray(target_state[key], dtype=np.float64)
+                if arr.shape == (3,):
+                    return arr
+        return None

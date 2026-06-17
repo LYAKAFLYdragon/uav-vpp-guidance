@@ -23,7 +23,10 @@ from .termination import TerminationChecker
 from ..virtual_point.generator import VirtualPointGenerator
 from ..virtual_point.no_vpp_guidance import NoVPPGuidance
 from ..guidance.los_rate_guidance import LOSRateGuidance, _extract_position as _extract_position_for_vp_error
-from ..guidance.proportional_navigation import ProportionalNavigationGuidance
+from ..guidance.proportional_navigation import (
+    AugmentedProportionalNavigationGuidance,
+    ProportionalNavigationGuidance,
+)
 from ..guidance.hybrid_guidance import HybridGuidance
 from ..guidance.overload_rollrate import CommandPostProcessor
 from ..guidance.gain_config import GuidanceGains
@@ -165,6 +168,8 @@ class CloseRangeTrackingEnv:
             self.guidance = LOSRateGuidance(guidance_config)
         elif guidance_mode == "proportional_navigation":
             self.guidance = ProportionalNavigationGuidance(guidance_config)
+        elif guidance_mode in ("augmented_proportional_navigation", "apn", "apn1971"):
+            self.guidance = AugmentedProportionalNavigationGuidance(guidance_config)
         elif guidance_mode == "hybrid":
             self.guidance = HybridGuidance(guidance_config)
         else:

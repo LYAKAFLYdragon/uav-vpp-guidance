@@ -27,7 +27,7 @@ Difference     & +0.42\% & --- & --- \\
 \end{tabular}
 \end{table}
 
-The overall difference is small and not statistically significant (Fisher exact test, $p = 0.669$). This is consistent with the analytical intuition captured by Proposition~2: when the learned offset is small and the guidance gains are fixed to their default values, the VPP+LOS-rate law degenerates to classical proportional navigation.
+The overall difference is small and not statistically significant (Fisher exact test, $p = 0.669$). This is consistent with the physical intuition that, when the learned offset is small and the guidance gains are fixed to their default values, the VPP+LOS-rate law behaves similarly to classical proportional navigation.
 
 \subsubsection{Sub-region analysis}
 
@@ -51,11 +51,11 @@ High ATA + close/mid range & 72 & 83.33\% & 80.56\% & +2.78\% & 0.1930 \\
 
 No sub-region reaches statistical significance at $\alpha = 0.05$. The largest nominal advantage ($+2.78\%$) occurs in high-aspect, close-to-medium-range engagements, but the sample is too small to claim significance.
 
-\subsubsection{Theoretical interpretation}
+\subsubsection{Physical interpretation}
 
-The near-equivalence of VPP+LOS and PN direct in this study does \emph{not} imply that the VPP layer is unnecessary. Rather, it confirms the \emph{degeneration property} described by Proposition~2: under fixed, default parameters the hierarchical law behaves like PN. The adaptive value of VPP arises only when the high-level policy is trained to choose context-dependent virtual-point offsets---lead pursuit in high-aspect engagements to avoid collision singularities, lag pursuit at high speed ratios to prevent overrun, and terminal blending near the minimum stand-off distance.
+The near-equivalence of VPP+LOS and PN direct in this study does \emph{not} imply that the VPP layer is unnecessary. Rather, it shows that under fixed, default parameters the hierarchical law can behave similarly to PN. The adaptive value of VPP arises only when the high-level policy is trained to choose context-dependent virtual-point offsets---lead pursuit in high-aspect engagements to avoid collision singularities, lag pursuit at high speed ratios to prevent overrun, and terminal blending near the minimum stand-off distance.
 
-Because the capture-region grid freezes the policy and the gains, it measures the \emph{baseline kinematic capability} of the guidance law, not its \emph{learned adaptive capability}. The result therefore supports the paper's central claim: VPP is best understood as a \emph{learnable augmentation} of PN, not a replacement that is universally superior without learning.
+Because the capture-region grid freezes the policy and the gains, it measures the \emph{baseline kinematic capability} of the guidance law, not its \emph{learned adaptive capability}. The result therefore supports the interface-audit framing: VPP should be treated as a learnable augmentation of PN-like guidance, not as a replacement that is universally superior without additional evidence.
 
 \subsubsection{Limitations}
 

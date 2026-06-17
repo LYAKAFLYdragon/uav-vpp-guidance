@@ -42,3 +42,5 @@ logs/
 # data/jsbsim/
 # If you want to include JSBSim data in git, remove the line above.
 # Recommended: include essential models (f16) in git, ignore large ones.
+paper.log
+.claude/

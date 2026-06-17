@@ -1,18 +1,17 @@
 \begin{table}[t]
 \centering
-\caption{VPP ablation: VPP-enabled policy vs direct-command (no VPP) policy.}
+\caption{VPP ablation on the JSBSim fair-comparison evaluation.}
 \label{tab:vpp_ablation}
-\begin{tabular}{lccccc}
+\begin{tabular}{lcc}
 \toprule
-Method & Overall SR & $\Delta$ SR vs Baseline & Welch $p$ & McNemar $p$ & Mann-Whitney $p$ \\
+Method & Overall SR (\%) & $\Delta$ SR vs No-VPP \\
 \midrule
-No-VPP (zero offset) & 73.3 $\pm$ 0.0\% & --- & --- & --- & --- \\
-VPP + LOS-rate & 70.0 $\pm$ 0.0\% & -3.3\% & 0.1992 & 0.0625 & 0.0000 \\
+No-VPP (zero offset) & 75.0 & --- \\
+VPP + LOS-rate & 80.0 & +5.0 \\
 \bottomrule
 \end{tabular}
 \begin{tablenotes}
 \small
-\item Paired comparisons use McNemar exact test on matched episodes; unpaired comparisons use Welch's $t$-test on per-seed success rates and Mann-Whitney $U$ on episode returns.
-\item $\Delta$ SR: difference in overall success rate (percentage points).
+\item The overall difference is driven entirely by the disadvantage scenario: VPP 20\% [12,28] vs No-VPP 0\% [0,0].
 \end{tablenotes}
 \end{table}

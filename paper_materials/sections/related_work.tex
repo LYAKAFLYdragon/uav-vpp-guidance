@@ -1,33 +1,39 @@
-\section{Related Work}\label{sec:related_work}
+\section{Related work}\label{sec:related_work}
 
-\subsection{Classical Guidance Laws}
+\subsection{Classical guidance laws}
 
-Proportional navigation (PN) and its augmented variants have been the workhorse of missile and UAV guidance for decades~\cite{pn}. PN generates lateral acceleration proportional to the line-of-sight (LOS) rate and is analytically optimal against non-maneuvering targets under idealized assumptions. Augmented proportional navigation (APN) and differential-game (DG) guidance extend PN to maneuvering targets by accounting for target acceleration or by solving a two-player pursuit-evasion game~\cite{apn1971,shima2002}. These methods provide strong analytical guarantees but rely on accurate kinematic models and can degrade when engagement geometries are highly nonlinear or when actuator delays and saturation are significant.
+PN remains a reference point for pursuit and interception because it links commanded acceleration to line-of-sight rate through a small number of interpretable parameters~\cite{pn,zarchan2012}. APN extends this idea by incorporating target acceleration information, and differential-game guidance frames interception as a bounded-control pursuit-evasion problem~\cite{apn1971,shima2002}. These methods are attractive baselines for the present paper because they use no learned VPP interface and therefore test whether the observed failures are caused by the physics of the geometry or by the learned waypoint abstraction. The current repository already contains evidence that pure PN without VPP can recover success in selected high-energy tail-chase candidates; this is why the final experiment matrix includes pure pursuit, pure PN, and APN as required external baselines.
 
-\subsection{Data-Driven Guidance}
+\subsection{Air-combat reinforcement learning}
 
-Deep reinforcement learning has been applied to aerial combat, autonomous racing, and pursuit-evasion tasks with remarkable success in simulation~\cite{ernest2019,mn2019}. End-to-end policies map raw sensor observations directly to actuator commands, bypassing the need for hand-crafted guidance laws. However, this flexibility comes at the cost of sample efficiency and interpretability. End-to-end policies often require millions of environment steps and can learn brittle behaviors that fail under distribution shift~\cite{mn2019}. In safety-critical guidance, the inability to guarantee stability or interpret failure modes limits their deployability.
+Modern DRL control builds on value-based and policy-gradient methods for high-dimensional sequential decision making~\cite{sutton2018book,mnih2015dqn,lillicrap2015ddpg,ppo}. In air-combat settings, DRL has been used for short-range maneuver decision making, UCAV dogfight policies, beyond-visual-range maneuver planning, and multi-agent control~\cite{ernest2016,mn2019,hu2021bvr,li2022msddqn,hu2022dual,fan2022a3c,liu2022mappo,zhu2024dt,chen2025dogfight}. These studies show that learning-based controllers can handle complex simulated engagements, but comparisons are often difficult to audit because training budgets, action interfaces, simulator fidelity, and initial geometries change together. End-to-end policies are particularly useful as stress tests: if an end-to-end controller with the same observation space and network scale can solve a geometry that VPP cannot, then the failure should not be attributed to physical infeasibility.
 
-\subsection{Hybrid and Hierarchical Methods}
+\subsection{Hierarchical RL and interface design}
 
-A growing body of work seeks to combine the analytical structure of classical guidance with the adaptability of learning~\cite{hrl2003,mpn2022}. Virtual pursuit point (VPP) methods place an intermediate target point that a classical guidance law tracks, allowing a high-level policy to modulate engagement geometry without learning low-level dynamics from scratch~\cite{mpn2022}. Mixed proportional navigation (MPN) similarly blends analytical and learned components. These hybrid approaches have shown promise, but most prior work treats the learned component as an incremental improvement over a fixed guidance law rather than rigorously identifying which architectural choice is the dominant driver of performance.
+The VPP architecture follows the broader idea that temporally or structurally abstract actions can reduce the burden on a low-level controller. Classical hierarchical RL formalizes this principle through options and semi-Markov decision processes~\cite{sutton1999options,barto2003hrl,bacon2017option}; h-DQN similarly separates high-level goals from lower-level control~\cite{kulkarni2016hdqn}. In this paper the abstraction is geometric rather than symbolic: the high-level policy chooses a virtual point, and the LOS-rate law converts that point into aircraft commands. This distinction matters because the low-level law currently receives target information mainly through the virtual point. The interface ablation introduced in this revision tests whether directly feeding target state into the guidance law changes the failure pattern.
 
-\subsection{Comparison with This Work}
+\subsection{Experimental practice in deep RL}
 
-Table~\ref{tab:related_work_comparison} situates our approach relative to representative prior methods. Unlike pure PN or APN, our framework uses a learned VPP generator to adapt to geometry. Unlike end-to-end DRL, it preserves the LOS-rate guidance law, reducing sample complexity and improving interpretability. Unlike prior VPP methods, we provide a theoretical framework and controlled experiments that identify guidance-law gain optimization as the dominant performance driver and show that the learned VPP offset is optional in the tested regime.
+Deep-RL results are sensitive to random seeds, implementation details, and evaluation protocol~\cite{henderson2018deep,patterson2023empirical}. For that reason, this paper reports success rate, crash rate, timeout rate, mean return, standard deviation, confidence intervals, effect sizes, and exact tests where the data support them. Results that use fewer seeds, different backends, or historical checkpoints are treated as exploratory. This policy is stricter than a single best-seed comparison and is necessary for a paper whose main contribution is an auditable comparison protocol.
+
+\subsection{Position of this work}
+
+Table~\ref{tab:related_work_comparison} summarizes the comparison dimensions. Relative to PN/APN, the VPP layer adds a learned geometric interface but removes some direct access to target dynamics unless explicitly reintroduced. Relative to tactical pursuit-point work, this paper emphasizes protocol control and failure attribution rather than a new decision rule. Relative to end-to-end DRL, the paper tests whether retaining a guidance-law layer improves stability under the same observation and simulator conditions. The contribution is therefore a fair-comparison and interface-diagnosis study, not a claim that VPP supersedes all classical or learned controllers.
 
 \begin{table}[t]
 \centering
-\caption{Comparison of guidance approaches.}
+\caption{Comparison dimensions for guidance approaches.}
 \label{tab:related_work_comparison}
-\begin{tabular}{lccc}
+\small
+\begin{tabular}{p{2.0cm}p{1.5cm}p{1.6cm}p{1.9cm}}
 \toprule
-Approach & Analytical guarantee & Sample efficiency & Adaptive geometry \\
+Approach & Learning & Low-level law & Interface tested here \\
 \midrule
-PN / APN           & $\checkmark$ High & $\checkmark$ High (no learning) & $\times$ Fixed structure \\
-End-to-end DRL     & $\times$ None & $\times$ Low & $\checkmark$ High \\
-VPP + classical    & $\circ$ Partial & $\circ$ Medium & $\checkmark$ Medium \\
-\textbf{VPP + LOS-rate + CEM-EMA (ours)} & $\circ$ Partial & \textbf{$\checkmark$ High} & \textbf{$\checkmark$ High} \\
+Pure pursuit & No & Direct target tracking & External baseline \\
+PN / APN & No & LOS-rate / acceleration law & External baseline \\
+End-to-end DRL & Yes & Learned commands & Strong RL baseline \\
+Tactical pursuit point & Yes or rule-based & Pursuit-point geometry & Literature comparator \\
+VPP + LOS-rate & Yes & Classical command law & Main interface under audit \\
 \bottomrule
 \end{tabular}
 \end{table}

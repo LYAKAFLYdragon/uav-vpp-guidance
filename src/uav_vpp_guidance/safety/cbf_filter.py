@@ -14,7 +14,7 @@ from typing import Any, Dict, Optional, Tuple
 
 import numpy as np
 
-from .jacobian_estimator import PointMassJacobianEstimator
+from .jacobian_estimator import PointMassJacobianEstimator, JSBSimFiniteDifferenceJacobianEstimator
 
 from scipy.optimize import minimize
 
@@ -54,6 +54,7 @@ class CBFQPFilter:
         estimate_target_accel: bool = True,
         dt: Optional[float] = None,
         constraint_tol: float = 1e-6,
+        flight_envelope_clip: bool = False,
     ) -> None:
         """
         Args:
@@ -88,7 +89,8 @@ class CBFQPFilter:
         self.dt = dt
         self.constraint_tol = float(constraint_tol)
 
-        self._jacobian_estimator = jacobian_estimator or PointMassJacobianEstimator()
+        self._jacobian_estimator = self._resolve_jacobian_estimator(jacobian_estimator)
+        self._flight_envelope_clip = FlightEnvelopeClip() if flight_envelope_clip else None
 
         # Stateful target-velocity buffer for finite-difference acceleration.
         self._prev_target_velocity: Optional[np.ndarray] = None
@@ -189,6 +191,15 @@ class CBFQPFilter:
 
         # Solve QP (or fallback).
         action_filtered, solve_info = self._solve_qp(action_rl, A, b)
+
+        # Optional flight-envelope clip to keep the filtered command physically
+        # realizable.  This weakens the CBF certificate but prevents the F-16
+        # from receiving infeasible actuator demands due to model mismatch.
+        if self._flight_envelope_clip is not None:
+            action_filtered = self._flight_envelope_clip.clip(
+                action_rl, action_filtered, env, pos_o, vel_o, pos_t, vel_t
+            )
+
         info.update(solve_info)
 
         h_ddot_filtered = float(A @ action_filtered - np.dot(r_hat, a_t) + curvature)
@@ -229,10 +240,25 @@ class CBFQPFilter:
         pos_t, vel_t = _get(target, "position", "velocity")
         return pos_o, vel_o, pos_t, vel_t
 
+    def _resolve_jacobian_estimator(self, estimator: Optional[Any]) -> Any:
+        """Resolve a string alias or a callable into a Jacobian estimator."""
+        if estimator is None:
+            return PointMassJacobianEstimator()
+        if callable(estimator):
+            return estimator
+        if isinstance(estimator, str):
+            estimator = estimator.lower().replace("-", "_")
+            if estimator in ("point_mass", "pointmass"):
+                return PointMassJacobianEstimator()
+            if estimator in ("jsbsim", "jsbsim_finite_difference", "jsbsim_fd"):
+                return JSBSimFiniteDifferenceJacobianEstimator()
+            raise ValueError(f"Unknown jacobian_estimator alias: {estimator}")
+        return estimator
+
     def _estimate_jacobian(
         self, env: Any, state: Dict[str, Any], base_action: np.ndarray
     ) -> np.ndarray:
-        """Estimate K = ∂v_o / ∂a using the configured estimator."""
+        """Estimate K = ∂a_o / ∂a using the configured estimator."""
         dt = self._get_dt(env)
         K = self._jacobian_estimator(env, state, base_action, self.eps_jacobian, dt)
         return np.asarray(K, dtype=np.float64).reshape(3, 3)
@@ -504,3 +530,104 @@ class CBFQPFilter:
         alpha = max(0.0, deficit / norm_sq)
         action = action_rl + alpha * A
         return np.clip(action, -1.0, 1.0)
+
+
+class FlightEnvelopeClip:
+    """
+    Post-process a CBF-filtered action so that the resulting LOS guidance
+    command lies inside the aircraft's physical limits.
+
+    The VPP -> LOS command mapping can produce demands that exceed the F-16
+    envelope (e.g. very large load factor or roll rate) when the QP safety
+    filter over-corrects.  This clipper finds, by bisection on the line between
+    the original RL action and the filtered action, the most aggressive action
+    whose raw guidance command is still within the configured limits.  It is a
+    pragmatic fix for model mismatch; it does not preserve the CBF certificate.
+    """
+
+    def __init__(self, max_iter: int = 10) -> None:
+        self.max_iter = max(max_iter, 2)
+
+    def clip(
+        self,
+        action_rl: np.ndarray,
+        action_filtered: np.ndarray,
+        env: Any,
+        own_pos: np.ndarray,
+        own_vel: np.ndarray,
+        target_pos: np.ndarray,
+        target_vel: np.ndarray,
+    ) -> np.ndarray:
+        """Return an action between ``action_rl`` and ``action_filtered`` that
+        produces a physically admissible guidance command.
+
+        If the filtered action is already admissible it is returned unchanged.
+        If even the original RL action is inadmissible, the RL action is
+        returned (the problem is upstream of the CBF).
+        """
+        own_state = {
+            "position_m": own_pos,
+            "velocity_vector_mps": own_vel,
+        }
+        target_state = {
+            "position_m": target_pos,
+            "velocity_vector_mps": target_vel,
+        }
+
+        if self._command_is_safe(env, own_state, target_state, action_filtered):
+            return np.asarray(action_filtered, dtype=np.float64).copy()
+
+        action_rl = np.asarray(action_rl, dtype=np.float64).reshape(3)
+        if self._command_is_safe(env, own_state, target_state, action_rl):
+            low = 0.0
+        else:
+            # The baseline command is already out of bounds; do not make it worse.
+            return action_rl.copy()
+
+        # action(alpha) = action_rl + alpha * (action_filtered - action_rl)
+        delta = np.asarray(action_filtered, dtype=np.float64).reshape(3) - action_rl
+        high = 1.0
+        best_alpha = low
+        for _ in range(self.max_iter):
+            alpha = 0.5 * (low + high)
+            action_candidate = action_rl + alpha * delta
+            if self._command_is_safe(env, own_state, target_state, action_candidate):
+                low = alpha
+                best_alpha = alpha
+            else:
+                high = alpha
+
+        return action_rl + best_alpha * delta
+
+    def _command_is_safe(
+        self,
+        env: Any,
+        own_state: Dict[str, Any],
+        target_state: Dict[str, Any],
+        action: np.ndarray,
+    ) -> bool:
+        """Check whether the raw guidance command for ``action`` is in bounds."""
+        from .jacobian_estimator import PointMassJacobianEstimator
+
+        raw_cmd = PointMassJacobianEstimator._compute_raw_guidance_command(
+            env, own_state, target_state, action
+        )
+        cfg = env.config if hasattr(env, "config") else {}
+        limits = cfg.get("limits", {}) if hasattr(cfg, "get") else {}
+
+        nz = float(raw_cmd.get("nz_cmd", raw_cmd.get("nz", 0.0)))
+        rr = float(raw_cmd.get("roll_rate_cmd", raw_cmd.get("roll_rate", 0.0)))
+        th = float(raw_cmd.get("throttle_cmd", raw_cmd.get("throttle", 0.0)))
+
+        nz_min = float(limits.get("nz_min", -2.0))
+        nz_max = float(limits.get("nz_max", 7.0))
+        rr_min = float(limits.get("roll_rate_min", -1.5))
+        rr_max = float(limits.get("roll_rate_max", 1.5))
+        th_min = float(limits.get("throttle_min", 0.0))
+        th_max = float(limits.get("throttle_max", 1.0))
+
+        return (
+            nz_min - 1e-9 <= nz <= nz_max + 1e-9
+            and rr_min - 1e-9 <= rr <= rr_max + 1e-9
+            and th_min - 1e-9 <= th <= th_max + 1e-9
+        )

@@ -1,0 +1,116 @@
+# Adversarial Target Agent Training Configuration v2
+# Phase 1: Train target (evader) against a frozen pre-trained pursuer.
+#
+# Goal: avoid the "over-escape" behavior of v1 (straight-line flying away).
+# Key changes vs v1:
+#   - Reduced w_range / w_escaping so distance alone is not the dominant signal.
+#   - Increased w_energy so the target keeps speed for actual maneuvers.
+#   - Added w_maneuver to reward turning / jinking (yaw rate).
+#   - Added w_proximity to keep the target inside the combat arena.
+#   - Stronger terminal penalty for capture, stronger terminal reward for timeout.
+#
+# Usage:
+#   python scripts/train_adversarial_target.py --config config/adversarial/train_target_v2.yaml
+
+includes:
+  - ../env.yaml
+  - ../ppo.yaml
+  - ../guidance.yaml
+  - ../reward.yaml
+
+experiment:
+  name: adversarial_target_training_v2
+  seed: 42
+
+# Training budget
+training:
+  total_timesteps: 500000
+  eval_interval: 10000
+  save_interval: 50000
+  smoke_timesteps: 5000
+
+# Target PPO hyperparameters
+target_ppo:
+  learning_rate: 3.0e-4
+  gamma: 0.99
+  gae_lambda: 0.95
+  clip_coef: 0.2
+  entropy_coef: 1.0e-3
+  rollout_steps: 1024
+  minibatch_size: 256
+  update_epochs: 10
+  value_coef: 0.5
+  max_grad_norm: 0.5
+  normalize_advantage: true
+  device: cpu
+  total_timesteps: 500000
+
+# Target policy network
+target_policy:
+  hidden_sizes: [128, 128]
+  activation: tanh
+  action_low: [-1.0, -1.0, -1.0]
+  action_high: [1.0, 1.0, 1.0]
+
+# Target reward weights v2 (escape-oriented but engagement-aware)
+target_reward:
+  w_survival: 0.01          # Per-step survival bonus (unchanged)
+  w_escaping: 0.05          # Reduced vs v1 (0.1): avoid over-emphasizing running away
+  w_energy: 0.1             # Increased vs v1 (0.05): reward keeping energy for maneuvers
+  w_range: 0.2              # Reduced vs v1 (0.5): do not reward straight-line distance
+  w_maneuver: 0.1           # NEW: reward turning / jinking (yaw rate)
+  w_proximity: 0.05         # NEW: penalty when range exceeds arena threshold
+  proximity_range_m: 6400.0 # ~80% of default max_range_m (8000 m)
+  maneuver_ref_rate: 0.3    # Reference yaw rate for maneuver reward (~17 deg/s)
+  terminal_captured: -500.0 # Stronger penalty for being captured
+  terminal_crash: -300.0    # Unchanged
+  terminal_oob: -100.0      # Reduced vs v1 (-200): strategic escape is acceptable
+  terminal_timeout: 100.0   # Increased vs v1 (50): big reward for surviving the episode
+
+# Physical limits
+limits:
+  nz_min: -2.0
+  nz_max: 7.0
+  roll_rate_min: -1.5
+  roll_rate_max: 1.5
+  throttle_min: 0.0
+  throttle_max: 1.0
+
+# Environment settings
+env:
+  backend: jsbsim
+  use_jsbsim: true
+  sim_freq: 60
+  decision_freq: 5
+  max_high_level_steps: 512
+  high_level_dt: 0.2
+  aircraft_model: f16
+
+# Termination criteria
+termination:
+  success_range_m: 900.0
+  success_ata_deg: 25.0
+  success_hold_time_s: 0.2
+  hysteresis_range_m: 950.0
+  hysteresis_ata_deg: 30.0
+  min_altitude_m: 500.0
+  max_altitude_m: 15000.0
+  max_range_m: 8000.0
+
+# Scenario sampler for initial conditions
+scenario_sampler:
+  enabled: true
+  source: registry_set
+  set: smoke_test
+  seed: 42
+
+# Path to pre-trained pursuer checkpoint
+pursuer_checkpoint: "outputs/experiments/no_prediction_vpp_ppo_seed0/checkpoints/best.pt"
+
+# Output directory
+output_dir: "outputs/adversarial/training/target_agent_ppo_v2"
+
+# Reward debug logging (Task B deliverable)
+adversarial_debug:
+  log_rewards: true
+  reward_log_path: "outputs/adversarial/debug/reward_terms.csv"

@@ -158,7 +158,7 @@ def run_adversarial_episode(
         "final_ata_deg": float(final_ata),
         "reason": reason,
         "captured": reason == "success",
-        "survived": reason == "timeout",
+        "survived": reason in ("timeout", "out_of_bounds"),
     }
 
 

@@ -1,0 +1,110 @@
+# Stage 3 v2: hard maneuver-library opponent + strict success criteria.
+# This is the standalone final-stage config used by the curriculum v2 design.
+includes:
+  - ../env_bandit.yaml
+  - ../ppo.yaml
+  - ../reward.yaml
+  - ../success_criteria/strict.yaml
+
+experiment:
+  name: close_range_curriculum_stage3_v2
+  seed: 0
+  mode: train
+  output_root: outputs
+
+env:
+  backend: jsbsim
+  use_jsbsim: true
+  max_high_level_steps: 100
+
+  # Hard opponent: maneuver-library expert with full maneuver set.
+  bandit:
+    controller_type: maneuver_library
+    difficulty: hard
+    fallback_maneuver: straight_level
+    selector:
+      reaction_time_s: 1.5
+      selector_noise: 0.25
+      min_altitude_m: 1500.0
+      min_speed_mps: 120.0
+      history_window: 3
+      history_switch_prob: 0.6
+      param_perturb_scale: 0.25
+      emergency_range_m: 1000.0
+      emergency_closure_mps: 80.0
+      allowed_maneuvers:
+        - straight_level
+        - coordinated_turn
+        - barrel_roll
+        - dive
+        - loop
+        - high_yoyo
+        - low_yoyo
+        - scissors
+        - split_s
+        - immelmann
+        - break_turn
+        - displacement_roll
+        - vertical_scissors
+        - defensive_spiral
+        - extension
+        - jink
+      situation:
+        max_weapon_range_m: 8000.0
+        min_weapon_range_m: 500.0
+        tail_angle_thresh_deg: 30.0
+
+  # Override the included strict criteria with the v2 tighter thresholds.
+  success_range_m: 600.0
+  success_ata_deg: 15.0
+  success_hold_time_s: 1.0
+  hysteresis_range_m: 650.0
+  hysteresis_ata_deg: 18.0
+
+domain_randomization:
+  scale: 1.0
+  position_noise_fraction: 0.10
+  velocity_noise_fraction: 0.10
+  heading_noise_deg: 15.0
+
+scenarios:
+  favorable:
+    name: favorable
+    own_init:
+      position_m: [0.0, 0.0, 5000.0]
+      velocity_mps: 250.0
+      heading_deg: 0.0
+    target_init:
+      position_m: [2000.0, 0.0, 5000.0]
+      velocity_mps: 250.0
+      heading_deg: 0.0
+  head_on:
+    name: head_on
+    own_init:
+      position_m: [0.0, 0.0, 5000.0]
+      velocity_mps: 250.0
+      heading_deg: 0.0
+    target_init:
+      position_m: [2000.0, 0.0, 5000.0]
+      velocity_mps: 250.0
+      heading_deg: 180.0
+  challenging:
+    name: challenging
+    own_init:
+      position_m: [0.0, 0.0, 5000.0]
+      velocity_mps: 250.0
+      heading_deg: 180.0
+    target_init:
+      position_m: [2000.0, 0.0, 5000.0]
+      velocity_mps: 250.0
+      heading_deg: 0.0
+  neutral:
+    name: neutral
+    own_init:
+      position_m: [0.0, 0.0, 5000.0]
+      velocity_mps: 250.0
+      heading_deg: 180.0
+    target_init:
+      position_m: [2000.0, 0.0, 5000.0]
+      velocity_mps: 250.0
+      heading_deg: 180.0

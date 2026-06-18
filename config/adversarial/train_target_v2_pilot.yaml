@@ -1,0 +1,35 @@
+# Pilot variant of adversarial target training config.
+# Reduced budget + reward tuning to improve target survivability and avoid
+# JSBSim crashes from over-aggressive maneuvering.
+includes:
+  - train_target_v2.yaml
+
+# Reduced budget for a single-seed pilot (full budget is 500 K).
+training:
+  total_timesteps: 200000
+  eval_interval: 10000
+  save_interval: 50000
+
+# Target reward tuning: de-emphasize raw maneuver rate (which can drive the
+# aircraft into non-finite / crashed states) and strengthen survival/energy.
+target_reward:
+  w_survival: 0.01
+  w_escaping: 0.05
+  w_energy: 0.2            # increased: keep energy/speed to avoid stalls
+  w_range: 0.1             # reduced: do not reward running away too far
+  w_maneuver: 0.02         # reduced: aggressive turning causes crashes
+  w_proximity: 0.05
+  proximity_range_m: 6400.0
+  maneuver_ref_rate: 0.3
+  terminal_captured: -500.0
+  terminal_crash: -500.0   # increased penalty to discourage crashing
+  terminal_oob: -100.0
+  terminal_timeout: 150.0  # increased reward for surviving the episode
+
+# Output directory for the pilot run.
+output_dir: "outputs/adversarial_curriculum_pilot/target_pilot"
+
+# Reward debug logging (Task B deliverable)
+adversarial_debug:
+  log_rewards: true
+  reward_log_path: "outputs/adversarial/debug/reward_terms_pilot.csv"

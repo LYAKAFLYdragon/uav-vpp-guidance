@@ -8,9 +8,9 @@ This project implements **Virtual Pursuit Point (VPP) guidance with trajectory p
 
 ```
 ┌──────────────┐     ┌──────────────────────┐     ┌──────────────────────┐
-│   Policy     │────▶│ Virtual Point        │────▶│ LOS Rate Guidance    │
-│  (PPO)       │     │ Generator            │     │ (Nz/roll_rate/throt) │
-└──────────────┘     └──────────────────────┘     └──────────────────────┘
+│   Policy     │────▶│ CBF QP Filter        │────▶│ Virtual Point        │────▶│ LOS Rate Guidance    │
+│  (PPO)       │     │ (safety layer)       │     │ Generator            │     │ (Nz/roll_rate/throt) │
+└──────────────┘     └──────────────────────┘     └──────────────────────┘     └──────────────────────┘
                                                            │
                            ┌───────────────────────────────┘
                            ▼
@@ -43,6 +43,7 @@ This project implements **Virtual Pursuit Point (VPP) guidance with trajectory p
 - **[`no_prediction_vpp_ppo_training.md`](./no_prediction_vpp_ppo_training.md)**: No-Prediction VPP PPO 自主决策基线。包含策略网络结构、PPO 训练流程、评估命令、训练输出说明。
 - **[`classical_prediction_vpp_integration.md`](./classical_prediction_vpp_integration.md)**: Stage 6A 经典 CV/CA 预测器接入。包含 CV/CA 公式、predicted_target 锚点数据流、P1 修复说明、训练/评估命令、当前局限性。
 - **[`stage6b_prediction_comparison_experiment.md`](./stage6b_prediction_comparison_experiment.md)**: Stage 6B 完整实验流程。包含多种子训练、固定/随机场景评估、per-method checkpoint 加载、per-scenario 对比绘图、JSBSim sanity check、远程执行 checklist。
+- **[`cbf_implementation_design.md`](./cbf_implementation_design.md)**: Control Barrier Function (CBF) QP 安全过滤的设计与验证。包含理论公式、实现结构、数值 Jacobian、QP 求解器选择、实验结果与复现命令。
 
 ## Configuration Files
 

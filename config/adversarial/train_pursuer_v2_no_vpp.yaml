@@ -1,0 +1,17 @@
+# No-VPP variant of the adversarial pursuer fine-tuning config.
+# Keeps the same reward weights and network architecture as VPP, but forces the
+# virtual-point offset to zero so the pursuer tracks the target directly.
+includes:
+  - train_pursuer_v2.yaml
+
+virtual_point:
+  # Zero offset ranges: the policy action is rescaled to [0, 0] in every axis,
+  # so the virtual point always coincides with the target anchor position.
+  # This reproduces the No-VPP baseline behavior in the adversarial environment
+  # without modifying core environment logic.
+  d_long_range: [0.0, 0.0]
+  d_lat_range: [0.0, 0.0]
+  d_vert_range: [0.0, 0.0]
+  smoothing_alpha: 0.3
+  dynamics_aware: false
+  lookahead_steps: 5

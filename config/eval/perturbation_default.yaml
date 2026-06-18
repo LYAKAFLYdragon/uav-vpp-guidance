@@ -1,0 +1,12 @@
+# Default random perturbation for adversarial CBF evaluation.
+# Values are applied uniformly within +/- the given scale.
+perturbation:
+  enabled: true
+  # Horizontal position perturbation as a fraction of the initial inter-aircraft range.
+  position_xy_relative: 0.10
+  # Altitude perturbation as a fraction of the base altitude.
+  altitude_relative: 0.05
+  # Speed perturbation as a fraction of the base speed.
+  speed_relative: 0.10
+  # Heading perturbation in degrees.
+  heading_deg: 5.0

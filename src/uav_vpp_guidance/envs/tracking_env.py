@@ -227,6 +227,15 @@ class CloseRangeTrackingEnv:
             dt=self.env_config.get("high_level_dt", 1.0 / self.decision_freq),
         )
 
+        # CBF safety filter (optional).  Only active for VPP-based actions.
+        cbf_cfg = config.get("cbf", {"enabled": False})
+        self._use_cbf = bool(cbf_cfg.get("enabled", False)) and self._use_virtual_point
+        self._cbf_filter = None
+        if self._use_cbf:
+            from ..safety import CBFQPFilter
+
+            self._cbf_filter = CBFQPFilter(**cbf_cfg.get("params", {}))
+
         # Trajectory prediction adapter
         self.trajectory_predictor_adapter = None
         self._predictor_init_failed = False
@@ -297,6 +306,8 @@ class CloseRangeTrackingEnv:
         self._mode_switch_latched = False
         self._command_filter.reset()
         self._actuator_dynamics.reset()
+        if self._cbf_filter is not None:
+            self._cbf_filter.reset()
         if self._low_level_controller is not None:
             self._low_level_controller.reset()
 
@@ -560,6 +571,21 @@ class CloseRangeTrackingEnv:
         if action is None:
             action = np.zeros(3)
         action = np.asarray(action, dtype=np.float64)
+
+        # 2b. CBF safety filter (VPP offset space).
+        cbf_info = None
+        if self._use_cbf and not use_command_override:
+            cbf_state = {
+                "pursuer": {
+                    "position": own_state.get("position_m", own_state.get("position_neu")),
+                    "velocity": own_state.get("velocity_vector_mps", own_state.get("velocity_ned")),
+                },
+                "target": {
+                    "position": target_state.get("position_m", target_state.get("position_neu")),
+                    "velocity": target_state.get("velocity_vector_mps", target_state.get("velocity_ned")),
+                },
+            }
+            _, action, cbf_info = self._cbf_filter.check(cbf_state, action, self)
 
         # 构建 target_state 用于 VPP 生成（统一字段名）
         target_pos = target_state.get("position_m")
@@ -850,7 +876,10 @@ class CloseRangeTrackingEnv:
             "mode_switch_effective": mode_switch_effective,
             "mode_switch_reason": mode_switch_reason,
             "effective_guidance_mode": effective_guidance_mode,
+            "cbf": cbf_info,
         }
+        if cbf_info is not None:
+            info["cbf_filtered"] = cbf_info.get("active", False)
         info.update(actuator_info)
         info.update(term_info)
 

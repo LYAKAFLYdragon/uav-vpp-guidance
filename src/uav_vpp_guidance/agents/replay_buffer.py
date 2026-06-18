@@ -96,22 +96,38 @@ class PPORolloutBuffer:
         advantages = np.zeros(n, dtype=np.float32)
         last_gae = 0.0
 
+        # Sanitize rewards/values so that JSBSim-diverged episodes cannot
+        # poison the GAE computation.  NaN/inf entries are zeroed and their
+        # bootstrapping contribution is disabled.
+        rewards = np.asarray(self.rewards[:n], dtype=np.float32).copy()
+        values = np.asarray(self.values[:n], dtype=np.float32).copy()
+        reward_mask = np.isfinite(rewards)
+        value_mask = np.isfinite(values)
+        if not reward_mask.all() or not value_mask.all():
+            import warnings
+            warnings.warn(
+                f"ReplayBuffer: {(~reward_mask).sum()} non-finite rewards and "
+                f"{(~value_mask).sum()} non-finite values detected; zeroing them for GAE."
+            )
+            rewards[~reward_mask] = 0.0
+            values[~value_mask] = 0.0
+
         # Work backwards through the rollout
         for t in reversed(range(n)):
             if t == n - 1:
                 next_non_terminal = 1.0 - self.dones[t]
-                next_v = next_value
+                next_v = next_value if np.isfinite(next_value) else 0.0
             else:
                 next_non_terminal = 1.0 - self.dones[t]
-                next_v = self.values[t + 1]
+                next_v = values[t + 1]
 
-            delta = self.rewards[t] + gamma * next_v * next_non_terminal - self.values[t]
+            delta = rewards[t] + gamma * next_v * next_non_terminal - values[t]
             last_gae = delta + gamma * gae_lambda * next_non_terminal * last_gae
             advantages[t] = last_gae
 
-        returns = advantages + self.values[:n]
+        returns = advantages + values
 
-        # NaN/inf check
+        # NaN/inf check (should now be a no-op, kept as a safety net)
         if not np.isfinite(advantages).all():
             raise ValueError("Non-finite values detected in GAE advantages")
         if not np.isfinite(returns).all():

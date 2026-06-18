@@ -8,3 +8,8 @@ scipy>=1.10.0
 tqdm>=4.65.0
 pymap3d>=2.9.0
 jsbsim>=1.1.0
+shap>=0.45.0
+osqp>=0.6.3
+seaborn>=0.13.0
+# cvxpy is optional but disabled by default because its bundled solvers
+# (clarabel/osqp) can crash when imported after jsbsim in this environment.

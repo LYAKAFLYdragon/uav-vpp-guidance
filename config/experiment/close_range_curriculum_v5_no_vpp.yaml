@@ -1,0 +1,19 @@
+# No-VPP variant of close_range_curriculum_v5.yaml.
+# Used for validation: identical opponent curriculum, but the pursuer uses
+# zero-offset virtual point (pure LOS-rate pursuit) instead of learned offsets.
+includes:
+  - close_range_curriculum_v5.yaml
+
+experiment:
+  name: close_range_curriculum_v5_no_vpp
+
+virtual_point:
+  enabled: true
+  mode: zero_offset
+  anchor_mode: current_target
+  return_info: true
+  action_dim: 3
+  d_long_range: [-1500.0, 1500.0]
+  d_lat_range: [-800.0, 800.0]
+  d_vert_range: [-500.0, 500.0]
+  smoothing_alpha: 0.3

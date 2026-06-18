@@ -1,0 +1,7 @@
+# Milder random perturbation for adversarial CBF evaluation.
+perturbation:
+  enabled: true
+  position_xy_relative: 0.05
+  altitude_relative: 0.025
+  speed_relative: 0.05
+  heading_deg: 2.5

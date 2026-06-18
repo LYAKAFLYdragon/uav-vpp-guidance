@@ -54,6 +54,7 @@ class RewardCalculator:
         self.w_alive = self.config.get("w_alive", 0.0)
         self.w_overshoot = self.config.get("w_overshoot", 0.0)
         self.w_boundary = self.config.get("w_boundary", 0.0)
+        self.w_adversarial_bonus = self.config.get("w_adversarial_bonus", 0.0)
         self.boundary_range_m = float(self.config.get("boundary_range_m", 6000.0))
         self.boundary_alt_min_m = float(self.config.get("boundary_alt_min_m", 1000.0))
         self.boundary_alt_max_m = float(self.config.get("boundary_alt_max_m", 9000.0))
@@ -205,7 +206,14 @@ class RewardCalculator:
                 boundary_penalty += (altitude_m - self.boundary_alt_max_m) / 1000.0
             reward_boundary = -self.w_boundary * boundary_penalty
 
-        # 11. 终端奖励（由调用方根据 done/reason 注入，这里预留接口）
+        # 11. 对抗奖励：当目标正在机动逃逸且本机正在接近时给予额外奖励
+        reward_adversarial = 0.0
+        if self.w_adversarial_bonus > 0.0 and info.get("adversarial_maneuvering", False):
+            range_rate_mps = rel.get("range_rate_mps", 0.0)
+            closing_signal = max(0.0, -range_rate_mps / 200.0)
+            reward_adversarial = self.w_adversarial_bonus * closing_signal
+
+        # 12. 终端奖励（由调用方根据 done/reason 注入，这里预留接口）
         terminal_reward = info.get("terminal_reward", 0.0)
 
         # 12. 势能奖励塑形：提供密集的距离梯度信号
@@ -225,6 +233,7 @@ class RewardCalculator:
             + reward_alive
             + reward_overshoot
             + reward_boundary
+            + reward_adversarial
             + terminal_reward
             + reward_potential
         )
@@ -240,6 +249,7 @@ class RewardCalculator:
             "reward_alive": reward_alive,
             "reward_overshoot": reward_overshoot,
             "reward_boundary": reward_boundary,
+            "reward_adversarial": reward_adversarial,
             "terminal_reward": terminal_reward,
             "reward_potential": reward_potential,
             "reward_total": reward,

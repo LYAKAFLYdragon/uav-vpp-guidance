@@ -152,14 +152,18 @@ def evaluate_target(
                 "min_range_m": min_range,
                 "final_range_m": final_range,
                 "reason": reason,
-                "survived": reason == "timeout",
+                "survived": reason in ("timeout", "out_of_bounds"),
                 "captured": reason == "success",
+                "crashed": reason == "crash",
             })
 
     returns = [e["return"] for e in episodes]
     lengths = [e["length"] for e in episodes]
     survived = sum(1 for e in episodes if e["survived"])
     captured = sum(1 for e in episodes if e["captured"])
+    crashed = sum(1 for e in episodes if e["crashed"])
+    timeouts = sum(1 for e in episodes if e["reason"] == "timeout")
+    oobs = sum(1 for e in episodes if e["reason"] == "out_of_bounds")
 
     return {
         "num_episodes": len(episodes),
@@ -168,6 +172,9 @@ def evaluate_target(
         "mean_length": float(np.mean(lengths)) if lengths else 0.0,
         "survival_rate": survived / max(1, len(episodes)),
         "capture_rate": captured / max(1, len(episodes)),
+        "crash_rate": crashed / max(1, len(episodes)),
+        "timeout_rate": timeouts / max(1, len(episodes)),
+        "oob_rate": oobs / max(1, len(episodes)),
         "mean_final_range_m": float(np.mean([e["final_range_m"] for e in episodes])),
         "mean_min_range_m": float(np.mean([e["min_range_m"] for e in episodes])),
     }
@@ -270,7 +277,8 @@ def train_target(
         csv_writer.writerow([
             "step", "policy_loss", "value_loss", "entropy", "approx_kl",
             "clip_fraction", "explained_variance", "eval_return",
-            "eval_survival_rate", "eval_capture_rate", "wall_time_s",
+            "eval_survival_rate", "eval_capture_rate", "eval_crash_rate",
+            "eval_timeout_rate", "eval_oob_rate", "wall_time_s",
         ])
 
         # ---- Training loop ----
@@ -280,6 +288,7 @@ def train_target(
         episode_return: float = 0.0
         episode_length: int = 0
         global_step: int = start_step
+        last_eval_step: int = start_step
         t_start = time.time()
 
         logger.info("Starting training: total_steps=%d rollout_steps=%d", total_steps, rollout_steps)
@@ -325,9 +334,10 @@ def train_target(
             next_t_obs_vec = t_obs["observation_vector"] if t_obs is not None else None
             update_stats = target_agent.update(next_t_obs_vec)
 
-            # Periodic evaluation
+            # Periodic evaluation (eval_interval may not align with rollout_steps)
             eval_stats = {}
-            if global_step % eval_interval == 0 or global_step >= total_steps:
+            if global_step - last_eval_step >= eval_interval or global_step >= total_steps:
+                last_eval_step = global_step
                 logger.info("Evaluating at step %d...", global_step)
                 eval_stats = evaluate_target(
                     env, pursuer_agent, target_agent, config,
@@ -354,13 +364,16 @@ def train_target(
                 eval_stats.get("mean_return", 0.0),
                 eval_stats.get("survival_rate", 0.0),
                 eval_stats.get("capture_rate", 0.0),
+                eval_stats.get("crash_rate", 0.0),
+                eval_stats.get("timeout_rate", 0.0),
+                eval_stats.get("oob_rate", 0.0),
                 wall_time,
             ])
             csv_file.flush()
 
             logger.info(
                 "Step %d/%d | loss=%.4f ent=%.4f kl=%.4f | "
-                "eval_ret=%.2f surv=%.2f capt=%.2f | wall=%.0fs",
+                "eval_ret=%.2f surv=%.2f capt=%.2f crash=%.2f oob=%.2f timeout=%.2f | wall=%.0fs",
                 global_step, total_steps,
                 update_stats.get("policy_loss", 0.0),
                 update_stats.get("entropy", 0.0),
@@ -368,6 +381,9 @@ def train_target(
                 eval_stats.get("mean_return", 0.0),
                 eval_stats.get("survival_rate", 0.0),
                 eval_stats.get("capture_rate", 0.0),
+                eval_stats.get("crash_rate", 0.0),
+                eval_stats.get("oob_rate", 0.0),
+                eval_stats.get("timeout_rate", 0.0),
                 wall_time,
             )
 

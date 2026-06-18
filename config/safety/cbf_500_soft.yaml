@@ -1,0 +1,13 @@
+cbf:
+  enabled: true
+  params:
+    d_min: 500.0
+    gamma: 1.0
+    gamma1: 1.0
+    gamma2: 0.5
+    eps_jacobian: 0.01
+    use_second_order: true
+    solver: scipy
+    slack_penalty: 1000.0
+    estimate_target_accel: true
+    constraint_tol: 1.0e-6

@@ -14,8 +14,10 @@ Both aircraft step together inside JSBSim each decision step.
 
 from __future__ import annotations
 
+import csv
 import logging
 import math
+import os
 from typing import Any, Dict, Optional, Tuple
 
 import numpy as np
@@ -94,6 +96,10 @@ class TargetRewardCalculator:
         self.w_escaping: float = float(reward_cfg.get("w_escaping", 0.1))
         self.w_energy: float = float(reward_cfg.get("w_energy", 0.05))
         self.w_range: float = float(reward_cfg.get("w_range", 0.5))
+        self.w_maneuver: float = float(reward_cfg.get("w_maneuver", 0.0))
+        self.w_proximity: float = float(reward_cfg.get("w_proximity", 0.0))
+        self.proximity_range_m: float = float(reward_cfg.get("proximity_range_m", 6400.0))
+        self.maneuver_ref_rate: float = float(reward_cfg.get("maneuver_ref_rate", 0.3))
         self.terminal_captured: float = float(reward_cfg.get("terminal_captured", -200.0))
         self.terminal_crash: float = float(reward_cfg.get("terminal_crash", -300.0))
         self.terminal_oob: float = float(reward_cfg.get("terminal_oob", -200.0))
@@ -151,6 +157,24 @@ class TargetRewardCalculator:
 
         # Energy maintenance (keep speed up for maneuverability)
         terms["energy"] = self.w_energy * min(own_speed / self.ref_speed, 1.0)
+
+        # Maneuver diversity reward: encourage turning / jinking instead of
+        # straight-line escape. Use body yaw rate as a proxy for evasive turn.
+        if self.w_maneuver > 0.0:
+            body_rates = own_state.get("body_rates_rps", np.zeros(3))
+            yaw_rate = float(body_rates[2]) if len(body_rates) > 2 else 0.0
+            terms["maneuver"] = self.w_maneuver * min(abs(yaw_rate) / self.maneuver_ref_rate, 1.0)
+        else:
+            terms["maneuver"] = 0.0
+
+        # Proximity penalty: discourage flying so far away that the engagement
+        # is broken. Keeps the target inside the combat arena.
+        if self.w_proximity != 0.0:
+            excess_range = max(0.0, range_m - self.proximity_range_m)
+            proximity_penalty = min(excess_range / self.proximity_range_m, 1.0)
+            terms["proximity"] = -self.w_proximity * proximity_penalty
+        else:
+            terms["proximity"] = 0.0
 
         total = sum(terms.values())
 
@@ -280,6 +304,32 @@ class AdversarialJSBSimEnv:
         self._sim_time_s: float = 0.0
         self._episode_count: int = 0
 
+        # ---- Optional CBF safety filter ----
+        cbf_cfg = config.get("cbf", {"enabled": False})
+        self._use_cbf = bool(cbf_cfg.get("enabled", False))
+        self._cbf_filter = None
+        if self._use_cbf:
+            from ..safety import CBFQPFilter
+
+            self._cbf_filter = CBFQPFilter(**cbf_cfg.get("params", {}))
+
+        # ---- Optional reward debug logging ----
+        debug_cfg = config.get("adversarial_debug", {})
+        self._reward_debug_enabled = bool(debug_cfg.get("log_rewards", False))
+        self._reward_debug_path: Optional[str] = debug_cfg.get("reward_log_path")
+        self._reward_debug_file: Optional[Any] = None
+        self._reward_debug_writer: Optional[Any] = None
+        if self._reward_debug_enabled and self._reward_debug_path:
+            os.makedirs(os.path.dirname(self._reward_debug_path), exist_ok=True)
+            self._reward_debug_file = open(self._reward_debug_path, "w", newline="", encoding="utf-8")
+            self._reward_debug_writer = csv.writer(self._reward_debug_file)
+            self._reward_debug_writer.writerow([
+                "step", "p_reward_total", "p_reward_geometry", "p_reward_range",
+                "p_reward_angle", "t_reward_total", "t_reward_survival",
+                "t_reward_escaping", "t_reward_energy", "t_reward_maneuver",
+            ])
+            self._reward_debug_file.flush()
+
         logger.info(
             "AdversarialJSBSimEnv initialized: sim_freq=%d decision_freq=%d max_steps=%d",
             self.sim_freq,
@@ -327,6 +377,8 @@ class AdversarialJSBSimEnv:
         self._target_cmd_filter.reset()
         self._pursuer_actuator.reset()
         self._target_actuator.reset()
+        if self._cbf_filter is not None:
+            self._cbf_filter.reset()
 
         # Build default non-overlapping scenario when none is provided
         if scenario is None:
@@ -421,6 +473,23 @@ class AdversarialJSBSimEnv:
             rel_pre = compute_relative_geometry(pursuer_state_pre, target_state_pre)
             pursuer_action = self._pursuer_controller.get_action(
                 pursuer_state_pre, target_state_pre, rel_pre
+            )
+
+        # 1c. CBF safety filter on the VPP offset action.
+        cbf_info = None
+        if self._use_cbf and pursuer_action is not None:
+            cbf_state = {
+                "pursuer": {
+                    "position": pursuer_state_pre.get("position_m", pursuer_state_pre.get("position_neu")),
+                    "velocity": pursuer_state_pre.get("velocity_vector_mps", pursuer_state_pre.get("velocity_ned")),
+                },
+                "target": {
+                    "position": target_state_pre.get("position_m", target_state_pre.get("position_neu")),
+                    "velocity": target_state_pre.get("velocity_vector_mps", target_state_pre.get("velocity_ned")),
+                },
+            }
+            _, pursuer_action, cbf_info = self._cbf_filter.check(
+                cbf_state, pursuer_action, self
             )
 
         # 2. Compute pursuer's guidance command (VPP → LOS guidance)
@@ -531,12 +600,25 @@ class AdversarialJSBSimEnv:
         elif term_info.get("is_timeout") or term_info.get("is_out_of_bounds"):
             terminal_reward = self._pursuer_reward.terminal_failure
 
+        # Adversarial bonus signal: target is considered maneuvering if it is
+        # not flying straight-and-level. For the maneuver-library target we use
+        # the active maneuver name; for the RL target we use a turn-rate heuristic.
+        adversarial_maneuvering = False
+        if self._target_controller_type == "maneuver_library":
+            maneuver_name = t_info.get("bandit_maneuver")
+            adversarial_maneuvering = maneuver_name is not None and maneuver_name != "straight_level"
+        else:
+            body_rates = target_state_post.get("body_rates_rps", np.zeros(3))
+            yaw_rate = float(body_rates[2]) if len(body_rates) > 2 else 0.0
+            adversarial_maneuvering = abs(yaw_rate) > 0.05
+
         p_info = {
             "own_state": pursuer_state_post,
             "target_state": target_state_post,
             "relative_state": rel_state,
             "command": p_filtered,
             "terminal_reward": terminal_reward,
+            "adversarial_maneuvering": adversarial_maneuvering,
         }
         p_reward, p_terms = self._pursuer_reward.compute(p_info)
 
@@ -549,11 +631,56 @@ class AdversarialJSBSimEnv:
             term_info,
         )
 
+        # Defensive guard: if reward computation produced a non-finite value,
+        # treat the episode as a crash so that PPO never sees NaN/inf rewards.
+        if not np.isfinite(p_reward) or not np.isfinite(t_reward):
+            logger.warning(
+                "Non-finite reward detected at step %d (p_reward=%s, t_reward=%s); "
+                "terminating episode as crash.",
+                self.current_step, str(p_reward), str(t_reward),
+            )
+            term_info = {
+                "reason": "crash",
+                "is_success": False,
+                "is_crash": True,
+                "is_timeout": False,
+                "is_out_of_bounds": False,
+                "success_hold_steps": 0,
+            }
+            p_reward = float(self._pursuer_reward.terminal_crash)
+            t_reward = float(self._target_reward.terminal_crash)
+            return (
+                self._zero_observation(),
+                self._zero_observation(),
+                p_reward,
+                t_reward,
+                True,
+                False,
+                {"termination": term_info},
+            )
+
         # 10. Build observations
         p_obs = self._build_pursuer_obs(pursuer_state_post, target_state_post)
         t_obs = self._build_target_obs(target_state_post, pursuer_state_post)
 
-        # 11. Assemble info
+        # 11. Log reward decomposition if requested
+        if self._reward_debug_enabled and self._reward_debug_writer is not None:
+            p_geometry = p_terms.get("reward_range", 0.0) + p_terms.get("reward_angle", 0.0)
+            self._reward_debug_writer.writerow([
+                self.current_step,
+                f"{p_reward:.6f}",
+                f"{p_geometry:.6f}",
+                f"{p_terms.get('reward_range', 0.0):.6f}",
+                f"{p_terms.get('reward_angle', 0.0):.6f}",
+                f"{t_reward:.6f}",
+                f"{t_terms.get('survival', 0.0):.6f}",
+                f"{t_terms.get('escaping', 0.0):.6f}",
+                f"{t_terms.get('energy', 0.0):.6f}",
+                f"{t_terms.get('maneuver', 0.0):.6f}",
+            ])
+            self._reward_debug_file.flush()
+
+        # 12. Assemble info
         info: Dict[str, Any] = {
             "pursuer_state": pursuer_state_post,
             "target_state": target_state_post,
@@ -567,7 +694,10 @@ class AdversarialJSBSimEnv:
             "sim_time_s": self._sim_time_s,
             "pursuer_controller_type": self._pursuer_controller_type,
             "target_controller_type": self._target_controller_type,
+            "cbf": cbf_info,
         }
+        if cbf_info is not None:
+            info["cbf_filtered"] = cbf_info.get("active", False)
         if self._target_controller_type == "maneuver_library":
             info["target_maneuver"] = t_info.get("bandit_maneuver")
 
@@ -753,5 +883,12 @@ class AdversarialJSBSimEnv:
 
     def close(self) -> None:
         """Release JSBSim resources."""
+        if self._reward_debug_file is not None:
+            try:
+                self._reward_debug_file.close()
+            except Exception:
+                pass
+            self._reward_debug_file = None
+            self._reward_debug_writer = None
         if self.jsbsim_env is not None:
             self.jsbsim_env.close()

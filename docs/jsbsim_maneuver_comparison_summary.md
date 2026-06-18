@@ -58,12 +58,27 @@
 - VPP-weave：Success 86.67%，Crash 13.33%（即 disadvantage 失败）。
 - No-VPP-weave：Success 86.67%，Crash 13.33%。
 
+### 4.3 Final zero-shot evaluation of the 10-seed matrix (sinusoidal_weaving, 5g / 1.0 rad/s)
+
+We also re-evaluated the best checkpoints from the constant-velocity 10-seed JSBSim training matrix on a much more aggressive weaving target without any additional training.
+
+| 方法 | favorable | neutral | challenging | disadvantage | 整体 |
+|---|---|---|---|---|---|
+| VPP | 100% | 100% | 100% | 0%（OOB） | **75.0%** |
+| No-VPP | 100% | 100% | 100% | 0%（OOB） | **75.0%** |
+| End-to-End | 100% | 100% | 100% | 0%（crash） | **75.0%** |
+
+- 评估规模：1 checkpoint / 方法 × 4 scenarios × 3 eval seeds × 5 episodes = 60 episodes / 方法。
+- VPP 与 No-VPP 仍然完全一致；E2E 在 `disadvantage` 中表现为 crash，而 VPP/No-VPP 为 out-of-bounds。
+- 该结果进一步确认：**当前场景几何下 `disadvantage` 是不可解的共同瓶颈**，而非 VPP offset 能单独解决的问题。
+
 ## 5. 结论与讨论
 
-1. **VPP offset 在 JSBSim 高气动 + 机动目标条件下仍未展现出独特优势**。无论是温和的 `sinusoidal` 还是更强的 `sinusoidal_weaving`，VPP 与 No-VPP 的成功率完全一致。
+1. **VPP offset 在 JSBSim 高气动 + 机动目标条件下仍未展现出独特优势**。无论是温和的 `sinusoidal`、中等强度 `sinusoidal_weaving`（3g），还是更强 `sinusoidal_weaving`（5g）的零样本测试，VPP 与 No-VPP 的成功率完全一致。
 2. **disadvantage 场景是共同瓶颈**：两种方法都在该场景下 100% crash（主要是持续下降触地）。这说明当前 LOS-rate 制导律/场景几何/奖励设计在该不利初始几何下存在结构性问题，而不是 VPP offset 能单独解决的问题。
 3. **VPP 策略确实会输出非零 offset**：在可成功的场景（favorable/neutral/challenging）中，VPP 策略会输出中等幅度的纵向/横向/垂直偏移，但零偏移的 No-VPP 同样 100% 成功，说明这些 offset 对这些场景并非必要。
-4. **层级结构仍然有效**：与 simple 后端一致，policy → VPP/No-VPP → LOS-rate guidance → JSBSim 的链路能够稳定学习并泛化到三个场景；但 VPP offset 本身不是决定性因素。
+4. **层级结构仍然有效**：与 simple 后端一致，policy → VPP/No-VPP → LOS-rate guidance → JSBSim 的链路能够稳定学习并泛化到 favorable/neutral/challenging；VPP offset 本身不是决定性因素。
+5. **Hierarchical > end-to-end 仍是稳健结论**：在相同训练预算与评估条件下，E2E 的失败模式更不稳定（disadvantage 中 crash，而 hierarchical 方法为 OOB），且整体成功率不高于 hierarchical 方法。因此 JSBSim 证据链应表述为 **“分层制导接口优于端到端控制”**，而非 **“VPP > No-VPP”**。
 
 ## 6. 建议下一步
 

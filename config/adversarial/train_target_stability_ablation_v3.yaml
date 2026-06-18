@@ -1,0 +1,77 @@
+# Target stability ablation v3.
+# Based on v2 but with an even more conservative flight envelope and a massive
+# crash penalty to eliminate the tail-chase divergence observed in v2.
+includes:
+  - train_target_v2.yaml
+
+experiment:
+  name: adversarial_target_stability_ablation_v3
+  seed: 0
+
+# Small-budget ablation
+training:
+  total_timesteps: 50000
+  eval_interval: 5000
+  save_interval: 50000
+  smoke_timesteps: 5000
+
+# Very conservative envelope: prevents aggressive turns that caused crashes
+limits:
+  nz_min: -1.5
+  nz_max: 2.5
+  roll_rate_min: -0.5
+  roll_rate_max: 0.5
+  throttle_min: 0.0
+  throttle_max: 1.0
+
+# Reward: survival/energy first, strong stay-in-bounds penalty, massive crash penalty
+target_reward:
+  w_survival: 0.10
+  w_escaping: 0.0
+  w_energy: 0.10
+  w_range: 0.10
+  w_maneuver: 0.0
+  w_proximity: 1.0
+  proximity_range_m: 5000.0
+  maneuver_ref_rate: 0.3
+  terminal_captured: -500.0
+  terminal_crash: -1000.0   # severe penalty for self-induced crashes
+  terminal_oob: -200.0
+  terminal_timeout: 200.0
+
+# Slower learning for stability
+target_ppo:
+  learning_rate: 5.0e-5
+  gamma: 0.99
+  gae_lambda: 0.95
+  clip_coef: 0.2
+  entropy_coef: 1.0e-3
+  rollout_steps: 1024
+  minibatch_size: 256
+  update_epochs: 10
+  value_coef: 0.5
+  max_grad_norm: 0.5
+  normalize_advantage: true
+  device: cpu
+  total_timesteps: 50000
+
+# Diverse scenarios (same as v2)
+scenario_sampler:
+  enabled: true
+  source: explicit_list
+  names:
+    - smoke_head_on
+    - smoke_crossing_left
+    - smoke_crossing_right
+    - smoke_tail_chase
+    - smoke_offset_attack
+  seed: 0
+
+# Frozen Stage-1 VPP pursuer
+pursuer_checkpoint: "outputs/adversarial_curriculum_pilot/vpp_s0/stage1/checkpoints/best.pt"
+
+output_dir: "outputs/adversarial_curriculum_pilot/target_stability_ablation_v3"
+
+adversarial_debug:
+  log_rewards: true
+  reward_log_path: "outputs/adversarial/debug/reward_terms_ablation_v3.csv"

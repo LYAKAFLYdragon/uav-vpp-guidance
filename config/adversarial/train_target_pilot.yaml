@@ -1,0 +1,63 @@
+# Pilot target (evader) training configuration.
+# Trains a medium-difficulty RL target for the adversarial curriculum pilot.
+# Uses diverse geometries and a strong stay-in-bounds penalty so the target
+# learns to dodge the pursuer rather than simply run away.
+includes:
+  - train_target_v2.yaml
+
+experiment:
+  name: adversarial_target_pilot
+  seed: 0
+
+# Reduced budget suitable for CPU pilot runs
+training:
+  total_timesteps: 100000
+  eval_interval: 10000
+  save_interval: 10000
+  smoke_timesteps: 5000
+
+# Conservative flight envelope to keep the target stable
+target_ppo:
+  learning_rate: 1.0e-4
+  total_timesteps: 100000
+
+limits:
+  nz_min: -1.5
+  nz_max: 3.5
+  roll_rate_min: -0.8
+  roll_rate_max: 0.8
+  throttle_min: 0.0
+  throttle_max: 1.0
+
+target_reward:
+  w_survival: 0.10
+  w_escaping: 0.0
+  w_energy: 0.10
+  w_range: 0.10
+  w_maneuver: 0.0
+  w_proximity: 1.0
+  proximity_range_m: 5000.0
+  maneuver_ref_rate: 0.3
+  terminal_captured: -500.0
+  terminal_crash: -500.0
+  terminal_oob: -200.0
+  terminal_timeout: 200.0
+
+# Diverse in-arena scenarios. Fleeing-only scenarios are excluded because they
+# teach the target to leave the combat arena, which gives the pursuer fine-tuning
+# stage little useful signal.
+scenario_sampler:
+  enabled: true
+  source: explicit_list
+  names:
+    - smoke_head_on
+    - smoke_crossing_left
+    - smoke_crossing_right
+    - smoke_tail_chase
+    - smoke_offset_attack
+  seed: 0
+
+# Frozen Stage-1 pursuer checkpoint (overridden by the orchestrator)
+pursuer_checkpoint: "outputs/adversarial_curriculum_pilot/vpp_s0/stage1/checkpoints/best.pt"
+
+output_dir: "outputs/adversarial_curriculum_pilot/target_pilot"

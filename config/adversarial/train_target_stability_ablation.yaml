@@ -1,0 +1,76 @@
+# Target stability ablation config.
+# Goal: train an RL evader for 50 K steps against the frozen Stage-1 pursuer
+# using fleeing / tail-chase scenarios and conservative flight limits so the
+# target learns to survive rather than crash.
+includes:
+  - train_target_v2.yaml
+
+experiment:
+  name: target_stability_ablation
+  seed: 0
+
+# Small-budget ablation
+training:
+  total_timesteps: 50000
+  eval_interval: 5000
+  save_interval: 10000
+  smoke_timesteps: 5000
+
+# Conservative flight envelope to reduce JSBSim divergence
+limits:
+  nz_min: -1.5
+  nz_max: 5.0
+  roll_rate_min: -1.0
+  roll_rate_max: 1.0
+  throttle_min: 0.0
+  throttle_max: 1.0
+
+# Reward: survival/energy first, no maneuver bonus, strong crash penalty
+target_reward:
+  w_survival: 0.01
+  w_escaping: 0.05
+  w_energy: 0.25
+  w_range: 0.05
+  w_maneuver: 0.0        # removed: aggressive turning caused crashes
+  w_proximity: 0.05
+  proximity_range_m: 6400.0
+  maneuver_ref_rate: 0.3
+  terminal_captured: -500.0
+  terminal_crash: -500.0
+  terminal_oob: -100.0
+  terminal_timeout: 150.0
+
+# Slower learning for stability
+target_ppo:
+  learning_rate: 1.0e-4
+  gamma: 0.99
+  gae_lambda: 0.95
+  clip_coef: 0.2
+  entropy_coef: 1.0e-3
+  rollout_steps: 1024
+  minibatch_size: 256
+  update_epochs: 10
+  value_coef: 0.5
+  max_grad_norm: 0.5
+  normalize_advantage: true
+  device: cpu
+  total_timesteps: 50000
+
+# Fleeing / tail-chase scenarios only (target starts with an advantage)
+scenario_sampler:
+  enabled: true
+  source: explicit_list
+  names:
+    - smoke_fleeing
+    - smoke_tail_chase
+    - negative_fleeing
+  seed: 0
+
+# Frozen Stage-1 VPP pursuer
+pursuer_checkpoint: "outputs/adversarial_curriculum_pilot/vpp_s0/stage1/checkpoints/best.pt"
+
+output_dir: "outputs/adversarial_curriculum_pilot/target_stability_ablation"
+
+adversarial_debug:
+  log_rewards: true
+  reward_log_path: "outputs/adversarial/debug/reward_terms_ablation.csv"

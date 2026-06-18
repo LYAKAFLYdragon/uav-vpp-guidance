@@ -58,6 +58,22 @@ does not reliably improve the E2E baseline; variance and instability dominate.
 This supports the weaker claim that **the hierarchical decomposition is
 beneficial and easier to train**, not that it is strictly necessary.
 
+### 1.4 JSBSim F-16 validation with maneuvering targets (10-seed matrix, zero-shot weaving)
+
+A separate JSBSim F-16 backend experiment trained VPP, No-VPP, and E2E policies on
+canonical constant-velocity targets (10 seeds each, 200 k steps) and evaluated them
+zero-shot on a `sinusoidal_weaving` target (5 g / 1.0 rad/s):
+
+| Method | favorable | neutral | challenging | disadvantage | overall |
+|---|---:|---:|---:|---:|---:|
+| VPP | 100 % | 100 % | 100 % | 0 % | **75.0 %** |
+| No-VPP | 100 % | 100 % | 100 % | 0 % | **75.0 %** |
+| End-to-End | 100 % | 100 % | 100 % | 0 % | **75.0 %** |
+
+- VPP and No-VPP are **numerically identical** on this aggressive maneuvering target.
+- The only difference is failure mode in `disadvantage`: E2E crashes, whereas VPP/No-VPP go out-of-bounds.
+- This cross-backend validation supports the weaker, but robust, claim that **the hierarchical guidance interface is more stable than end-to-end control**, while confirming that the learned VPP offset is not the primary driver.
+
 ## 2. New title candidates
 
 1. *Bilevel Optimization of Guidance Gains for UAV Close-Range Tracking:

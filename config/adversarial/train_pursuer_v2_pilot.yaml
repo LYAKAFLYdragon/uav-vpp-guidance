@@ -1,0 +1,18 @@
+# Pilot variant of adversarial pursuer fine-tuning config.
+# Reduced budget for a single-seed pilot (full budget is 300 K).
+includes:
+  - train_pursuer_v2.yaml
+
+# Reduced budget for the pilot.
+training:
+  total_timesteps: 100000
+  eval_interval: 10000
+  save_interval: 50000
+
+# Output directory for the pilot run.
+output_dir: "outputs/adversarial_curriculum_pilot/pursuer_pilot"
+
+# Reward debug logging (Task B deliverable)
+adversarial_debug:
+  log_rewards: true
+  reward_log_path: "outputs/adversarial/debug/reward_terms_pilot.csv"

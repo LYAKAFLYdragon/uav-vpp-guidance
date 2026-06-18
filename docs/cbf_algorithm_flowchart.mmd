@@ -1,0 +1,30 @@
+flowchart LR
+    A[PPO Policy] --> B[VPP Offset a_RL]
+    B --> C{CBF QP Filter}
+    C -->|safe| D[Use a_RL]
+    C -->|unsafe| E[Solve QP / Fallback]
+    E --> F[Use a_filtered]
+    D --> G[VirtualPointGenerator]
+    F --> G
+    G --> H[LOSRateGuidance]
+    H --> I[Command Clip / Filter]
+    I --> J[ActuatorDynamics]
+    J --> K[LowLevelController]
+    K --> L[JSBSim F-16 Dynamics]
+    L --> M[State x]
+    M --> C
+
+    subgraph CBF_Input
+        N[pursuer position p_o]
+        O[pursuer velocity v_o]
+        P[target position p_t]
+        Q[target velocity v_t]
+    end
+
+    N --> C
+    O --> C
+    P --> C
+    Q --> C
+
+    style C fill:#f9f,stroke:#333,stroke-width:2px
+    style E fill:#ff9,stroke:#333,stroke-width:1px

@@ -226,7 +226,8 @@ def write_latex_macros(
             "Baseline": "cbfBaseline",
             "CBF(500)": "cbfFive",
             "CBF(700)": "cbfSeven",
-        }.get(label, label.replace("(", "").replace(")", "").replace(" ", ""))
+            "CBF(500)-FD": "cbfFd",
+        }.get(label, label.replace("(", "").replace(")", "").replace(" ", "").replace("-", ""))
         lines.append(rf"\newcommand{{\{prefix}Success}}{{{np.mean(st['success'])*100:.1f}}}")
         lines.append(rf"\newcommand{{\{prefix}Crash}}{{{np.mean(st['crash'])*100:.1f}}}")
         lines.append(rf"\newcommand{{\{prefix}Oob}}{{{np.mean(st['oob'])*100:.1f}}}")
@@ -461,6 +462,7 @@ def main() -> None:
     parser.add_argument("--baseline", type=str, required=True)
     parser.add_argument("--cbf500", type=str, required=True)
     parser.add_argument("--cbf700", type=str, required=True)
+    parser.add_argument("--cbf500-fd", type=str, default=None, help="Optional JSBSim finite-difference CBF(500) results.")
     parser.add_argument("--output-dir", type=str, default="outputs/cbf_adversarial/figures_paper")
     parser.add_argument("--stats-dir", type=str, default="outputs/cbf_adversarial")
     parser.add_argument("--stats-name", type=str, default="stats_test.json")
@@ -478,6 +480,8 @@ def main() -> None:
         ("CBF(500)", "cbf500", load_json(args.cbf500), True),
         ("CBF(700)", "cbf700", load_json(args.cbf700), True),
     ]
+    if args.cbf500_fd:
+        conditions.append(("CBF(500)-FD", "cbf500_fd", load_json(args.cbf500_fd), True))
 
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)

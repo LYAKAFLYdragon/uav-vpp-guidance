@@ -21,6 +21,7 @@ METHOD_DIRS = {
     "pointmass": "outputs/cbf_adversarial/randomized/cbf500",
     "envelope": "outputs/cbf_adversarial/randomized_envelope/cbf500",
     "jsbsim_fd": "outputs/cbf_adversarial/randomized_jsbsim_fd/cbf500",
+    "jsbsim_fd_envelope": "outputs/cbf_adversarial/randomized_jsbsim_fd_envelope/cbf500",
 }
 
 

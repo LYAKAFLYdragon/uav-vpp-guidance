@@ -287,3 +287,46 @@ python scripts/plot_cbf_safety.py \
 
 - Ames et al., 2019: "Control Barrier Functions: Theory and Applications"
 - Cheng et al., 2019: "End-to-End Safe Reinforcement Learning through Barrier Functions"
+
+---
+
+## 9. 最终实验结论（冻结版本，2026-06-18）
+
+CBF 代码改进阶段已结束。以下为最终可写入论文的实验结果。
+
+### 9.1 确定性场景（3 个场景 × 10 次重复）
+
+| 条件 | Success | Crash | OOB | Mean min range | CBF active | QP time |
+|---|---:|---:|---:|---:|---:|---:|
+| Baseline | 33.3% | 0.0% | 66.7% | 579.0 m | — | — |
+| CBF(500) | 33.3% | 0.0% | 66.7% | 665.0 m | 8.0% | 0.65 ms |
+| CBF(700) | 33.3% | 0.0% | 66.7% | 676.4 m | 11.7% | 0.85 ms |
+
+Mann-Whitney U：CBF vs baseline 最小距离，$p = 9.0 \times 10^{-5}$。
+
+### 9.2 随机扰动场景（90 episodes / 条件）
+
+| 条件 | Success | Crash | OOB | Mean min range | CBF active | QP time |
+|---|---:|---:|---:|---:|---:|---:|
+| Baseline | 33.3% | 3.3% | 52.2% | 588.1 ± 266.8 m | — | — |
+| CBF-PM | 30.0% | 5.6% | 55.6% | 604.1 ± 275.3 m | 7.0% | 0.61 ms |
+| CBF-FD | 45.6% | 6.7% | 15.6% | 628.0 ± 268.6 m | 7.6% | 12.77 ms |
+| CBF-FD-E | 45.6% | 6.7% | 15.6% | 628.0 ± 268.6 m | 7.6% | 10.09 ms |
+
+Mann-Whitney U（min-range vs baseline）：CBF-PM $p=0.61$；CBF-FD $p=0.36$。
+
+### 9.3 关键结论
+
+1. **概念验证通过**：确定性场景下 CBF 显著增加最小分离距离。
+2. **模型失配暴露**：point-mass Jacobian 在随机几何下增加碰撞率。
+3. **JSBSim FD 部分缓解**：OOB 从 52.2% 降至 15.6%，Success 升至 45.6%，但 min-range 提升不显著，且 crash 率仍高于 baseline。
+4. **Envelope clip 无效**：说明 crash 不是单步包线饱和问题，而是多步/执行机构动态未建模。
+5. **查表原型失败**：KNN 加速度回归无法准确估计 Jacobian（相对误差 ~1.0–1.6），需要局部线性模型或显式状态-动作网格。
+6. **QP 时间**：CBF-FD 平均 12.77 ms，仍在 5 Hz 预算内，但余量较小。
+
+### 9.4 论文叙事建议
+
+- 将 CBF 作为“初步理论扩展”而非“已验证的安全解决方案”。
+- 保留确定性结果作为概念验证。
+- 诚实报告随机场景下的模型失配、JSBSim FD 的缓解效果、以及剩余 crash 的未解决问题。
+- 未来方向：局部线性系统辨识、显式状态-动作 Jacobian 表、数据驱动 CBF（留作博士阶段工作）。

@@ -1,0 +1,33 @@
+# Conservative VPP Stage 3 fine-tuning config.
+#
+# The aggressive Stage 2 config (train_pursuer_v2_pilot_aggressive.yaml) is tuned
+# to break action saturation against a medium target. When reused for Stage 3
+# against a hard target, the high entropy and large reward magnitudes cause:
+#   - value_loss to explode (inf),
+#   - entropy to grow monotonically,
+#   - approx_kl to saturate near 17,
+#   - capture_rate to stay at 0.
+#
+# This config inherits the aggressive Stage 2 settings and overrides only the
+# PPO/reward knobs needed for stable fine-tuning against the hard Stage 3 target.
+includes:
+  - train_pursuer_v2_pilot_aggressive.yaml
+
+experiment:
+  name: adversarial_pursuer_finetune_v2_pilot_aggressive_stage3
+
+# Tighter PPO updates for fine-tuning against a strong evader
+ppo:
+  learning_rate: 3.0e-5      # lower LR: hard target needs smaller steps
+  entropy_coef: 1.0e-3       # restore base entropy to allow convergence
+  clip_coef: 0.1             # stricter clipping to keep KL small
+  update_epochs: 10
+
+# Dampen reward magnitudes so the value function can fit
+reward:
+  terminal_success: 200.0    # was 500; keep same scale as base v2
+  w_closing: 0.5             # was 1.0; less aggressive closing bonus
+  w_safety: 0.8              # was 0.3; reduce crash/oob rate
+  w_adversarial_bonus: 0.5
+
+output_dir: "outputs/adversarial_curriculum_pilot/pursuer_pilot_aggressive_stage3"

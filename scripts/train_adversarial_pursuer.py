@@ -150,6 +150,8 @@ def train_pursuer(
     output_dir: str,
     smoke: bool = False,
     resume: bool = False,
+    swanlab_logger=None,
+    log_prefix: str = "pursuer/",
 ) -> None:
     """Fine-tune pursuer against frozen adversarial target."""
     ckpt_dir = os.path.join(output_dir, "checkpoints")
@@ -297,6 +299,25 @@ def train_pursuer(
                 wall_time,
             ])
             csv_file.flush()
+
+            # SwanLab logging
+            if swanlab_logger is not None:
+                swanlab_log = {
+                    f"{log_prefix}policy_loss": update_stats.get("policy_loss"),
+                    f"{log_prefix}value_loss": update_stats.get("value_loss"),
+                    f"{log_prefix}entropy": update_stats.get("entropy"),
+                    f"{log_prefix}approx_kl": update_stats.get("approx_kl"),
+                    f"{log_prefix}wall_time_s": wall_time,
+                }
+                if eval_stats:
+                    swanlab_log.update({
+                        f"{log_prefix}eval_capture_rate": eval_stats.get("capture_rate"),
+                        f"{log_prefix}eval_mean_return": eval_stats.get("mean_return"),
+                        f"{log_prefix}eval_std_return": eval_stats.get("std_return"),
+                        f"{log_prefix}eval_mean_length": eval_stats.get("mean_length"),
+                        f"{log_prefix}eval_mean_min_range_m": eval_stats.get("mean_min_range_m"),
+                    })
+                swanlab_logger.log({k: v for k, v in swanlab_log.items() if v is not None}, step=global_step)
 
             logger.info(
                 "Step %d/%d | loss=%.4f ent=%.4f | capt=%.2f ret=%.2f | wall=%.0fs",

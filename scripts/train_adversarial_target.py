@@ -189,6 +189,8 @@ def train_target(
     output_dir: str,
     smoke: bool = False,
     resume: bool = False,
+    swanlab_logger=None,
+    log_prefix: str = "target/",
 ) -> None:
     """
     Train the adversarial target agent against a frozen pre-trained pursuer.
@@ -370,6 +372,30 @@ def train_target(
                 wall_time,
             ])
             csv_file.flush()
+
+            # SwanLab logging
+            if swanlab_logger is not None:
+                swanlab_log = {
+                    f"{log_prefix}policy_loss": update_stats.get("policy_loss"),
+                    f"{log_prefix}value_loss": update_stats.get("value_loss"),
+                    f"{log_prefix}entropy": update_stats.get("entropy"),
+                    f"{log_prefix}approx_kl": update_stats.get("approx_kl"),
+                    f"{log_prefix}clip_fraction": update_stats.get("clip_fraction"),
+                    f"{log_prefix}explained_variance": update_stats.get("explained_variance"),
+                    f"{log_prefix}wall_time_s": wall_time,
+                }
+                if eval_stats:
+                    swanlab_log.update({
+                        f"{log_prefix}eval_return": eval_stats.get("mean_return"),
+                        f"{log_prefix}eval_survival_rate": eval_stats.get("survival_rate"),
+                        f"{log_prefix}eval_capture_rate": eval_stats.get("capture_rate"),
+                        f"{log_prefix}eval_crash_rate": eval_stats.get("crash_rate"),
+                        f"{log_prefix}eval_timeout_rate": eval_stats.get("timeout_rate"),
+                        f"{log_prefix}eval_oob_rate": eval_stats.get("oob_rate"),
+                        f"{log_prefix}eval_mean_final_range_m": eval_stats.get("mean_final_range_m"),
+                        f"{log_prefix}eval_mean_min_range_m": eval_stats.get("mean_min_range_m"),
+                    })
+                swanlab_logger.log({k: v for k, v in swanlab_log.items() if v is not None}, step=global_step)
 
             logger.info(
                 "Step %d/%d | loss=%.4f ent=%.4f kl=%.4f | "

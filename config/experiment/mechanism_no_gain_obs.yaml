@@ -1,0 +1,9 @@
+# Mechanism-removal ablation: remove guidance gains from policy observation.
+includes:
+  - train_no_prediction_vpp_ppo.yaml
+
+experiment:
+  name: mechanism_no_gain_obs
+
+observation:
+  include_gains: false

@@ -1,0 +1,14 @@
+# Mechanism-removal ablation: disable regret-aware gain update.
+# Note: the current PPO training pipeline does not implement a regret-aware
+# gain update, so this flag is retained for protocol continuity.
+includes:
+  - train_no_prediction_vpp_ppo.yaml
+
+experiment:
+  name: mechanism_no_regret
+
+observation:
+  include_gains: true
+
+gain_optimizer:
+  use_regret: false

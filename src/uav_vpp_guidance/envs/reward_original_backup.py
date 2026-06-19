@@ -55,10 +55,6 @@ class RewardCalculator:
         self.w_overshoot = self.config.get("w_overshoot", 0.0)
         self.w_boundary = self.config.get("w_boundary", 0.0)
         self.w_adversarial_bonus = self.config.get("w_adversarial_bonus", 0.0)
-        self.w_position_advantage = self.config.get("w_position_advantage", 0.0)
-        self.position_advantage_tail_deg = float(
-            self.config.get("position_advantage_tail_deg", 30.0)
-        )
         self.boundary_range_m = float(self.config.get("boundary_range_m", 6000.0))
         self.boundary_alt_min_m = float(self.config.get("boundary_alt_min_m", 1000.0))
         self.boundary_alt_max_m = float(self.config.get("boundary_alt_max_m", 9000.0))
@@ -217,30 +213,10 @@ class RewardCalculator:
             closing_signal = max(0.0, -range_rate_mps / 200.0)
             reward_adversarial = self.w_adversarial_bonus * closing_signal
 
-        # 12. 位置优势奖励：鼓励从“被目标追尾”转换为“追尾目标”。
-        # 在 disadvantage 等场景中，目标初始位于本机后方；单纯的角度/距离奖励
-        # 不足以引导智能体完成 lead-turn / 高悠悠等位置转换机动。
-        reward_position_advantage = 0.0
-        if self.w_position_advantage > 0.0:
-            tail_thresh = self.position_advantage_tail_deg
-            own_on_tail = abs(aa_deg) <= tail_thresh
-            bandit_on_tail = abs(ata_deg) <= tail_thresh
-            if own_on_tail and not bandit_on_tail:
-                advantage_signal = 1.0
-            elif bandit_on_tail and not own_on_tail:
-                advantage_signal = -1.0
-            else:
-                # 过渡状态：AA 越小（本机越在目标后方）越好，
-                # ATA 越小（本机越对准目标）越好。
-                aa_component = 1.0 - min(1.0, abs(aa_deg) / 90.0)
-                ata_component = 1.0 - min(1.0, abs(ata_deg) / 90.0)
-                advantage_signal = 0.5 * aa_component + 0.5 * ata_component - 0.5
-            reward_position_advantage = self.w_position_advantage * advantage_signal
-
-        # 13. 终端奖励（由调用方根据 done/reason 注入，这里预留接口）
+        # 12. 终端奖励（由调用方根据 done/reason 注入，这里预留接口）
         terminal_reward = info.get("terminal_reward", 0.0)
 
-        # 14. 势能奖励塑形：提供密集的距离梯度信号
+        # 12. 势能奖励塑形：提供密集的距离梯度信号
         reward_potential = 0.0
         if self.pbs_enabled:
             reward_potential = self._compute_potential_shaping(rel)
@@ -258,7 +234,6 @@ class RewardCalculator:
             + reward_overshoot
             + reward_boundary
             + reward_adversarial
-            + reward_position_advantage
             + terminal_reward
             + reward_potential
         )
@@ -275,7 +250,6 @@ class RewardCalculator:
             "reward_overshoot": reward_overshoot,
             "reward_boundary": reward_boundary,
             "reward_adversarial": reward_adversarial,
-            "reward_position_advantage": reward_position_advantage,
             "terminal_reward": terminal_reward,
             "reward_potential": reward_potential,
             "reward_total": reward,

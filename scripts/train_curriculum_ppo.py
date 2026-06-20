@@ -385,6 +385,11 @@ def train_ppo_curriculum(config, output_dir, smoke=False, algorithm="ppo", swanl
 
             if agent.buffer.full or (global_step >= total_timesteps and len(agent.buffer) > 0):
                 next_obs_vec = obs["observation_vector"]
+                # Linear learning-rate decay for long runs (stabilizes 100K+ curriculum training)
+                progress = min(1.0, global_step / max(1, total_timesteps))
+                current_lr = agent.lr * max(0.05, 1.0 - 0.95 * progress)
+                for param_group in agent.optimizer.param_groups:
+                    param_group["lr"] = current_lr
                 update_stats = agent.update(next_obs=next_obs_vec)
                 update_num += 1
                 up_writer.writerow({

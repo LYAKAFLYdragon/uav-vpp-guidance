@@ -336,6 +336,13 @@ def train_ppo_curriculum(config, output_dir, smoke=False, algorithm="ppo", swanl
                 obs_vec = obs_dict["observation_vector"]
                 action, log_prob, value = agent.select_action(obs_vec, deterministic=False, store=False)
                 obs, reward, terminated, truncated, info = env.step(action)
+                # Defensive guard: a non-finite reward (e.g. from JSBSim divergence)
+                # would crash PPO training; treat it as a crash reward and end the episode.
+                if not np.isfinite(reward):
+                    reward = -300.0
+                    terminated = True
+                    truncated = True
+                    info["reason"] = "crash"
                 done = terminated or truncated
                 global_step += 1
                 episode_return += reward

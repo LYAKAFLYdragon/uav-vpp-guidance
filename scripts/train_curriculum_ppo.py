@@ -48,7 +48,7 @@ def sample_scenario(config, rng):
     return scenarios[name]
 
 
-def run_evaluation(env, agent, config, num_episodes=10, seeds=None, save_trajectories=False, output_dir=None, domain_rand_scale=0.0):
+def run_evaluation(env, agent, config, num_episodes=10, seeds=None, save_trajectories=False, output_dir=None, domain_rand_scale=0.0, scenario=None):
     if seeds is None:
         seeds = [0, 1, 2]
 
@@ -57,19 +57,28 @@ def run_evaluation(env, agent, config, num_episodes=10, seeds=None, save_traject
     success_range_m = float(term_cfg.get("success_range_m", 900.0))
     high_level_dt = float(config.get("env", {}).get("high_level_dt", 0.2))
 
+    # Fixed scenario for single-scenario evaluation (e.g. smoke tests).
+    fixed_scenario = None
+    if scenario is not None:
+        scenarios = config.get("scenarios", {})
+        fixed_scenario = scenarios.get(scenario)
+
     all_episodes = []
     for seed in seeds:
         for ep in range(num_episodes):
             ep_seed = seed * 10000 + ep
-            rng = np.random.default_rng(ep_seed)
-            scenario = sample_scenario(config, rng)
+            if fixed_scenario is not None:
+                current_scenario = fixed_scenario
+            else:
+                rng = np.random.default_rng(ep_seed)
+                current_scenario = sample_scenario(config, rng)
             # Apply eval-time domain randomization if requested. A fixed
             # evaluation RNG makes results reproducible while still perturbing
             # initial conditions across episodes.
             if domain_rand_scale > 0.0 and hasattr(env, "set_domain_rand_scale"):
                 env.set_domain_rand_scale(domain_rand_scale)
-                scenario = env._apply_domain_randomization(scenario)
-            obs = env.reset(scenario=scenario, seed=ep_seed)
+                current_scenario = env._apply_domain_randomization(current_scenario)
+            obs = env.reset(scenario=current_scenario, seed=ep_seed)
             ep_reward = 0.0
             ep_length = 0
             min_range = float("inf")
@@ -199,7 +208,7 @@ DEFAULT_CURRICULUM = [
 ]
 
 
-def train_ppo_curriculum(config, output_dir, smoke=False, algorithm="ppo", swanlab_logger=None):
+def train_ppo_curriculum(config, output_dir, smoke=False, algorithm="ppo", swanlab_logger=None, eval_scenario=None):
     checkpoint_dir = os.path.join(output_dir, "checkpoints")
     log_dir = os.path.join(output_dir, "logs")
     os.makedirs(checkpoint_dir, exist_ok=True)
@@ -419,6 +428,7 @@ def train_ppo_curriculum(config, output_dir, smoke=False, algorithm="ppo", swanl
                     num_episodes=eval_cfg.get("eval_episodes", 10),
                     seeds=eval_cfg.get("seeds", [0, 1, 2]),
                     domain_rand_scale=eval_domain_rand_scale,
+                    scenario=eval_scenario,
                 )
                 eval_writer.writerow({
                     "step": global_step, "num_episodes": eval_metrics["num_episodes"],
@@ -473,13 +483,15 @@ def train_ppo_curriculum(config, output_dir, smoke=False, algorithm="ppo", swanl
                 f_cur.flush()
                 print(f"Per-scenario SR: {per_scenario}")
 
-                # Check if we should advance stage
+                # Check if we should advance stage (per-stage gate overrides global)
                 current_scenario_sr = [per_scenario.get(s, 0.0) for s in allowed_names]
                 min_sr = min(current_scenario_sr) if current_scenario_sr else 0.0
-                if min_sr >= stage_gate_sr and current_stage < len(curriculum) - 1:
-                    print(f"*** Curriculum gate passed (min SR={min_sr:.2%}). Advancing to stage {current_stage+1} ***")
-                elif min_sr < stage_gate_sr:
-                    print(f"Curriculum gate NOT passed (min SR={min_sr:.2%}). Staying in stage {current_stage}")
+                stage_spec_for_gate = curriculum[current_stage] if isinstance(curriculum[current_stage], dict) else {}
+                current_stage_gate_sr = stage_spec_for_gate.get("stage_gate_sr", stage_gate_sr)
+                if min_sr >= current_stage_gate_sr and current_stage < len(curriculum) - 1:
+                    print(f"*** Curriculum gate passed (min SR={min_sr:.2%}, threshold={current_stage_gate_sr:.0%}). Advancing to stage {current_stage+1} ***")
+                elif min_sr < current_stage_gate_sr:
+                    print(f"Curriculum gate NOT passed (min SR={min_sr:.2%}, threshold={current_stage_gate_sr:.0%}). Staying in stage {current_stage}")
 
                 if save_best and eval_metrics["mean_return"] > best_eval_return:
                     best_eval_return = eval_metrics["mean_return"]
@@ -530,6 +542,12 @@ def main():
         default=None,
         help="Override total training timesteps",
     )
+    parser.add_argument(
+        "--eval-scenario",
+        type=str,
+        default=None,
+        help="If set, evaluation episodes use only this scenario",
+    )
     args = parser.parse_args()
 
     config = load_experiment_config(args.config)
@@ -564,7 +582,7 @@ def main():
 
     try:
         train_ppo_curriculum(
-            config, output_dir, smoke=args.smoke, algorithm=args.algorithm, swanlab_logger=swanlab_logger
+            config, output_dir, smoke=args.smoke, algorithm=args.algorithm, swanlab_logger=swanlab_logger, eval_scenario=args.eval_scenario
         )
     finally:
         if swanlab_logger is not None:

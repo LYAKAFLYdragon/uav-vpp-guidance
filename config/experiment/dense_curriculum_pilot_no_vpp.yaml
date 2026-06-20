@@ -1,0 +1,17 @@
+# Dense-reward curriculum pilot (No-VPP variant) against a hard maneuver-library target.
+includes:
+  - dense_curriculum_pilot.yaml
+
+experiment:
+  name: dense_curriculum_pilot_no_vpp
+
+virtual_point:
+  # Zero-offset: policy outputs are rescaled to [0,0] so the virtual point
+  # coincides with the target anchor. This reproduces the No-VPP baseline
+  # without changing core environment logic.
+  d_long_range: [0.0, 0.0]
+  d_lat_range: [0.0, 0.0]
+  d_vert_range: [0.0, 0.0]
+  smoothing_alpha: 0.3
+  dynamics_aware: false
+  lookahead_steps: 5

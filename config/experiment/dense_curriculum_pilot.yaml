@@ -1,0 +1,73 @@
+# Dense-reward curriculum pilot against a hard maneuver-library target.
+includes:
+  - maneuver_target_vpp_pilot.yaml
+
+experiment:
+  name: dense_curriculum_pilot
+
+ppo:
+  total_timesteps: 100000
+  rollout_steps: 1024
+  minibatch_size: 256
+  update_epochs: 10
+  learning_rate: 3.0e-4
+  entropy_coef: 1.0e-3
+  device: cpu
+
+curriculum:
+  stage_gate_sr: 0.00
+  stages:
+    - progress_end: 0.25
+      scenario_names:
+        - favorable
+      stage_gate_sr: 0.50
+    - progress_end: 0.50
+      scenario_names:
+        - favorable
+        - neutral
+      stage_gate_sr: 0.30
+    - progress_end: 0.75
+      scenario_names:
+        - favorable
+        - neutral
+        - disadvantage
+      stage_gate_sr: 0.10
+    - progress_end: 1.00
+      scenario_names:
+        - favorable
+        - neutral
+        - disadvantage
+        - challenging
+      stage_gate_sr: 0.00
+
+evaluation:
+  eval_interval: 10000
+  eval_episodes: 10
+  seeds: [0, 1, 2]
+
+checkpoint:
+  save_interval: 100000
+  save_best: true
+  save_last: true
+
+env:
+  max_high_level_steps: 400
+  bandit:
+    difficulty: hard
+    selector:
+      reaction_time_s: 1.5
+      selector_noise: 0.25
+      param_perturb_scale: 0.25
+      allowed_maneuvers:
+        - straight_level
+        - coordinated_turn
+        - barrel_roll
+        - dive
+        - high_yoyo
+        - low_yoyo
+        - scissors
+        - split_s
+        - immelmann
+        - break_turn
+        - defensive_spiral
+        - extension

@@ -1,0 +1,51 @@
+# Sparse-reward curriculum pilot against a hard maneuver-library target.
+includes:
+  - dense_curriculum_pilot.yaml
+
+experiment:
+  name: sparse_curriculum_pilot
+
+reward:
+  use_sparse: true
+
+curriculum:
+  stage_gate_sr: 0.00
+  stages:
+    - progress_end: 0.25
+      scenario_names:
+        - favorable
+      stage_gate_sr: 0.50
+    - progress_end: 0.50
+      scenario_names:
+        - favorable
+        - neutral
+      stage_gate_sr: 0.30
+    - progress_end: 0.75
+      scenario_names:
+        - favorable
+        - neutral
+        - disadvantage
+      stage_gate_sr: 0.10
+    - progress_end: 1.00
+      scenario_names:
+        - favorable
+        - neutral
+        - disadvantage
+        - challenging
+      stage_gate_sr: 0.00
+
+sparse_reward:
+  enabled: true
+  terminal_success: 10.0
+  terminal_crash: -10.0
+  terminal_failure: -5.0
+  event_range_m: 1200.0
+  event_ata_deg: 45.0
+  event_reward: 1.0
+  lock_reward: 0.0
+  gaussian_window: 50
+  gaussian_sigma_ratio: 0.5
+  relabelling:
+    enabled: true
+    terminal_kernel: linear
+    event_kernel: gaussian

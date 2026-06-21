@@ -23,6 +23,9 @@ Usage:
     # Only specific experiment group
     python scripts/run_full_experiment_matrix.py --only-group A
 
+    # Mechanism-removal ablation group (F)
+    python scripts/run_full_experiment_matrix.py --only-group F
+
     # Resume interrupted run
     python scripts/run_full_experiment_matrix.py --resume \
         --state-file outputs/full_experiment/progress.json
@@ -101,6 +104,10 @@ ESTIMATED_DURATIONS = {
     "gain_comparison_smoke": 5,
     "jsbsim_eval": 30,      # ~30min for JSBSim eval
     "jsbsim_eval_smoke": 5,
+    "mechanism_train": 90,   # ~1.5h per mechanism variant
+    "mechanism_train_smoke": 3,
+    "mechanism_eval": 60,    # ~1h for 4 mechanisms
+    "mechanism_eval_smoke": 3,
     "analysis": 10,
     "analysis_smoke": 2,
 }
@@ -321,6 +328,41 @@ def build_task_graph(args: argparse.Namespace) -> List[Task]:
                         estimated_minutes=_dur("train_ppo_smoke" if smoke else "train_ppo"),
                         checkpoint_hint=checkpoint_file,
                     ))
+
+        # -------------------------------------------------------------------
+        # Group F: Mechanism-removal ablations
+        # -------------------------------------------------------------------
+        if args.only_group in (None, "F"):
+            mechanism_variants = ["full_vpp", "no_regret", "no_gain_obs", "no_safety_penalty"]
+            mechanism_seeds = [0] if smoke else DEFAULT_TRAIN_SEEDS
+            for variant in mechanism_variants:
+                task_id = f"F_train_{variant}"
+                out_subdir = _out("phase1_training", "experiment_F", variant)
+                ckpt = os.path.join(out_subdir, "train", variant, "seed0", "checkpoints", "best.pt")
+                cmd = [
+                    sys.executable, str(PROJECT_ROOT / "scripts" / "run_mechanism_removal_ablation.py"),
+                    "--base-config", str(CONFIG_DIR / "mechanism_full_vpp.yaml"),
+                    "--variants", variant,
+                    "--seeds", *[str(s) for s in mechanism_seeds],
+                    "--output-dir", out_subdir,
+                    "--backend", backend,
+                    "--device", device,
+                    "--skip-eval",
+                    "--no-publish",
+                ]
+                if smoke:
+                    cmd.append("--smoke")
+                tasks.append(Task(
+                    id=task_id,
+                    name=f"Group F: Train {variant} mechanism-removal ablation",
+                    phase=1,
+                    group="F",
+                    cmd=cmd,
+                    depends_on=[],
+                    output_files=[ckpt],
+                    estimated_minutes=_dur("mechanism_train_smoke" if smoke else "mechanism_train"),
+                    checkpoint_hint=ckpt,
+                ))
 
         # -------------------------------------------------------------------
         # Predictor pre-training: LSTM + GRU grid search
@@ -759,6 +801,51 @@ print("[Eval-E] JSBSim evaluation complete.")
                 estimated_minutes=_dur("jsbsim_eval_smoke" if smoke else "jsbsim_eval") * 2,
             ))
 
+        # -------------------------------------------------------------------
+        # Group F: Mechanism-removal evaluation
+        # -------------------------------------------------------------------
+        if args.only_group in (None, "F"):
+            mechanism_variants = ["full_vpp", "no_regret", "no_gain_obs", "no_safety_penalty"]
+            ckpt_deps = [f"F_train_{v}" for v in mechanism_variants]
+            eval_seeds = [0, 1] if smoke else DEFAULT_EVAL_SEEDS
+            eps = "2" if smoke else "10"
+
+            out_dir = _out("phase2_evaluation", "experiment_F")
+
+            # Build checkpoint-map args pointing to training outputs
+            ckpt_map_args = []
+            for variant in mechanism_variants:
+                train_out = _out("phase1_training", "experiment_F", variant)
+                ckpt = os.path.join(train_out, "train", variant, "seed0", "checkpoints", "best.pt")
+                ckpt_map_args.extend(["--checkpoint-map", f"{variant}={ckpt}"])
+
+            eval_cmd = [
+                sys.executable, str(PROJECT_ROOT / "scripts" / "run_mechanism_removal_ablation.py"),
+                "--base-config", str(CONFIG_DIR / "mechanism_full_vpp.yaml"),
+                "--variants", *mechanism_variants,
+                "--output-dir", out_dir,
+                "--backend", backend,
+                "--eval-seeds", *[str(s) for s in eval_seeds],
+                "--episodes-per-scenario", eps,
+                "--scenarios", "favorable", "neutral", "disadvantage", "challenging",
+                "--skip-training",
+                "--no-publish",
+                *ckpt_map_args,
+            ]
+            if smoke:
+                eval_cmd.append("--smoke")
+
+            tasks.append(Task(
+                id="Eval_F",
+                name="Group F: Mechanism-removal ablation evaluation",
+                phase=2,
+                group="F",
+                cmd=eval_cmd,
+                depends_on=ckpt_deps,
+                output_files=[_out("phase2_evaluation", "experiment_F", "eval", "prediction_metrics.json")],
+                estimated_minutes=_dur("mechanism_eval_smoke" if smoke else "mechanism_eval"),
+            ))
+
     # ========================================================================
     # PHASE 3: Analysis
     # ========================================================================
@@ -827,6 +914,56 @@ print("Hypothesis validation report written to", output_dir / "hypothesis_valida
             cmd=hypo_cmd,
             depends_on=["Analysis_compile"],
             output_files=[_out("phase3_analysis", "hypothesis_validation", "hypothesis_validation.json")],
+            estimated_minutes=_dur("analysis_smoke" if smoke else "analysis"),
+        ))
+
+        # -------------------------------------------------------------------
+        # Group F: Mechanism-removal summary table
+        # -------------------------------------------------------------------
+        mechanism_summary_cmd = [
+            sys.executable, "-c",
+            f"""
+import csv, json
+from pathlib import Path
+
+src = Path({_out("phase2_evaluation", "experiment_F", "eval", "prediction_metrics.json")!r})
+out_dir = Path({_out("phase3_analysis", "mechanism_removal_summary")!r})
+out_dir.mkdir(parents=True, exist_ok=True)
+
+if src.exists():
+    with open(src, "r", encoding="utf-8") as f:
+        metrics = json.load(f)
+    rows = []
+    for m in metrics:
+        rows.append({{
+            "method": m.get("method", m.get("method_name", "unknown")),
+            "success_rate": f"{{m.get('instant_success_rate', m.get('success_rate', 0))*100:.1f}}",
+            "mean_return": f"{{m.get('mean_return', 0):.1f}}",
+            "crash_rate": f"{{m.get('crash_rate', 0)*100:.1f}}",
+            "oob_rate": f"{{m.get('out_of_bounds_rate', 0)*100:.1f}}",
+            "timeout_rate": f"{{m.get('timeout_rate', 0)*100:.1f}}",
+            "episodes": m.get("episodes", 0),
+        }})
+    csv_path = out_dir / "mechanism_removal_summary.csv"
+    with open(csv_path, "w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=list(rows[0].keys()))
+        writer.writeheader()
+        writer.writerows(rows)
+    print(f"[MECH-SUMMARY] {{csv_path}}")
+    with open(out_dir / "mechanism_removal_summary.json", "w", encoding="utf-8") as f:
+        json.dump(rows, f, indent=2, ensure_ascii=False)
+else:
+    print(f"[MECH-SUMMARY] Source not found: {{src}}")
+"""
+        ]
+        tasks.append(Task(
+            id="Analysis_mechanism",
+            name="Phase 3: Generate mechanism-removal summary table",
+            phase=3,
+            group="ANALYSIS",
+            cmd=mechanism_summary_cmd,
+            depends_on=["Eval_F"],
+            output_files=[_out("phase3_analysis", "mechanism_removal_summary", "mechanism_removal_summary.csv")],
             estimated_minutes=_dur("analysis_smoke" if smoke else "analysis"),
         ))
 
@@ -1379,8 +1516,8 @@ Examples:
         "--only-group",
         type=str,
         default=None,
-        choices=["A", "B", "C", "D", "E"],
-        help="Run only a specific experiment group (A-E)",
+        choices=["A", "B", "C", "D", "E", "F"],
+        help="Run only a specific experiment group (A-F)",
     )
     parser.add_argument(
         "--gpu",
@@ -1556,6 +1693,7 @@ def validate_environment(args: argparse.Namespace) -> Dict[str, Any]:
         "run_maneuver_sweep.py": PROJECT_ROOT / "scripts" / "run_maneuver_sweep.py",
         "compare_gain_optimization.py": PROJECT_ROOT / "scripts" / "compare_gain_optimization.py",
         "compile_ablation_results.py": PROJECT_ROOT / "scripts" / "compile_ablation_results.py",
+        "run_mechanism_removal_ablation.py": PROJECT_ROOT / "scripts" / "run_mechanism_removal_ablation.py",
     }
     for name, path in scripts.items():
         exists = path.exists()

@@ -18,7 +18,7 @@ from .jsbsim_env import JSBSimEnv, neu2lla
 from .simple_point_mass_env import SimplePointMassEnv
 from .target_dynamics import create_target_dynamics
 from .observation import compute_relative_geometry, build_observation, ObservationBuilder
-from .reward import RewardCalculator
+from .reward import build_reward_calculator
 from .termination import TerminationChecker
 from ..virtual_point.generator import VirtualPointGenerator
 from ..virtual_point.no_vpp_guidance import NoVPPGuidance
@@ -195,7 +195,7 @@ class CloseRangeTrackingEnv:
             }
             self.command_post_processor = CommandPostProcessor(processor_config)
 
-        self.reward_calculator = RewardCalculator(config)
+        self.reward_calculator = build_reward_calculator(config)
         self.termination_checker = TerminationChecker(self.env_config)
 
         # Observation builder (supports temporal features, gains, VP error, scenario)

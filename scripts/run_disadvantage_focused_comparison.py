@@ -28,9 +28,9 @@ METHODS = {
         "config": "config/experiment/maneuver_target_vpp_pilot.yaml",
         "name": "VPP-Baseline",
     },
-    "focused": {
-        "config": "config/experiment/maneuver_target_vpp_pilot_disadvantage_focused.yaml",
-        "name": "VPP-Disadvantage-Focused",
+    "focused_v2": {
+        "config": "config/experiment/maneuver_target_vpp_pilot_disadvantage_focused_v2.yaml",
+        "name": "VPP-Disadvantage-Focused-v2",
     },
 }
 

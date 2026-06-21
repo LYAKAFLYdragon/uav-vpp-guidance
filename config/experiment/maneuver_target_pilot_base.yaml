@@ -197,3 +197,8 @@ scenarios:
       position_m: [1500.0, 1500.0, 5200.0]
       velocity_mps: 210.0
       heading_deg: 225.0
+
+# Domain randomization perturbs initial position, velocity, and heading at reset.
+domain_randomization:
+  enabled: true
+  scale: 0.15

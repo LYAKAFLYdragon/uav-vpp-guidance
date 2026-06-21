@@ -214,6 +214,33 @@ def _apply_final_success_criterion(env, schedule: list):
     _apply_success_criterion_stage(env, final_stage)
 
 
+def _maybe_relabel_episode_rewards(env, agent, episode_start_idx, can_relabel):
+    """
+    Replace the raw sparse rewards of the just-finished episode with the
+    R2SP relabelled trajectory when relabelling is enabled.
+
+    Returns ``False`` if relabelling could not be applied (e.g. the episode
+    spanned a buffer boundary); the caller should then mark subsequent
+    episodes as non-relabellable until the next full reset.
+    """
+    calc = getattr(env, "reward_calculator", None)
+    if not can_relabel:
+        return False
+    if calc is None or not hasattr(calc, "finalize"):
+        return False
+    if not getattr(calc, "relabelling_enabled", False):
+        return False
+
+    relabelled = calc.finalize()
+    end_idx = agent.buffer.ptr
+    episode_len = end_idx - episode_start_idx
+    if episode_len <= 0 or episode_len != len(relabelled):
+        return False
+
+    agent.buffer.rewards[episode_start_idx:end_idx] = relabelled.astype(np.float32)
+    return True
+
+
 def train_ppo(config, output_dir, smoke=False):
     """
     Main PPO training loop.
@@ -334,6 +361,11 @@ def train_ppo(config, output_dir, smoke=False):
                 rng = np.random.default_rng(config.get("experiment", {}).get("seed", 0))
                 obs = env.reset(seed=rng.integers(0, 1000000))
 
+                # Tracks whether the current rollout starts at an episode
+                # boundary.  If an episode was cut by a buffer boundary, the
+                # remainder cannot be relabelled because its beginning is lost.
+                last_step_done = True
+
                 episode_return = 0.0
                 episode_length = 0
                 episode_ranges = []
@@ -347,6 +379,9 @@ def train_ppo(config, output_dir, smoke=False):
                 update_num = 0
 
                 while global_step < total_timesteps:
+                    episode_start_idx = agent.buffer.ptr
+                    can_relabel = last_step_done
+
                     # Collect rollout
                     for step in range(rollout_steps):
                         obs_vec = obs["observation_vector"]
@@ -420,6 +455,12 @@ def train_ppo(config, output_dir, smoke=False):
                             episode_length = 0
                             episode_ranges = []
 
+                            # Relabel sparse rewards if enabled.
+                            if _maybe_relabel_episode_rewards(
+                                env, agent, episode_start_idx, can_relabel
+                            ):
+                                pass  # rewards already rewritten in buffer
+
                             # Reset environment
                             scenario = sample_scenario(config, rng)
                             if dr_enabled:
@@ -428,12 +469,19 @@ def train_ppo(config, output_dir, smoke=False):
                                 env.set_domain_rand_scale(current_dr_scale)
                             obs = env.reset(scenario=scenario, seed=rng.integers(0, 1000000))
 
+                            # New episode starts here.
+                            episode_start_idx = agent.buffer.ptr
+                            can_relabel = True
+                            last_step_done = True
+
                             # Check if buffer is full after this step
                             if agent.buffer.full:
                                 break
 
                         if global_step >= total_timesteps:
                             break
+
+                    last_step_done = done
 
                     # PPO update when buffer is full or training ended
                     if agent.buffer.full or (global_step >= total_timesteps and len(agent.buffer) > 0):

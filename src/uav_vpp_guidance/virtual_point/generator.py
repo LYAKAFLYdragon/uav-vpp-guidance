@@ -62,6 +62,16 @@ class VirtualPointGenerator:
         # F-16 max feasible heading change per step (high_level_dt=0.2s, max rate ≈ 0.3 rad/s)
         self.max_heading_rate = config.get("max_heading_rate", 0.3)
         self.lookahead_steps = config.get("lookahead_steps", 5)
+        # Action frame: "world" (default) keeps the legacy world-NEU offset semantics;
+        # "target_velocity" rotates the offset into the target's velocity frame so that
+        # action[0] = lead/lag along the target's flight path and action[1] = lateral
+        # offset to the left/right of the target. This makes lead-turn maneuvers much
+        # easier to learn.
+        self.action_frame = str(config.get("action_frame", "world")).lower()
+        if self.action_frame not in ("world", "target_velocity"):
+            raise ValueError(
+                f"virtual_point.action_frame must be 'world' or 'target_velocity', got {self.action_frame}"
+            )
         self._prev_action = None
 
     def action_to_virtual_point(
@@ -128,6 +138,10 @@ class VirtualPointGenerator:
             ],
             dtype=np.float64,
         )
+
+        # Optionally interpret the offset in the target's velocity frame.
+        if self.action_frame == "target_velocity" and target_state is not None:
+            offset = self._rotate_to_world_frame(offset, target_state)
 
         # 确定锚点位置
         if anchor_mode == "current_target":
@@ -306,6 +320,34 @@ class VirtualPointGenerator:
             return own_pos + los
 
         return virtual_point_pos
+
+    @staticmethod
+    def _get_target_velocity(target_state):
+        """Extract target velocity vector; fall back to zeros."""
+        for key in ("velocity_vector_mps", "velocity", "velocity_neu"):
+            vel = target_state.get(key)
+            if vel is not None:
+                arr = np.asarray(vel, dtype=np.float64)
+                if arr.shape == (3,):
+                    return arr
+        return np.zeros(3, dtype=np.float64)
+
+    @staticmethod
+    def _rotate_to_world_frame(offset, target_state):
+        """Rotate a [long, lat, vert] offset from target velocity frame to world NEU."""
+        vel = VirtualPointGenerator._get_target_velocity(target_state)
+        speed = float(np.linalg.norm(vel[:2]))
+        if speed < 1e-6:
+            # Target is effectively stationary horizontally; keep world offset.
+            return offset
+        cos_h = vel[0] / speed
+        sin_h = vel[1] / speed
+        # target-x = cos_h * world-x + sin_h * world-y
+        # target-y = -sin_h * world-x + cos_h * world-y
+        # Invert to get world offset from target-frame offset:
+        world_x = cos_h * offset[0] - sin_h * offset[1]
+        world_y = sin_h * offset[0] + cos_h * offset[1]
+        return np.array([world_x, world_y, offset[2]], dtype=np.float64)
 
     @staticmethod
     def _get_target_position(target_state):

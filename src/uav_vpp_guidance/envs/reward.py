@@ -13,7 +13,10 @@ Self-contained JSBSim integration.
 """
 
 import math
+
 import numpy as np
+
+from .sparse_reward import redistribute_rewards
 
 
 def _stable_angle_diff(a, b):
@@ -220,21 +223,25 @@ class RewardCalculator:
         # 12. 位置优势奖励：鼓励从“被目标追尾”转换为“追尾目标”。
         # 在 disadvantage 等场景中，目标初始位于本机后方；单纯的角度/距离奖励
         # 不足以引导智能体完成 lead-turn / 高悠悠等位置转换机动。
+        # v2: 使用更柔和、非对称的信号，避免 agent 为了“绕后”而过度远离目标。
         reward_position_advantage = 0.0
         if self.w_position_advantage > 0.0:
             tail_thresh = self.position_advantage_tail_deg
             own_on_tail = abs(aa_deg) <= tail_thresh
             bandit_on_tail = abs(ata_deg) <= tail_thresh
             if own_on_tail and not bandit_on_tail:
+                # 本机已成功处于目标后方：强正奖励
                 advantage_signal = 1.0
             elif bandit_on_tail and not own_on_tail:
-                advantage_signal = -1.0
+                # 被目标追尾：轻微负奖励，鼓励逐步脱离，但不要过度反应
+                advantage_signal = -0.3
             else:
                 # 过渡状态：AA 越小（本机越在目标后方）越好，
                 # ATA 越小（本机越对准目标）越好。
+                # AA 权重更高，因为绕到目标后方是 disadvantage 的核心目标。
                 aa_component = 1.0 - min(1.0, abs(aa_deg) / 90.0)
                 ata_component = 1.0 - min(1.0, abs(ata_deg) / 90.0)
-                advantage_signal = 0.5 * aa_component + 0.5 * ata_component - 0.5
+                advantage_signal = 0.6 * aa_component + 0.4 * ata_component - 0.5
             reward_position_advantage = self.w_position_advantage * advantage_signal
 
         # 13. 终端奖励（由调用方根据 done/reason 注入，这里预留接口）
@@ -416,4 +423,262 @@ def create_reward_calculator(config: dict):
     if ac.get("reward", {}).get("use_sparse", False):
         from .sparse_reward_air_combat import AirCombatSparseReward
         return AirCombatSparseReward(ac.get("reward", {}))
+    return RewardCalculator(config)
+
+
+class SparseRewardCalculator:
+    """
+    Sparse event reward calculator with R2SP trajectory-level relabelling.
+
+    This calculator replaces dense geometry-based shaping with a small set of
+    sparse, semantically meaningful rewards:
+
+    - Outcome rewards at episode end: success (+10), crash (-10),
+      timeout / out-of-bounds (-5).
+    - Event reward for entering the proximity zone (e.g. ideal engagement
+      range with acceptable aspect angle).
+    - Optional per-step lock reward when the aircraft is inside the success
+      zone (can be supplied by the environment via ``info["in_lock"]`` or
+      inferred from relative geometry).
+
+    The per-step ``compute()`` output follows the original sparse MDP and can
+    be consumed directly by an environment.  After an episode finishes,
+    ``finalize()`` returns the full trajectory with outcome rewards redistributed
+    via a linear kernel and event rewards redistributed via a truncated Gaussian
+    kernel looking backward up to 50 steps.  Total reward is preserved exactly.
+
+    Because this class only changes the reward signal, it is fully compatible
+    with the existing CBF safety filter, which operates on states and actions
+    before the reward is ever computed.
+    """
+
+    def __init__(self, config):
+        """
+        Args:
+            config (dict): Configuration dictionary.  Sparse-reward parameters
+                are read from ``config["sparse_reward"]``; dense ``reward``
+                keys are used only as fallbacks for terminal magnitudes and
+                ideal range defaults.
+        """
+        self._full_config = config
+        self._sparse_cfg = config.get("sparse_reward", {})
+        self._dense_cfg = config.get("reward", {})
+
+        # Outcome magnitudes (also exposed for env injection)
+        self.terminal_success = float(
+            self._sparse_cfg.get(
+                "terminal_success", self._dense_cfg.get("terminal_success", 10.0)
+            )
+        )
+        self.terminal_crash = float(
+            self._sparse_cfg.get(
+                "terminal_crash", self._dense_cfg.get("terminal_crash", -10.0)
+            )
+        )
+        self.terminal_failure = float(
+            self._sparse_cfg.get(
+                "terminal_failure", self._dense_cfg.get("terminal_failure", -5.0)
+            )
+        )
+
+        # Proximity event definition: entering this zone triggers a one-shot
+        # event reward.  Defaults align with the existing ideal range.
+        self.event_range_m = float(
+            self._sparse_cfg.get(
+                "event_range_m", self._dense_cfg.get("ideal_range_max", 1200.0)
+            )
+        )
+        self.event_ata_deg = float(
+            self._sparse_cfg.get("event_ata_deg", 45.0)
+        )
+        self.event_reward = float(
+            self._sparse_cfg.get("event_reward", 1.0)
+        )
+
+        # Continuous lock reward (optional, disabled by default).
+        self.lock_reward = float(
+            self._sparse_cfg.get("lock_reward", 0.0)
+        )
+        self.success_range_m = float(
+            self._sparse_cfg.get(
+                "success_range_m",
+                self._full_config.get("env", {}).get("success_range_m", 900.0),
+            )
+        )
+        self.success_ata_deg = float(
+            self._sparse_cfg.get(
+                "success_ata_deg",
+                self._full_config.get("env", {}).get("success_ata_deg", 25.0),
+            )
+        )
+
+        # Relabelling kernel parameters.
+        self.gaussian_window = int(
+            self._sparse_cfg.get("gaussian_window", 50)
+        )
+        self.gaussian_sigma_ratio = float(
+            self._sparse_cfg.get("gaussian_sigma_ratio", 0.5)
+        )
+        rel_cfg = self._sparse_cfg.get("relabelling", {})
+        self.relabelling_enabled = bool(rel_cfg.get("enabled", True))
+        self.terminal_kernel = str(rel_cfg.get("terminal_kernel", "linear"))
+        self.event_kernel = str(rel_cfg.get("event_kernel", "gaussian"))
+
+        self.reset()
+
+    def reset(self):
+        """Reset all per-episode buffers."""
+        self._step = 0
+        self._continuous_rewards = []  # per-step lock rewards
+        self._events = []              # (step, event_reward)
+        self._base_step_rewards = []   # original sparse reward per step
+        self._terminal_reward = 0.0
+        self._terminal_step = None
+        self._proximity_triggered = False
+        self._redistributed = None
+
+    def compute(self, info):
+        """
+        Compute the sparse reward for the current step.
+
+        Args:
+            info (dict): Same interface as :class:`RewardCalculator`:
+                ``relative_state``, ``own_state``, ``command`` and optional
+                ``terminal_reward`` / ``termination_info``.
+
+        Returns:
+            tuple: ``(reward, reward_terms)``.  ``reward`` is the original
+            sparse reward for this step (including terminal outcome reward on
+            the last step).  ``reward_terms`` contains a per-component
+            breakdown.
+        """
+        rel = info.get("relative_state", {})
+
+        range_m = float(rel.get("range_m", 2000.0))
+        ata_deg = float(np.rad2deg(rel.get("ata_rad", np.pi)))
+
+        # ------------------------------------------------------------------
+        # 1. Proximity event: one-shot reward on first entry to the event zone.
+        # ------------------------------------------------------------------
+        event_reward = 0.0
+        if not self._proximity_triggered:
+            if range_m <= self.event_range_m and abs(ata_deg) <= self.event_ata_deg:
+                event_reward = self.event_reward
+                self._proximity_triggered = True
+                self._events.append((self._step, event_reward))
+
+        # ------------------------------------------------------------------
+        # 2. Continuous lock reward (optional).
+        # ------------------------------------------------------------------
+        lock_reward = 0.0
+        if self.lock_reward != 0.0:
+            in_lock = info.get("in_lock", False)
+            if not in_lock:
+                in_lock = (
+                    range_m <= self.success_range_m
+                    and abs(ata_deg) <= self.success_ata_deg
+                )
+            if in_lock:
+                lock_reward = self.lock_reward
+        self._continuous_rewards.append(lock_reward)
+
+        # ------------------------------------------------------------------
+        # 3. Terminal outcome reward (recorded separately for relabelling).
+        # ------------------------------------------------------------------
+        terminal_reward = info.get("terminal_reward", 0.0)
+        if terminal_reward == 0.0:
+            term_info = info.get("termination_info", {})
+            if term_info.get("is_success"):
+                terminal_reward = self.terminal_success
+            elif term_info.get("is_crash"):
+                terminal_reward = self.terminal_crash
+            elif term_info.get("is_timeout") or term_info.get("is_out_of_bounds"):
+                terminal_reward = self.terminal_failure
+
+        if terminal_reward != 0.0 and self._terminal_step is None:
+            self._terminal_reward = terminal_reward
+            self._terminal_step = self._step
+
+        # Step reward that the environment sees (original sparse MDP).
+        step_reward = event_reward + lock_reward + terminal_reward
+        self._base_step_rewards.append(float(step_reward))
+
+        reward_terms = {
+            "reward_event_proximity": event_reward,
+            "reward_lock": lock_reward,
+            "terminal_reward": terminal_reward,
+            "reward_sparse_step": event_reward + lock_reward,
+            "reward_total": step_reward,
+        }
+
+        self._step += 1
+        return float(step_reward), reward_terms
+
+    def finalize(self) -> np.ndarray:
+        """
+        Redistribute the recorded trajectory and return the per-step rewards.
+
+        Outcome rewards are spread uniformly across the whole trajectory.
+        Event rewards are spread backwards from the event step using a
+        truncated Gaussian kernel over at most ``gaussian_window`` steps.
+
+        Returns:
+            np.ndarray: Relabelled per-step rewards.  ``sum(finalize())``
+            equals the sum of all sparse rewards returned by ``compute()``.
+        """
+        trajectory_length = len(self._continuous_rewards)
+        if trajectory_length == 0:
+            self._redistributed = np.array([], dtype=float)
+            return self._redistributed
+
+        if not self.relabelling_enabled:
+            self._redistributed = np.asarray(self._base_step_rewards, dtype=float)
+            return self._redistributed
+
+        # Only redistribute the terminal reward if it was observed on the last
+        # step; otherwise treat it as already delivered in the step reward.
+        terminal = self._terminal_reward if self._terminal_step == trajectory_length - 1 else 0.0
+
+        event_relabel = redistribute_rewards(
+            trajectory_length,
+            terminal_reward=0.0,
+            events=self._events,
+            gaussian_window=self.gaussian_window,
+            gaussian_sigma_ratio=self.gaussian_sigma_ratio,
+            terminal_kernel="none",
+            event_kernel=self.event_kernel,
+        )
+        terminal_relabel = redistribute_rewards(
+            trajectory_length,
+            terminal_reward=terminal,
+            events=[],
+            terminal_kernel=self.terminal_kernel,
+            event_kernel="none",
+        )
+
+        continuous = np.asarray(self._continuous_rewards, dtype=float)
+        self._redistributed = continuous + event_relabel + terminal_relabel
+        return self._redistributed
+
+    def get_redistributed_trajectory(self) -> np.ndarray:
+        """Return the last ``finalize()`` result, or ``finalize()`` if needed."""
+        if self._redistributed is None:
+            return self.finalize()
+        return self._redistributed
+
+
+def build_reward_calculator(config):
+    """
+    Factory that selects the dense or sparse reward calculator.
+
+    The sparse calculator is chosen when ``config["reward"]["use_sparse"]`` is
+    ``True`` or when ``config["sparse_reward"]["enabled"]`` is ``True``.
+    Otherwise the original dense :class:`RewardCalculator` is returned.
+    """
+    use_sparse = (
+        config.get("reward", {}).get("use_sparse", False)
+        or config.get("sparse_reward", {}).get("enabled", False)
+    )
+    if use_sparse:
+        return SparseRewardCalculator(config)
     return RewardCalculator(config)

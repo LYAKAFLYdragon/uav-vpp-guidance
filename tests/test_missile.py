@@ -365,10 +365,10 @@ def test_step_kinematic_consistency(
 #     质量动力学不依赖 PNG，故该选择不影响质量相关断言。
 #
 # 关键常量（与实现一致）：
-#   structural_mass = INITIAL_MASS - BURN_RATE * ENGINE_BURN_TIME
-#                   = 400 - 25 * 5 = 275 kg。
+#   burnout_mass = INITIAL_MASS - BURN_RATE * ENGINE_BURN_TIME
+#                = 400 - 25 * 5 = 275 kg（燃料耗尽后的总质量，非壳体结构干重）。
 #   燃烧段成员判定使用 **步进前** 的 flight_time_s <= ENGINE_BURN_TIME(=5.0)。
-#   燃烧段内 mass_kg = max(mass_kg - BURN_RATE*dt, structural_mass)（钳到下限）。
+#   燃烧段内 mass_kg = max(mass_kg - BURN_RATE*dt, burnout_mass)（钳到下限）。
 #   燃烧结束后既不施加推力也不递减质量 → 质量恒定。
 _p6_dt_strategy = st.floats(
     min_value=1e-3, max_value=1.0, allow_nan=False, allow_infinity=False
@@ -383,21 +383,21 @@ _p6_dt_list_strategy = st.lists(_p6_dt_strategy, min_size=1, max_size=40)
 # dt 序列驱动的飞行轨迹，逐步检查 step 前后的质量：
 #   (a) 质量全程非递增（mass_after <= mass_before，含数值容差）；
 #   (b) 任一步若 **步进前** flight_time_s <= ENGINE_BURN_TIME 且 **步进前** 质量
-#       严格高于结构质量下限 275，则该步质量 **严格递减**（mass_after < mass_before）
+#       严格高于燃尽质量下限 275，则该步质量 **严格递减**（mass_after < mass_before）
 #       —— 即燃烧段在触及 275 地板之前严格单调递减；一旦因 max() 钳到 275，
 #       质量停止下降（由 (a) 的非递增与 (d) 的下限共同保证，不再强求严格递减）；
 #   (c) 任一步若 **步进前** flight_time_s > ENGINE_BURN_TIME，则该步质量恒定
 #       （mass_after == mass_before）—— 燃烧结束后推力关闭且不再递减质量；
-#   (d) 质量全程位于 [structural_mass(275), INITIAL_MASS(400)]。
+#   (d) 质量全程位于 [burnout_mass(275), INITIAL_MASS(400)]。
 @settings(max_examples=200)
 @given(dts=_p6_dt_list_strategy)
 def test_burn_phase_mass_monotonicity_and_thrust_switch(dts):
     missile = Missile3DoF()
 
-    structural_mass = (
+    burnout_mass = (
         missile.INITIAL_MASS - missile.BURN_RATE * missile.ENGINE_BURN_TIME
     )
-    assert structural_mass == pytest.approx(275.0)
+    assert burnout_mass == pytest.approx(275.0)
 
     # 从本机状态发射：mass=400, flight_time=0, in_flight=True。
     ego_state = _make_state([0.0, 5000.0, 0.0], [500.0, 0.0, 0.0])
@@ -423,20 +423,20 @@ def test_burn_phase_mass_monotonicity_and_thrust_switch(dts):
         assert mass_after <= mass_before + 1e-9
 
         # (d) 质量始终位于 [275, 400]。
-        assert structural_mass - 1e-9 <= mass_after <= missile.INITIAL_MASS + 1e-9
+        assert burnout_mass - 1e-9 <= mass_after <= missile.INITIAL_MASS + 1e-9
 
         if is_burning_pre:
-            if mass_before > structural_mass + 1e-9:
+            if mass_before > burnout_mass + 1e-9:
                 # (b) 燃烧段且步进前质量高于地板 → 严格递减。
                 assert mass_after < mass_before - 1e-12
                 # 递减量为 BURN_RATE*dt 或恰好钳到地板。
                 expected = max(
-                    mass_before - missile.BURN_RATE * dt, structural_mass
+                    mass_before - missile.BURN_RATE * dt, burnout_mass
                 )
                 assert mass_after == pytest.approx(expected, rel=1e-9, abs=1e-9)
             else:
                 # 已在地板：max() 钳位使质量不再下降（仍 == 275）。
-                assert mass_after == pytest.approx(structural_mass, abs=1e-9)
+                assert mass_after == pytest.approx(burnout_mass, abs=1e-9)
         else:
             # (c) 燃烧结束后质量恒定。
             assert mass_after == pytest.approx(mass_before, rel=1e-12, abs=1e-12)
@@ -522,7 +522,7 @@ def test_check_hit_distance_threshold_iff(
 #
 # 生成策略：直接设置失效相关状态量，覆盖各阈值两侧。
 #   - flight_time_s ∈ [0, 40]：跨越 MAX_FLIGHT_TIME_S(=20) 两侧与边界。
-#   - mass_kg ∈ [200, 400]：跨越结构质量地板 structural_mass(=275) 两侧。
+#   - mass_kg ∈ [200, 400]：跨越燃尽质量地板 burnout_mass(=275) 两侧。
 #   - flight_distance_m ∈ [0, 10000]：跨越 MAX_RANGE_M(=5000) 两侧。
 # 三者独立采样，使 (超时) 与 (燃料耗尽 且 超射程) 两个失效分支及其组合均被覆盖。
 _p5_flight_time_strategy = st.floats(
@@ -541,8 +541,8 @@ _p5_distance_strategy = st.floats(
 #
 # 充要性表述：is_expired() 返回 True 当且仅当
 #   flight_time_s > MAX_FLIGHT_TIME_S(=20)
-#   OR (mass_kg <= structural_mass(=275) AND flight_distance_m > MAX_RANGE_M(=5000))。
-# 其中 structural_mass = INITIAL_MASS - BURN_RATE*ENGINE_BURN_TIME = 400 - 25*5 = 275。
+#   OR (mass_kg <= burnout_mass(=275) AND flight_distance_m > MAX_RANGE_M(=5000))。
+# 其中 burnout_mass = INITIAL_MASS - BURN_RATE*ENGINE_BURN_TIME = 400 - 25*5 = 275。
 # 预言机用与实现 **完全相同** 的比较运算符（>、<=、>）计算该条件，保证在精确阈值
 # (20 / 275 / 5000)处与实现逐位一致，避免边界偶发分歧。
 # 另验证：失效（返回 True）时 expired=True 且 in_flight=False 被置位。
@@ -555,10 +555,10 @@ _p5_distance_strategy = st.floats(
 def test_is_expired_necessary_and_sufficient(flight_time, mass, flight_distance):
     missile = Missile3DoF()
 
-    structural_mass = (
+    burnout_mass = (
         missile.INITIAL_MASS - missile.BURN_RATE * missile.ENGINE_BURN_TIME
     )
-    assert structural_mass == pytest.approx(275.0)
+    assert burnout_mass == pytest.approx(275.0)
 
     # 直接设置失效相关状态量，置 in_flight=True 以验证失效时被复位。
     missile.flight_time_s = flight_time
@@ -568,7 +568,7 @@ def test_is_expired_necessary_and_sufficient(flight_time, mass, flight_distance)
 
     # 预言机：与实现同运算符计算充要条件。
     timed_out = flight_time > missile.MAX_FLIGHT_TIME_S
-    fuel_exhausted = mass <= structural_mass
+    fuel_exhausted = mass <= burnout_mass
     out_of_range = flight_distance > missile.MAX_RANGE_M
     expected = timed_out or (fuel_exhausted and out_of_range)
 

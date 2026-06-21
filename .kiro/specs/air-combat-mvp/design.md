@@ -340,16 +340,18 @@ a_drag = -(F_drag / mass_kg) * v_hat
 
 **重力**：`a_gravity = [0, -GRAVITY, 0]`（仅作用于 Up 分量）。
 
-**合成与积分（显式欧拉，dt = high_level_dt）**：`step` 全程无返回值（`-> None`），下述更新均作用于实例属性；未在飞时在流程最前直接 `return None`。
+**合成与积分（半隐式欧拉 / Symplectic Euler，dt = high_level_dt）**：`step` 全程无返回值（`-> None`），下述更新均作用于实例属性；未在飞时在流程最前直接 `return None`。注意：先更新速度、再用**更新后**的速度更新位置，这是半隐式（symplectic）欧拉，而非显式欧拉（显式欧拉用步进前速度更新位置）。
 
 ```
 a_total = a_png + a_thrust + a_drag + a_lift + a_gravity
-velocity_mps += a_total * dt
-position_m   += velocity_mps * dt
+velocity_mps += a_total * dt          # 先更新速度
+position_m   += velocity_mps * dt     # 用更新后的速度更新位置（半隐式）
 flight_distance_m += |velocity_mps * dt|
 flight_time_s += dt
-if 燃烧段: mass_kg -= BURN_RATE * dt
+if 燃烧段: mass_kg = max(mass_kg - BURN_RATE * dt, burnout_mass)
 ```
+
+> 命名说明：`burnout_mass = INITIAL_MASS - BURN_RATE * ENGINE_BURN_TIME`（= 275 kg）是燃料耗尽后的**总质量**（burnout mass），并非壳体结构干重（structural mass）。
 
 #### 3.1.5 边界与异常处理（见 §7）
 
@@ -973,9 +975,9 @@ def create_reward_calculator(config: dict):
 - **结局奖励用线性核均匀分配**：结局（命中/失败）是整条轨迹累积行为的结果，将稀疏的终端信号均匀回填到各步，提供稠密的方向性梯度，且保证总量守恒（Property 15）。
 - **事件奖励用高斯核反向衰减**：事件（锁定/发射/命中）由其之前的机动促成，故将信用沿时间反向（事件步之前）以高斯权重衰减分配，强化"导致该事件的前序动作"，并保证总量守恒（Property 16）。高斯比矩形窗更平滑，避免突变的信用边界。窗口默认 50（需求 5.7）。
 
-### 11.5 显式欧拉积分
+### 11.5 半隐式欧拉积分（Symplectic Euler）
 
-MVP 高层 dt=0.2 s，导弹动力学采用显式欧拉积分，简单且足够；若后续发现数值精度不足（高过载下发散），可在不改接口的前提下升级为 RK4。
+MVP 高层 dt=0.2 s，导弹动力学采用半隐式欧拉积分（Symplectic Euler：先更新速度，再用更新后的速度更新位置），简单且足够，且相比显式欧拉对周期性/振荡运动有更好的能量稳定性；若后续发现数值精度不足（高过载下发散），可在不改接口的前提下升级为 RK4。
 
 ### 11.6 pilot 默认简化后端
 

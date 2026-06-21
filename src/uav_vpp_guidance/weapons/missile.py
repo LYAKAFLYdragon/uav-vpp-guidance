@@ -465,7 +465,7 @@ class Missile3DoF:
     # 3-DoF 动力学步进（需求 1.5 / 1.6 / 1.10；设计 §3.1.4）
     # ------------------------------------------------------------------
     def step(self, dt: float, target_state: dict) -> None:
-        """推进在飞导弹一步（显式欧拉积分，需求 1.5 / 1.6 / 1.10）。
+        """推进在飞导弹一步（半隐式欧拉积分，需求 1.5 / 1.6 / 1.10）。
 
         **无返回值（返回 None）**：所有状态变更通过实例属性
         （``position_m`` / ``velocity_mps`` / ``mass_kg`` / ``flight_time_s`` /
@@ -493,25 +493,27 @@ class Missile3DoF:
           竖直（正交分量退化）时升力取 0。
         - **重力**：``a_gravity = [0, -GRAVITY, 0]``（仅作用于 Up 分量）。
 
-        **积分方案（显式欧拉，与 Property 3 / 6 对齐，必须严格遵守此顺序）**::
+        **积分方案（半隐式欧拉 / Symplectic Euler，与 Property 3 / 6 对齐，必须严格遵守此顺序）**::
 
             v_hat 由步进前的 velocity_mps 计算（速度≈0 时退化为北向 [1,0,0]）
             velocity_mps += a_total * dt          # 先更新速度
             position_m   += velocity_mps * dt     # 用 **更新后** 的速度更新位置
             flight_distance_m += |velocity_mps * dt|
             flight_time_s += dt
-            若燃烧段: mass_kg = max(mass_kg - BURN_RATE * dt, structural_mass)
+            若燃烧段: mass_kg = max(mass_kg - BURN_RATE * dt, burnout_mass)
 
-        即位置位移基于 **更新后** 的速度（半隐式 / symplectic Euler 风格），
+        即位置位移基于 **更新后** 的速度（半隐式 / symplectic Euler 风格；
+        注意这并非显式欧拉——显式欧拉用步进 **前** 的速度更新位置），
         因此 Property 3 的运动学一致性断言应针对步进 **后** 的 ``velocity_mps``：
         ``Δposition == velocity_mps_post * dt``（积分误差内），且 ``flight_time_s``
         恰增加 ``dt``。
 
         **燃烧段质量单调性（Property 6 对齐）**：是否处于燃烧段由步进 **前** 的
         ``flight_time_s <= ENGINE_BURN_TIME`` 一致判定，推力施加与质量递减使用
-        同一判定。质量按 ``BURN_RATE * dt`` 递减并钳到结构质量下限
-        ``structural_mass = INITIAL_MASS - BURN_RATE * ENGINE_BURN_TIME``
-        （= 400 - 25*5 = 275 kg），保证燃烧段严格单调递减、燃烧结束后恒定。
+        同一判定。质量按 ``BURN_RATE * dt`` 递减并钳到燃尽质量下限
+        ``burnout_mass = INITIAL_MASS - BURN_RATE * ENGINE_BURN_TIME``
+        （= 400 - 25*5 = 275 kg；即燃料耗尽后的总质量，非壳体结构干重），
+        保证燃烧段严格单调递减、燃烧结束后恒定。
 
         所有除法分母均加 ``_EPS`` 或显式判零，避免零速度奇异。
 
@@ -571,19 +573,19 @@ class Missile3DoF:
         # --- 合成总加速度。 ---
         a_total = a_png + a_thrust + a_drag + a_lift + a_gravity
 
-        # --- 显式欧拉积分（先速度后位置；位置用更新后速度）。 ---
+        # --- 半隐式欧拉积分（Symplectic Euler：先更新速度，再用更新后的速度更新位置）。 ---
         self.velocity_mps = self.velocity_mps + a_total * dt
         displacement = self.velocity_mps * dt
         self.position_m = self.position_m + displacement
         self.flight_distance_m += float(np.linalg.norm(displacement))
         self.flight_time_s += dt
 
-        # --- 燃烧段质量递减（钳到结构质量下限）。 ---
+        # --- 燃烧段质量递减（钳到燃尽质量下限 burnout_mass）。 ---
         if is_burning:
-            structural_mass = (
+            burnout_mass = (
                 self.INITIAL_MASS - self.BURN_RATE * self.ENGINE_BURN_TIME
             )
-            self.mass_kg = max(self.mass_kg - self.BURN_RATE * dt, structural_mass)
+            self.mass_kg = max(self.mass_kg - self.BURN_RATE * dt, burnout_mass)
 
         # --- 缓存目标状态供 time_to_impact 使用。 ---
         self._last_target_state = target_state
@@ -634,10 +636,10 @@ class Missile3DoF:
         满足以下任一条件即判定失效：
 
         - 飞行时间超时：``flight_time_s > MAX_FLIGHT_TIME_S``（20.0 s），或
-        - 燃料耗尽且超出射程：``mass_kg <= structural_mass`` 且
+        - 燃料耗尽且超出射程：``mass_kg <= burnout_mass`` 且
           ``flight_distance_m > MAX_RANGE_M``，其中
-          ``structural_mass = INITIAL_MASS - BURN_RATE * ENGINE_BURN_TIME``
-          （= 400 - 25*5 = 275 kg）。
+          ``burnout_mass = INITIAL_MASS - BURN_RATE * ENGINE_BURN_TIME``
+          （= 400 - 25*5 = 275 kg；燃料耗尽后的总质量，非壳体结构干重）。
 
         失效时置 ``expired=True``、``in_flight=False`` 并返回 ``True``；否则返回
         ``False`` 且不修改任何状态（保持幂等，与 Property 5 的充要性一致）。
@@ -648,12 +650,12 @@ class Missile3DoF:
         Returns:
             bool: 是否失效。
         """
-        structural_mass = (
+        burnout_mass = (
             self.INITIAL_MASS - self.BURN_RATE * self.ENGINE_BURN_TIME
         )
 
         timed_out = self.flight_time_s > self.MAX_FLIGHT_TIME_S
-        fuel_exhausted = self.mass_kg <= structural_mass
+        fuel_exhausted = self.mass_kg <= burnout_mass
         out_of_range = self.flight_distance_m > self.MAX_RANGE_M
 
         if timed_out or (fuel_exhausted and out_of_range):

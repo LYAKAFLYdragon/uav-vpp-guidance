@@ -74,7 +74,7 @@
     - 推力：`flight_time_s <= ENGINE_BURN_TIME` 时 `a_thrust=(THRUST/mass_kg)*v_hat`，否则为 0
     - 阻力（经验修正公式）：`q=0.5*AIR_DENSITY*|v|^2`，`F_drag = 0.05*DRAG_COEFF/3*q*REF_AREA`，`a_drag=-(F_drag/mass_kg)*v_hat`
     - 升力：`F_lift=q*LIFT_COEFF*REF_AREA`，方向取竖直—速度平面内与速度正交的单位向量；重力 `a_gravity=[0,-GRAVITY,0]`
-    - 合成显式欧拉积分：更新 `velocity_mps`、`position_m`、`flight_distance_m`、`flight_time_s`；燃烧段按 `BURN_RATE*dt` 递减 `mass_kg`（下限钳到结构质量）
+    - 合成半隐式欧拉积分（Symplectic Euler：先更新速度，再用更新后的速度更新位置）：更新 `velocity_mps`、`position_m`、`flight_distance_m`、`flight_time_s`；燃烧段按 `BURN_RATE*dt` 递减 `mass_kg`（下限钳到燃尽质量 `burnout_mass`）
     - 缓存 `_last_target_state`；`in_flight=False` 时 `step` 流程最前直接 `return None`（无返回值）
     - _Requirements: 1.5, 1.6, 1.10_
 

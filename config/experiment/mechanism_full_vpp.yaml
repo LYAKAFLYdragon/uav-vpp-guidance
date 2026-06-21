@@ -1,0 +1,9 @@
+# Mechanism-removal ablation baseline: all mechanisms enabled.
+includes:
+  - train_no_prediction_vpp_ppo.yaml
+
+experiment:
+  name: mechanism_full_vpp
+
+observation:
+  include_gains: true

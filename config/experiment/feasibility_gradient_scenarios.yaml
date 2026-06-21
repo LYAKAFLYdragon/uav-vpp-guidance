@@ -1,0 +1,65 @@
+# Feasibility-gradient scenarios for the lead-turn / disadvantage task.
+# These five scenarios form a controlled difficulty ladder that moves the
+# target from an easy front-quarter position (large speed advantage) toward
+# the standard rear-hemisphere `disadvantage` geometry.
+
+scenarios:
+  disadvantage_easy_speed_advantage:
+    name: disadvantage_easy_speed_advantage
+    description: "Very easy lead-turn: target in front-quarter, large speed advantage, small heading offset."
+    own_init:
+      position_m: [0.0, 0.0, 5000.0]
+      velocity_mps: 280.0
+      heading_deg: 0.0
+    target_init:
+      position_m: [600.0, 200.0, 5000.0]
+      velocity_mps: 180.0
+      heading_deg: 0.0
+
+  disadvantage_bridge_1:
+    name: disadvantage_bridge_1
+    description: "Front-quarter lead-turn with moderate speed advantage."
+    own_init:
+      position_m: [0.0, 0.0, 5000.0]
+      velocity_mps: 260.0
+      heading_deg: 0.0
+    target_init:
+      position_m: [300.0, 300.0, 5000.0]
+      velocity_mps: 190.0
+      heading_deg: 10.0
+
+  disadvantage_bridge_2:
+    name: disadvantage_bridge_2
+    description: "Beam lead-turn; target abeam with small speed advantage."
+    own_init:
+      position_m: [0.0, 0.0, 5000.0]
+      velocity_mps: 240.0
+      heading_deg: 0.0
+    target_init:
+      position_m: [0.0, 400.0, 5000.0]
+      velocity_mps: 200.0
+      heading_deg: 20.0
+
+  disadvantage_bridge_3:
+    name: disadvantage_bridge_3
+    description: "Rear-quarter lead-turn; target has moved behind the beam."
+    own_init:
+      position_m: [0.0, 0.0, 5000.0]
+      velocity_mps: 220.0
+      heading_deg: 0.0
+    target_init:
+      position_m: [-300.0, 500.0, 5000.0]
+      velocity_mps: 210.0
+      heading_deg: 25.0
+
+  disadvantage:
+    name: disadvantage
+    description: "Standard disadvantage: target starts offset behind ego; ego must perform lead turn."
+    own_init:
+      position_m: [0.0, 0.0, 5000.0]
+      velocity_mps: 200.0
+      heading_deg: 0.0
+    target_init:
+      position_m: [-600.0, 400.0, 5000.0]
+      velocity_mps: 220.0
+      heading_deg: 30.0

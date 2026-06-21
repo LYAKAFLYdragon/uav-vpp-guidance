@@ -1,0 +1,130 @@
+# Feasibility-gradient scenarios for the disadvantage lead-turn task.
+#
+# These scenarios gradually move from an energy-rich, clearly solvable lead-turn
+# toward the standard `disadvantage` geometry.  Each bridge keeps the same
+# scenario family -- target starts behind-left and ego must turn left to get
+# nose-on / tail-chase -- but varies the parameters that dominate feasibility:
+#   - speed ratio  V_ego / V_target
+#   - initial lateral offset
+#   - target heading (how directly the target is pulling away)
+#
+# The base scenarios (favorable, neutral, challenging) are re-declared here so
+# this file can be included standalone in a curriculum experiment.
+
+scenarios:
+  # ------------------------------------------------------------------
+  # Base / anchor scenarios
+  # ------------------------------------------------------------------
+  favorable:
+    name: favorable
+    description: "Ego starts behind target at close range with strong speed advantage."
+    own_init:
+      position_m: [0.0, 0.0, 5000.0]
+      velocity_mps: 280.0
+      heading_deg: 0.0
+    target_init:
+      position_m: [800.0, 0.0, 5000.0]
+      velocity_mps: 180.0
+      heading_deg: 0.0
+
+  neutral:
+    name: neutral
+    description: "Ego and target start head-on at similar speed and altitude."
+    own_init:
+      position_m: [0.0, 0.0, 5000.0]
+      velocity_mps: 200.0
+      heading_deg: 0.0
+    target_init:
+      position_m: [2000.0, 0.0, 5000.0]
+      velocity_mps: 200.0
+      heading_deg: 180.0
+
+  challenging:
+    name: challenging
+    description: "Target starts at high lateral offset with crossing trajectory."
+    own_init:
+      position_m: [0.0, 0.0, 5000.0]
+      velocity_mps: 200.0
+      heading_deg: 45.0
+    target_init:
+      position_m: [1500.0, 1500.0, 5200.0]
+      velocity_mps: 210.0
+      heading_deg: 225.0
+
+  # ------------------------------------------------------------------
+  # Standard disadvantage (the eventual target)
+  # ------------------------------------------------------------------
+  disadvantage:
+    name: disadvantage
+    description: "Target starts offset behind ego; ego must perform lead turn."
+    own_init:
+      position_m: [0.0, 0.0, 5000.0]
+      velocity_mps: 200.0
+      heading_deg: 0.0
+    target_init:
+      position_m: [-600.0, 400.0, 5000.0]
+      velocity_mps: 220.0
+      heading_deg: 30.0
+
+  # ------------------------------------------------------------------
+  # Bridge scenarios: easy -> hard
+  # ------------------------------------------------------------------
+  disadvantage_bridge_1:
+    name: disadvantage_bridge_1
+    description: "Energy-rich lead-turn. Ego has 44% speed advantage and target is close behind with small offset."
+    own_init:
+      position_m: [0.0, 0.0, 5000.0]
+      velocity_mps: 260.0
+      heading_deg: 0.0
+    target_init:
+      position_m: [-300.0, 100.0, 5000.0]
+      velocity_mps: 180.0
+      heading_deg: 10.0
+
+  disadvantage_bridge_2:
+    name: disadvantage_bridge_2
+    description: "Comfortable lead-turn. Ego has 26% speed advantage."
+    own_init:
+      position_m: [0.0, 0.0, 5000.0]
+      velocity_mps: 240.0
+      heading_deg: 0.0
+    target_init:
+      position_m: [-400.0, 150.0, 5000.0]
+      velocity_mps: 190.0
+      heading_deg: 15.0
+
+  disadvantage_bridge_3:
+    name: disadvantage_bridge_3
+    description: "Moderate lead-turn. Ego has 15% speed advantage; offset and target heading grow."
+    own_init:
+      position_m: [0.0, 0.0, 5000.0]
+      velocity_mps: 230.0
+      heading_deg: 0.0
+    target_init:
+      position_m: [-450.0, 200.0, 5000.0]
+      velocity_mps: 200.0
+      heading_deg: 20.0
+
+  disadvantage_bridge_4:
+    name: disadvantage_bridge_4
+    description: "Narrow lead-turn. Only 5% speed advantage; geometry is forgiving via reduced offset."
+    own_init:
+      position_m: [0.0, 0.0, 5000.0]
+      velocity_mps: 220.0
+      heading_deg: 0.0
+    target_init:
+      position_m: [-500.0, 250.0, 5000.0]
+      velocity_mps: 210.0
+      heading_deg: 25.0
+
+  disadvantage_bridge_5:
+    name: disadvantage_bridge_5
+    description: "Near-standard disadvantage. Ego is slightly slower; last bridge before standard."
+    own_init:
+      position_m: [0.0, 0.0, 5000.0]
+      velocity_mps: 210.0
+      heading_deg: 0.0
+    target_init:
+      position_m: [-550.0, 300.0, 5000.0]
+      velocity_mps: 215.0
+      heading_deg: 28.0

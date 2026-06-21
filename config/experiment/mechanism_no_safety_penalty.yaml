@@ -1,0 +1,12 @@
+# Mechanism-removal ablation: remove the low-altitude safety penalty.
+includes:
+  - train_no_prediction_vpp_ppo.yaml
+
+experiment:
+  name: mechanism_no_safety_penalty
+
+observation:
+  include_gains: true
+
+reward:
+  w_safety: 0.0

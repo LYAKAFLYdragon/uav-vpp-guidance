@@ -167,13 +167,16 @@ def _load_ppo_hyperparams(ppo_path: str) -> dict:
     return out
 
 
-def build_config(pilot_path: str, reward: str = "sparse", vpp: bool = True) -> dict:
+def build_config(pilot_path: str, reward: str = "sparse", vpp: bool = True,
+                 launch_action: bool = False) -> dict:
     """Build full AirCombatMVPEnv config: base + pilot + ppo, with toggles.
 
     Args:
         pilot_path: pilot yaml path.
         reward: "sparse" or "dense" (toggles air_combat.reward.use_sparse).
         vpp: True -> virtual_point.mode="normal"; False -> "zero_offset" (No-VPP).
+        launch_action: True -> 4-dim action with policy launch decision
+            (air_combat.action.use_launch_action); False -> 3-dim rule-launch.
 
     Returns:
         dict: full config for AirCombatMVPEnv + PPOAgent.
@@ -194,6 +197,10 @@ def build_config(pilot_path: str, reward: str = "sparse", vpp: bool = True) -> d
     config.setdefault("virtual_point", {})
     config["virtual_point"]["enabled"] = True
     config["virtual_point"]["mode"] = "normal" if vpp else "zero_offset"
+
+    # Defect 2: launch-decision action toggle.
+    config["air_combat"].setdefault("action", {})
+    config["air_combat"]["action"]["use_launch_action"] = bool(launch_action)
 
     return config
 
@@ -274,14 +281,18 @@ def train(config: dict, total_timesteps: int, seed: int, label: str,
 
     obs = env.reset(scenario=build_episode_scenario(scenario_cfg, rng), seed=seed)
     obs_dim = int(obs["observation_vector"].shape[0])
-    action_dim = int(config["policy"]["action_dim"])
+    # action_dim from the env (4 when launch-decision action is enabled, else 3),
+    # keeping policy.action_dim in sync so the PPO network output matches.
+    action_dim = int(env.action_dim)
+    config.setdefault("policy", {})["action_dim"] = action_dim
 
     agent = PPOAgent(obs_dim=obs_dim, action_dim=action_dim, config=config, device="cpu")
 
     print("=" * 72)
     print(f"[{label}] PPO smoke training on AirCombatMVPEnv (simple backend)")
     print(f"  reward={'sparse' if config['air_combat']['reward']['use_sparse'] else 'dense'}"
-          f"  vpp_mode={config['virtual_point']['mode']}")
+          f"  vpp_mode={config['virtual_point']['mode']}"
+          f"  launch_action={config.get('air_combat', {}).get('action', {}).get('use_launch_action', False)}")
     print(f"  obs_dim={obs_dim}  action_dim={action_dim}  rollout_steps={rollout_steps}"
           f"  total_timesteps={total_timesteps}  seed={seed}")
     print("=" * 72)
@@ -386,6 +397,9 @@ def train(config: dict, total_timesteps: int, seed: int, label: str,
         "label": label,
         "reward": "sparse" if config["air_combat"]["reward"]["use_sparse"] else "dense",
         "vpp_mode": config["virtual_point"]["mode"],
+        "launch_action": bool(
+            config.get("air_combat", {}).get("action", {}).get("use_launch_action", False)
+        ),
         "completed_timesteps": global_step,
         "target_timesteps": total_timesteps,
         "episodes": episode_count,
@@ -436,6 +450,10 @@ def main() -> int:
                         help="use VPP guidance (default)")
     parser.add_argument("--no-vpp", dest="vpp", action="store_false",
                         help="use No-VPP baseline (virtual_point.mode=zero_offset)")
+    parser.add_argument("--launch-action", dest="launch_action", action="store_true",
+                        default=False,
+                        help="enable 4-dim action with policy launch decision "
+                             "(air_combat.action.use_launch_action; defect 2)")
     parser.add_argument("--rollout-steps", type=int, default=None,
                         help="override PPO rollout_steps")
     parser.add_argument("--output-dir", default=os.path.join("outputs", "mvp_air_combat_smoke"),
@@ -443,11 +461,17 @@ def main() -> int:
     parser.add_argument("--label", default=None, help="run label for log filenames")
     args = parser.parse_args()
 
-    config = build_config(args.config, reward=args.reward, vpp=args.vpp)
+    config = build_config(
+        args.config, reward=args.reward, vpp=args.vpp,
+        launch_action=args.launch_action,
+    )
     if args.rollout_steps is not None:
         config["ppo"]["rollout_steps"] = args.rollout_steps
 
-    label = args.label or f"{args.reward}_{'vpp' if args.vpp else 'novpp'}_seed{args.seed}"
+    la_tag = "_launch" if args.launch_action else ""
+    label = args.label or (
+        f"{args.reward}_{'vpp' if args.vpp else 'novpp'}{la_tag}_seed{args.seed}"
+    )
     summary = train(config, args.timesteps, args.seed, label, args.output_dir)
 
     print("\n=== Task summary (JSON) ===")

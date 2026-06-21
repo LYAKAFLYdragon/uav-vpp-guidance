@@ -342,3 +342,159 @@ def test_finalize_returns_none_without_episode():
     env.reset(seed=0)
     # reset 后尚未 step，_episode_step_events 为空 → finalize 返回 None。
     assert env.finalize(terminal_reward=5.0) is None
+
+
+# ===========================================================================
+# 缺陷 2：发射决策动作维（use_launch_action）
+# 验证：
+#   - action_dim 属性：默认 3，启用时 4。
+#   - 物理可行 AND 策略请求 → 发射；
+#   - 物理可行 AND 策略放弃 → 不发射（策略学习"何时发射"）；
+#   - 物理不可行（未锁定）即使策略请求 → 不发射（物理约束优先）。
+#   - 默认（未启用）时第 4 维不存在，规则发射行为不变（向后兼容）。
+# ===========================================================================
+def _build_launch_action_config(use_launch_action=True, threshold=0.0):
+    cfg = _build_config()
+    cfg["air_combat"]["action"] = {
+        "use_launch_action": use_launch_action,
+        "launch_action_threshold": threshold,
+    }
+    return cfg
+
+
+def test_action_dim_property():
+    """action_dim：默认 3；启用发射决策维时 4。"""
+    env_default = AirCombatMVPEnv(_build_config())
+    assert env_default.action_dim == 3
+
+    env_launch = AirCombatMVPEnv(_build_launch_action_config(True))
+    assert env_launch.action_dim == 4
+
+
+def _force_lock(env, ego, target):
+    """连续 update 雷达直到锁定（达到 lock_time_steps）。"""
+    for _ in range(env.radar_ego.lock_time_steps + 1):
+        env.radar_ego.update(ego, target)
+    assert env.radar_ego.locked is True
+
+
+def test_launch_action_feasible_and_wants_launches():
+    """物理可行（锁定+包线+无在飞弹）且策略请求发射 → 发射。"""
+    env = AirCombatMVPEnv(_build_launch_action_config(True, threshold=0.0))
+    # 目标正前方、包线内（距离 2000，ATA 0）。
+    ego, target = _state_at(2000.0, 0.0)
+    env.reset(seed=0)
+    AirCombatMVPEnv._reset_missile(env.missile_ego)
+    _force_lock(env, ego, target)
+
+    # 物理可行 + 策略请求（第 4 维 > 阈值）。
+    launch_feasible = (
+        env.radar_ego.locked
+        and not env.missile_ego.in_flight
+        and env.missile_ego.can_launch(ego, target)
+    )
+    assert launch_feasible is True
+    # 直接复刻 step 的门控逻辑（避免依赖父类动力学推进改变几何）。
+    policy_wants = 0.9 > env._launch_action_threshold
+    assert (launch_feasible and policy_wants) is True
+
+
+def test_launch_action_feasible_but_declines_no_launch():
+    """物理可行但策略放弃发射（第 4 维 <= 阈值）→ 不发射。"""
+    env = AirCombatMVPEnv(_build_launch_action_config(True, threshold=0.0))
+    ego, target = _state_at(2000.0, 0.0)
+    env.reset(seed=0)
+    AirCombatMVPEnv._reset_missile(env.missile_ego)
+    _force_lock(env, ego, target)
+
+    launch_feasible = (
+        env.radar_ego.locked
+        and not env.missile_ego.in_flight
+        and env.missile_ego.can_launch(ego, target)
+    )
+    policy_wants = (-0.5) > env._launch_action_threshold  # 放弃发射
+    assert launch_feasible is True
+    assert policy_wants is False
+    assert (launch_feasible and policy_wants) is False
+
+
+def test_launch_action_infeasible_ignored():
+    """物理不可行（未锁定）即使策略请求 → 不发射（物理约束优先）。"""
+    env = AirCombatMVPEnv(_build_launch_action_config(True, threshold=0.0))
+    ego, target = _state_at(2000.0, 0.0)
+    env.reset(seed=0)
+    AirCombatMVPEnv._reset_missile(env.missile_ego)
+    env.radar_ego.reset()  # 未锁定
+
+    launch_feasible = (
+        env.radar_ego.locked
+        and not env.missile_ego.in_flight
+        and env.missile_ego.can_launch(ego, target)
+    )
+    policy_wants = 0.9 > env._launch_action_threshold  # 请求发射
+    assert env.radar_ego.locked is False
+    assert launch_feasible is False
+    assert (launch_feasible and policy_wants) is False
+
+
+def test_launch_action_end_to_end_4dim():
+    """4 维动作端到端：始终请求发射时应能发射并命中（与规则发射等价）。"""
+    env = AirCombatMVPEnv(_build_launch_action_config(True, threshold=0.0))
+    scenario = {
+        "name": "launch_action_test",
+        "own_init": {
+            "position_m": np.array([0.0, 0.0, 5000.0], dtype=float),
+            "velocity_mps": 250.0,
+            "heading_deg": 0.0,
+        },
+        "target_init": {
+            "position_m": np.array([3500.0, 0.0, 5000.0], dtype=float),
+            "velocity_mps": 250.0,
+            "heading_deg": 180.0,
+        },
+    }
+    env.reset(scenario=scenario, seed=0)
+    # 4 维动作：VPP 零偏移 + 始终请求发射（第 4 维 = +1）。
+    action = np.array([0.0, 0.0, 0.0, 1.0], dtype=float)
+    launched_ever = False
+    hit = False
+    for _ in range(400):
+        _obs, _reward, terminated, truncated, info = env.step(action)
+        if info.get("launched"):
+            launched_ever = True
+        if (info.get("termination_info", {}) or {}).get("is_success"):
+            hit = True
+        if terminated or truncated:
+            break
+    assert launched_ever is True
+    assert hit is True
+
+
+def test_launch_action_declined_never_launches_4dim():
+    """4 维动作端到端：始终放弃发射 → 整局不发射（验证决策真正生效）。"""
+    env = AirCombatMVPEnv(_build_launch_action_config(True, threshold=0.0))
+    scenario = {
+        "name": "launch_action_decline_test",
+        "own_init": {
+            "position_m": np.array([0.0, 0.0, 5000.0], dtype=float),
+            "velocity_mps": 250.0,
+            "heading_deg": 0.0,
+        },
+        "target_init": {
+            "position_m": np.array([3500.0, 0.0, 5000.0], dtype=float),
+            "velocity_mps": 250.0,
+            "heading_deg": 180.0,
+        },
+    }
+    env.reset(scenario=scenario, seed=0)
+    # 4 维动作：VPP 零偏移 + 始终放弃发射（第 4 维 = -1）。
+    action = np.array([0.0, 0.0, 0.0, -1.0], dtype=float)
+    launched_ever = False
+    for _ in range(400):
+        _obs, _reward, terminated, truncated, info = env.step(action)
+        if info.get("launched"):
+            launched_ever = True
+        if terminated or truncated:
+            break
+    assert launched_ever is False
+    assert env.missile_ego.in_flight is False

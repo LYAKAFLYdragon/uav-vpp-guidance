@@ -282,6 +282,39 @@ class AirCombatMVPEnv(CloseRangeTrackingEnv):
         # 每个元素为对应 step 触发的事件名称列表；reset 时清空。
         self._episode_step_events = []
 
+        # ------------------------------------------------------------------
+        # 缺陷 2 修复：发射决策动作维（可选，默认关闭以保持向后兼容）。
+        # ------------------------------------------------------------------
+        # air_combat.action.use_launch_action（默认 False）：
+        #   - False（默认，第一阶段）：动作空间为 3 维 VPP 偏移，导弹发射由规则
+        #     自动触发（锁定 + 包线 + 无在飞弹），与既有行为完全一致。
+        #   - True（第二阶段）：动作空间扩展为 4 维 = [VPP 偏移(3) + 发射决策(1)]。
+        #     第 4 维为连续值，经阈值 launch_action_threshold 二值化为"策略是否
+        #     请求发射"。实际发射仍由**物理可行性**门控（锁定 + 无在飞弹 +
+        #     can_launch），即策略学习"何时发射"，但不能违反物理约束发射。
+        action_cfg = ac.get("action", {})
+        self._use_launch_action = bool(action_cfg.get("use_launch_action", False))
+        # 发射决策阈值：策略第 4 维动作 > 阈值 ⇒ 请求发射（动作归一化区间约 [-1,1]）。
+        self._launch_action_threshold = float(
+            action_cfg.get("launch_action_threshold", 0.0)
+        )
+        # 发射时机奖励塑形（可选）：对"在物理可行窗口内请求发射"给予小幅塑形奖励，
+        # 缓解发射决策的稀疏性。默认 0.0（关闭，纯稀疏），仅在显式配置时生效。
+        self._launch_shaping_reward = float(
+            action_cfg.get("launch_shaping_reward", 0.0)
+        )
+        # 最近一步发射决策诊断缓存（供 info / 奖励塑形；step 前为默认值）。
+        self._last_launch_feasible = False
+        self._last_policy_wants_launch = False
+
+    @property
+    def action_dim(self) -> int:
+        """策略动作维度：启用发射决策维时为 4（VPP 偏移 3 + 发射 1），否则 3。
+
+        训练脚本可读取本属性配置策略网络输出维度（与 obs_dim 类似由环境暴露）。
+        """
+        return 4 if self._use_launch_action else 3
+
     # ------------------------------------------------------------------
     # 任务 12.2：reset 复位扩展（需求 3.1）
     # ------------------------------------------------------------------
@@ -337,6 +370,9 @@ class AirCombatMVPEnv(CloseRangeTrackingEnv):
 
         # 4b) 清空逐步事件轨迹累加器（供 finalize() 轨迹级重标）。
         self._episode_step_events = []
+        # 4c) 复位发射决策诊断缓存。
+        self._last_launch_feasible = False
+        self._last_policy_wants_launch = False
 
         # 5) 复位稀疏奖励（若启用）。
         if self._sparse_reward is not None:
@@ -502,8 +538,15 @@ class AirCombatMVPEnv(CloseRangeTrackingEnv):
         C 节：父类 step 在终止时不做清理，重算是安全且幂等的）。
 
         Args:
-            action: 策略动作（透传给父类）。第一阶段导弹发射由规则触发，不占用
-                动作维度（需求 3.6）。
+            action: 策略动作（透传给父类）。动作维度由 ``action_dim`` 属性决定：
+
+                - **3 维（默认，规则发射）**：``[VPP 偏移 x, y, z]``。导弹发射由规则
+                  自动触发（锁定 + 包线 + 无在飞弹），不占用动作维度（需求 3.6）。
+                - **4 维（启用 ``air_combat.action.use_launch_action``，缺陷 2 修复）**：
+                  ``[VPP 偏移 x, y, z, 发射决策]``。前 3 维透传父类作 VPP 偏移；
+                  第 4 维经阈值 ``launch_action_threshold`` 二值化为"策略是否请求发射"。
+                  实际发射 = 物理可行（锁定 + 无在飞弹 + can_launch）AND 策略请求发射，
+                  即策略学习"何时发射"但不能违反物理约束发射。
 
         Returns:
             tuple: ``(obs, reward, terminated, truncated, info)``。``info`` 含
@@ -511,7 +554,22 @@ class AirCombatMVPEnv(CloseRangeTrackingEnv):
             ``time_to_impact``，并合并父类 ``base_info``。
         """
         # ① 本机机动：复用父类制导/飞行链路推进本机与目标动力学。
-        obs, _base_reward, _term, _trunc, base_info = super().step(action)
+        #    发射决策维（缺陷 2）：启用 use_launch_action 时动作为 4 维
+        #    [VPP 偏移(3) + 发射决策(1)]；父类只消费前 3 维 VPP 偏移，故在此切片，
+        #    并将第 4 维二值化为"策略是否请求发射"。未启用时动作为 3 维，
+        #    policy_wants_launch 恒为 True（等价于纯规则发射，向后兼容）。
+        if self._use_launch_action and action is not None:
+            action_arr = np.asarray(action, dtype=np.float64)
+            vpp_action = action_arr[:3]
+            launch_decision_raw = (
+                float(action_arr[3]) if action_arr.shape[0] >= 4 else 0.0
+            )
+            policy_wants_launch = launch_decision_raw > self._launch_action_threshold
+        else:
+            vpp_action = action
+            policy_wants_launch = True
+
+        obs, _base_reward, _term, _trunc, base_info = super().step(vpp_action)
 
         # super().step 已推进动力学；读取 post-step 当前状态（NEU 轴序）。
         own_neu, target_neu = self._get_current_states()
@@ -530,13 +588,21 @@ class AirCombatMVPEnv(CloseRangeTrackingEnv):
         self._last_radar_state = radar_state
 
         # ③ 检查发射（环境层组合条件，需求 3.7）：
-        #    锁定 AND 无在飞弹 AND 几何允许发射 ⇔ 创建一枚在飞导弹。
-        launched = False
-        if (
+        #    物理可行性门控 = 锁定 AND 无在飞弹 AND 几何允许发射。
+        #    缺陷 2：实际发射 = 物理可行 AND 策略请求发射（policy_wants_launch）。
+        #    - 规则发射模式（默认）：policy_wants_launch 恒 True ⇒ 物理可行即发射。
+        #    - 发射决策模式：策略学习"何时发射"，但不能违反物理约束发射
+        #      （可行窗口外即使请求也不发射）。
+        launch_feasible = (
             radar_state["locked"]
             and not self.missile_ego.in_flight
             and self.missile_ego.can_launch(own, target)
-        ):
+        )
+        launched = False
+        # 记录"策略在可行窗口内请求/放弃发射"以供奖励塑形与诊断。
+        self._last_launch_feasible = bool(launch_feasible)
+        self._last_policy_wants_launch = bool(policy_wants_launch)
+        if launch_feasible and policy_wants_launch:
             self.missile_ego.launch(own)
             launched = True
 
@@ -581,6 +647,18 @@ class AirCombatMVPEnv(CloseRangeTrackingEnv):
         else:
             reward = _base_reward
 
+        # 发射时机奖励塑形（缺陷 2，可选）：仅当启用发射决策维且配置了非零塑形值时
+        # 生效。对"在物理可行窗口内策略请求并成功发射"给予 +shaping；对"可行窗口内
+        # 策略放弃发射"给予 -shaping（鼓励抓住可行发射窗口）。默认 shaping=0（关闭），
+        # 保持纯稀疏奖励语义不变。
+        if self._use_launch_action and self._launch_shaping_reward != 0.0:
+            if self._last_launch_feasible:
+                if launched:
+                    reward += self._launch_shaping_reward
+                elif not self.missile_ego.in_flight:
+                    # 可行但策略放弃发射（且当前无在飞弹）→ 轻微惩罚错失窗口。
+                    reward -= self._launch_shaping_reward
+
         obs = self._get_observation()
         info = {
             **base_info,
@@ -588,6 +666,9 @@ class AirCombatMVPEnv(CloseRangeTrackingEnv):
             "termination_info": term_info,
             "missile_in_flight": self.missile_ego.in_flight,
             "time_to_impact": self.missile_ego.time_to_impact,
+            "launch_feasible": self._last_launch_feasible,
+            "policy_wants_launch": self._last_policy_wants_launch,
+            "launched": launched,
         }
         return obs, reward, terminated, truncated, info
 

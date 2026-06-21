@@ -44,3 +44,4 @@ logs/
 # Recommended: include essential models (f16) in git, ignore large ones.
 paper.log
 .claude/
+scripts/_cloud_*

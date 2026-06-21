@@ -392,3 +392,28 @@ class RewardCalculator:
         """Reset internal state (e.g., previous command buffer)."""
         self._prev_command = None
         self._prev_rel_state = None
+
+
+def create_reward_calculator(config: dict):
+    """根据配置选择奖励实现（非破坏式工厂，需求 4.11 / 7.2 / 7.7）。
+
+    - ``air_combat.reward.use_sparse=True`` → 返回 ``AirCombatSparseReward``
+      （R2SP 风格事件稀疏奖励，使用 ``air_combat.reward`` 子配置）。
+    - 否则 → 返回现有 ``RewardCalculator``（密集奖励，行为完全不变）。
+
+    采用惰性导入 ``AirCombatSparseReward`` 以避免模块加载期的循环依赖。
+    本工厂不修改 ``RewardCalculator`` 现有逻辑（需求 7.7）。
+
+    Args:
+        config: 完整配置字典。沿用 ``RewardCalculator(config)`` 既有约定，
+            回退分支直接将整个 ``config`` 传入 ``RewardCalculator``（其内部
+            自行读取 ``config.get("reward", {})``）。
+
+    Returns:
+        奖励实现实例：``AirCombatSparseReward`` 或 ``RewardCalculator``。
+    """
+    ac = config.get("air_combat", {})
+    if ac.get("reward", {}).get("use_sparse", False):
+        from .sparse_reward_air_combat import AirCombatSparseReward
+        return AirCombatSparseReward(ac.get("reward", {}))
+    return RewardCalculator(config)

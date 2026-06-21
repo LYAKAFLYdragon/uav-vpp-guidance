@@ -278,6 +278,10 @@ class AirCombatMVPEnv(CloseRangeTrackingEnv):
         # 最近一次雷达状态缓存（供观测 radar_state 字段；reset 前用默认值）。
         self._last_radar_state = dict(self._DEFAULT_RADAR_STATE)
 
+        # 逐步事件轨迹累加器（供回合结束后的轨迹级重标 finalize() 使用）。
+        # 每个元素为对应 step 触发的事件名称列表；reset 时清空。
+        self._episode_step_events = []
+
     # ------------------------------------------------------------------
     # 任务 12.2：reset 复位扩展（需求 3.1）
     # ------------------------------------------------------------------
@@ -330,6 +334,9 @@ class AirCombatMVPEnv(CloseRangeTrackingEnv):
         self._prev_event_state = {}
         self._prev_in_envelope = False
         self._last_radar_state = dict(self._DEFAULT_RADAR_STATE)
+
+        # 4b) 清空逐步事件轨迹累加器（供 finalize() 轨迹级重标）。
+        self._episode_step_events = []
 
         # 5) 复位稀疏奖励（若启用）。
         if self._sparse_reward is not None:
@@ -567,6 +574,8 @@ class AirCombatMVPEnv(CloseRangeTrackingEnv):
         events = self._detect_events(
             own, target, radar_state, launched, hit, expired
         )
+        # 累加本步事件到回合轨迹（供回合结束后的 finalize() 轨迹级重标）。
+        self._episode_step_events.append(list(events))
         if self._use_sparse:
             reward = self._compute_sparse_reward(events, term_info)
         else:
@@ -821,3 +830,45 @@ class AirCombatMVPEnv(CloseRangeTrackingEnv):
             float: 本步事件奖励之和。
         """
         return float(self._sparse_reward.compute_step(events))
+
+    # ------------------------------------------------------------------
+    # 轨迹级重标接口（缺陷 1 修复：暴露 relabel_trajectory 给训练流程）
+    # ------------------------------------------------------------------
+    def finalize(self, terminal_reward: float = 0.0):
+        """回合结束后的轨迹级奖励重标（线性核 + 高斯核）。
+
+        本方法把 ``AirCombatSparseReward.relabel_trajectory`` 暴露给训练流程，使
+        逐步即时事件奖励（``compute_step``）可被替换为**轨迹级重标后**的逐步奖励
+        序列：结局奖励用线性核在整条轨迹上均匀分配，事件奖励用高斯核围绕事件步
+        反向衰减分配，两部分均总量守恒（设计 §3.4.3）。
+
+        **使用场景与算法适配说明（缺陷 1）**：
+
+        - on-policy 算法（如本仓库 ``train_*_ppo`` 使用的 PPO）没有回放缓冲，
+          逐步奖励在 rollout 中即时消费，advantage 由 GAE 在时间维度上隐式回传，
+          因此 PPO 训练**默认不调用**本方法（轨迹级信用分配由 GAE 承担）。
+        - off-policy 算法（如 SAC）或需要显式轨迹级信用再分配的训练流程，可在
+          回合结束后调用 ``finalize(terminal_reward)`` 获取重标奖励序列，
+          回填到其样本/回放缓冲中，替换原始逐步奖励。
+
+        即：本方法是为 off-policy / 显式重标流程**预留**的接口；其存在不改变
+        PPO 的现有逐步奖励行为（``step`` 仍返回 ``compute_step`` 的即时奖励）。
+
+        Args:
+            terminal_reward: 本回合结局奖励（成功为正、失败为负），用于线性核
+                均匀分配。默认 0.0（仅重标事件奖励）。
+
+        Returns:
+            np.ndarray | None: 长度等于本回合步数的重标逐步奖励数组；当未启用稀疏
+            奖励（``_sparse_reward is None``）或本回合无步数时返回 ``None``。
+        """
+        if self._sparse_reward is None:
+            return None
+        episode_length = len(self._episode_step_events)
+        if episode_length == 0:
+            return None
+        return self._sparse_reward.relabel_trajectory(
+            step_events=self._episode_step_events,
+            terminal_reward=terminal_reward,
+            episode_length=episode_length,
+        )

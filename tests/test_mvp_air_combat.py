@@ -23,6 +23,7 @@
 import math
 
 import numpy as np
+import pytest
 from hypothesis import assume, given, settings
 from hypothesis import strategies as st
 
@@ -287,3 +288,57 @@ def test_property_13_out_of_envelope_event(sequence):
         assert env._prev_in_envelope == actual_in_env
 
         prev_in_envelope = actual_in_env
+
+# ===========================================================================
+# finalize() 轨迹级重标接口（缺陷 1 修复）
+# 验证：回合结束后 finalize(terminal_reward) 返回的重标奖励序列与逐步事件
+# 轨迹一致，且总量守恒（事件奖励之和 + terminal_reward）。
+# ===========================================================================
+def test_finalize_relabel_trajectory_conservation():
+    """finalize() 应返回长度等于回合步数的重标奖励数组，且总量守恒。"""
+    env = AirCombatMVPEnv(_build_config())
+    # 固定一个可发射/命中的几何：目标在正前方、距离带内。
+    scenario = {
+        "name": "finalize_test",
+        "own_init": {
+            "position_m": np.array([0.0, 0.0, 5000.0], dtype=float),
+            "velocity_mps": 250.0,
+            "heading_deg": 0.0,
+        },
+        "target_init": {
+            "position_m": np.array([3500.0, 0.0, 5000.0], dtype=float),
+            "velocity_mps": 250.0,
+            "heading_deg": 180.0,
+        },
+    }
+    env.reset(scenario=scenario, seed=0)
+
+    action = np.zeros(3, dtype=float)
+    # 累加逐步即时事件奖励，作为守恒核对基准。
+    step_reward_sum = 0.0
+    for _ in range(400):
+        _obs, reward, terminated, truncated, _info = env.step(action)
+        step_reward_sum += reward
+        if terminated or truncated:
+            break
+
+    terminal_reward = 10.0
+    relabeled = env.finalize(terminal_reward=terminal_reward)
+
+    # finalize 返回长度等于回合步数的数组。
+    assert relabeled is not None
+    assert relabeled.shape == (len(env._episode_step_events),)
+
+    # 守恒：重标后总量 == 逐步事件奖励之和 + terminal_reward。
+    # （逐步事件奖励之和等于 relabel 的事件部分总量；线性核贡献 terminal_reward。）
+    assert float(relabeled.sum()) == pytest.approx(
+        step_reward_sum + terminal_reward, abs=1e-6
+    )
+
+
+def test_finalize_returns_none_without_episode():
+    """未运行任何步（无轨迹）时 finalize 返回 None。"""
+    env = AirCombatMVPEnv(_build_config())
+    env.reset(seed=0)
+    # reset 后尚未 step，_episode_step_events 为空 → finalize 返回 None。
+    assert env.finalize(terminal_reward=5.0) is None

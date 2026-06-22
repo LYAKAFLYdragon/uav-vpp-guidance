@@ -10,6 +10,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import json
 from pathlib import Path
 from typing import Dict, List
 
@@ -499,7 +500,7 @@ def _build_summary_report(
             std = row.get("completed_orbits_std")
             lines.append(f"- {CONTROLLER_LABELS[controller]}: {mean:.2f} ± {std:.2f} orbits\n")
 
-    lines.append("\n## 4. Pairwise Conclusions (PPO+PID vs Others)\n")
+    lines.append("\n## 4. Pairwise Statistical Conclusions\n")
     if pairwise is not None and not pairwise.empty:
         primary_metrics = [("multi_waypoint", "completed_waypoints"), ("sustained_turn", "completed_orbits")]
         for task, metric in primary_metrics:
@@ -508,18 +509,28 @@ def _build_summary_report(
                 continue
             lines.append(f"\n### {task} – {metric}\n")
             for _, row in sub.iterrows():
-                comparison = f"{row['lhs']} vs {row['rhs']}"
+                lhs_label = CONTROLLER_LABELS.get(row["lhs"], row["lhs"])
+                rhs_label = CONTROLLER_LABELS.get(row["rhs"], row["rhs"])
                 sig = "significant" if row["significant"] else "not significant"
                 direction = "higher" if row["mean_diff"] > 0 else "lower"
                 lines.append(
-                    f"- {comparison}: mean_diff={row['mean_diff']:.3f} "
+                    f"- {lhs_label} vs {rhs_label}: mean_diff={row['mean_diff']:.3f} "
                     f"(CI95 [{row['ci95_low']:.3f}, {row['ci95_high']:.3f}]), "
-                    f"p_adj={row['p_adj_holm']:.4f}, {sig}; PPO+PID is {direction}.\n"
+                    f"p_adj={row['p_adj_holm']:.4f}, {sig}; {lhs_label} is {direction}.\n"
                 )
     else:
         lines.append("- No pairwise statistics available.\n")
 
     lines.append("\n## 5. Answers to the Two Core Questions\n")
+
+    def _primary_text(direction: str, significant: bool, metric: str) -> str:
+        """For primary metrics, higher is better."""
+        higher_better = direction == "higher"
+        if not significant:
+            return "not significantly different"
+        if higher_better:
+            return "significantly better"
+        return "significantly worse"
 
     # Question 1: system-level PPO+PID vs PPO-FixedPID.
     lines.append("### Q1: Does PPO+PID-Hybrid significantly outperform PPO-FixedPID at the system level?\n")
@@ -537,17 +548,19 @@ def _build_summary_report(
         row = q1_mw.iloc[0]
         sig = "significant" if row["significant"] else "not significant"
         direction = "higher" if row["mean_diff"] > 0 else "lower"
+        conclusion = _primary_text(direction, row["significant"], "completed_waypoints")
         lines.append(
             f"- Multi-waypoint: PPO+PID is {direction} by {abs(row['mean_diff']):.2f} waypoints "
-            f"(p_adj={row['p_adj_holm']:.4f}, {sig}); thus PPO+PID is **not** significantly better.\n"
+            f"(p_adj={row['p_adj_holm']:.4f}, {sig}); thus PPO+PID is **{conclusion}**.\n"
         )
     if not q1_st.empty:
         row = q1_st.iloc[0]
         sig = "significant" if row["significant"] else "not significant"
         direction = "higher" if row["mean_diff"] > 0 else "lower"
+        conclusion = _primary_text(direction, row["significant"], "completed_orbits")
         lines.append(
             f"- Sustained-turn: PPO+PID is {direction} by {abs(row['mean_diff']):.3f} orbits "
-            f"(p_adj={row['p_adj_holm']:.4f}, {sig}); thus PPO+PID is **significantly worse**.\n"
+            f"(p_adj={row['p_adj_holm']:.4f}, {sig}); thus PPO+PID is **{conclusion}**.\n"
         )
     # Build a dynamic conclusion for Q1 based on actual data.
     q1_conclusions = []
@@ -586,17 +599,19 @@ def _build_summary_report(
         row = q2_mw.iloc[0]
         sig = "significant" if row["significant"] else "not significant"
         direction = "higher" if row["mean_diff"] > 0 else "lower"
+        conclusion = _primary_text(direction, row["significant"], "completed_waypoints")
         lines.append(
             f"- Multi-waypoint: Enhanced PID is {direction} by {abs(row['mean_diff']):.2f} waypoints "
-            f"(p_adj={row['p_adj_holm']:.4f}, {sig}).\n"
+            f"(p_adj={row['p_adj_holm']:.4f}, {sig}); thus Enhanced PID is **{conclusion}**.\n"
         )
     if not q2_st.empty:
         row = q2_st.iloc[0]
         sig = "significant" if row["significant"] else "not significant"
         direction = "higher" if row["mean_diff"] > 0 else "lower"
+        conclusion = _primary_text(direction, row["significant"], "completed_orbits")
         lines.append(
             f"- Sustained-turn: Enhanced PID is {direction} by {abs(row['mean_diff']):.3f} orbits "
-            f"(p_adj={row['p_adj_holm']:.4f}, {sig}).\n"
+            f"(p_adj={row['p_adj_holm']:.4f}, {sig}); thus Enhanced PID is **{conclusion}**.\n"
         )
     # Dynamic conclusion for Q2
     q2_conclusions = []

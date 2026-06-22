@@ -557,9 +557,9 @@ def _evaluate_worker(args: tuple) -> List[Dict[str, Any]]:
         config = _build_ppo_eval_config(path, base_config, task_config, backend_override=backend_override)
     else:
         ll_type = {
-            "enhanced_pid": "enhanced",
-            "baseline_pid": "baseline",
-            "gain_scheduled_pid": "gain_scheduled",
+            "enhanced_pid": "enhanced_pid",
+            "baseline_pid": "baseline_pid",
+            "gain_scheduled_pid": "gain_scheduled_pid",
         }[controller]
         config = _build_pid_eval_config(base_config, task_config, ll_type)
 
@@ -754,9 +754,9 @@ def main():
                     cfg = _build_ppo_eval_config(path, base_config, task_configs[task], backend_override=args.backend)
                 else:
                     ll_type = {
-                        "enhanced_pid": "enhanced",
-                        "baseline_pid": "baseline",
-                        "gain_scheduled_pid": "gain_scheduled",
+                        "enhanced_pid": "enhanced_pid",
+                        "baseline_pid": "baseline_pid",
+                        "gain_scheduled_pid": "gain_scheduled_pid",
                     }[controller]
                     cfg = _build_pid_eval_config(base_config, task_configs[task], ll_type)
                 logger.info(f"  {controller}/{task}: config ok (sha256={_config_sha256(cfg)})")
@@ -841,9 +841,9 @@ def main():
                 cfg = _build_ppo_eval_config(path, base_config, task_configs[task], backend_override=args.backend)
             else:
                 ll_type = {
-                    "enhanced_pid": "enhanced",
-                    "baseline_pid": "baseline",
-                    "gain_scheduled_pid": "gain_scheduled",
+                    "enhanced_pid": "enhanced_pid",
+                    "baseline_pid": "baseline_pid",
+                    "gain_scheduled_pid": "gain_scheduled_pid",
                 }[controller]
                 cfg = _build_pid_eval_config(base_config, task_configs[task], ll_type)
             snapshot_path = manifest_dir / f"config_{controller}_{task}.yaml"

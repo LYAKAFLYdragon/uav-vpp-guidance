@@ -111,12 +111,18 @@ class CloseRangeTrackingEnv:
                     **ll_controller_kwargs,
                     "limits": {**(config.get("limits", {})), **(config.get("guidance", {}).get("limits", {}))},
                 }
-                if ll_controller_class == "enhanced":
-                    from ..flight_control.enhanced_low_level_controller import EnhancedLowLevelController
-                    self._low_level_controller = EnhancedLowLevelController(controller_config)
-                elif ll_controller_class == "gain_scheduled":
-                    from ..flight_control.enhanced_low_level_controller import GainScheduledEnhancedController
-                    self._low_level_controller = GainScheduledEnhancedController(controller_config)
+                if ll_controller_class in ("enhanced", "enhanced_pid"):
+                    from ..flight_control.pid_controllers import EnhancedPIDController
+                    self._low_level_controller = EnhancedPIDController(controller_config)
+                elif ll_controller_class in ("gain_scheduled", "gain_scheduled_pid"):
+                    from ..flight_control.pid_controllers import GainScheduledPIDController
+                    self._low_level_controller = GainScheduledPIDController(controller_config)
+                elif ll_controller_class in ("baseline_pid", "baseline"):
+                    from ..flight_control.pid_controllers import BaselinePIDController
+                    self._low_level_controller = BaselinePIDController(controller_config)
+                elif ll_controller_class in ("hybrid_ppo_pid", "ppo_pid"):
+                    from ..flight_control.pid_controllers import HybridPPOPIDAdapter
+                    self._low_level_controller = HybridPPOPIDAdapter(controller_config)
                 else:
                     self._low_level_controller = LowLevelController(controller_config)
             except Exception as exc:

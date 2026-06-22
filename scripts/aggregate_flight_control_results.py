@@ -21,7 +21,26 @@ from typing import List
 import numpy as np
 import pandas as pd
 from scipy import stats
-from statsmodels.stats.multitest import multipletests
+
+
+def _holm_correction(pvalues, alpha=0.05):
+    """Holm-Bonferroni step-down correction without statsmodels."""
+    pvalues = np.asarray(pvalues, dtype=float)
+    m = len(pvalues)
+    if m == 0:
+        return np.array([], dtype=bool), np.array([], dtype=float)
+    order = np.argsort(pvalues)
+    sorted_p = pvalues[order]
+    adj_sorted = np.empty(m, dtype=float)
+    prev = 0.0
+    for i, p in enumerate(sorted_p):
+        adj = min(max(p * (m - i), prev), 1.0)
+        adj_sorted[i] = adj
+        prev = adj
+    adj = np.empty(m, dtype=float)
+    adj[order] = adj_sorted
+    reject = adj <= alpha
+    return reject, adj
 
 
 # Statistical families for paired testing.  Tests and Holm correction are
@@ -294,7 +313,7 @@ def paired_test(df: pd.DataFrame, task: str, metric: str, family: str) -> pd.Dat
 
     # Apply Holm correction only to the non-degenerate p-values within this family.
     if raw_pvalues:
-        reject, p_adj, _, _ = multipletests(raw_pvalues, alpha=0.05, method="holm")
+        reject, p_adj = _holm_correction(raw_pvalues, alpha=0.05)
         # Walk through the list and attach corrected p-values/significance only
         # to rows that actually contributed a p-value.
         padj_iter = iter(p_adj)

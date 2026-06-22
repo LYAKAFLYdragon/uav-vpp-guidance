@@ -426,42 +426,57 @@ def main():
     table3b_std_ci = _build_table3b_std_ci(summary)
 
     excel_path = tables_dir / "table3_summary.xlsx"
-    with pd.ExcelWriter(excel_path, engine="openpyxl") as writer:
-        table3a.to_excel(writer, sheet_name="multi_waypoint", index=False)
-        table3b.to_excel(writer, sheet_name="sustained_turn", index=False)
-        table3c.to_excel(writer, sheet_name="overall", index=False)
-        if pairwise is not None and not pairwise.empty:
-            pw_summary = _build_pairwise_summary(pairwise)
-            pw_summary.to_excel(writer, sheet_name="pairwise_tests", index=False)
-        summary.to_excel(writer, sheet_name="summary_mean_std_ci", index=False)
+    try:
+        with pd.ExcelWriter(excel_path, engine="openpyxl") as writer:
+            table3a.to_excel(writer, sheet_name="multi_waypoint", index=False)
+            table3b.to_excel(writer, sheet_name="sustained_turn", index=False)
+            table3c.to_excel(writer, sheet_name="overall", index=False)
+            if pairwise is not None and not pairwise.empty:
+                pw_summary = _build_pairwise_summary(pairwise)
+                pw_summary.to_excel(writer, sheet_name="pairwise_tests", index=False)
+            summary.to_excel(writer, sheet_name="summary_mean_std_ci", index=False)
 
-        # Mean-only combined sheet.
-        table3_mean = _combine_sectioned_sheets(
-            table3a_mean, table3b_mean, table3c, "Table 3A: Multi-Waypoint", "Table 3B: Sustained Turn", "Table 3C: Overall"
-        )
-        table3_mean.to_excel(writer, sheet_name="table3_mean", index=False)
+            # Mean-only combined sheet.
+            table3_mean = _combine_sectioned_sheets(
+                table3a_mean, table3b_mean, table3c, "Table 3A: Multi-Waypoint", "Table 3B: Sustained Turn", "Table 3C: Overall"
+            )
+            table3_mean.to_excel(writer, sheet_name="table3_mean", index=False)
 
-        # Std + CI95 combined sheet.
-        table3_std_ci = _combine_sectioned_sheets(
-            table3a_std_ci, table3b_std_ci, table3c, "Table 3A: Multi-Waypoint", "Table 3B: Sustained Turn", "Table 3C: Overall"
-        )
-        table3_std_ci.to_excel(writer, sheet_name="table3_std_ci", index=False)
+            # Std + CI95 combined sheet.
+            table3_std_ci = _combine_sectioned_sheets(
+                table3a_std_ci, table3b_std_ci, table3c, "Table 3A: Multi-Waypoint", "Table 3B: Sustained Turn", "Table 3C: Overall"
+            )
+            table3_std_ci.to_excel(writer, sheet_name="table3_std_ci", index=False)
+    except ImportError:
+        print(f"WARNING: openpyxl not installed; skipping Excel output at {excel_path}")
 
     # Summary report
-    report = _build_summary_report(summary, pairwise, table3c)
+    manifest_path = args.run_dir / "manifests" / "run_manifest.json"
+    backend = "unknown"
+    if manifest_path.exists():
+        try:
+            backend = json.loads(manifest_path.read_text(encoding="utf-8")).get("backend", "unknown")
+        except Exception:
+            pass
+    report = _build_summary_report(summary, pairwise, table3c, backend=backend)
     (tables_dir / "summary_report.md").write_text(report, encoding="utf-8")
 
     print(f"Exported Table 3 and summary report to {tables_dir}")
 
 
-def _build_summary_report(summary: pd.DataFrame, pairwise: pd.DataFrame, ranking: pd.DataFrame) -> str:
+def _build_summary_report(
+    summary: pd.DataFrame,
+    pairwise: pd.DataFrame,
+    ranking: pd.DataFrame,
+    backend: str = "unknown",
+) -> str:
     """Generate a short analytical report from aggregated results."""
     lines = [
         "# Flight-Control Comparison: Summary Report\n",
         "## 1. Scope and Methods\n",
         "- Controllers: PPO+PID-Hybrid, PPO-FixedPID, Enhanced PID, Baseline PID.\n",
         "- Tasks: Multi-waypoint tracking (5 waypoints) and sustained turn (90 s).\n",
-        "- Backend: JSBSim F-16 with `strict_backend=true`.\n",
+        f"- Backend: {backend}.\n",
         "- Seeds are paired across controllers for fair comparison.\n",
         "- Statistical tests: Shapiro-Wilk → paired t-test or Wilcoxon, with Holm correction applied separately within each comparison family (system-level: PPO+PID vs PPO; low-level isolation: Enhanced PID vs Baseline PID).\n",
         "\n## 2. Multi-Waypoint Task (Primary Metric: Completed Waypoints)\n",

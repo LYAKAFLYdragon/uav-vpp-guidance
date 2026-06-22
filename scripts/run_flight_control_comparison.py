@@ -804,14 +804,15 @@ def main():
     logger.info(f"Saved {len(config_snapshots)} merged config snapshots to {manifest_dir}")
 
     # Write manifest
+    effective_backend = args.backend or base_config.get("backend", "jsbsim")
     manifest = {
         "run_id": args.run_id,
         "status": args.status,
         "start_time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(start_time)),
         "elapsed_seconds": elapsed,
         "git_commit": git_commit,
-        "backend": "jsbsim",
-        "strict_backend": True,
+        "backend": effective_backend,
+        "strict_backend": effective_backend == "jsbsim",
         "controllers": args.controllers,
         "tasks": args.tasks,
         "seeds": args.seeds,

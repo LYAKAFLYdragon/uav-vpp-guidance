@@ -593,7 +593,15 @@ class CloseRangeTrackingEnv:
         action = np.asarray(action, dtype=np.float64)
 
         # --- Validate action-space schema (3D/4D/6D) ---
-        action, schema = validate_action(action)
+        # Legacy anchor-mode variants may use other action shapes; pass those
+        # through unchanged so existing tests and configs keep working.
+        action_dim = (
+            int(action.shape[0]) if action.ndim == 1 else int(action.shape[-1])
+        )
+        if action_dim in (3, 4, 6):
+            action, schema = validate_action(action)
+        else:
+            schema = None
 
         # --- Detect APIC mode (policy outputs PID gain deltas) ---
         ll_cfg = self.config.get("low_level_controller", {})

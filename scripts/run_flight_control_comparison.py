@@ -150,26 +150,34 @@ def _load_checkpoint_config(checkpoint_path: str) -> dict:
 
 
 def _build_ppo_eval_config(
-    checkpoint_path: str, base_config: dict, task_config: dict
+    checkpoint_path: str,
+    base_config: dict,
+    task_config: dict,
+    backend_override: Optional[str] = None,
 ) -> dict:
     """
     Build an evaluation config for a PPO controller.
 
     The checkpoint's policy/observation/virtual_point settings are preserved;
     task-specific env limits and task block are overlaid from the comparison
-    configs.
+    configs.  Backend is inherited from the task/base config (or the CLI override)
+    rather than hard-coded to JSBSim, so the same runner can evaluate on the
+    simple kinematic backend.
     """
     ckpt_config = _load_checkpoint_config(checkpoint_path)
     config = copy.deepcopy(ckpt_config)
 
-    # Overlay backend strictly.
-    config["backend"] = base_config.get("backend", "jsbsim")
+    # Overlay backend from task/base config, with optional CLI override.
+    backend = backend_override or task_config.get("backend") or base_config.get("backend") or "jsbsim"
+    backend = str(backend).lower()
+    config["backend"] = backend
     if "env" not in config:
         config["env"] = {}
+    use_jsbsim = backend == "jsbsim"
     env_overrides = {
-        "backend": "jsbsim",
-        "use_jsbsim": True,
-        "strict_backend": True,
+        "backend": backend,
+        "use_jsbsim": use_jsbsim,
+        "strict_backend": use_jsbsim,
     }
     for key in (
         "aircraft_model",
@@ -536,6 +544,7 @@ def _evaluate_worker(args: tuple) -> List[Dict[str, Any]]:
         checkpoint_apic_pid,
         save_full,
         device,
+        backend_override,
     ) = args
 
     # Build config and adapter in the subprocess to isolate JSBSim state.
@@ -545,7 +554,7 @@ def _evaluate_worker(args: tuple) -> List[Dict[str, Any]]:
             "apic_pid": checkpoint_apic_pid,
             "ppo": checkpoint_ppo,
         }[controller]
-        config = _build_ppo_eval_config(path, base_config, task_config)
+        config = _build_ppo_eval_config(path, base_config, task_config, backend_override=backend_override)
     else:
         ll_type = {
             "enhanced_pid": "enhanced",
@@ -659,6 +668,13 @@ def _parse_args():
         help="Torch device for PPO inference",
     )
     parser.add_argument(
+        "--backend",
+        type=str,
+        default=None,
+        choices=["simple", "jsbsim"],
+        help="Override simulation backend for all evaluation configs",
+    )
+    parser.add_argument(
         "--no-trajectory",
         action="store_true",
         help="Disable full trajectory saving to reduce disk usage",
@@ -735,7 +751,7 @@ def main():
                         "apic_pid": args.checkpoint_apic_pid,
                         "ppo": args.checkpoint_ppo,
                     }[controller]
-                    cfg = _build_ppo_eval_config(path, base_config, task_configs[task])
+                    cfg = _build_ppo_eval_config(path, base_config, task_configs[task], backend_override=args.backend)
                 else:
                     ll_type = {
                         "enhanced_pid": "enhanced",
@@ -766,6 +782,7 @@ def main():
                         args.checkpoint_apic_pid,
                         not args.no_trajectory,
                         args.device,
+                        args.backend,
                     )
                 )
 
@@ -821,7 +838,7 @@ def main():
                     "apic_pid": args.checkpoint_apic_pid,
                     "ppo": args.checkpoint_ppo,
                 }[controller]
-                cfg = _build_ppo_eval_config(path, base_config, task_configs[task])
+                cfg = _build_ppo_eval_config(path, base_config, task_configs[task], backend_override=args.backend)
             else:
                 ll_type = {
                     "enhanced_pid": "enhanced",

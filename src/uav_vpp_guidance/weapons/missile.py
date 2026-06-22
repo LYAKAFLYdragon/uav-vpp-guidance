@@ -18,6 +18,8 @@ Missile3DoF：3 自由度（3-DoF）空空导弹模型。
     该模块不依赖 JSBSim，可在纯 Python 环境中导入。
 """
 
+from __future__ import annotations
+
 import numpy as np
 
 # 模块级重力加速度常量（m/s^2）

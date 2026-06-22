@@ -27,6 +27,8 @@ FireControlRadar：火控雷达几何视场与锁定状态机模型。
     ``_extract_velocity``，避免重复实现并保证与导弹模块行为一致。
 """
 
+from __future__ import annotations
+
 import numpy as np
 
 # 复用导弹模块的状态提取辅助函数，保证键约定与轴索引完全一致。

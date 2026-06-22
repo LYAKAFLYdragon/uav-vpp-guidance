@@ -22,6 +22,8 @@ AirCombatSparseReward：R2SP 风格的空战事件稀疏奖励。
 因此 ``compute_step`` / ``relabel_trajectory`` 同时兼容字符串与枚举成员输入。
 """
 
+from __future__ import annotations
+
 import math
 from enum import Enum
 

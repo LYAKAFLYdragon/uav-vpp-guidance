@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.9", "3.10"]
+        python-version: ["3.8", "3.9", "3.10"]
 
     steps:
       - uses: actions/checkout@v4
@@ -42,6 +42,12 @@ jobs:
           python scripts/run_stage6g_guidance_limitation_probe.py --help
           python scripts/run_stage6g4_smoke_probes.py --help
           python scripts/run_stage6g_guidance_limitation_probe.py --dry-run --output-dir /tmp/stage6g_probe_dryrun
+          python scripts/run_flight_control_comparison.py --help
+          python scripts/run_full_flight_control_pipeline.py --help
+          python scripts/aggregate_flight_control_results.py --help
+          python scripts/export_table3.py --help
+          python scripts/plot_flight_control_figures.py --help
+          python -m uav_vpp_guidance.training.train_ppo_pid --help
 
       - name: Check TOML/YAML syntax
         run: |

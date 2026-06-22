@@ -1,0 +1,63 @@
+# Base configuration for the flight-control comparison benchmark.
+# Task-specific overrides are provided by task_multi_waypoint.yaml and
+# task_sustained_turn.yaml.
+
+includes:
+  - ../env.yaml
+  - ../ppo.yaml
+  - ../guidance.yaml
+  - ../reward.yaml
+
+experiment:
+  output_root: outputs
+  run_family: flight_control_compare
+
+backend: jsbsim
+
+env:
+  backend: jsbsim
+  use_jsbsim: true
+  strict_backend: true
+  aircraft_model: f16
+  origin: [120.0, 60.0, 0.0]
+  sim_freq: 60
+  decision_freq: 5
+  high_level_dt: 0.2
+  low_level_dt: 0.0166667
+  action_repeat: 12
+  min_altitude_m: 500.0
+  max_altitude_m: 15000.0
+  max_range_m: 20000.0
+  xy_limit_m: 20000
+
+guidance:
+  mode: los_rate
+  gains:
+    k_los: 1.0
+    k_pos: 0.5
+    k_damp: 0.2
+    k_roll: 1.0
+    k_speed: 0.2
+    alpha_filter: 0.3
+  mode_switch:
+    enabled: false
+
+limits:
+  nz_min: -2.0
+  nz_max: 7.0
+  roll_rate_min: -1.5
+  roll_rate_max: 1.5
+  throttle_min: 0.0
+  throttle_max: 1.0
+
+low_level_controller:
+  type: enhanced
+
+evaluation:
+  # NOTE: The following n_episodes and seeds are for the *training* evaluation
+  # (eval_interval during training). The flight-control comparison runner uses
+  # its own CLI arguments (--n-episodes, --seeds) and ignores these values.
+  n_episodes: 20
+  seeds: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
+  save_full_trajectory: true
+  export_manifest: true

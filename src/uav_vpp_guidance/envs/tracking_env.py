@@ -13,6 +13,7 @@ P3 scope: no-prediction VPP baseline with SimplePointMassEnv fallback.
 P4 scope: JSBSim high-fidelity bridge with unified backend interface.
 """
 
+import inspect
 import numpy as np
 from typing import Optional, Tuple
 
@@ -31,6 +32,13 @@ from ..guidance.gain_config import GuidanceGains
 from ..flight_control.command_limiter import clip_command
 from ..flight_control.command_filter import MultiChannelCommandFilter
 from ..flight_control.low_level_controller import LowLevelController
+from ..flight_control.pid_controllers import (
+    BaselinePIDController,
+    EnhancedPIDController,
+    GainScheduledPIDController,
+    HybridPPOPIDAdapter,
+)
+from ..utils.action_schema import ActionSchema, validate_action
 from ..trajectory_prediction import (
     TrajectoryPredictorAdapter,
     create_predictor_from_config,
@@ -91,8 +99,8 @@ class CloseRangeTrackingEnv:
                     self.target_uid, {"model": self.aircraft_model}
                 )
                 self._backend = "jsbsim"
-                self._low_level_controller = LowLevelController(
-                    config.get("guidance", {}).get("gains", {})
+                self._low_level_controller = self._build_low_level_controller(
+                    config
                 )
             except Exception as exc:
                 if strict_backend:
@@ -234,6 +242,77 @@ class CloseRangeTrackingEnv:
         self.current_step = 0
         self._episode_count = 0
         self._sim_time_s = 0.0
+        self._last_aggressiveness = None
+        self._last_pid_gain_deltas = None
+
+    # ------------------------------------------------------------------
+    # Low-level controller factory
+    # ------------------------------------------------------------------
+
+    def _build_low_level_controller(self, config: dict):
+        """
+        Select the low-level controller based on the ``low_level_controller``
+        config block.  Unknown / legacy configurations fall back to the original
+        feed-forward ``LowLevelController`` so existing configs keep working.
+        """
+        ll_controller_cfg = config.get("low_level_controller", {})
+        if isinstance(ll_controller_cfg, str):
+            ll_controller_class = ll_controller_cfg
+            ll_controller_kwargs = {}
+        else:
+            ll_controller_class = ll_controller_cfg.get("type", "")
+            ll_controller_kwargs = {
+                k: v for k, v in ll_controller_cfg.items() if k != "type"
+            }
+
+        controller_config = {
+            **config.get("guidance", {}).get("gains", {}),
+            **ll_controller_kwargs,
+            "limits": {
+                **config.get("limits", {}),
+                **config.get("guidance", {}).get("limits", {}),
+            },
+        }
+
+        if ll_controller_class in ("enhanced", "enhanced_pid"):
+            return EnhancedPIDController(controller_config)
+        if ll_controller_class in ("gain_scheduled", "gain_scheduled_pid"):
+            return GainScheduledPIDController(controller_config)
+        if ll_controller_class in ("baseline_pid",):
+            return BaselinePIDController(controller_config)
+        if ll_controller_class in ("hybrid_ppo_pid", "ppo_pid"):
+            return HybridPPOPIDAdapter(controller_config)
+
+        # Legacy / unspecified configuration: keep the original behavior.
+        return LowLevelController(controller_config)
+
+    # ------------------------------------------------------------------
+    # Task-specific hooks (for MultiWaypoint / SustainedTurn subclasses)
+    # ------------------------------------------------------------------
+
+    def _task_reset(self, seed=None) -> None:
+        """Subclasses may override for task-specific reset logic."""
+        return None
+
+    def _task_get_target_state(self, backend_target_state, own_state):
+        """Subclasses may replace the backend target with a synthetic target."""
+        return backend_target_state
+
+    def _task_pre_step(self, own_state, target_state):
+        """Subclasses may update task state before guidance is computed."""
+        return own_state, target_state
+
+    def _task_post_step(
+        self,
+        own_state_post,
+        target_state_post,
+        info,
+        reward,
+        terminated,
+        truncated,
+    ):
+        """Subclasses may override reward / done / info after the step."""
+        return reward, terminated, truncated, info
 
     # ------------------------------------------------------------------
     # Gym-like interface
@@ -253,8 +332,11 @@ class CloseRangeTrackingEnv:
         self.current_step = 0
         self._episode_count += 1
         self._sim_time_s = 0.0
+        self._last_aggressiveness = None
+        self._last_pid_gain_deltas = None
         self.reward_calculator.reset()
         self.termination_checker.reset()
+        self._task_reset(seed)
         if hasattr(self.guidance, "reset"):
             self.guidance.reset()
         if self._guidance_pn is not None and hasattr(self._guidance_pn, "reset"):
@@ -464,6 +546,12 @@ class CloseRangeTrackingEnv:
         # 1. 获取当前状态
         own_state, target_state = self._get_current_states()
 
+        # 1b. 任务钩子：允许子类替换/合成目标状态
+        target_state = self._task_get_target_state(target_state, own_state)
+
+        # 1c. 任务钩子：允许子类在 guidance 前更新任务状态
+        own_state, target_state = self._task_pre_step(own_state, target_state)
+
         # 2. 计算相对态势
         rel_state = compute_relative_geometry(own_state, target_state)
 
@@ -503,6 +591,31 @@ class CloseRangeTrackingEnv:
         if action is None:
             action = np.zeros(3)
         action = np.asarray(action, dtype=np.float64)
+
+        # --- Validate action-space schema (3D/4D/6D) ---
+        action, schema = validate_action(action)
+
+        # --- Detect APIC mode (policy outputs PID gain deltas) ---
+        ll_cfg = self.config.get("low_level_controller", {})
+        if isinstance(ll_cfg, str):
+            ll_cfg = {}
+        apic_enabled = bool(ll_cfg.get("apic", {}).get("enabled", False))
+
+        if apic_enabled or schema == ActionSchema.APIC_PID_6D:
+            # APIC action = [delta_Kp_nz, delta_Ki_nz, delta_Kd_nz,
+            #                delta_Kp_roll, delta_Ki_roll, delta_Kd_roll]
+            pid_gain_deltas = np.clip(action, -1.0, 1.0)
+            self._last_pid_gain_deltas = pid_gain_deltas
+            action = np.zeros(3, dtype=np.float64)
+            aggressiveness = None
+        else:
+            aggressiveness = None
+            pid_gain_deltas = None
+            if schema == ActionSchema.PPO_PID_4D:
+                aggressiveness = float(np.clip(action[3], -1.0, 1.0))
+                action = action[:3].copy()
+            self._last_pid_gain_deltas = None
+        self._last_aggressiveness = aggressiveness
 
         # 构建 target_state 用于 VPP 生成（统一字段名）
         target_pos = target_state.get("position_m")
@@ -694,7 +807,11 @@ class CloseRangeTrackingEnv:
         # 7. 环境 step
         actuator_info = {}
         if self._backend == "jsbsim":
-            actuator_info = self._step_jsbsim(filtered_command)
+            actuator_info = self._step_jsbsim(
+                filtered_command,
+                aggressiveness=self._last_aggressiveness,
+                pid_gain_deltas=self._last_pid_gain_deltas,
+            )
         else:
             self._step_simple(filtered_command)
 
@@ -732,9 +849,6 @@ class CloseRangeTrackingEnv:
             filtered_command,
             term_info,
         )
-
-        # 11. 获取观察（post-step）
-        obs = self._get_observation()
 
         # Serialize virtual_point for info (convert ndarrays → lists)
         def _serialize_vp(vp):
@@ -787,9 +901,19 @@ class CloseRangeTrackingEnv:
             "mode_switch_effective": mode_switch_effective,
             "mode_switch_reason": mode_switch_reason,
             "effective_guidance_mode": effective_guidance_mode,
+            "aggressiveness": self._last_aggressiveness,
+            "pid_gain_deltas": self._last_pid_gain_deltas,
         }
         info.update(actuator_info)
         info.update(term_info)
+
+        # 12. 任务钩子：允许子类覆盖 reward / done / info
+        reward, terminated, truncated, info = self._task_post_step(
+            own_state_post, target_state_post, info, reward, terminated, truncated
+        )
+
+        # 11. 获取观察（post-step）
+        obs = self._get_observation()
 
         return obs, reward, terminated, truncated, info
 
@@ -912,16 +1036,30 @@ class CloseRangeTrackingEnv:
         else:
             return self._simple_env.get_state()
 
-    def _step_jsbsim(self, command):
+    def _step_jsbsim(
+        self, command, aggressiveness: Optional[float] = None, pid_gain_deltas=None
+    ):
         """在 JSBSim 后端执行控制，返回 actuator info。"""
         # Get current aircraft state for the low-level controller
         states = self.jsbsim_env.get_state()
         own_state_raw = states[self.own_uid]
 
-        # Use low-level controller to map guidance commands to JSBSim properties
-        actuator_output = self._low_level_controller.compute_actuator(
-            command, own_state_raw
-        )
+        # Use low-level controller to map guidance commands to JSBSim properties.
+        # New PID controllers accept aggressiveness/pid_gain_deltas; the legacy
+        # LowLevelController does not, so fall back gracefully.
+        sig = inspect.signature(self._low_level_controller.compute_actuator)
+        supports_extras = any(p in sig.parameters for p in ("aggressiveness", "pid_gain_deltas"))
+        if supports_extras:
+            actuator_output = self._low_level_controller.compute_actuator(
+                command,
+                own_state_raw,
+                aggressiveness=aggressiveness,
+                pid_gain_deltas=pid_gain_deltas,
+            )
+        else:
+            actuator_output = self._low_level_controller.compute_actuator(
+                command, own_state_raw
+            )
 
         # Extract JSBSim properties
         jsbsim_props = {

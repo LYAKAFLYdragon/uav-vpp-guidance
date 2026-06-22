@@ -36,6 +36,8 @@ uav-vpp-train-prediction-ppo = "uav_vpp_guidance.training.train_prediction_vpp_p
 uav-vpp-eval-no-prediction = "uav_vpp_guidance.evaluation.evaluate_no_prediction:main"
 uav-vpp-eval-prediction-comparison = "uav_vpp_guidance.evaluation.evaluate_prediction_comparison:main"
 uav-vpp-eval-stage6b = "uav_vpp_guidance.evaluation.run_stage6b_simple_benchmark:main"
+uav-vpp-train-ppo-pid = "uav_vpp_guidance.training.train_ppo_pid:main"
+uav-vpp-run-flight-control-comparison = "scripts.run_flight_control_comparison:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

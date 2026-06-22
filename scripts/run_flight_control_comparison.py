@@ -24,6 +24,13 @@ A run_manifest.json is written to outputs/flight_control_compare/<run_id>/manife
 
 from __future__ import annotations
 
+import os
+
+# Windows/PyTorch+NumPy can initialise multiple OpenMP runtimes and abort.
+# Allow the process to continue; this is a known local-workaround on this
+# platform and does not affect numerical results.
+os.environ.setdefault("KMP_DUPLICATE_LIB_OK", "TRUE")
+
 import argparse
 import copy
 import hashlib
@@ -56,6 +63,7 @@ from uav_vpp_guidance.evaluation.flight_control_metrics import (
     compute_multi_waypoint_metrics,
     compute_sustained_turn_metrics,
 )
+from uav_vpp_guidance.evaluation.recorders import EpisodeRecorder, RunRecorder
 
 logger = logging.getLogger(__name__)
 
@@ -377,18 +385,47 @@ def _build_adapter(
 # ---------------------------------------------------------------------------
 
 
-def _run_episode(env, adapter: ControllerAdapter, seed: int, save_full: bool = True):
-    """Run one episode and return the episode record."""
+def _run_episode(
+    env,
+    adapter: ControllerAdapter,
+    seed: int,
+    run_id: str,
+    task: str,
+    controller: str,
+    episode: int,
+    config: dict,
+    config_sha256: str,
+    git_commit: str,
+    save_full: bool = True,
+) -> Dict[str, Any]:
+    """Run one episode and return the final episode JSON."""
+    backend = config.get("backend", "jsbsim")
+    strict_backend = config.get("env", {}).get(
+        "strict_backend", backend == "jsbsim"
+    )
+    recorder = EpisodeRecorder(
+        run_id=run_id,
+        task=task,
+        controller=controller,
+        seed=seed,
+        episode=episode,
+        config=config,
+        config_sha256=config_sha256,
+        git_commit=git_commit,
+        backend=backend,
+        strict_backend=bool(strict_backend),
+        save_full=save_full,
+    )
+
     obs = env.reset(seed=seed)
     adapter.reset()
 
-    trajectory = []
     total_reward = 0.0
     steps = 0
     terminated = False
     truncated = False
     info = {}
-    previous_active_idx = 0
+    dt = env.env_config.get("high_level_dt", 0.2)
 
     while not (terminated or truncated):
         action = adapter.act(obs, info)
@@ -396,40 +433,9 @@ def _run_episode(env, adapter: ControllerAdapter, seed: int, save_full: bool = T
         total_reward += reward
         steps += 1
 
-        if save_full:
-            own_state = info.get("own_state", {})
-            current_active_idx = info.get("active_waypoint_index", previous_active_idx)
-            switch_event = current_active_idx != previous_active_idx
-            previous_active_idx = current_active_idx
-            point = {
-                "step": steps,
-                "time_s": float(info.get("current_step", steps)) * env.env_config.get("high_level_dt", 0.2),
-                "own_pos_m": _tolist(own_state.get("position_m", own_state.get("position_neu"))),
-                "target_pos_m": _tolist(info.get("target_state", {}).get("position_m", info.get("target_state", {}).get("position_neu"))),
-                "range_m": float(info.get("range_m", np.nan)),
-                "heading_deg": float(np.degrees(own_state.get("yaw_rad", 0.0))),
-                "speed_mps": float(own_state.get("speed_mps", 250.0)),
-                "nz_g": float(own_state.get("nz_g", 1.0)),
-                "nz_cmd": float(info.get("nz_cmd", np.nan)),
-                "aggressiveness": info.get("aggressiveness"),
-                "gain_scale": info.get("gain_scale"),
-                "saturation_flag": bool(info.get("saturation_flag", False)),
-                "active_waypoint_index": current_active_idx,
-                "switch_event": bool(switch_event),
-                "switch_events": copy.deepcopy(info.get("switch_events", [])),
-                "waypoints": [copy.deepcopy(wp) for wp in info.get("waypoints", [])],
-                "completed_waypoints": info.get("completed_waypoints", 0),
-                "completed_orbits": info.get("completed_orbits", 0.0),
-                "turn_radius_m": info.get("turn_radius_m", np.nan),
-                "orbit_direction": info.get("orbit_direction", np.nan),
-                "virtual_point_m": _tolist(
-                    info.get("virtual_point", {}).get("position_neu")
-                    if info.get("virtual_point") is not None
-                    else None
-                ),
-                "reward": float(reward),
-            }
-            trajectory.append(point)
+        own_state = info.get("own_state", {})
+        target_state = info.get("target_state", {})
+        recorder.record_step(steps, steps * dt, own_state, target_state, info, reward)
 
         if steps >= env.max_steps:
             truncated = True
@@ -438,95 +444,28 @@ def _run_episode(env, adapter: ControllerAdapter, seed: int, save_full: bool = T
     # Final info may be empty if the loop never ran; fall back to env state.
     if not info:
         own_state, target_state = env._get_current_states()
-        rel_state = {
-            "range_m": float(np.linalg.norm(
-                np.asarray(own_state.get("position_m", own_state.get("position_neu", [0.0, 0.0, 0.0])))
-                - np.asarray(target_state.get("position_m", target_state.get("position_neu", [0.0, 0.0, 0.0])))
-            )),
+        info = {
+            "own_state": own_state,
+            "target_state": target_state,
+            "reason": "timeout",
+            "is_success": False,
         }
-        info = {"own_state": own_state, "target_state": target_state, "range_m": rel_state["range_m"]}
 
     own_state = info.get("own_state", {})
-    total_time_s = steps * env.env_config.get("high_level_dt", 0.2)
+    total_time_s = steps * dt
     termination_reason = info.get("reason", "timeout")
     success = bool(info.get("is_success", False))
 
-    record = {
-        "steps": steps,
-        "total_time_s": total_time_s,
-        "total_reward": float(total_reward),
-        "termination_reason": termination_reason,
-        "success": success,
-        "final_position_m": _tolist(own_state.get("position_m", own_state.get("position_neu"))),
-        "final_speed_mps": float(own_state.get("speed_mps", 250.0)),
-        "final_altitude_m": float(own_state.get("altitude_m", 5000.0)),
-        "trajectory": trajectory if save_full else [],
-    }
-    return record
-
-
-def _tolist(arr):
-    if arr is None:
-        return None
-    if hasattr(arr, "tolist"):
-        return arr.tolist()
-    return list(arr)
-
-
-def _build_episode_json(
-    run_id: str,
-    task: str,
-    controller: str,
-    seed: int,
-    episode: int,
-    config: dict,
-    record: dict,
-) -> dict:
-    """Build the final episode JSON with statistics and provenance."""
-    task_name = task
-    if task_name == "multi_waypoint":
-        statistics = compute_multi_waypoint_metrics(record["trajectory"])
-    elif task_name == "sustained_turn":
-        statistics = compute_sustained_turn_metrics(record["trajectory"])
-    else:
-        statistics = {}
-
-    ep = {
-        "run_id": run_id,
-        "task": task_name,
-        "controller": controller,
-        "seed": seed,
-        "episode": episode,
-        "backend": "jsbsim",
-        "strict_backend": True,
-        "config_sha256": _config_sha256(config),
-        "git_commit": _get_git_commit(),
-        "success": record["success"],
-        "termination_reason": record["termination_reason"],
-        "steps": record["steps"],
-        "total_time_s": record["total_time_s"],
-        "total_reward": record["total_reward"],
-        "trajectory": record["trajectory"],
-        "statistics": statistics,
-    }
-
-    # Task-specific top-level fields for convenience.
-    if task_name == "multi_waypoint":
-        # completed_waypoints can be inferred from final trajectory point.
-        if record["trajectory"]:
-            ep["completed_waypoints"] = int(record["trajectory"][-1].get("completed_waypoints", 0))
-            # Use the task's own switch event log (has from_idx/reached/timeout/range_m).
-            ep["switch_events"] = record["trajectory"][-1].get("switch_events", [])
-            ep["waypoints"] = record["trajectory"][-1].get("waypoints", [])
-        else:
-            ep["completed_waypoints"] = 0
-            ep["switch_events"] = []
-            ep["waypoints"] = []
-    elif task_name == "sustained_turn":
-        # Use the metric-computed value (handles NaN/Inf gracefully).
-        ep["completed_orbits"] = float(statistics.get("completed_orbits", 0.0))
-
-    return ep
+    return recorder.finalize(
+        steps=steps,
+        total_time_s=total_time_s,
+        total_reward=total_reward,
+        termination_reason=termination_reason,
+        success=success,
+        final_position_m=own_state.get("position_m", own_state.get("position_neu")),
+        final_speed_mps=float(own_state.get("speed_mps", 250.0)),
+        final_altitude_m=float(own_state.get("altitude_m", 5000.0)),
+    )
 
 
 def _evaluate_worker(args: tuple) -> List[Dict[str, Any]]:
@@ -566,11 +505,24 @@ def _evaluate_worker(args: tuple) -> List[Dict[str, Any]]:
     env = _build_env(config)
     adapter = _build_adapter(controller, config, checkpoint_ppo_pid, checkpoint_ppo, checkpoint_apic_pid, device=device)
 
+    config_sha256 = _config_sha256(config)
+    git_commit = _get_git_commit()
     records = []
     for ep in range(n_episodes):
         ep_seed = seed * 10000 + ep
-        record = _run_episode(env, adapter, ep_seed, save_full=save_full)
-        ep_json = _build_episode_json(run_id, task, controller, seed, ep, config, record)
+        ep_json = _run_episode(
+            env,
+            adapter,
+            ep_seed,
+            run_id,
+            task,
+            controller,
+            ep,
+            config,
+            config_sha256,
+            git_commit,
+            save_full=save_full,
+        )
         records.append(ep_json)
 
     env.close()
@@ -817,16 +769,12 @@ def main():
     elapsed = time.time() - start_time
     logger.info(f"Evaluation completed in {elapsed:.1f}s; {len(all_records)} episodes saved")
 
-    # Save episode JSONs
+    # Save episode JSONs and aggregate JSON via the independent recorder layer.
+    run_recorder = RunRecorder(run_dir)
     for rec in all_records:
-        task = rec["task"]
-        controller = rec["controller"]
-        seed = rec["seed"]
-        episode = rec["episode"]
-        out_path = raw_dir / task / controller / f"seed_{seed:02d}" / f"episode_{episode:03d}.json"
-        out_path.parent.mkdir(parents=True, exist_ok=True)
-        with open(out_path, "w", encoding="utf-8") as f:
-            json.dump(rec, f, indent=2, ensure_ascii=False)
+        run_recorder.add(rec)
+    run_recorder.write()
+    logger.info(f"Wrote aggregate JSON with {len(all_records)} episodes to {run_recorder.aggregate_dir / 'episode_records.json'}")
 
     # Build and save per-controller/task merged config snapshots.
     config_snapshots = {}

@@ -648,6 +648,10 @@ class CloseRangeTrackingEnv:
             action = np.zeros(3)
         action = np.asarray(action, dtype=np.float64)
 
+        # --- Validate action-space schema (3D/4D/6D) ---
+        from ..utils.action_schema import validate_action
+        action, _ = validate_action(action)
+
         # --- Detect APIC mode (policy outputs PID gain deltas) ---
         ll_cfg = self.config.get("low_level_controller", {})
         if isinstance(ll_cfg, str):

@@ -30,13 +30,17 @@ from uav_vpp_guidance.ablations.intentional.intentional_ppo_agent import Intenti
 
 
 def load_experiment_config(config_path):
+    """Load experiment config and recursively resolve includes."""
     base_config = load_yaml_config(config_path)
     includes = base_config.pop("includes", [])
     merged = {}
+    cfg_dir = os.path.dirname(config_path)
     for inc_path in includes:
-        inc_full = os.path.join(os.path.dirname(config_path), inc_path)
+        inc_full = os.path.join(cfg_dir, inc_path)
+        if not os.path.exists(inc_full):
+            inc_full = os.path.join(cfg_dir, "..", os.path.basename(inc_path))
         if os.path.exists(inc_full):
-            merged = merge_config(merged, load_yaml_config(inc_full))
+            merged = merge_config(merged, load_experiment_config(inc_full))
     return merge_config(merged, base_config)
 
 

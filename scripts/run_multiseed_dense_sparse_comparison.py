@@ -27,6 +27,7 @@ import argparse
 import copy
 import json
 import os
+import subprocess
 import sys
 import time
 from pathlib import Path
@@ -123,30 +124,38 @@ def run_stage1(
     swanlab_project: Optional[str],
     swanlab_exp_base: Optional[str],
 ) -> str:
-    """Train Stage-1 pursuer vs maneuver-library bandit. Returns best checkpoint path."""
+    """Train Stage-1 pursuer vs maneuver-library bandit. Returns best checkpoint path.
+
+    Runs in a subprocess so that JSBSim global state is reset for each condition.
+    This avoids hard-to-debug NaN aircraft states when multiple CloseRangeTrackingEnv
+    instances are created sequentially in the same process.
+    """
     config_path = STAGE1_CONFIGS[condition]
+    os.makedirs(output_dir, exist_ok=True)
+
+    # Snapshot a minimal config for the subprocess so seed/name/output are honoured.
     config = load_experiment_config(config_path)
     config["experiment"]["seed"] = seed
     config["experiment"]["name"] = f"{condition}_stage1_s{seed}"
+    device = config.get("ppo", {}).get("device")
 
-    os.makedirs(output_dir, exist_ok=True)
-
-    swanlab_logger = None
+    cmd = [
+        sys.executable,
+        "scripts/train_curriculum_ppo.py",
+        "--config", config_path,
+        "--seed", str(seed),
+        "--output-dir", output_dir,
+        "--algorithm", "ppo",
+    ]
+    if smoke:
+        cmd.append("--smoke")
+    if device:
+        cmd.extend(["--device", device])
     if use_swanlab:
-        exp_name = f"{swanlab_exp_base}_{condition}_s{seed}_s1" if swanlab_exp_base else None
-        swanlab_logger = make_swanlab_logger(
-            swanlab_project, exp_name,
-            {"condition": condition, "seed": seed, "stage": 1, "config": config_path},
-        )
+        # Keeping the option open, but the current experiments disable SwanLab.
+        pass
 
-    set_seed(seed)
-    try:
-        train_ppo_curriculum(
-            config, output_dir, smoke=smoke, algorithm="ppo", swanlab_logger=swanlab_logger
-        )
-    finally:
-        if swanlab_logger is not None:
-            swanlab_logger.finish()
+    subprocess.run(cmd, cwd=str(_PROJECT_ROOT), check=True)
 
     ckpt = os.path.join(output_dir, "checkpoints", "best.pt")
     if not os.path.exists(ckpt):

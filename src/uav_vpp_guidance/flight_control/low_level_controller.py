@@ -48,13 +48,23 @@ class LowLevelController:
         self._prev_throttle = 0.7
         self.command_history.clear()
 
-    def compute_actuator(self, guidance_command: dict, aircraft_state: dict = None) -> dict:
+    def compute_actuator(
+        self,
+        guidance_command: dict,
+        aircraft_state: dict = None,
+        aggressiveness: float = None,
+        pid_gain_deltas=None,
+    ) -> dict:
         """
         Compute actuator commands from guidance commands.
 
         Args:
             guidance_command (dict): Keys 'nz_cmd', 'roll_rate_cmd', 'throttle_cmd'.
             aircraft_state (dict, optional): Current aircraft state.
+            aggressiveness (float, optional): Ignored by the baseline controller; kept
+                for interface compatibility with EnhancedLowLevelController.
+            pid_gain_deltas: Ignored by the baseline controller; kept for interface
+                compatibility with EnhancedLowLevelController (APIC mode).
 
         Returns:
             dict: Actuator command dictionary for JSBSim, including:

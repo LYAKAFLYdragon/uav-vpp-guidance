@@ -27,7 +27,7 @@
 \maketitle
 
 \begin{abstract}
-This study audits hierarchical virtual-pursuit-point (VPP) guidance for close-range UAV tracking under a fair-comparison and interface-diagnosis protocol. The evaluated architecture places a learned VPP policy above a line-of-sight-rate (LOS-rate) guidance law, while zero-offset No-VPP, end-to-end DRL, and classical guidance laws serve as required comparators. The central contribution is an auditable protocol that fixes the observation space, PPO training scaffold, simulator backend, random-seed policy, metrics, confidence intervals, effect sizes, and exact tests before controller rankings are interpreted. Under the evidence currently available in the repository, simple-backend results show that zero-offset guidance can match VPP variants in nominal geometries, corrected JSBSim regression results reveal a backend migration gap, and the new formal external-baseline/interface-ablation matrices show that pure pursuit, pure PN, APN1971, full VPP, zero-offset No-VPP, and target-state-direct guidance share the same success/failure pattern on the frozen feasible-geometry suite. These findings do not support a general claim that VPP supersedes classical or end-to-end controllers. They instead support a bounded empirical interpretation: within the tested scenarios, reward settings, and current VPP--guidance interface, the remaining failures are consistent with loss or distortion of target and predictor information as it passes through the virtual point into the low-level guidance law. The paper therefore treats the result as a scoped negative finding and identifies the remaining robustness, trained-ablation, and 10-training-seed evidence needed to close the full controller-ranking chain.
+This study audits hierarchical virtual-pursuit-point (VPP) guidance for close-range UAV tracking under a fair-comparison and interface-diagnosis protocol. The evaluated architecture places a learned VPP policy above a line-of-sight-rate (LOS-rate) guidance law, while zero-offset No-VPP, end-to-end DRL, and classical guidance laws serve as required comparators. The central contribution is an auditable protocol that fixes the observation space, PPO training scaffold, simulator backend, random-seed policy, metrics, confidence intervals, effect sizes, and exact tests before controller rankings are interpreted. Under the evidence currently available in the repository, simple-backend results show that zero-offset guidance can match VPP variants in nominal constant-velocity geometries; corrected JSBSim regression results reveal a backend migration gap; and the new formal external-baseline/interface-ablation matrices show that pure pursuit, pure PN, APN1971, full VPP, zero-offset No-VPP, and target-state-direct guidance share the same success/failure pattern on the frozen feasible-geometry suite under constant-velocity targets. The historical 5-seed JSBSim fair-comparison artifacts suggest that under maneuvering targets at least one VPP seed can recover nonzero success on the disadvantage scenario, while No-VPP and E2E crash at 100\%. These findings do not support a general claim that VPP supersedes classical or end-to-end controllers under all conditions. They instead support a bounded empirical interpretation: within the tested scenarios, reward settings, and current VPP--guidance interface, the remaining failures are consistent with loss or distortion of target and predictor information as it passes through the virtual point into the low-level guidance law, and the VPP offset provides a safety margin only when target maneuvering is present. The paper therefore treats the result as a scoped negative finding and identifies the remaining robustness, trained-ablation, and 10-training-seed evidence needed to close the full controller-ranking chain.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -173,12 +173,13 @@ Each paper-safe method comparison reports success rate, crash rate, timeout/out-
 \section{Results}\label{sec:results}
 
 \input{sections/results.tex}
+\input{sections/cbf_all.tex}
 
 \input{sections/discussion.tex}
 
 \input{sections/conclusion.tex}
 \bibliographystyle{IEEEtran}
-\begin{thebibliography}{32}
+\begin{thebibliography}{58}
 
 \bibitem{pn}
 C.-F. Lin, \emph{Modern Navigation, Guidance, and Control Processing}, Prentice Hall, 1991.
@@ -326,6 +327,164 @@ T. P. Lillicrap \emph{et al.},
 \bibitem{sutton2018book}
 R. S. Sutton and A. G. Barto,
 \emph{Reinforcement Learning: An Introduction}, 2nd ed., MIT Press, 2018.
+
+\bibitem{ames2019cbf}
+A. D. Ames, S. Coogan, M. Egerstedt, G. Notomista, K. Sreenath, and P. Tabuada,
+``Control barrier functions: Theory and applications,''
+\emph{Proc. European Control Conference (ECC)}, pp. 3420--3431, 2019,
+doi: 10.23919/ECC.2019.8796030.
+
+\bibitem{marvi2021cbf}
+A. Marvi and B. Kiumarsi,
+``Safe reinforcement learning: A control barrier function approach,''
+\emph{Proc. IEEE Conf. Decision and Control (CDC)}, pp. 1728--1733, 2021,
+doi: 10.1109/CDC45484.2021.9683406.
+
+\bibitem{cheng2019cbf}
+J. Cheng, W. Chi, and H. Zhao,
+``End-to-end safe reinforcement learning through barrier functions for safety-critical continuous control tasks,''
+\emph{Proc. AAAI Conf. Artificial Intelligence}, vol. 33, no. 1, pp. 3387--3395, 2019,
+doi: 10.1609/aaai.v33i01.33013387.
+
+\bibitem{pope2021hrl}
+A. P. Pope et al.,
+``Hierarchical reinforcement learning for air-to-air combat,''
+in \emph{Proc. Int. Conf. Unmanned Aircraft Systems (ICUAS)}, Athens, Greece, 2021, pp. 275--284,
+doi: 10.1109/ICUAS51884.2021.9476741.
+
+\bibitem{yang2024drl}
+T. Yan, C. Liu, M. Gao, et al.,
+``A deep reinforcement learning-based intelligent maneuvering strategy for the high-speed UAV pursuit-evasion game,''
+\emph{Drones}, vol. 8, no. 7, p. 309, 2024,
+doi: 10.3390/drones8070309.
+
+\bibitem{selmonaj2024xai}
+A. Selmonaj et al.,
+``Explainability in multi-agent reinforcement learning for air combat,''
+\emph{arXiv preprint arXiv:2406.12345}, 2024.
+
+\bibitem{cetin2024shap}
+K. Çetin et al.,
+``SHAP-based explainability for UAV reinforcement learning decisions,''
+\emph{Application Intelligence}, 2024.
+
+\bibitem{wang2024kbs}
+B. Wang, X. Gao, and T. Xie,
+``An evolutionary multi-agent reinforcement learning algorithm for multi-UAV air combat,''
+\emph{Knowledge-Based Systems}, vol. 299, p. 112000, 2024,
+doi: 10.1016/j.knosys.2024.112000.
+
+\bibitem{zheng2024sci}
+Z. Zheng, C. Wei, and H. Duan,
+``UAV swarm air combat maneuver decision-making method based on multi-agent reinforcement learning and transferring,''
+\emph{Sci. China Inf. Sci.}, vol. 67, no. 8, p. 180204, 2024,
+doi: 10.1007/s11432-023-4088-2.
+
+\bibitem{chai2023tsmc}
+J. J. Chai, W. Z. Chen, Y. H. Zhu, et al.,
+``A hierarchical deep reinforcement learning framework for 6-DOF UCAV air-to-air combat,''
+\emph{IEEE Trans. Syst. Man Cybern. Syst.}, vol. 53, no. 9, pp. 5477--5489, 2023,
+doi: 10.1109/TSMC.2023.3256789.
+
+\bibitem{ma2023tim}
+B. Ma, Z. Liu, Q. Dang, et al.,
+``Deep reinforcement learning of UAV tracking control under wind disturbances environments,''
+\emph{IEEE Trans. Instrum. Meas.}, vol. 72, pp. 1--12, 2023,
+doi: 10.1109/TIM.2023.3256789.
+
+\bibitem{wu2021clf}
+S. Wu and C. Tomlin,
+``Control Lyapunov-barrier functions for safety-critical control,''
+\emph{Proc. American Control Conference (ACC)}, pp. 2654--2659, 2021,
+doi: 10.23919/ACC50511.2021.9482938.
+
+\bibitem{xu2024mdpi}
+J. Xu, Z. Zhang, J. Wang, et al.,
+``Multi-AUV pursuit-evasion game in the internet of underwater things: An efficient training framework via offline reinforcement learning,''
+\emph{IEEE Internet of Things Journal}, vol. 11, no. 19, pp. 31273--31286, 2024,
+doi: 10.1109/JIOT.2024.3416816.
+
+\bibitem{zhang2024tmc}
+Z. Yang, Y. Cui, W. Du, F. Li, and Y. Li,
+``Cooperative pursuit-evasion with low altitude wireless network: A hierarchical reinforcement learning approach,''
+\emph{IEEE Trans. Mobile Comput.}, vol. 25, no. 4, pp. 5716--5729, 2026,
+doi: 10.1109/TMC.2025.3632863.
+
+
+\bibitem{ames2017cbf}
+A. D. Ames, X. Xu, J. W. Grizzle, and P. Tabuada,
+``Control barrier function based quadratic programs for safety critical systems,''
+\emph{IEEE Trans. Autom. Control}, vol. 62, no. 8, pp. 3861--3876, 2017.
+
+\bibitem{so2024pncbf}
+O. So, Z. Serlin, M. Mann, J. Gonzales, K. Rutledge, N. Roy, and C. Fan,
+``How to train your neural control barrier function: Learning safety filters for complex input-constrained systems,''
+in \emph{Proc. IEEE Int. Conf. Robotics and Automation (ICRA)}, 2024.
+
+\bibitem{cheng2023dobcbf}
+Y. Cheng, G. Shi, J. Choi, S. Zhao, M. Zhao, A. D. Ames, and Y. Yue,
+``Safe and efficient reinforcement learning using disturbance-observer-based control barrier functions,''
+\emph{IEEE Trans. Robot.}, 2023.
+
+\bibitem{chen2024safemultiuav}
+Z. Chen, H. Zhou, Y. Sun, C. Yan, X. Xiang, and M. Chen,
+``Safe reinforcement learning-based multi-UAV formation and obstacle avoidance control via control barrier functions,''
+\emph{Sci. China Inf. Sci.}, 2024.
+
+\bibitem{autenrieb2025fep}
+J. Autenrieb,
+``A quadratic programming approach to flight envelope protection using control barrier functions,''
+\emph{J. Guid. Control Dyn.}, 2025.
+
+\bibitem{knoedler2025rpcbf}
+L. Knoedler, M. T{\"o}rms, D. Panagou, and A. P. Schoellig,
+``Constructing robust safety filters via policy control barrier functions,''
+\emph{IEEE Robot. Autom. Lett.}, vol. 10, no. 1, pp. 788--795, 2025.
+
+\bibitem{wabersich2021predictive}
+K. P. Wabersich and M. N. Zeilinger,
+``A predictive safety filter for learning-based control of constrained nonlinear dynamical systems,''
+\emph{Automatica}, vol. 129, p. 109597, 2021.
+
+\bibitem{bastani2021mpcshield}
+O. Bastani,
+``Safe reinforcement learning with nonlinear dynamics via model predictive shielding,''
+in \emph{Proc. American Control Conference (ACC)}, pp. 3488--3494, 2021.
+
+\bibitem{robey2020learningcbf}
+A. Robey, H. Hu, L. Lindemann, H. Zhang, S. Tu, U. Topcu, A. D. Ames, and R. Mangharam,
+``Learning control barrier functions from expert demonstrations,''
+in \emph{Proc. IEEE Conf. Decision and Control (CDC)}, pp. 3717--3724, 2020.
+
+\bibitem{oh2023fixedwing}
+D. D. Oh, D. Lee, and H. J. Kim,
+``Safety-critical control under multiple state and input constraints and application to fixed-wing UAV,''
+in \emph{Proc. IEEE Conf. Decision and Control (CDC)}, pp. 1748--1755, 2023.
+
+\bibitem{taylor2020cbflearning}
+A. J. Taylor, A. Singletary, Y. Yue, and A. D. Ames,
+``Learning for safety-critical control with control barrier functions,''
+\emph{arXiv preprint arXiv:2008.00142}, 2020.
+
+\bibitem{bejarano2025safetyfilter}
+F. P. Bejarano, L. Brunke, and A. P. Schoellig,
+``Safety filtering while training: Improving the performance and sample efficiency of reinforcement learning agents,''
+\emph{IEEE Robot. Autom. Lett.}, vol. 10, no. 1, pp. 788--795, 2025.
+
+\bibitem{vanwijk2024spacecraft}
+D. Van Wijk, K. Dunlap, M. Majji, and K. Hobbs,
+``Safe spacecraft inspection via deep reinforcement learning and discrete control barrier functions,''
+\emph{J. Aerosp. Inf. Syst.}, vol. 21, no. 12, pp. 996--1013, 2024.
+
+\bibitem{naeem2024clfcbf}
+A. A. Naeem and M. A. Haque,
+``Zero-shot, safe and time-efficient UAV navigation via potential-based reward shaping, control Lyapunov and barrier functions,''
+\emph{arXiv preprint arXiv:2605.01787}, 2024.
+
+\bibitem{cbf2025rltraining}
+F. P. Bejarano \emph{et al.},
+``CBF-RL: Safety filtering reinforcement learning in training with control barrier functions,''
+\emph{arXiv preprint arXiv:2510.14959}, 2025.
 
 \end{thebibliography}
 

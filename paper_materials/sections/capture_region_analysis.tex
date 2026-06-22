@@ -6,50 +6,13 @@ We numerically compare the capture regions of two guidance strategies on a grid 
     \item \textbf{PN direct:} the same LOS-rate guidance law, but with the virtual point fixed at the instantaneous target position (zero learned offset).
 \end{itemize}
 
-The grid spans initial range $R \in [500, 5000]$~m (10 points), heading error $\eta \in [-180^{\circ}, 180^{\circ}]$ (12 points), and speed ratio $v_o/v_t \in [0.8, 1.5]$ (4 points), for 480 initial conditions with 10 Monte Carlo episodes per condition.
+The grid spans initial range $R \in [500, 5000]$~m (10 points), heading error $\eta \in [-180^{\circ}, 180^{\circ}]$ (12 points), and speed ratio $v_o/v_t \in [0.8, 1.5]$ (4 points), for 480 initial conditions with 10 Monte Carlo episodes per condition. Figure~\ref{fig:capture_region_heatmap} replaces the previous table-only summary by showing both the VPP capture region and the VPP--PN success-rate difference across the grid.
 
-\subsubsection{Overall comparison}
+\input{figures/capture_region_heatmap}
 
-Table~\ref{tab:capture_region_overall} reports the pooled success rates.
+\subsubsection{Overall and sub-region comparison}
 
-\begin{table}[t]
-\centering
-\caption{Capture-region overall comparison (480 grid points).}
-\label{tab:capture_region_overall}
-\begin{tabular}{lccc}
-\toprule
-Method & Mean SR & Min SR & Max SR \\
-\midrule
-VPP+LOS-rate & 29.17\% & 0.00\% & 100.00\% \\
-PN direct      & 28.75\% & 0.00\% & 100.00\% \\
-Difference     & +0.42\% & --- & --- \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-The overall difference is small and not statistically significant (Fisher exact test, $p = 0.669$). This is consistent with the physical intuition that, when the learned offset is small and the guidance gains are fixed to their default values, the VPP+LOS-rate law behaves similarly to classical proportional navigation.
-
-\subsubsection{Sub-region analysis}
-
-Table~\ref{tab:capture_region_sub} reports pooled success rates in sub-regions where the VPP layer might be expected to help.
-
-\begin{table}[t]
-\centering
-\caption{Capture-region sub-region comparison.}
-\label{tab:capture_region_sub}
-\begin{tabular}{lccccc}
-\toprule
-Sub-region & Points & VPP SR & PN SR & $\Delta$ SR & $p$-value \\
-\midrule
-Overall & 480 & 29.17\% & 28.75\% & +0.42\% & 0.6690 \\
-High ATA ($|\eta| > 90^{\circ}$) & 240 & 25.00\% & 24.17\% & +0.83\% & 0.5242 \\
-High speed ratio ($v_o/v_t > 1.2$) & 240 & 27.50\% & 26.67\% & +0.83\% & 0.5372 \\
-High ATA + close/mid range & 72 & 83.33\% & 80.56\% & +2.78\% & 0.1930 \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-No sub-region reaches statistical significance at $\alpha = 0.05$. The largest nominal advantage ($+2.78\%$) occurs in high-aspect, close-to-medium-range engagements, but the sample is too small to claim significance.
+The pooled result remains nearly neutral: VPP+LOS-rate achieves 29.17\% mean success, PN direct achieves 28.75\%, and the overall difference is not statistically significant (Fisher exact test, $p = 0.669$). Sub-region tests also remain non-significant: high-ATA cases differ by +0.83 percentage points ($p=0.5242$), high-speed-ratio cases differ by +0.83 percentage points ($p=0.5372$), and the largest nominal advantage, high-ATA close/mid-range engagements, is +2.78 percentage points ($p=0.1930$). This is consistent with the physical intuition that, when the learned offset is small and the guidance gains are fixed to their default values, the VPP+LOS-rate law behaves similarly to classical proportional navigation.
 
 \subsubsection{Physical interpretation}
 

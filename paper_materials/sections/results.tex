@@ -60,7 +60,15 @@ The corrected JSBSim regression run in \texttt{outputs/stage10\_2\_jsbsim\_corre
 
 The historical 5-seed JSBSim fair-comparison artifacts suggest that the disadvantage scenario is the main failure case and that at least one VPP seed can recover nonzero success. Because this pattern is seed-dependent, it is reported as exploratory until the 10-training-seed matrix is complete. Episode-level Fisher tests are informative about terminal-outcome counts, but seed-level uncertainty remains the stricter criterion for DRL reproducibility.
 
-\input{figures/offset_timeseries}
+To make the failure mechanism inspectable rather than table-only, we add representative JSBSim diagnostic rollouts for the disadvantage geometry. These rollouts use existing checkpoints and the same JSBSim F-16 backend, but they are single-episode visual diagnostics rather than pooled performance estimates. Figure~\ref{fig:trajectory_3d} compares the full three-dimensional flight paths of VPP, zero-offset No-VPP, and the extended 2M-step E2E policy. Figures~\ref{fig:vpp_offset_evolution} and~\ref{fig:los_dynamics} then expose how the VPP offset and LOS dynamics evolve during the same rollout. Figure~\ref{fig:policy_decision_map} broadens the inspection to visited VPP states across four JSBSim diagnostic scenarios and three episode seeds.
+
+\input{figures/trajectory_3d}
+
+\input{figures/vpp_offset_evolution}
+
+\input{figures/los_dynamics}
+
+\input{figures/policy_decision_map}
 
 \subsection{Predictor value stratification}\label{sec:predictor}
 
@@ -88,6 +96,10 @@ These data support only a scoped statement: neural prediction is more useful und
 The repository evidence already shows why external guidance baselines cannot be omitted: pure PN without VPP succeeds in selected high-energy tail-chase candidates where several VPP-based variants fail. The completed external-baseline matrix evaluates pure pursuit, pure PN, APN1971, and a VPP reference under the same feasible-geometry scenarios, metric schema, and 3-seed evaluation budget (Fig.~\ref{fig:external_baselines}). All four methods achieve 90/120 successes (75.0\%, Wilson 95\% CI: 66.6--81.9\%). As in the ablation subset, favorable, neutral, and challenging scenarios are solved by all methods, while the disadvantage scenario fails for all methods by out-of-bounds termination. Fisher exact tests against the VPP reference are therefore non-significant for terminal success ($p=1.0$). Paired return tests show lower returns for the classical baselines relative to the VPP reference ($p=5.25\times10^{-9}$, Cohen's $d=-0.575$), with the difference concentrated in the failed disadvantage episodes. APN1971 matches pure PN in this constant-velocity target suite because no nonzero target acceleration is exposed to the APN feed-forward term.
 
 \input{figures/fig_external_baselines}
+
+The formal episode matrices also show that the remaining terminal failures are not crash- or timeout-dominated in the frozen feasible-geometry suite. Figure~\ref{fig:failure_taxonomy} decomposes the outcomes into success, crash, timeout, and out-of-bounds categories for both the external-baseline and interface-ablation matrices.
+
+\input{figures/failure_taxonomy}
 
 The new \texttt{paper\_materials/scripts/run\_robustness.py} evaluates wind, observation noise, actuator delay, and guidance-parameter sensitivity, but those runs remain proxy/smoke-level because wind and sensor perturbations are not yet wired into a true JSBSim wind/sensor interface. They are therefore not promoted to formal Defence Technology evidence in this revision.
 

@@ -1,17 +1,25 @@
+#!/usr/bin/env python3
 """
-Stage 5: No-Prediction VPP PPO Autonomous Decision Baseline.
+APIC-style PPO+PID Training.
 
-Trains a PPO policy to output virtual pursuit point offsets Δp
-without trajectory prediction.
+PPO policy outputs 6D action: [delta_Kp_nz, delta_Ki_nz, delta_Kd_nz,
+                                delta_Kp_roll, delta_Ki_roll, delta_Kd_roll]
+Each delta is in [-1, 1] and multiplicatively adjusts a fixed base PID gain:
+    K_eff = K_base * (1 + range_k * delta_k)
+
+The guidance reference is fixed (waypoint / orbit tangent point) via
+guidance.direct_track_mode=true and virtual_point.mode=zero_offset, so the
+policy is a true low-level controller: it only tunes PID gains, not the
+reference trajectory.
 
 Usage:
     # Smoke test (fast)
-    python -m uav_vpp_guidance.training.train_no_prediction_vpp_ppo \
-        --config config/experiment/train_no_prediction_vpp_ppo.yaml --smoke
+    python -m uav_vpp_guidance.training.train_apic_pid \
+        --config config/experiment/train_apic_pid_multi_waypoint.yaml --smoke
 
     # Full training
-    python -m uav_vpp_guidance.training.train_no_prediction_vpp_ppo \
-        --config config/experiment/train_no_prediction_vpp_ppo.yaml
+    python -m uav_vpp_guidance.training.train_apic_pid \
+        --config config/experiment/train_apic_pid_multi_waypoint.yaml
 """
 
 import argparse
@@ -25,6 +33,8 @@ import numpy as np
 from uav_vpp_guidance.utils.config import load_yaml_config, merge_config
 from uav_vpp_guidance.utils.seed import set_seed
 from uav_vpp_guidance.envs.tracking_env import CloseRangeTrackingEnv
+from uav_vpp_guidance.envs.multi_waypoint_tracking_env import MultiWaypointTrackingEnv
+from uav_vpp_guidance.envs.sustained_turn_env import SustainedTurnEnv
 from uav_vpp_guidance.agents.ppo_agent import PPOAgent
 
 
@@ -40,6 +50,17 @@ def load_experiment_config(config_path):
     return merge_config(merged, base_config)
 
 
+def _build_env(config: dict):
+    """Build the appropriate environment class from the task config."""
+    task_cfg = config.get("task", {})
+    class_name = task_cfg.get("env_class", "CloseRangeTrackingEnv")
+    if class_name == "MultiWaypointTrackingEnv":
+        return MultiWaypointTrackingEnv(config)
+    if class_name == "SustainedTurnEnv":
+        return SustainedTurnEnv(config)
+    return CloseRangeTrackingEnv(config)
+
+
 def sample_scenario(config, rng):
     """Sample a random scenario from config."""
     scenarios = config.get("scenarios", {})
@@ -51,20 +72,18 @@ def sample_scenario(config, rng):
 
 def run_evaluation(env, agent, config, num_episodes=10, seeds=None, save_trajectories=False, output_dir=None, domain_rand_scale=0.0):
     """
-    Evaluate a trained policy.
-
-    Args:
-        domain_rand_scale: If > 0, the environment perturbs initial conditions
-            internally during reset() using an RNG seeded by the episode seed.
+    Evaluate a trained APIC policy.
 
     Returns:
-        dict: Aggregated evaluation metrics.
+        dict: Aggregated evaluation metrics including PID gain-delta stats.
     """
     if seeds is None:
         seeds = [0, 1, 2]
 
     if domain_rand_scale > 0.0 and hasattr(env, "set_domain_rand_scale"):
         env.set_domain_rand_scale(domain_rand_scale)
+
+    gain_names = ["Kp_nz", "Ki_nz", "Kd_nz", "Kp_roll", "Ki_roll", "Kd_roll"]
 
     all_episodes = []
     for seed in seeds:
@@ -81,6 +100,7 @@ def run_evaluation(env, agent, config, num_episodes=10, seeds=None, save_traject
             final_ata = 0.0
             reason = "timeout"
             trajectory = []
+            ep_gain_deltas = []
 
             for step in range(env.max_steps):
                 obs_vec = obs["observation_vector"]
@@ -96,18 +116,21 @@ def run_evaluation(env, agent, config, num_episodes=10, seeds=None, save_traject
                 min_range = min(min_range, range_m)
                 final_range = range_m
                 final_ata = ata_deg
+                deltas = info.get("pid_gain_deltas")
+                if deltas is not None:
+                    ep_gain_deltas.append(np.asarray(deltas, dtype=np.float64))
 
                 if save_trajectories and output_dir is not None:
-                    trajectory.append({
+                    traj_point = {
                         "step": step,
                         "time": step * env.env_config.get("high_level_dt", 0.2),
                         "range_m": range_m,
                         "ata_deg": ata_deg,
                         "reward": reward,
-                        "action_x": float(action[0]),
-                        "action_y": float(action[1]),
-                        "action_z": float(action[2]),
-                    })
+                    }
+                    for i, name in enumerate(gain_names):
+                        traj_point[f"delta_{name}"] = float(action[i]) if i < len(action) else np.nan
+                    trajectory.append(traj_point)
 
                 if terminated or truncated:
                     reason = info.get("reason", "unknown")
@@ -127,6 +150,17 @@ def run_evaluation(env, agent, config, num_episodes=10, seeds=None, save_traject
                 "is_timeout": reason == "timeout",
                 "is_out_of_bounds": reason == "out_of_bounds",
             }
+            if ep_gain_deltas:
+                gd_stack = np.stack(ep_gain_deltas)
+                for i, name in enumerate(gain_names):
+                    ep_result[f"mean_delta_{name}"] = float(np.mean(gd_stack[:, i]))
+                    ep_result[f"min_delta_{name}"] = float(np.min(gd_stack[:, i]))
+                    ep_result[f"max_delta_{name}"] = float(np.max(gd_stack[:, i]))
+            else:
+                for name in gain_names:
+                    ep_result[f"mean_delta_{name}"] = np.nan
+                    ep_result[f"min_delta_{name}"] = np.nan
+                    ep_result[f"max_delta_{name}"] = np.nan
             all_episodes.append(ep_result)
 
             if save_trajectories and output_dir is not None and trajectory:
@@ -147,7 +181,7 @@ def run_evaluation(env, agent, config, num_episodes=10, seeds=None, save_traject
     final_ranges = [e["final_range_m"] for e in all_episodes]
     final_atas = [e["final_ata_deg"] for e in all_episodes]
 
-    return {
+    metrics = {
         "num_episodes": len(all_episodes),
         "mean_return": float(np.mean(returns)) if returns else 0.0,
         "std_return": float(np.std(returns)) if returns else 0.0,
@@ -159,19 +193,15 @@ def run_evaluation(env, agent, config, num_episodes=10, seeds=None, save_traject
         "mean_final_range_m": float(np.mean(final_ranges)) if final_ranges else 0.0,
         "mean_final_ata_deg": float(np.mean(final_atas)) if final_atas else 0.0,
     }
+    for i, name in enumerate(gain_names):
+        vals = [e[f"mean_delta_{name}"] for e in all_episodes if not np.isnan(e[f"mean_delta_{name}"])]
+        metrics[f"mean_delta_{name}"] = float(np.mean(vals)) if vals else np.nan
+        metrics[f"std_delta_{name}"] = float(np.std(vals)) if vals else np.nan
+    return metrics
 
 
 def _compute_curriculum_scale(progress: float, schedule: list) -> float:
-    """
-    Compute domain-randomization scale from training progress.
-
-    Args:
-        progress: global_step / total_timesteps (0.0 – 1.0)
-        schedule: list of (progress_threshold, scale) tuples, sorted by threshold.
-                  E.g. [(0.0, 0.05), (0.25, 0.10), (0.50, 0.15), (0.75, 0.20)]
-    Returns:
-        Current scale value.
-    """
+    """Compute domain-randomization scale from training progress."""
     scale = 0.0
     for thresh, s in schedule:
         if progress >= thresh:
@@ -180,17 +210,7 @@ def _compute_curriculum_scale(progress: float, schedule: list) -> float:
 
 
 def _select_success_criterion_stage(progress: float, schedule: list) -> dict:
-    """
-    Select the current success-criterion stage from a curriculum schedule.
-
-    Args:
-        progress: global_step / total_timesteps (0.0 – 1.0)
-        schedule: list of dicts with key "until_progress" (float, exclusive upper bound)
-                  and success criteria fields.  Stages must be sorted by
-                  until_progress in ascending order.
-    Returns:
-        dict: The active stage.
-    """
+    """Select the current success-criterion stage from a curriculum schedule."""
     for stage in schedule:
         if progress <= stage.get("until_progress", 1.0):
             return stage
@@ -215,14 +235,7 @@ def _apply_final_success_criterion(env, schedule: list):
 
 
 def _maybe_relabel_episode_rewards(env, agent, episode_start_idx, can_relabel):
-    """
-    Replace the raw sparse rewards of the just-finished episode with the
-    R2SP relabelled trajectory when relabelling is enabled.
-
-    Returns ``False`` if relabelling could not be applied (e.g. the episode
-    spanned a buffer boundary); the caller should then mark subsequent
-    episodes as non-relabellable until the next full reset.
-    """
+    """Replace raw sparse rewards with R2SP relabelled trajectory when enabled."""
     calc = getattr(env, "reward_calculator", None)
     if not can_relabel:
         return False
@@ -242,15 +255,7 @@ def _maybe_relabel_episode_rewards(env, agent, episode_start_idx, can_relabel):
 
 
 def train_ppo(config, output_dir, smoke=False):
-    """
-    Main PPO training loop.
-
-    Args:
-        config (dict): Full experiment configuration.
-        output_dir (str): Output directory for logs and checkpoints.
-        smoke (bool): If True, run a minimal smoke test.
-    """
-    # Create output directories
+    """Main PPO+PID training loop."""
     checkpoint_dir = os.path.join(output_dir, "checkpoints")
     log_dir = os.path.join(output_dir, "logs")
     figure_dir = os.path.join(output_dir, "figures")
@@ -258,35 +263,30 @@ def train_ppo(config, output_dir, smoke=False):
     os.makedirs(log_dir, exist_ok=True)
     os.makedirs(figure_dir, exist_ok=True)
 
-    # Save config snapshot
     import yaml
     config_path = os.path.join(output_dir, "config_snapshot.yaml")
     with open(config_path, "w", encoding="utf-8") as f:
         yaml.dump(config, f, default_flow_style=False, allow_unicode=True)
 
-    # Hyperparameters
     ppo_cfg = config.get("ppo", {})
     total_timesteps = int(ppo_cfg.get("total_timesteps", 200000))
     rollout_steps = int(ppo_cfg.get("rollout_steps", 2048))
+    entropy_coef_start = float(ppo_cfg.get("entropy_coef", 0.01))
+    entropy_coef_final = float(ppo_cfg.get("entropy_coef_final", entropy_coef_start))
     eval_interval = int(config.get("evaluation", {}).get("eval_interval", 10000))
     save_interval = int(config.get("checkpoint", {}).get("save_interval", 10000))
     save_best = bool(config.get("checkpoint", {}).get("save_best", True))
     save_last = bool(config.get("checkpoint", {}).get("save_last", True))
 
-    # Domain randomization curriculum schedule
     dr_config = config.get("domain_randomization", {})
     dr_enabled = dr_config.get("enabled", False)
     dr_schedule = dr_config.get("curriculum_schedule", [
-        (0.00, 0.05),
-        (0.25, 0.10),
-        (0.50, 0.15),
-        (0.75, 0.20),
+        (0.00, 0.05), (0.25, 0.10), (0.50, 0.15), (0.75, 0.20),
     ])
     dr_fixed_scale = dr_config.get("fixed_scale", None)
     if dr_fixed_scale is not None:
         dr_schedule = [(0.0, float(dr_fixed_scale))]
 
-    # Success-criterion curriculum schedule
     sc_curriculum = config.get("success_criterion_curriculum", None)
     if sc_curriculum:
         print(f"Success-criterion curriculum enabled with {len(sc_curriculum)} stages")
@@ -300,9 +300,10 @@ def train_ppo(config, output_dir, smoke=False):
         print(f"  total_timesteps={total_timesteps}, rollout_steps={rollout_steps}")
 
     # Environment
-    env = CloseRangeTrackingEnv(config)
+    env = _build_env(config)
     backend = env._backend
     print(f"Backend: {backend}")
+    print(f"Environment class: {env.__class__.__name__}")
 
     if dr_enabled:
         print(f"Domain randomization enabled with schedule: {dr_schedule}")
@@ -311,8 +312,10 @@ def train_ppo(config, output_dir, smoke=False):
     sample_obs = env.reset(seed=0)
     obs_vec = sample_obs["observation_vector"]
     obs_dim = int(obs_vec.shape[0])
-    action_dim = int(config.get("policy", {}).get("action_dim", 3))
+    action_dim = int(config.get("policy", {}).get("action_dim", 4))
     print(f"Observation dim: {obs_dim}, Action dim: {action_dim}")
+    print(f"APIC mode: action = [delta_Kp_nz, delta_Ki_nz, delta_Kd_nz, delta_Kp_roll, delta_Ki_roll, delta_Kd_roll]")
+    print(f"  Each delta in [-1, 1] multiplicatively adjusts the corresponding PID gain")
 
     # Agent
     device = ppo_cfg.get("device", "cpu")
@@ -323,18 +326,19 @@ def train_ppo(config, output_dir, smoke=False):
     global_step = 0
     episode_count = 0
     best_eval_return = -float("inf")
-    last_sc_stage = None  # tracks last applied success-criterion curriculum stage
+    last_sc_stage = None
 
     # CSV loggers
     episode_log_path = os.path.join(log_dir, "episode_train_log.csv")
     update_log_path = os.path.join(log_dir, "update_train_log.csv")
     eval_log_path = os.path.join(log_dir, "eval_log.csv")
 
+    gain_names = ["Kp_nz", "Ki_nz", "Kd_nz", "Kp_roll", "Ki_roll", "Kd_roll"]
     episode_fieldnames = [
         "step", "episode", "episode_return", "episode_length",
         "success", "score_win", "crash", "out_of_bounds", "timeout",
         "mean_range", "final_range", "final_ata",
-    ]
+    ] + [f"mean_delta_{n}" for n in gain_names] + [f"min_delta_{n}" for n in gain_names] + [f"max_delta_{n}" for n in gain_names]
     update_fieldnames = [
         "step", "update_num", "policy_loss", "value_loss", "entropy",
         "approx_kl", "clip_fraction", "explained_variance", "learning_rate",
@@ -343,7 +347,7 @@ def train_ppo(config, output_dir, smoke=False):
         "step", "num_episodes", "mean_return", "std_return",
         "success_rate", "crash_rate", "out_of_bounds_rate", "timeout_rate",
         "mean_final_range_m", "mean_final_ata_deg",
-    ]
+    ] + [f"mean_delta_{n}" for n in gain_names] + [f"std_delta_{n}" for n in gain_names]
 
     with open(episode_log_path, "w", newline="", encoding="utf-8") as f_ep:
         ep_writer = csv.DictWriter(f_ep, fieldnames=episode_fieldnames)
@@ -361,14 +365,11 @@ def train_ppo(config, output_dir, smoke=False):
                 rng = np.random.default_rng(config.get("experiment", {}).get("seed", 0))
                 obs = env.reset(seed=rng.integers(0, 1000000))
 
-                # Tracks whether the current rollout starts at an episode
-                # boundary.  If an episode was cut by a buffer boundary, the
-                # remainder cannot be relabelled because its beginning is lost.
                 last_step_done = True
-
                 episode_return = 0.0
                 episode_length = 0
                 episode_ranges = []
+                episode_gain_deltas = []
                 episode_success = False
                 episode_crash = False
                 episode_oob = False
@@ -377,7 +378,6 @@ def train_ppo(config, output_dir, smoke=False):
 
                 start_time = time.time()
                 update_num = 0
-                last_saved_step = 0
 
                 while global_step < total_timesteps:
                     episode_start_idx = agent.buffer.ptr
@@ -408,15 +408,17 @@ def train_ppo(config, output_dir, smoke=False):
                                 )
                                 last_sc_stage = sc_stage
 
-                        # Store transition with actual reward/done from env.step()
+                        # Store transition
                         agent.store_transition(obs_vec, action, log_prob, reward, done, value)
 
                         rel_state = obs.get("relative_state", {})
                         range_m = rel_state.get("range_m", 0.0)
                         episode_ranges.append(range_m)
+                        deltas = info.get("pid_gain_deltas")
+                        if deltas is not None:
+                            episode_gain_deltas.append(np.asarray(deltas, dtype=np.float64))
 
                         if terminated or truncated:
-                            # Episode ended
                             episode_count += 1
                             reason = info.get("reason", "unknown")
                             episode_success = reason == "success"
@@ -424,7 +426,6 @@ def train_ppo(config, output_dir, smoke=False):
                             episode_oob = reason == "out_of_bounds"
                             episode_timeout = reason == "timeout"
 
-                            # Compute score win
                             ego_score = info.get("ego_score", 0.0)
                             target_score = info.get("target_score", 0.0)
                             episode_score_win = ego_score > target_score
@@ -433,7 +434,6 @@ def train_ppo(config, output_dir, smoke=False):
                             final_ata = float(np.rad2deg(rel_state.get("ata_rad", 0.0)))
                             mean_range = float(np.mean(episode_ranges)) if episode_ranges else 0.0
 
-                            # Log episode stats immediately
                             ep_row = {
                                 "step": global_step,
                                 "episode": episode_count,
@@ -448,6 +448,17 @@ def train_ppo(config, output_dir, smoke=False):
                                 "final_range": final_range,
                                 "final_ata": final_ata,
                             }
+                            if episode_gain_deltas:
+                                gd_stack = np.stack(episode_gain_deltas)
+                                for i, name in enumerate(gain_names):
+                                    ep_row[f"mean_delta_{name}"] = float(np.mean(gd_stack[:, i]))
+                                    ep_row[f"min_delta_{name}"] = float(np.min(gd_stack[:, i]))
+                                    ep_row[f"max_delta_{name}"] = float(np.max(gd_stack[:, i]))
+                            else:
+                                for name in gain_names:
+                                    ep_row[f"mean_delta_{name}"] = np.nan
+                                    ep_row[f"min_delta_{name}"] = np.nan
+                                    ep_row[f"max_delta_{name}"] = np.nan
                             ep_writer.writerow(ep_row)
                             f_ep.flush()
 
@@ -455,12 +466,11 @@ def train_ppo(config, output_dir, smoke=False):
                             episode_return = 0.0
                             episode_length = 0
                             episode_ranges = []
+                            episode_gain_deltas = []
 
-                            # Relabel sparse rewards if enabled.
-                            if _maybe_relabel_episode_rewards(
-                                env, agent, episode_start_idx, can_relabel
-                            ):
-                                pass  # rewards already rewritten in buffer
+                            # Relabel sparse rewards if enabled
+                            if _maybe_relabel_episode_rewards(env, agent, episode_start_idx, can_relabel):
+                                pass
 
                             # Reset environment
                             scenario = sample_scenario(config, rng)
@@ -470,12 +480,10 @@ def train_ppo(config, output_dir, smoke=False):
                                 env.set_domain_rand_scale(current_dr_scale)
                             obs = env.reset(scenario=scenario, seed=rng.integers(0, 1000000))
 
-                            # New episode starts here.
                             episode_start_idx = agent.buffer.ptr
                             can_relabel = True
                             last_step_done = True
 
-                            # Check if buffer is full after this step
                             if agent.buffer.full:
                                 break
 
@@ -486,6 +494,10 @@ def train_ppo(config, output_dir, smoke=False):
 
                     # PPO update when buffer is full or training ended
                     if agent.buffer.full or (global_step >= total_timesteps and len(agent.buffer) > 0):
+                        # Linear entropy coefficient decay for improved convergence.
+                        progress = min(1.0, global_step / max(1, total_timesteps))
+                        agent.entropy_coef = entropy_coef_start + (entropy_coef_final - entropy_coef_start) * progress
+
                         next_obs_vec = obs["observation_vector"]
                         update_stats = agent.update(next_obs=next_obs_vec)
                         update_num += 1
@@ -510,28 +522,28 @@ def train_ppo(config, output_dir, smoke=False):
                             f"Policy Loss: {update_stats.get('policy_loss', 0):.4f} | "
                             f"Value Loss: {update_stats.get('value_loss', 0):.4f} | "
                             f"Entropy: {update_stats.get('entropy', 0):.4f} | "
-                            f"Explained Var: {update_stats.get('explained_variance', 0):.4f}"
+                            f"Explained Var: {update_stats.get('explained_variance', 0):.4f} | "
+                            f"EntCoef: {agent.entropy_coef:.5f}"
                         )
 
                     # Evaluation
                     if eval_interval > 0 and global_step % eval_interval == 0 and global_step > 0:
                         print(f"\n--- Evaluation at step {global_step} ---")
-                        # Evaluate on nominal conditions (no domain randomization)
-                        env.set_domain_rand_scale(0.0)
+                        eval_env = _build_env(config)
+                        eval_env.set_domain_rand_scale(0.0)
                         if sc_curriculum:
-                            _apply_final_success_criterion(env, sc_curriculum)
-                            # Force restoration of the training curriculum stage
-                            # at the next environment step.
+                            _apply_final_success_criterion(eval_env, sc_curriculum)
                             last_sc_stage = None
                         eval_cfg = config.get("evaluation", {})
                         eval_metrics = run_evaluation(
-                            env, agent, config,
+                            eval_env, agent, config,
                             num_episodes=eval_cfg.get("eval_episodes", 10),
                             seeds=eval_cfg.get("seeds", [0, 1, 2]),
                             save_trajectories=eval_cfg.get("save_trajectories", False),
                             output_dir=output_dir,
                             domain_rand_scale=eval_cfg.get("domain_rand_scale", 0.0),
                         )
+                        eval_env.close()
                         eval_row = {
                             "step": global_step,
                             "num_episodes": eval_metrics["num_episodes"],
@@ -544,14 +556,22 @@ def train_ppo(config, output_dir, smoke=False):
                             "mean_final_range_m": eval_metrics["mean_final_range_m"],
                             "mean_final_ata_deg": eval_metrics["mean_final_ata_deg"],
                         }
+                        for name in gain_names:
+                            eval_row[f"mean_delta_{name}"] = eval_metrics.get(f"mean_delta_{name}", np.nan)
+                            eval_row[f"std_delta_{name}"] = eval_metrics.get(f"std_delta_{name}", np.nan)
                         eval_writer.writerow(eval_row)
                         f_eval.flush()
 
+                        gain_summary = " | ".join(
+                            f"{n}: {eval_metrics.get(f'mean_delta_{n}', np.nan):.2f}±{eval_metrics.get(f'std_delta_{n}', np.nan):.2f}"
+                            for n in gain_names
+                        )
                         print(
                             f"Eval Return: {eval_metrics['mean_return']:.2f} ± {eval_metrics['std_return']:.2f} | "
                             f"Success: {eval_metrics['success_rate']:.2%} | "
                             f"Crash: {eval_metrics['crash_rate']:.2%} | "
-                            f"OOB: {eval_metrics['out_of_bounds_rate']:.2%}"
+                            f"OOB: {eval_metrics['out_of_bounds_rate']:.2%} | "
+                            f"{gain_summary}"
                         )
 
                         # Save best checkpoint
@@ -561,12 +581,10 @@ def train_ppo(config, output_dir, smoke=False):
                             agent.save(best_path)
                             print(f"  -> Saved best checkpoint (return={best_eval_return:.2f})")
 
-                    # Periodic checkpoint save (guaranteed to fire even when
-                    # save_interval is not an exact multiple of rollout_steps).
-                    if save_interval > 0 and global_step - last_saved_step >= save_interval and global_step > 0:
+                    # Periodic checkpoint save
+                    if save_interval > 0 and global_step % save_interval == 0 and global_step > 0:
                         step_path = os.path.join(checkpoint_dir, f"step_{global_step}.pt")
                         agent.save(step_path)
-                        last_saved_step = global_step
 
                 # Save last checkpoint
                 if save_last:
@@ -601,15 +619,15 @@ def train_ppo(config, output_dir, smoke=False):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Train No-Prediction VPP PPO Baseline")
+    parser = argparse.ArgumentParser(description="Train PPO+PID Hybrid Policy")
     parser.add_argument("--config", type=str, required=True, help="Path to experiment config YAML")
     parser.add_argument("--smoke", action="store_true", help="Run smoke test (minimal training)")
     parser.add_argument("--seed", type=int, default=None, help="Random seed override")
     parser.add_argument("--output-dir", type=str, default=None, help="Output directory override")
-    parser.add_argument("--device", type=str, default=None, choices=["cpu", "cuda"], help="Override compute device (default: from config).")
-    parser.add_argument("--backend", type=str, default=None, choices=["simple", "jsbsim"], help="Override simulation backend (default: from config).")
-    parser.add_argument("--use-jsbsim", action="store_true", help="Force use_jsbsim=True (equivalent to --backend jsbsim).")
-    parser.add_argument("--domain-rand-scale", type=float, default=None, help="Override domain randomization scale (0.0=off). If set, curriculum is disabled and this fixed scale is used during training.")
+    parser.add_argument("--device", type=str, default=None, choices=["cpu", "cuda"], help="Override compute device")
+    parser.add_argument("--backend", type=str, default=None, choices=["simple", "jsbsim"], help="Override simulation backend")
+    parser.add_argument("--use-jsbsim", action="store_true", help="Force use_jsbsim=True")
+    parser.add_argument("--domain-rand-scale", type=float, default=None, help="Override domain randomization scale")
     args = parser.parse_args()
 
     config = load_experiment_config(args.config)
@@ -629,7 +647,7 @@ def main():
     seed = args.seed if args.seed is not None else config.get("experiment", {}).get("seed", 0)
     set_seed(seed)
 
-    exp_name = config.get("experiment", {}).get("name", "no_prediction_vpp_ppo")
+    exp_name = config.get("experiment", {}).get("name", "ppo_pid")
     if args.output_dir is not None:
         output_dir = args.output_dir
     else:
@@ -658,8 +676,41 @@ def main():
         print("WARNING: trajectory_prediction.enabled is True! Forcing to False for this baseline.")
         config["trajectory_prediction"]["enabled"] = False
 
-    anchor_mode = config.get("virtual_point", {}).get("anchor_mode", "current_target")
-    print(f"Anchor mode: {anchor_mode}")
+    # Verify APIC configuration
+    ll_controller_cfg = config.get("low_level_controller", {})
+    if isinstance(ll_controller_cfg, str):
+        ll_controller_cfg = {"type": ll_controller_cfg}
+    ll_controller = ll_controller_cfg.get("type", "baseline")
+    if ll_controller != "enhanced":
+        print(f"WARNING: low_level_controller is '{ll_controller}'. Forcing to 'enhanced' for APIC.")
+        ll_controller_cfg["type"] = "enhanced"
+    apic_cfg = ll_controller_cfg.get("apic", {})
+    if not bool(apic_cfg.get("enabled", False)):
+        print("WARNING: APIC not enabled in config. Enabling it.")
+        apic_cfg["enabled"] = True
+        ll_controller_cfg["apic"] = apic_cfg
+    config["low_level_controller"] = ll_controller_cfg
+    print(f"Low-level controller: {ll_controller} (APIC enabled)")
+
+    action_dim = int(config.get("policy", {}).get("action_dim", 6))
+    print(f"Action space: {action_dim}D PID gain deltas")
+    print(f"  [delta_Kp_nz, delta_Ki_nz, delta_Kd_nz, delta_Kp_roll, delta_Ki_roll, delta_Kd_roll]")
+    print(f"  Each delta in [-1, 1] adjusts its PID gain by ± configured range")
+
+    vp_mode = config.get("virtual_point", {}).get("mode", "normal")
+    if vp_mode != "zero_offset":
+        print("WARNING: virtual_point.mode is not 'zero_offset'. Forcing zero_offset for APIC.")
+        if "virtual_point" not in config:
+            config["virtual_point"] = {}
+        config["virtual_point"]["mode"] = "zero_offset"
+    direct_track = config.get("guidance", {}).get("direct_track_mode", False)
+    if not direct_track:
+        print("WARNING: guidance.direct_track_mode is False. Enabling it for APIC.")
+        if "guidance" not in config:
+            config["guidance"] = {}
+        config["guidance"]["direct_track_mode"] = True
+    print(f"Virtual point mode: zero_offset")
+    print(f"Direct track mode: True")
     print(f"Trajectory prediction: {'enabled' if tp_enabled else 'disabled'}")
 
     # Device override

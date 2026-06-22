@@ -388,6 +388,16 @@ class _JSBSimAircraft:
             except Exception:
                 nz_g = 1.0
 
+        # Angle of attack and sideslip (rad) — useful for low-level control
+        try:
+            alpha_rad = float(self.get_property_value("aero/alpha-rad"))
+        except Exception:
+            alpha_rad = 0.0
+        try:
+            beta_rad = float(self.get_property_value("aero/beta-rad"))
+        except Exception:
+            beta_rad = 0.0
+
         # 统一别名字段，供上层模块（TerminationChecker、feature_builder 等）直接使用
         self._state = {
             "position_neu": np.array([n, e, u], dtype=np.float64),
@@ -406,6 +416,8 @@ class _JSBSimAircraft:
             "q_rps": float(q_rps),
             "r_rps": float(r_rps),
             "nz_g": float(nz_g),
+            "alpha_rad": float(alpha_rad),
+            "beta_rad": float(beta_rad),
             "speed_mps": float(vt),
             "vt_mps": float(vt),
             "sim_time": self.jsbsim_exec.get_sim_time(),

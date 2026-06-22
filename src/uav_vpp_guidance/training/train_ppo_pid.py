@@ -1,17 +1,28 @@
+#!/usr/bin/env python3
 """
-Stage 5: No-Prediction VPP PPO Autonomous Decision Baseline.
+PPO+PID Hybrid Training.
 
-Trains a PPO policy to output virtual pursuit point offsets Δp
-without trajectory prediction.
+PPO policy outputs 4D action: [Δx, Δy, Δz, aggressiveness]
+- Δx, Δy, Δz: Virtual Pursuit Point offset (3D)
+- aggressiveness: PID gain scaling factor in [-1, 1]
+  → scale = 1.0 + agg * 0.5  →  [0.5, 1.5]
+  → +1 = aggressive (higher PID gains, faster response)
+  → -1 = conservative (lower PID gains, smoother response)
+
+Architecture: PPO plans trajectories (VPP), PID handles low-level stability.
+Benefits:
+- Full maneuverability (VPP allows any geometry)
+- High interpretability (single aggressiveness knob)
+- Moderate training cost (action_dim=4, only 33% more than baseline)
 
 Usage:
     # Smoke test (fast)
-    python -m uav_vpp_guidance.training.train_no_prediction_vpp_ppo \
-        --config config/experiment/train_no_prediction_vpp_ppo.yaml --smoke
+    python -m uav_vpp_guidance.training.train_ppo_pid \
+        --config config/experiment/train_ppo_pid_jsbsim.yaml --smoke
 
     # Full training
-    python -m uav_vpp_guidance.training.train_no_prediction_vpp_ppo \
-        --config config/experiment/train_no_prediction_vpp_ppo.yaml
+    python -m uav_vpp_guidance.training.train_ppo_pid \
+        --config config/experiment/train_ppo_pid_jsbsim.yaml
 """
 
 import argparse
@@ -51,14 +62,10 @@ def sample_scenario(config, rng):
 
 def run_evaluation(env, agent, config, num_episodes=10, seeds=None, save_trajectories=False, output_dir=None, domain_rand_scale=0.0):
     """
-    Evaluate a trained policy.
-
-    Args:
-        domain_rand_scale: If > 0, the environment perturbs initial conditions
-            internally during reset() using an RNG seeded by the episode seed.
+    Evaluate a trained PPO+PID policy.
 
     Returns:
-        dict: Aggregated evaluation metrics.
+        dict: Aggregated evaluation metrics including aggressiveness stats.
     """
     if seeds is None:
         seeds = [0, 1, 2]
@@ -81,6 +88,7 @@ def run_evaluation(env, agent, config, num_episodes=10, seeds=None, save_traject
             final_ata = 0.0
             reason = "timeout"
             trajectory = []
+            ep_aggressiveness = []
 
             for step in range(env.max_steps):
                 obs_vec = obs["observation_vector"]
@@ -96,9 +104,12 @@ def run_evaluation(env, agent, config, num_episodes=10, seeds=None, save_traject
                 min_range = min(min_range, range_m)
                 final_range = range_m
                 final_ata = ata_deg
+                agg = info.get("aggressiveness")
+                if agg is not None:
+                    ep_aggressiveness.append(agg)
 
                 if save_trajectories and output_dir is not None:
-                    trajectory.append({
+                    traj_point = {
                         "step": step,
                         "time": step * env.env_config.get("high_level_dt", 0.2),
                         "range_m": range_m,
@@ -107,7 +118,10 @@ def run_evaluation(env, agent, config, num_episodes=10, seeds=None, save_traject
                         "action_x": float(action[0]),
                         "action_y": float(action[1]),
                         "action_z": float(action[2]),
-                    })
+                    }
+                    if len(action) >= 4:
+                        traj_point["action_agg"] = float(action[3])
+                    trajectory.append(traj_point)
 
                 if terminated or truncated:
                     reason = info.get("reason", "unknown")
@@ -126,6 +140,9 @@ def run_evaluation(env, agent, config, num_episodes=10, seeds=None, save_traject
                 "is_crash": reason == "crash",
                 "is_timeout": reason == "timeout",
                 "is_out_of_bounds": reason == "out_of_bounds",
+                "mean_aggressiveness": float(np.mean(ep_aggressiveness)) if ep_aggressiveness else np.nan,
+                "min_aggressiveness": float(np.min(ep_aggressiveness)) if ep_aggressiveness else np.nan,
+                "max_aggressiveness": float(np.max(ep_aggressiveness)) if ep_aggressiveness else np.nan,
             }
             all_episodes.append(ep_result)
 
@@ -146,6 +163,7 @@ def run_evaluation(env, agent, config, num_episodes=10, seeds=None, save_traject
     timeout_count = sum(1 for e in all_episodes if e["is_timeout"])
     final_ranges = [e["final_range_m"] for e in all_episodes]
     final_atas = [e["final_ata_deg"] for e in all_episodes]
+    all_agg = [e["mean_aggressiveness"] for e in all_episodes if not np.isnan(e["mean_aggressiveness"])]
 
     return {
         "num_episodes": len(all_episodes),
@@ -158,20 +176,13 @@ def run_evaluation(env, agent, config, num_episodes=10, seeds=None, save_traject
         "timeout_rate": timeout_count / max(1, len(all_episodes)),
         "mean_final_range_m": float(np.mean(final_ranges)) if final_ranges else 0.0,
         "mean_final_ata_deg": float(np.mean(final_atas)) if final_atas else 0.0,
+        "mean_aggressiveness": float(np.mean(all_agg)) if all_agg else np.nan,
+        "std_aggressiveness": float(np.std(all_agg)) if all_agg else np.nan,
     }
 
 
 def _compute_curriculum_scale(progress: float, schedule: list) -> float:
-    """
-    Compute domain-randomization scale from training progress.
-
-    Args:
-        progress: global_step / total_timesteps (0.0 – 1.0)
-        schedule: list of (progress_threshold, scale) tuples, sorted by threshold.
-                  E.g. [(0.0, 0.05), (0.25, 0.10), (0.50, 0.15), (0.75, 0.20)]
-    Returns:
-        Current scale value.
-    """
+    """Compute domain-randomization scale from training progress."""
     scale = 0.0
     for thresh, s in schedule:
         if progress >= thresh:
@@ -180,17 +191,7 @@ def _compute_curriculum_scale(progress: float, schedule: list) -> float:
 
 
 def _select_success_criterion_stage(progress: float, schedule: list) -> dict:
-    """
-    Select the current success-criterion stage from a curriculum schedule.
-
-    Args:
-        progress: global_step / total_timesteps (0.0 – 1.0)
-        schedule: list of dicts with key "until_progress" (float, exclusive upper bound)
-                  and success criteria fields.  Stages must be sorted by
-                  until_progress in ascending order.
-    Returns:
-        dict: The active stage.
-    """
+    """Select the current success-criterion stage from a curriculum schedule."""
     for stage in schedule:
         if progress <= stage.get("until_progress", 1.0):
             return stage
@@ -215,14 +216,7 @@ def _apply_final_success_criterion(env, schedule: list):
 
 
 def _maybe_relabel_episode_rewards(env, agent, episode_start_idx, can_relabel):
-    """
-    Replace the raw sparse rewards of the just-finished episode with the
-    R2SP relabelled trajectory when relabelling is enabled.
-
-    Returns ``False`` if relabelling could not be applied (e.g. the episode
-    spanned a buffer boundary); the caller should then mark subsequent
-    episodes as non-relabellable until the next full reset.
-    """
+    """Replace raw sparse rewards with R2SP relabelled trajectory when enabled."""
     calc = getattr(env, "reward_calculator", None)
     if not can_relabel:
         return False
@@ -242,15 +236,7 @@ def _maybe_relabel_episode_rewards(env, agent, episode_start_idx, can_relabel):
 
 
 def train_ppo(config, output_dir, smoke=False):
-    """
-    Main PPO training loop.
-
-    Args:
-        config (dict): Full experiment configuration.
-        output_dir (str): Output directory for logs and checkpoints.
-        smoke (bool): If True, run a minimal smoke test.
-    """
-    # Create output directories
+    """Main PPO+PID training loop."""
     checkpoint_dir = os.path.join(output_dir, "checkpoints")
     log_dir = os.path.join(output_dir, "logs")
     figure_dir = os.path.join(output_dir, "figures")
@@ -258,13 +244,11 @@ def train_ppo(config, output_dir, smoke=False):
     os.makedirs(log_dir, exist_ok=True)
     os.makedirs(figure_dir, exist_ok=True)
 
-    # Save config snapshot
     import yaml
     config_path = os.path.join(output_dir, "config_snapshot.yaml")
     with open(config_path, "w", encoding="utf-8") as f:
         yaml.dump(config, f, default_flow_style=False, allow_unicode=True)
 
-    # Hyperparameters
     ppo_cfg = config.get("ppo", {})
     total_timesteps = int(ppo_cfg.get("total_timesteps", 200000))
     rollout_steps = int(ppo_cfg.get("rollout_steps", 2048))
@@ -273,20 +257,15 @@ def train_ppo(config, output_dir, smoke=False):
     save_best = bool(config.get("checkpoint", {}).get("save_best", True))
     save_last = bool(config.get("checkpoint", {}).get("save_last", True))
 
-    # Domain randomization curriculum schedule
     dr_config = config.get("domain_randomization", {})
     dr_enabled = dr_config.get("enabled", False)
     dr_schedule = dr_config.get("curriculum_schedule", [
-        (0.00, 0.05),
-        (0.25, 0.10),
-        (0.50, 0.15),
-        (0.75, 0.20),
+        (0.00, 0.05), (0.25, 0.10), (0.50, 0.15), (0.75, 0.20),
     ])
     dr_fixed_scale = dr_config.get("fixed_scale", None)
     if dr_fixed_scale is not None:
         dr_schedule = [(0.0, float(dr_fixed_scale))]
 
-    # Success-criterion curriculum schedule
     sc_curriculum = config.get("success_criterion_curriculum", None)
     if sc_curriculum:
         print(f"Success-criterion curriculum enabled with {len(sc_curriculum)} stages")
@@ -311,8 +290,9 @@ def train_ppo(config, output_dir, smoke=False):
     sample_obs = env.reset(seed=0)
     obs_vec = sample_obs["observation_vector"]
     obs_dim = int(obs_vec.shape[0])
-    action_dim = int(config.get("policy", {}).get("action_dim", 3))
+    action_dim = int(config.get("policy", {}).get("action_dim", 4))
     print(f"Observation dim: {obs_dim}, Action dim: {action_dim}")
+    print(f"PPO+PID mode: action[0:3] = VPP offset, action[3] = aggressiveness")
 
     # Agent
     device = ppo_cfg.get("device", "cpu")
@@ -323,7 +303,7 @@ def train_ppo(config, output_dir, smoke=False):
     global_step = 0
     episode_count = 0
     best_eval_return = -float("inf")
-    last_sc_stage = None  # tracks last applied success-criterion curriculum stage
+    last_sc_stage = None
 
     # CSV loggers
     episode_log_path = os.path.join(log_dir, "episode_train_log.csv")
@@ -334,6 +314,7 @@ def train_ppo(config, output_dir, smoke=False):
         "step", "episode", "episode_return", "episode_length",
         "success", "score_win", "crash", "out_of_bounds", "timeout",
         "mean_range", "final_range", "final_ata",
+        "mean_aggressiveness", "min_aggressiveness", "max_aggressiveness",
     ]
     update_fieldnames = [
         "step", "update_num", "policy_loss", "value_loss", "entropy",
@@ -343,6 +324,7 @@ def train_ppo(config, output_dir, smoke=False):
         "step", "num_episodes", "mean_return", "std_return",
         "success_rate", "crash_rate", "out_of_bounds_rate", "timeout_rate",
         "mean_final_range_m", "mean_final_ata_deg",
+        "mean_aggressiveness", "std_aggressiveness",
     ]
 
     with open(episode_log_path, "w", newline="", encoding="utf-8") as f_ep:
@@ -361,14 +343,11 @@ def train_ppo(config, output_dir, smoke=False):
                 rng = np.random.default_rng(config.get("experiment", {}).get("seed", 0))
                 obs = env.reset(seed=rng.integers(0, 1000000))
 
-                # Tracks whether the current rollout starts at an episode
-                # boundary.  If an episode was cut by a buffer boundary, the
-                # remainder cannot be relabelled because its beginning is lost.
                 last_step_done = True
-
                 episode_return = 0.0
                 episode_length = 0
                 episode_ranges = []
+                episode_aggressiveness = []
                 episode_success = False
                 episode_crash = False
                 episode_oob = False
@@ -377,7 +356,6 @@ def train_ppo(config, output_dir, smoke=False):
 
                 start_time = time.time()
                 update_num = 0
-                last_saved_step = 0
 
                 while global_step < total_timesteps:
                     episode_start_idx = agent.buffer.ptr
@@ -408,15 +386,17 @@ def train_ppo(config, output_dir, smoke=False):
                                 )
                                 last_sc_stage = sc_stage
 
-                        # Store transition with actual reward/done from env.step()
+                        # Store transition
                         agent.store_transition(obs_vec, action, log_prob, reward, done, value)
 
                         rel_state = obs.get("relative_state", {})
                         range_m = rel_state.get("range_m", 0.0)
                         episode_ranges.append(range_m)
+                        agg = info.get("aggressiveness")
+                        if agg is not None:
+                            episode_aggressiveness.append(agg)
 
                         if terminated or truncated:
-                            # Episode ended
                             episode_count += 1
                             reason = info.get("reason", "unknown")
                             episode_success = reason == "success"
@@ -424,7 +404,6 @@ def train_ppo(config, output_dir, smoke=False):
                             episode_oob = reason == "out_of_bounds"
                             episode_timeout = reason == "timeout"
 
-                            # Compute score win
                             ego_score = info.get("ego_score", 0.0)
                             target_score = info.get("target_score", 0.0)
                             episode_score_win = ego_score > target_score
@@ -433,7 +412,6 @@ def train_ppo(config, output_dir, smoke=False):
                             final_ata = float(np.rad2deg(rel_state.get("ata_rad", 0.0)))
                             mean_range = float(np.mean(episode_ranges)) if episode_ranges else 0.0
 
-                            # Log episode stats immediately
                             ep_row = {
                                 "step": global_step,
                                 "episode": episode_count,
@@ -447,6 +425,9 @@ def train_ppo(config, output_dir, smoke=False):
                                 "mean_range": mean_range,
                                 "final_range": final_range,
                                 "final_ata": final_ata,
+                                "mean_aggressiveness": float(np.mean(episode_aggressiveness)) if episode_aggressiveness else np.nan,
+                                "min_aggressiveness": float(np.min(episode_aggressiveness)) if episode_aggressiveness else np.nan,
+                                "max_aggressiveness": float(np.max(episode_aggressiveness)) if episode_aggressiveness else np.nan,
                             }
                             ep_writer.writerow(ep_row)
                             f_ep.flush()
@@ -455,12 +436,11 @@ def train_ppo(config, output_dir, smoke=False):
                             episode_return = 0.0
                             episode_length = 0
                             episode_ranges = []
+                            episode_aggressiveness = []
 
-                            # Relabel sparse rewards if enabled.
-                            if _maybe_relabel_episode_rewards(
-                                env, agent, episode_start_idx, can_relabel
-                            ):
-                                pass  # rewards already rewritten in buffer
+                            # Relabel sparse rewards if enabled
+                            if _maybe_relabel_episode_rewards(env, agent, episode_start_idx, can_relabel):
+                                pass
 
                             # Reset environment
                             scenario = sample_scenario(config, rng)
@@ -470,12 +450,10 @@ def train_ppo(config, output_dir, smoke=False):
                                 env.set_domain_rand_scale(current_dr_scale)
                             obs = env.reset(scenario=scenario, seed=rng.integers(0, 1000000))
 
-                            # New episode starts here.
                             episode_start_idx = agent.buffer.ptr
                             can_relabel = True
                             last_step_done = True
 
-                            # Check if buffer is full after this step
                             if agent.buffer.full:
                                 break
 
@@ -516,12 +494,9 @@ def train_ppo(config, output_dir, smoke=False):
                     # Evaluation
                     if eval_interval > 0 and global_step % eval_interval == 0 and global_step > 0:
                         print(f"\n--- Evaluation at step {global_step} ---")
-                        # Evaluate on nominal conditions (no domain randomization)
                         env.set_domain_rand_scale(0.0)
                         if sc_curriculum:
                             _apply_final_success_criterion(env, sc_curriculum)
-                            # Force restoration of the training curriculum stage
-                            # at the next environment step.
                             last_sc_stage = None
                         eval_cfg = config.get("evaluation", {})
                         eval_metrics = run_evaluation(
@@ -543,6 +518,8 @@ def train_ppo(config, output_dir, smoke=False):
                             "timeout_rate": eval_metrics["timeout_rate"],
                             "mean_final_range_m": eval_metrics["mean_final_range_m"],
                             "mean_final_ata_deg": eval_metrics["mean_final_ata_deg"],
+                            "mean_aggressiveness": eval_metrics.get("mean_aggressiveness", np.nan),
+                            "std_aggressiveness": eval_metrics.get("std_aggressiveness", np.nan),
                         }
                         eval_writer.writerow(eval_row)
                         f_eval.flush()
@@ -551,7 +528,8 @@ def train_ppo(config, output_dir, smoke=False):
                             f"Eval Return: {eval_metrics['mean_return']:.2f} ± {eval_metrics['std_return']:.2f} | "
                             f"Success: {eval_metrics['success_rate']:.2%} | "
                             f"Crash: {eval_metrics['crash_rate']:.2%} | "
-                            f"OOB: {eval_metrics['out_of_bounds_rate']:.2%}"
+                            f"OOB: {eval_metrics['out_of_bounds_rate']:.2%} | "
+                            f"Agg: {eval_metrics.get('mean_aggressiveness', np.nan):.3f}±{eval_metrics.get('std_aggressiveness', np.nan):.3f}"
                         )
 
                         # Save best checkpoint
@@ -561,12 +539,10 @@ def train_ppo(config, output_dir, smoke=False):
                             agent.save(best_path)
                             print(f"  -> Saved best checkpoint (return={best_eval_return:.2f})")
 
-                    # Periodic checkpoint save (guaranteed to fire even when
-                    # save_interval is not an exact multiple of rollout_steps).
-                    if save_interval > 0 and global_step - last_saved_step >= save_interval and global_step > 0:
+                    # Periodic checkpoint save
+                    if save_interval > 0 and global_step % save_interval == 0 and global_step > 0:
                         step_path = os.path.join(checkpoint_dir, f"step_{global_step}.pt")
                         agent.save(step_path)
-                        last_saved_step = global_step
 
                 # Save last checkpoint
                 if save_last:
@@ -601,15 +577,15 @@ def train_ppo(config, output_dir, smoke=False):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Train No-Prediction VPP PPO Baseline")
+    parser = argparse.ArgumentParser(description="Train PPO+PID Hybrid Policy")
     parser.add_argument("--config", type=str, required=True, help="Path to experiment config YAML")
     parser.add_argument("--smoke", action="store_true", help="Run smoke test (minimal training)")
     parser.add_argument("--seed", type=int, default=None, help="Random seed override")
     parser.add_argument("--output-dir", type=str, default=None, help="Output directory override")
-    parser.add_argument("--device", type=str, default=None, choices=["cpu", "cuda"], help="Override compute device (default: from config).")
-    parser.add_argument("--backend", type=str, default=None, choices=["simple", "jsbsim"], help="Override simulation backend (default: from config).")
-    parser.add_argument("--use-jsbsim", action="store_true", help="Force use_jsbsim=True (equivalent to --backend jsbsim).")
-    parser.add_argument("--domain-rand-scale", type=float, default=None, help="Override domain randomization scale (0.0=off). If set, curriculum is disabled and this fixed scale is used during training.")
+    parser.add_argument("--device", type=str, default=None, choices=["cpu", "cuda"], help="Override compute device")
+    parser.add_argument("--backend", type=str, default=None, choices=["simple", "jsbsim"], help="Override simulation backend")
+    parser.add_argument("--use-jsbsim", action="store_true", help="Force use_jsbsim=True")
+    parser.add_argument("--domain-rand-scale", type=float, default=None, help="Override domain randomization scale")
     args = parser.parse_args()
 
     config = load_experiment_config(args.config)
@@ -629,7 +605,7 @@ def main():
     seed = args.seed if args.seed is not None else config.get("experiment", {}).get("seed", 0)
     set_seed(seed)
 
-    exp_name = config.get("experiment", {}).get("name", "no_prediction_vpp_ppo")
+    exp_name = config.get("experiment", {}).get("name", "ppo_pid")
     if args.output_dir is not None:
         output_dir = args.output_dir
     else:
@@ -657,6 +633,23 @@ def main():
     if tp_enabled:
         print("WARNING: trajectory_prediction.enabled is True! Forcing to False for this baseline.")
         config["trajectory_prediction"]["enabled"] = False
+
+    # Verify low-level controller is enhanced (PID-based, not baseline)
+    ll_controller_cfg = config.get("low_level_controller", {})
+    if isinstance(ll_controller_cfg, str):
+        ll_controller = ll_controller_cfg
+    else:
+        ll_controller = ll_controller_cfg.get("type", "baseline")
+    if ll_controller == "baseline":
+        print("WARNING: low_level_controller is 'baseline'. Forcing to 'enhanced' for PPO+PID.")
+        if isinstance(ll_controller_cfg, dict):
+            config["low_level_controller"] = {**ll_controller_cfg, "type": "enhanced"}
+        else:
+            config["low_level_controller"] = "enhanced"
+        ll_controller = "enhanced"
+    print(f"Low-level controller: {ll_controller}")
+    print(f"Action space: 4D [Δx, Δy, Δz, aggressiveness]")
+    print(f"  aggressiveness ∈ [-1, 1] → PID gain scale ∈ [0.5, 1.5]")
 
     anchor_mode = config.get("virtual_point", {}).get("anchor_mode", "current_target")
     print(f"Anchor mode: {anchor_mode}")

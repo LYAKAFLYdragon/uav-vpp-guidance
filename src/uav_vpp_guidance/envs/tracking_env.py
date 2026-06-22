@@ -94,9 +94,31 @@ class CloseRangeTrackingEnv:
                     self.target_uid, {"model": self.aircraft_model}
                 )
                 self._backend = "jsbsim"
-                self._low_level_controller = LowLevelController(
-                    config.get("guidance", {}).get("gains", {})
-                )
+                # Low-level controller selection (drop-in replacement)
+                ll_controller_cfg = self.config.get("low_level_controller", {})
+                if isinstance(ll_controller_cfg, str):
+                    ll_controller_class = ll_controller_cfg
+                    ll_controller_kwargs = {}
+                else:
+                    ll_controller_class = ll_controller_cfg.get("type", "baseline")
+                    ll_controller_kwargs = {
+                        k: v for k, v in ll_controller_cfg.items() if k != "type"
+                    }
+                # Merge guidance gains / limits into controller config so existing
+                # configs that only set `guidance.gains` keep working.
+                controller_config = {
+                    **config.get("guidance", {}).get("gains", {}),
+                    **ll_controller_kwargs,
+                    "limits": {**(config.get("limits", {})), **(config.get("guidance", {}).get("limits", {}))},
+                }
+                if ll_controller_class == "enhanced":
+                    from ..flight_control.enhanced_low_level_controller import EnhancedLowLevelController
+                    self._low_level_controller = EnhancedLowLevelController(controller_config)
+                elif ll_controller_class == "gain_scheduled":
+                    from ..flight_control.enhanced_low_level_controller import GainScheduledEnhancedController
+                    self._low_level_controller = GainScheduledEnhancedController(controller_config)
+                else:
+                    self._low_level_controller = LowLevelController(controller_config)
             except Exception as exc:
                 if strict_backend:
                     raise RuntimeError(
@@ -274,6 +296,45 @@ class CloseRangeTrackingEnv:
         self.current_step = 0
         self._episode_count = 0
         self._sim_time_s = 0.0
+        self._last_aggressiveness = None
+        self._last_pid_gain_deltas = None
+
+    # ------------------------------------------------------------------
+    # Task-specific hooks (for MultiWaypoint / SustainedTurn subclasses)
+    # ------------------------------------------------------------------
+
+    def _task_reset(self, seed=None) -> None:
+        """子类可重写；默认不做任何任务特化初始化。"""
+        return None
+
+    def _task_get_target_state(self, backend_target_state, own_state):
+        """
+        子类可重写；默认返回 backend_target_state。
+        多航点/持续盘旋任务中，可用合成目标状态替代 JSBSim 后端目标。
+        """
+        return backend_target_state
+
+    def _task_pre_step(self, own_state, target_state):
+        """
+        子类可重写；在 guidance 前更新内部任务状态。
+        返回 (own_state, target_state) 供后续 guidance 使用。
+        """
+        return own_state, target_state
+
+    def _task_post_step(
+        self,
+        own_state_post,
+        target_state_post,
+        info,
+        reward,
+        terminated,
+        truncated,
+    ):
+        """
+        子类可重写；可改变 reward / done / info。
+        多航点任务在此实现切换逻辑；持续盘旋任务在此覆盖 success 终止。
+        """
+        return reward, terminated, truncated, info
 
     # ------------------------------------------------------------------
     # Gym-like interface
@@ -314,6 +375,9 @@ class CloseRangeTrackingEnv:
         if self.trajectory_predictor_adapter is not None:
             self.trajectory_predictor_adapter.reset()
         self._prediction_error_tracker.reset()
+
+        # Task-specific reset hook (subclasses may override scenario generation).
+        self._task_reset(seed)
 
         # Cache scenario metadata for dynamic offset scaling and observation enhancement.
         self._current_scenario_type = None
@@ -532,6 +596,12 @@ class CloseRangeTrackingEnv:
         # 1. 获取当前状态
         own_state, target_state = self._get_current_states()
 
+        # 1b. 任务钩子：允许子类替换/合成目标状态
+        target_state = self._task_get_target_state(target_state, own_state)
+
+        # 1c. 任务钩子：允许子类在 guidance 前更新任务状态
+        own_state, target_state = self._task_pre_step(own_state, target_state)
+
         # 2. 计算相对态势
         rel_state = compute_relative_geometry(own_state, target_state)
 
@@ -572,9 +642,38 @@ class CloseRangeTrackingEnv:
             action = np.zeros(3)
         action = np.asarray(action, dtype=np.float64)
 
+        # --- Detect APIC mode (policy outputs PID gain deltas) ---
+        ll_cfg = self.config.get("low_level_controller", {})
+        if isinstance(ll_cfg, str):
+            ll_cfg = {}
+        apic_cfg = ll_cfg.get("apic", {})
+        apic_enabled = bool(apic_cfg.get("enabled", False))
+
+        if apic_enabled:
+            # APIC action = [delta_Kp_nz, delta_Ki_nz, delta_Kd_nz,
+            #                delta_Kp_roll, delta_Ki_roll, delta_Kd_roll]
+            pid_gain_deltas = np.clip(np.asarray(action, dtype=np.float64), -1.0, 1.0)
+            self._last_pid_gain_deltas = pid_gain_deltas
+            # The action is not a VPP offset; downstream VPP/CBF code expects a
+            # 3-D vector, so feed it a zero offset (direct_track_mode / zero_offset
+            # will ignore it anyway).
+            action = np.zeros(3, dtype=np.float64)
+            aggressiveness = None
+        else:
+            # --- PPO+PID: extract aggressiveness from 4th action dimension ---
+            # action = [Δx, Δy, Δz, aggressiveness]  (aggressiveness ∈ [-1, 1])
+            aggressiveness = None
+            pid_gain_deltas = None
+            if action.shape[0] >= 4:
+                aggressiveness = float(np.clip(action[3], -1.0, 1.0))
+                # Truncate to 3D for VPP / direct-command processing
+                action = action[:3]
+            self._last_pid_gain_deltas = None
+        self._last_aggressiveness = aggressiveness
+
         # 2b. CBF safety filter (VPP offset space).
         cbf_info = None
-        if self._use_cbf and not use_command_override:
+        if self._use_cbf and not use_command_override and not apic_enabled:
             cbf_state = {
                 "pursuer": {
                     "position": own_state.get("position_m", own_state.get("position_neu")),
@@ -782,13 +881,84 @@ class CloseRangeTrackingEnv:
         # 7. 环境 step
         actuator_info = {}
         if self._backend == "jsbsim":
-            actuator_info = self._step_jsbsim(actuated_command)
+            actuator_info = self._step_jsbsim(
+                actuated_command,
+                aggressiveness=self._last_aggressiveness,
+                pid_gain_deltas=self._last_pid_gain_deltas,
+            )
         else:
-            self._step_simple(actuated_command)
+            self._step_simple(
+                actuated_command,
+                aggressiveness=self._last_aggressiveness,
+                pid_gain_deltas=self._last_pid_gain_deltas,
+            )
 
         # 8. 获取 step 后的新状态（post-step）
         own_state_post, target_state_post = self._get_current_states()
+
+        # 8b. JSBSim divergence guard: treat NaN/Inf state as a crash.
+        own_pos_post = own_state_post.get("position_m", own_state_post.get("position_neu"))
+        states_finite = (
+            own_pos_post is not None
+            and np.isfinite(np.asarray(own_pos_post)).all()
+        )
+        if not states_finite:
+            terminated = True
+            truncated = False
+            term_info = {"reason": "crash", "is_crash": True, "nan_state": True}
+            reward = float(self.reward_calculator.terminal_crash)
+            reward_terms = {}
+            info = {
+                "own_state": own_state_post,
+                "target_state": target_state_post,
+                "current_step": self.current_step,
+                "termination_info": term_info,
+                "reason": "crash",
+                "is_crash": True,
+                "nan_state": True,
+                "aggressiveness": self._last_aggressiveness,
+            }
+            info.update(actuator_info)
+            info["pid_gain_deltas"] = self._last_pid_gain_deltas
+            self._task_post_step(own_state_post, target_state_post, info, reward, terminated, truncated)
+            obs = self._get_observation()
+            obs["observation_vector"] = np.nan_to_num(
+                np.asarray(obs["observation_vector"], dtype=np.float32),
+                nan=0.0, posinf=0.0, neginf=0.0,
+            )
+            return obs, float(reward), terminated, truncated, info
+
         rel_state_post = compute_relative_geometry(own_state_post, target_state_post)
+
+        # 8c. Simulator-divergence sanity guard: detect absurd states before they
+        # explode the reward (e.g., potential-based shaping with range >> 1e6).
+        # Thresholds are intentionally loose so normal F-16 flight is unaffected.
+        sane = self._check_state_sanity(own_state_post, target_state_post, rel_state_post)
+        if not sane:
+            terminated = True
+            truncated = False
+            term_info = {"reason": "crash", "is_crash": True, "diverged_state": True}
+            reward = float(self.reward_calculator.terminal_crash)
+            reward_terms = {}
+            info = {
+                "own_state": own_state_post,
+                "target_state": target_state_post,
+                "current_step": self.current_step,
+                "termination_info": term_info,
+                "reason": "crash",
+                "is_crash": True,
+                "diverged_state": True,
+                "aggressiveness": self._last_aggressiveness,
+            }
+            info.update(actuator_info)
+            info["pid_gain_deltas"] = self._last_pid_gain_deltas
+            self._task_post_step(own_state_post, target_state_post, info, reward, terminated, truncated)
+            obs = self._get_observation()
+            obs["observation_vector"] = np.nan_to_num(
+                np.asarray(obs["observation_vector"], dtype=np.float32),
+                nan=0.0, posinf=0.0, neginf=0.0,
+            )
+            return obs, float(reward), terminated, truncated, info
 
         # 8a. Update prediction error tracker with actual target position
         actual_target_pos = target_state_post.get("position_m")
@@ -821,8 +991,12 @@ class CloseRangeTrackingEnv:
             term_info,
         )
 
-        # 11. 获取观察（post-step）
-        obs = self._get_observation()
+        # 10b. Guard against non-finite rewards caused by simulator divergence.
+        if not np.isfinite(float(reward)):
+            reward = float(self.reward_calculator.terminal_crash)
+            terminated = True
+            truncated = False
+            term_info = {"reason": "crash", "is_crash": True, "nan_reward": True}
 
         # Serialize virtual_point for info (convert ndarrays → lists)
         def _serialize_vp(vp):
@@ -832,7 +1006,7 @@ class CloseRangeTrackingEnv:
                 return vp.tolist()
             return vp
 
-        # 组装 info
+        # 11. 组装 info
         info = {
             "virtual_point": _serialize_vp(virtual_point),
             "guidance_command": filtered_command,
@@ -877,11 +1051,21 @@ class CloseRangeTrackingEnv:
             "mode_switch_reason": mode_switch_reason,
             "effective_guidance_mode": effective_guidance_mode,
             "cbf": cbf_info,
+            "aggressiveness": self._last_aggressiveness,
+            "pid_gain_deltas": self._last_pid_gain_deltas,
         }
         if cbf_info is not None:
             info["cbf_filtered"] = cbf_info.get("active", False)
         info.update(actuator_info)
         info.update(term_info)
+
+        # 12. 任务钩子：允许子类覆盖 reward / done / info
+        reward, terminated, truncated, info = self._task_post_step(
+            own_state_post, target_state_post, info, reward, terminated, truncated
+        )
+
+        # 13. 获取观察（post-step，可被子类钩子影响）
+        obs = self._get_observation()
 
         return obs, reward, terminated, truncated, info
 
@@ -992,6 +1176,54 @@ class CloseRangeTrackingEnv:
 
         return terminated, truncated, term_info
 
+    def _check_state_sanity(self, own_state, target_state, rel_state):
+        """Check that post-step states are physically plausible.
+
+        JSBSim can transiently produce absurd but finite values (e.g., position
+        or range >> 1e6 m) right before NaN divergence. Catching them early
+        prevents reward explosion (especially potential-based shaping) and
+        policy gradient blow-up.
+
+        Returns:
+            bool: True if all checked quantities are finite and within loose
+            bounds, False otherwise.
+        """
+        max_range_m = 100_000.0
+        max_speed_mps = 3_000.0
+        max_altitude_m = 50_000.0
+        max_position_m = 100_000.0
+
+        # Range sanity
+        range_m = rel_state.get("range_m", 0.0)
+        if not np.isfinite(range_m) or abs(range_m) > max_range_m:
+            return False
+
+        # Own speed / altitude
+        own_speed = own_state.get("speed_mps")
+        if own_speed is None:
+            vel = own_state.get("velocity_vector_mps", own_state.get("velocity_ned"))
+            if vel is not None:
+                own_speed = float(np.linalg.norm(np.asarray(vel, dtype=float)))
+        if own_speed is not None and (not np.isfinite(own_speed) or own_speed > max_speed_mps):
+            return False
+
+        own_alt = own_state.get("altitude_m")
+        if own_alt is None:
+            pos = own_state.get("position_m", own_state.get("position_neu"))
+            if pos is not None and len(np.asarray(pos)) > 2:
+                own_alt = float(np.asarray(pos)[2])
+        if own_alt is not None and (not np.isfinite(own_alt) or abs(own_alt) > max_altitude_m):
+            return False
+
+        # Position components
+        own_pos = own_state.get("position_m", own_state.get("position_neu"))
+        if own_pos is not None:
+            arr = np.asarray(own_pos, dtype=float)
+            if not np.isfinite(arr).all() or np.any(np.abs(arr) > max_position_m):
+                return False
+
+        return True
+
     def _apply_command_filter(self, command: dict) -> dict:
         """Apply independent first-order filters to each command channel."""
         return self._command_filter.filter(command)
@@ -1006,7 +1238,7 @@ class CloseRangeTrackingEnv:
         else:
             return self._simple_env.get_state()
 
-    def _step_jsbsim(self, command):
+    def _step_jsbsim(self, command, aggressiveness=None, pid_gain_deltas=None):
         """在 JSBSim 后端执行控制，返回 actuator info。"""
         high_level_dt = self.env_config.get("high_level_dt", 0.2)
 
@@ -1026,7 +1258,7 @@ class CloseRangeTrackingEnv:
 
         # Use low-level controller to map guidance commands to JSBSim properties
         actuator_output = self._low_level_controller.compute_actuator(
-            command, own_state_raw
+            command, own_state_raw, aggressiveness=aggressiveness, pid_gain_deltas=pid_gain_deltas
         )
 
         # Extract JSBSim properties
@@ -1039,16 +1271,23 @@ class CloseRangeTrackingEnv:
             self.jsbsim_env.step(control_inputs)
             control_inputs = None
 
+        gain_scale = 1.0
+        if aggressiveness is not None:
+            gain_scale = 1.0 + 0.5 * float(np.clip(aggressiveness, -1.0, 1.0))
         return {
             "elevator_cmd": actuator_output.get("fcs/elevator-cmd-norm", np.nan),
             "aileron_cmd": actuator_output.get("fcs/aileron-cmd-norm", np.nan),
             "rudder_cmd": actuator_output.get("fcs/rudder-cmd-norm", np.nan),
             "throttle_actual": actuator_output.get("fcs/throttle-cmd-norm", np.nan),
             "saturation_flag": actuator_output.get("saturation_flag", False),
+            "aggressiveness": aggressiveness,
+            "gain_scale": gain_scale,
+            "pid_gain_deltas": pid_gain_deltas,
         }
 
-    def _step_simple(self, command):
+    def _step_simple(self, command, aggressiveness=None, pid_gain_deltas=None):
         """在简化后端执行控制。"""
+        # Simple backend does not support per-step PID gain adaptation.
         self._simple_env.step(own_command=command)
 
     # ------------------------------------------------------------------

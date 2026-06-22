@@ -1,0 +1,352 @@
+{
+  "config": {
+    "n_episodes": 5,
+    "seed_start": 42,
+    "policy": null,
+    "fixed_action": "0,0,0",
+    "max_steps": 200
+  },
+  "baseline": {
+    "aggregate": {
+      "n_episodes": 5,
+      "success_count": 0,
+      "success_rate": 0.0,
+      "mean_steps": 69.0,
+      "std_steps": 0.0,
+      "mean_total_reward": -423.65513168916823,
+      "mean_reward": -6.139929444770554,
+      "nz_rmse_mean": 3.5980987516188434,
+      "nz_rmse_std": 0.0,
+      "nz_mae_mean": 3.3521424885116735,
+      "roll_rate_rmse_mean": 1.8380051650001505,
+      "roll_rate_rmse_std": 0.0,
+      "roll_rate_mae_mean": 1.8014815444418388,
+      "mean_beta_deg": 4.716098175100851,
+      "max_beta_deg_max": 6.864015096764513,
+      "mean_alpha_deg": 1.5450153308974561,
+      "max_alpha_deg_max": 3.7305810998964573,
+      "mean_speed_mps": 298.5823659740808,
+      "min_speed_mps_mean": 274.331392534551,
+      "saturation_rate_mean": 0.0,
+      "final_range_m_mean": 8044.62884354251,
+      "min_range_m_mean": 2794.808109628376
+    },
+    "episodes": [
+      {
+        "success": false,
+        "terminated": true,
+        "truncated": false,
+        "steps": 69,
+        "total_reward": -423.65513168916823,
+        "mean_reward": -6.139929444770554,
+        "nz_rmse": 3.5980987516188434,
+        "nz_mae": 3.3521424885116735,
+        "roll_rate_rmse": 1.8380051650001505,
+        "roll_rate_mae": 1.8014815444418388,
+        "mean_beta_deg": 4.716098175100851,
+        "max_beta_deg": 6.864015096764512,
+        "mean_alpha_deg": 1.5450153308974561,
+        "max_alpha_deg": 3.7305810998964577,
+        "mean_speed_mps": 298.5823659740808,
+        "min_speed_mps": 274.331392534551,
+        "saturation_rate": 0.0,
+        "final_range_m": 8044.6288435425095,
+        "min_range_m": 2794.808109628376
+      },
+      {
+        "success": false,
+        "terminated": true,
+        "truncated": false,
+        "steps": 69,
+        "total_reward": -423.65513168916823,
+        "mean_reward": -6.139929444770554,
+        "nz_rmse": 3.5980987516188434,
+        "nz_mae": 3.3521424885116735,
+        "roll_rate_rmse": 1.8380051650001505,
+        "roll_rate_mae": 1.8014815444418388,
+        "mean_beta_deg": 4.716098175100851,
+        "max_beta_deg": 6.864015096764512,
+        "mean_alpha_deg": 1.5450153308974561,
+        "max_alpha_deg": 3.7305810998964577,
+        "mean_speed_mps": 298.5823659740808,
+        "min_speed_mps": 274.331392534551,
+        "saturation_rate": 0.0,
+        "final_range_m": 8044.6288435425095,
+        "min_range_m": 2794.808109628376
+      },
+      {
+        "success": false,
+        "terminated": true,
+        "truncated": false,
+        "steps": 69,
+        "total_reward": -423.65513168916823,
+        "mean_reward": -6.139929444770554,
+        "nz_rmse": 3.5980987516188434,
+        "nz_mae": 3.3521424885116735,
+        "roll_rate_rmse": 1.8380051650001505,
+        "roll_rate_mae": 1.8014815444418388,
+        "mean_beta_deg": 4.716098175100851,
+        "max_beta_deg": 6.864015096764512,
+        "mean_alpha_deg": 1.5450153308974561,
+        "max_alpha_deg": 3.7305810998964577,
+        "mean_speed_mps": 298.5823659740808,
+        "min_speed_mps": 274.331392534551,
+        "saturation_rate": 0.0,
+        "final_range_m": 8044.6288435425095,
+        "min_range_m": 2794.808109628376
+      },
+      {
+        "success": false,
+        "terminated": true,
+        "truncated": false,
+        "steps": 69,
+        "total_reward": -423.65513168916823,
+        "mean_reward": -6.139929444770554,
+        "nz_rmse": 3.5980987516188434,
+        "nz_mae": 3.3521424885116735,
+        "roll_rate_rmse": 1.8380051650001505,
+        "roll_rate_mae": 1.8014815444418388,
+        "mean_beta_deg": 4.716098175100851,
+        "max_beta_deg": 6.864015096764512,
+        "mean_alpha_deg": 1.5450153308974561,
+        "max_alpha_deg": 3.7305810998964577,
+        "mean_speed_mps": 298.5823659740808,
+        "min_speed_mps": 274.331392534551,
+        "saturation_rate": 0.0,
+        "final_range_m": 8044.6288435425095,
+        "min_range_m": 2794.808109628376
+      },
+      {
+        "success": false,
+        "terminated": true,
+        "truncated": false,
+        "steps": 69,
+        "total_reward": -423.65513168916823,
+        "mean_reward": -6.139929444770554,
+        "nz_rmse": 3.5980987516188434,
+        "nz_mae": 3.3521424885116735,
+        "roll_rate_rmse": 1.8380051650001505,
+        "roll_rate_mae": 1.8014815444418388,
+        "mean_beta_deg": 4.716098175100851,
+        "max_beta_deg": 6.864015096764512,
+        "mean_alpha_deg": 1.5450153308974561,
+        "max_alpha_deg": 3.7305810998964577,
+        "mean_speed_mps": 298.5823659740808,
+        "min_speed_mps": 274.331392534551,
+        "saturation_rate": 0.0,
+        "final_range_m": 8044.6288435425095,
+        "min_range_m": 2794.808109628376
+      }
+    ]
+  },
+  "enhanced": {
+    "aggregate": {
+      "n_episodes": 5,
+      "success_count": 0,
+      "success_rate": 0.0,
+      "mean_steps": 71.0,
+      "std_steps": 0.0,
+      "mean_total_reward": -423.6318840585171,
+      "mean_reward": -5.96664625434531,
+      "nz_rmse_mean": 1.9237856052659565,
+      "nz_rmse_std": 0.0,
+      "nz_mae_mean": 1.626483068463647,
+      "roll_rate_rmse_mean": 0.6375774256636796,
+      "roll_rate_rmse_std": 0.0,
+      "roll_rate_mae_mean": 0.6159549652583255,
+      "mean_beta_deg": 4.547328986409369,
+      "max_beta_deg_max": 6.113103100205824,
+      "mean_alpha_deg": 4.836401930029065,
+      "max_alpha_deg_max": 8.290039314340795,
+      "mean_speed_mps": 286.99563794415326,
+      "min_speed_mps_mean": 273.91086034448386,
+      "saturation_rate_mean": 0.0,
+      "final_range_m_mean": 8012.453752708905,
+      "min_range_m_mean": 2794.8071659840557
+    },
+    "episodes": [
+      {
+        "success": false,
+        "terminated": true,
+        "truncated": false,
+        "steps": 71,
+        "total_reward": -423.631884058517,
+        "mean_reward": -5.96664625434531,
+        "nz_rmse": 1.9237856052659565,
+        "nz_mae": 1.6264830684636473,
+        "roll_rate_rmse": 0.6375774256636796,
+        "roll_rate_mae": 0.6159549652583255,
+        "mean_beta_deg": 4.547328986409369,
+        "max_beta_deg": 6.113103100205824,
+        "mean_alpha_deg": 4.836401930029065,
+        "max_alpha_deg": 8.290039314340795,
+        "mean_speed_mps": 286.99563794415326,
+        "min_speed_mps": 273.91086034448386,
+        "saturation_rate": 0.0,
+        "final_range_m": 8012.453752708905,
+        "min_range_m": 2794.8071659840557
+      },
+      {
+        "success": false,
+        "terminated": true,
+        "truncated": false,
+        "steps": 71,
+        "total_reward": -423.631884058517,
+        "mean_reward": -5.96664625434531,
+        "nz_rmse": 1.9237856052659565,
+        "nz_mae": 1.6264830684636473,
+        "roll_rate_rmse": 0.6375774256636796,
+        "roll_rate_mae": 0.6159549652583255,
+        "mean_beta_deg": 4.547328986409369,
+        "max_beta_deg": 6.113103100205824,
+        "mean_alpha_deg": 4.836401930029065,
+        "max_alpha_deg": 8.290039314340795,
+        "mean_speed_mps": 286.99563794415326,
+        "min_speed_mps": 273.91086034448386,
+        "saturation_rate": 0.0,
+        "final_range_m": 8012.453752708905,
+        "min_range_m": 2794.8071659840557
+      },
+      {
+        "success": false,
+        "terminated": true,
+        "truncated": false,
+        "steps": 71,
+        "total_reward": -423.631884058517,
+        "mean_reward": -5.96664625434531,
+        "nz_rmse": 1.9237856052659565,
+        "nz_mae": 1.6264830684636473,
+        "roll_rate_rmse": 0.6375774256636796,
+        "roll_rate_mae": 0.6159549652583255,
+        "mean_beta_deg": 4.547328986409369,
+        "max_beta_deg": 6.113103100205824,
+        "mean_alpha_deg": 4.836401930029065,
+        "max_alpha_deg": 8.290039314340795,
+        "mean_speed_mps": 286.99563794415326,
+        "min_speed_mps": 273.91086034448386,
+        "saturation_rate": 0.0,
+        "final_range_m": 8012.453752708905,
+        "min_range_m": 2794.8071659840557
+      },
+      {
+        "success": false,
+        "terminated": true,
+        "truncated": false,
+        "steps": 71,
+        "total_reward": -423.631884058517,
+        "mean_reward": -5.96664625434531,
+        "nz_rmse": 1.9237856052659565,
+        "nz_mae": 1.6264830684636473,
+        "roll_rate_rmse": 0.6375774256636796,
+        "roll_rate_mae": 0.6159549652583255,
+        "mean_beta_deg": 4.547328986409369,
+        "max_beta_deg": 6.113103100205824,
+        "mean_alpha_deg": 4.836401930029065,
+        "max_alpha_deg": 8.290039314340795,
+        "mean_speed_mps": 286.99563794415326,
+        "min_speed_mps": 273.91086034448386,
+        "saturation_rate": 0.0,
+        "final_range_m": 8012.453752708905,
+        "min_range_m": 2794.8071659840557
+      },
+      {
+        "success": false,
+        "terminated": true,
+        "truncated": false,
+        "steps": 71,
+        "total_reward": -423.631884058517,
+        "mean_reward": -5.96664625434531,
+        "nz_rmse": 1.9237856052659565,
+        "nz_mae": 1.6264830684636473,
+        "roll_rate_rmse": 0.6375774256636796,
+        "roll_rate_mae": 0.6159549652583255,
+        "mean_beta_deg": 4.547328986409369,
+        "max_beta_deg": 6.113103100205824,
+        "mean_alpha_deg": 4.836401930029065,
+        "max_alpha_deg": 8.290039314340795,
+        "mean_speed_mps": 286.99563794415326,
+        "min_speed_mps": 273.91086034448386,
+        "saturation_rate": 0.0,
+        "final_range_m": 8012.453752708905,
+        "min_range_m": 2794.8071659840557
+      }
+    ]
+  },
+  "comparison": {
+    "success_rate": {
+      "baseline": 0.0,
+      "enhanced": 0.0,
+      "delta_pct": 0.0
+    },
+    "mean_steps": {
+      "baseline": 69.0,
+      "enhanced": 71.0,
+      "delta_pct": 2.898550724637681
+    },
+    "nz_rmse_mean": {
+      "baseline": 3.5980987516188434,
+      "enhanced": 1.9237856052659565,
+      "delta_pct": -46.533273874142175
+    },
+    "nz_rmse_std": {
+      "baseline": 0.0,
+      "enhanced": 0.0,
+      "delta_pct": 0.0
+    },
+    "roll_rate_rmse_mean": {
+      "baseline": 1.8380051650001505,
+      "enhanced": 0.6375774256636796,
+      "delta_pct": -65.31144537541998
+    },
+    "roll_rate_rmse_std": {
+      "baseline": 0.0,
+      "enhanced": 0.0,
+      "delta_pct": 0.0
+    },
+    "mean_beta_deg": {
+      "baseline": 4.716098175100851,
+      "enhanced": 4.547328986409369,
+      "delta_pct": -3.5785766628548425
+    },
+    "max_beta_deg_max": {
+      "baseline": 6.864015096764513,
+      "enhanced": 6.113103100205824,
+      "delta_pct": -10.939836028516986
+    },
+    "mean_alpha_deg": {
+      "baseline": 1.5450153308974561,
+      "enhanced": 4.836401930029065,
+      "delta_pct": 213.03261743168167
+    },
+    "max_alpha_deg_max": {
+      "baseline": 3.7305810998964573,
+      "enhanced": 8.290039314340795,
+      "delta_pct": 122.21844512563705
+    },
+    "mean_speed_mps": {
+      "baseline": 298.5823659740808,
+      "enhanced": 286.99563794415326,
+      "delta_pct": -3.8805801515195166
+    },
+    "min_speed_mps_mean": {
+      "baseline": 274.331392534551,
+      "enhanced": 273.91086034448386,
+      "delta_pct": -0.1532934988525547
+    },
+    "saturation_rate_mean": {
+      "baseline": 0.0,
+      "enhanced": 0.0,
+      "delta_pct": 0.0
+    },
+    "final_range_m_mean": {
+      "baseline": 8044.62884354251,
+      "enhanced": 8012.453752708905,
+      "delta_pct": -0.39995743072015677
+    },
+    "min_range_m_mean": {
+      "baseline": 2794.808109628376,
+      "enhanced": 2794.8071659840557,
+      "delta_pct": -3.376418999602948e-05
+    }
+  }
+}

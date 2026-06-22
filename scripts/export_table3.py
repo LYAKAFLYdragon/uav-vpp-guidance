@@ -534,7 +534,26 @@ def _build_summary_report(summary: pd.DataFrame, pairwise: pd.DataFrame, ranking
             f"- Sustained-turn: PPO+PID is {direction} by {abs(row['mean_diff']):.3f} orbits "
             f"(p_adj={row['p_adj_holm']:.4f}, {sig}); thus PPO+PID is **significantly worse**.\n"
         )
-    lines.append("- **Conclusion**: No. In the current formal run, PPO+PID-Hybrid does not outperform PPO-FixedPID; it is significantly worse on the sustained-turn task and not significantly different on multi-waypoint.\n")
+    # Build a dynamic conclusion for Q1 based on actual data.
+    q1_conclusions = []
+    if not q1_mw.empty and not q1_st.empty:
+        mw_sig = q1_mw.iloc[0]["significant"]
+        st_sig = q1_st.iloc[0]["significant"]
+        mw_better = q1_mw.iloc[0]["mean_diff"] > 0
+        st_better = q1_st.iloc[0]["mean_diff"] > 0
+        if mw_sig and st_sig and mw_better and st_better:
+            q1_conclusions.append("- **Conclusion**: Yes. PPO+PID-Hybrid is significantly better than PPO-FixedPID on both tasks.")
+        elif not mw_sig and not st_sig:
+            q1_conclusions.append("- **Conclusion**: No. PPO+PID-Hybrid is not significantly different from PPO-FixedPID on either task.")
+        elif (mw_sig and not mw_better) or (st_sig and not st_better):
+            q1_conclusions.append("- **Conclusion**: No. PPO+PID-Hybrid is significantly worse on at least one task.")
+        else:
+            q1_conclusions.append("- **Conclusion**: Partially. PPO+PID-Hybrid shows significant improvement on one task but not the other.")
+    elif not q1_mw.empty or not q1_st.empty:
+        q1_conclusions.append("- **Conclusion**: Insufficient data to draw a complete conclusion (only one task has pairwise statistics).")
+    else:
+        q1_conclusions.append("- **Conclusion**: No pairwise statistics available for PPO+PID vs PPO-FixedPID.")
+    lines.extend([c + "\n" for c in q1_conclusions])
 
     # Question 2: low-level Enhanced PID vs Baseline PID.
     lines.append("\n### Q2: Does Enhanced PID significantly outperform Baseline PID in low-level control isolation?\n")
@@ -564,7 +583,26 @@ def _build_summary_report(summary: pd.DataFrame, pairwise: pd.DataFrame, ranking
             f"- Sustained-turn: Enhanced PID is {direction} by {abs(row['mean_diff']):.3f} orbits "
             f"(p_adj={row['p_adj_holm']:.4f}, {sig}).\n"
         )
-    lines.append("- **Conclusion**: Mixed. Enhanced PID is significantly better on multi-waypoint, but Baseline PID is significantly better on sustained-turn in this run; therefore Enhanced PID is not uniformly superior.\n")
+    # Dynamic conclusion for Q2
+    q2_conclusions = []
+    if not q2_mw.empty and not q2_st.empty:
+        mw_sig = q2_mw.iloc[0]["significant"]
+        st_sig = q2_st.iloc[0]["significant"]
+        mw_better = q2_mw.iloc[0]["mean_diff"] > 0
+        st_better = q2_st.iloc[0]["mean_diff"] > 0
+        if mw_sig and st_sig and mw_better and st_better:
+            q2_conclusions.append("- **Conclusion**: Yes. Enhanced PID is significantly better than Baseline PID on both tasks.")
+        elif not mw_sig and not st_sig:
+            q2_conclusions.append("- **Conclusion**: No. Enhanced PID is not significantly different from Baseline PID on either task.")
+        elif (mw_sig and not mw_better) or (st_sig and not st_better):
+            q2_conclusions.append("- **Conclusion**: No. Enhanced PID is significantly worse on at least one task.")
+        else:
+            q2_conclusions.append("- **Conclusion**: Partially. Enhanced PID shows significant improvement on one task but not the other.")
+    elif not q2_mw.empty or not q2_st.empty:
+        q2_conclusions.append("- **Conclusion**: Insufficient data to draw a complete conclusion (only one task has pairwise statistics).")
+    else:
+        q2_conclusions.append("- **Conclusion**: No pairwise statistics available for Enhanced PID vs Baseline PID.")
+    lines.extend([c + "\n" for c in q2_conclusions])
 
     lines.append("\n## 6. Overall Ranking\n")
     for _, row in ranking.iterrows():

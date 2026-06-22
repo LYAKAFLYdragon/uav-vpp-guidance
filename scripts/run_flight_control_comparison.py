@@ -207,9 +207,9 @@ def _build_ppo_eval_config(
     ckpt_ll = ckpt_config.get("low_level_controller", {})
     if isinstance(ckpt_ll, str):
         ckpt_ll = {}
-    is_apic = bool(ckpt_ll.get("apic", {}).get("enabled", False)) or int(
-        ckpt_config.get("policy", {}).get("action_dim", 3)
-    ) == 6
+    action_dim = ckpt_config.get("policy", {}).get("action_dim")
+    is_apic = bool(ckpt_ll.get("apic", {}).get("enabled", False)) or \
+              (int(action_dim) == 6 if action_dim is not None else False)
 
     # Ensure low-level controller type is inherited from the comparison base/task
     # configs. This guarantees PPO-FixedPID is evaluated with Enhanced PID if the
@@ -259,7 +259,7 @@ def _build_ppo_eval_config(
 
 
 def _build_pid_eval_config(
-    base_config: dict, task_config: dict, ll_type: str, action_dim: int = 3
+    base_config: dict, task_config: dict, ll_type: str, action_dim: int = 4
 ) -> dict:
     """Build an evaluation config for a fixed-gain PID controller."""
     config = copy.deepcopy(base_config)

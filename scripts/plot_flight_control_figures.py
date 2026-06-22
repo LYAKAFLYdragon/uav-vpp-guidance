@@ -182,7 +182,18 @@ def _plot_fig7(run_dir: Path, controllers: list, out_png: Path) -> None:
     ax3 = fig.add_subplot(2, 2, 3)
     ax4 = fig.add_subplot(2, 2, 4)
 
+    # Try to read target position from the first trajectory point or task config
     target_pos = [2000.0, 0.0]
+    first_json_path = next(iter(episodes.values()), None)
+    if first_json_path is not None:
+        first_obj = _load_episode(first_json_path)
+        first_traj = first_obj.get("trajectory", [])
+        if first_traj and first_traj[0].get("target_pos_m"):
+            target_pos = first_traj[0]["target_pos_m"][:2]
+        elif first_obj.get("waypoints"):
+            # Multi-waypoint fallback: use first waypoint as target
+            wp_pos = first_obj["waypoints"][0].get("pos", [0.0, 0.0, 0.0])
+            target_pos = wp_pos[:2] if len(wp_pos) >= 2 else [0.0, 0.0]
     ppo_pid_plotted = False
 
     for controller, json_path in episodes.items():

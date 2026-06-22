@@ -356,6 +356,7 @@ def train_ppo(config, output_dir, smoke=False):
 
                 start_time = time.time()
                 update_num = 0
+                last_saved_step = 0
 
                 while global_step < total_timesteps:
                     episode_start_idx = agent.buffer.ptr
@@ -539,10 +540,12 @@ def train_ppo(config, output_dir, smoke=False):
                             agent.save(best_path)
                             print(f"  -> Saved best checkpoint (return={best_eval_return:.2f})")
 
-                    # Periodic checkpoint save
-                    if save_interval > 0 and global_step % save_interval == 0 and global_step > 0:
+                    # Periodic checkpoint save (guaranteed to fire even when
+                    # save_interval is not an exact multiple of rollout_steps).
+                    if save_interval > 0 and global_step - last_saved_step >= save_interval and global_step > 0:
                         step_path = os.path.join(checkpoint_dir, f"step_{global_step}.pt")
                         agent.save(step_path)
+                        last_saved_step = global_step
 
                 # Save last checkpoint
                 if save_last:

@@ -96,8 +96,8 @@ def parse_args():
 
 def has_checkpoint(output_dir: Path) -> bool:
     """Check whether a checkpoint already exists in output_dir."""
-    ckpt = output_dir / "checkpoints" / "best.pt"
-    return ckpt.exists()
+    return (output_dir / "checkpoints" / "best.pt").exists() or \
+           (output_dir / "checkpoints" / "last.pt").exists()
 
 
 def run_single(controller: str, seed: int, output_dir: Path, smoke: bool, device: str = None):
@@ -243,6 +243,42 @@ def main():
             f"success_rate={sr_mean:.3f} ± {sr_std:.3f}  "
             f"mean_return={ret_mean:.1f} ± {ret_std:.1f}"
         )
+
+    # M-2: Auto-copy a representative checkpoint to the default evaluation path.
+    # This bridges the 10-seed robustness output tree with the single-seed
+    # evaluation runner expected by run_flight_control_comparison.py.
+    print("\n" + "=" * 80)
+    print("Auto-copying representative checkpoint to default evaluation path")
+    print("=" * 80)
+    for controller, meta in CONTROLLERS.items():
+        if controller not in args.controllers:
+            continue
+        # Try best.pt first, then last.pt
+        for ckpt_name in ("best.pt", "last.pt"):
+            for seed in seeds:
+                src = output_root / f"{controller}_s{seed}" / "checkpoints" / ckpt_name
+                if src.exists():
+                    dst = ROOT / "outputs" / "experiments" / meta["exp_name"] / "checkpoints" / "last.pt"
+                    dst.parent.mkdir(parents=True, exist_ok=True)
+                    import shutil
+                    shutil.copy2(str(src), str(dst))
+                    print(f"  Copied {src} -> {dst}")
+                    break
+            else:
+                continue
+            break
+        else:
+            print(f"  WARNING: No checkpoint found for {controller}")
+
+    # Also emit a CLI snippet for the comparison runner.
+    print("\n" + "=" * 80)
+    print("Next step: run the flight-control comparison")
+    print("=" * 80)
+    for controller, meta in CONTROLLERS.items():
+        if controller not in args.controllers:
+            continue
+        default_ckpt = ROOT / "outputs" / "experiments" / meta["exp_name"] / "checkpoints" / "last.pt"
+        print(f"  --checkpoint-{controller} {default_ckpt}")
 
 
 if __name__ == "__main__":

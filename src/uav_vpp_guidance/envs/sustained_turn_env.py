@@ -241,9 +241,9 @@ class SustainedTurnEnv(CloseRangeTrackingEnv):
         return own, target
 
     def _step_jsbsim(self, command, aggressiveness=None, pid_gain_deltas=None):
-        """Step JSBSim then reset the target aircraft to fixed position."""
-        result = super()._step_jsbsim(command, aggressiveness, pid_gain_deltas)
-        # Re-apply the target aircraft initial condition every step to freeze it.
+        """Step JSBSim after resetting the target aircraft to fixed position."""
+        # Re-apply the target aircraft initial condition BEFORE stepping JSBSim
+        # to prevent any target_dynamics movement from affecting the step.
         target_init = self._scenario_to_jsbsim_init({
             "position_m": self.target_pos,
             "velocity_mps": 0.0,
@@ -252,6 +252,7 @@ class SustainedTurnEnv(CloseRangeTrackingEnv):
             "roll_deg": 0.0,
         })
         self.jsbsim_env.apply_aircraft_ic_state(self.target_uid, target_init)
+        result = super()._step_jsbsim(command, aggressiveness, pid_gain_deltas)
         return result
 
     def _build_default_scenario(self, seed):

@@ -412,6 +412,7 @@ def _run_episode(
     config_sha256: str,
     git_commit: str,
     save_full: bool = True,
+    scenario: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """Run one episode and return the final episode JSON."""
     backend = config.get("backend", "jsbsim")
@@ -432,7 +433,10 @@ def _run_episode(
         save_full=save_full,
     )
 
-    obs = env.reset(seed=seed)
+    reset_kwargs = {"seed": seed}
+    if scenario is not None:
+        reset_kwargs["scenario"] = scenario
+    obs = env.reset(**reset_kwargs)
     adapter.reset()
 
     total_reward = 0.0

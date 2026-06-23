@@ -22,6 +22,9 @@ experiments/*/logs/
 
 .vscode/
 .idea/
+.claude/
+
+*.log
 
 runs/
 wandb/

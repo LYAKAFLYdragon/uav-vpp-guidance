@@ -14,6 +14,7 @@ import argparse
 import copy
 import hashlib
 import json
+import logging
 import shlex
 import subprocess
 import sys
@@ -26,9 +27,12 @@ import numpy as np
 import pandas as pd
 import yaml
 
+logger = logging.getLogger(__name__)
+
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 from uav_vpp_guidance.agents.ppo_agent import PPOAgent
+from uav_vpp_guidance.common.provenance import record_config_override
 from uav_vpp_guidance.envs.scenario_registry import (
     ScenarioRegistry,
     initialize_canonical_scenarios,
@@ -150,8 +154,8 @@ def _get_git_info() -> dict:
             subprocess.check_output(["git", "branch", "--show-current"], text=True)
             .strip()
         )
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.warning("Could not capture git provenance: %s", exc)
     return info
 
 
@@ -315,18 +319,41 @@ def evaluate_method(
 ) -> dict:
     """Evaluate a single method across all scenarios and seeds."""
     config = load_config(config_path, method_cfg["config_method"])
+    old_backend = config.get("backend")
     config["backend"] = backend
+    record_config_override(
+        config, "backend", backend, old_value=old_backend, source="run_paper_benchmark.py:--backend"
+    )
     if "env" not in config:
         config["env"] = {}
+    old_env_backend = config["env"].get("backend")
     config["env"]["backend"] = backend
+    if backend != old_env_backend:
+        record_config_override(
+            config, "env.backend", backend, old_value=old_env_backend, source="run_paper_benchmark.py:--backend"
+        )
+    old_use_jsbsim = config["env"].get("use_jsbsim")
     config["env"]["use_jsbsim"] = backend == "jsbsim"
+    if config["env"]["use_jsbsim"] != old_use_jsbsim:
+        record_config_override(
+            config, "env.use_jsbsim", config["env"]["use_jsbsim"], old_value=old_use_jsbsim, source="run_paper_benchmark.py:--backend"
+        )
 
     # Disable mode-switch for clean comparison
+    old_mode_switch = config.get("guidance", {}).get("mode_switch", {}).get("enabled")
     if "guidance" not in config:
         config["guidance"] = {}
     if "mode_switch" not in config["guidance"]:
         config["guidance"]["mode_switch"] = {}
     config["guidance"]["mode_switch"]["enabled"] = False
+    if old_mode_switch is not False:
+        record_config_override(
+            config,
+            "guidance.mode_switch.enabled",
+            False,
+            old_value=old_mode_switch,
+            source="run_paper_benchmark.py:benchmark_fixed_law",
+        )
 
     # gain_only: load and apply CEM-optimized gains
     gains_info = {

@@ -472,3 +472,241 @@ class TestScenarioPositionConversionRegression:
         assert init["ic/long-gc-deg"] == pytest.approx(120.0, abs=1e-6)
         assert init["ic/lat-geod-deg"] == pytest.approx(60.0, abs=1e-6)
         env.close()
+
+
+class TestObservationSchema:
+    """Tests for configurable observation schema."""
+
+    def test_default_observation_schema_excludes_gains_and_guidance_state(
+        self, base_config
+    ):
+        env = CloseRangeTrackingEnv(base_config)
+        obs = env.reset(seed=0)
+        assert "observation_schema" in obs
+        schema = obs["observation_schema"]
+        assert schema["include_gains"] is False
+        assert schema["include_guidance_state"] is False
+        env.close()
+
+    def test_include_gains_increases_observation_dim(self, base_config):
+        env_base = CloseRangeTrackingEnv(base_config)
+        base_config["observation"] = {"include_gains": True}
+        env_gains = CloseRangeTrackingEnv(base_config)
+        try:
+            base_obs = env_base.reset(seed=0)
+            gains_obs = env_gains.reset(seed=0)
+            assert (
+                gains_obs["observation_vector"].shape[0]
+                == base_obs["observation_vector"].shape[0] + 2
+            )
+            assert gains_obs["observation_schema"]["include_gains"] is True
+        finally:
+            env_base.close()
+            env_gains.close()
+
+    def test_include_guidance_state_increases_observation_dim(self, base_config):
+        env_base = CloseRangeTrackingEnv(base_config)
+        base_config["observation"] = {"include_guidance_state": True}
+        env_guidance = CloseRangeTrackingEnv(base_config)
+        try:
+            base_obs = env_base.reset(seed=0)
+            guidance_obs = env_guidance.reset(seed=0)
+            assert (
+                guidance_obs["observation_vector"].shape[0]
+                == base_obs["observation_vector"].shape[0] + 3
+            )
+            assert (
+                guidance_obs["observation_schema"]["include_guidance_state"] is True
+            )
+        finally:
+            env_base.close()
+            env_guidance.close()
+
+    def test_include_both_increases_observation_dim_correctly(self, base_config):
+        env_base = CloseRangeTrackingEnv(base_config)
+        base_config["observation"] = {
+            "include_gains": True,
+            "include_guidance_state": True,
+        }
+        env_both = CloseRangeTrackingEnv(base_config)
+        try:
+            base_obs = env_base.reset(seed=0)
+            both_obs = env_both.reset(seed=0)
+            assert (
+                both_obs["observation_vector"].shape[0]
+                == base_obs["observation_vector"].shape[0] + 5
+            )
+        finally:
+            env_base.close()
+            env_both.close()
+
+    def test_backend_fallback_occurred_in_info(self, base_config, monkeypatch):
+        base_config["env"]["use_jsbsim"] = True
+        base_config["env"]["strict_backend"] = False
+
+        def _fail_init(*args, **kwargs):
+            raise RuntimeError("Simulated JSBSim failure")
+
+        monkeypatch.setattr(
+            "uav_vpp_guidance.envs.tracking_env.JSBSimEnv",
+            _fail_init,
+        )
+        env = CloseRangeTrackingEnv(base_config)
+        env.reset(seed=0)
+        _, _, _, _, info = env.step(np.zeros(3))
+        assert "backend_fallback_occurred" in info
+        assert info["backend_fallback_occurred"] is True
+        env.close()
+
+    def test_backend_fallback_false_when_no_fallback(self, base_config):
+        env = CloseRangeTrackingEnv(base_config)
+        env.reset(seed=0)
+        _, _, _, _, info = env.step(np.zeros(3))
+        assert "backend_fallback_occurred" in info
+        assert info["backend_fallback_occurred"] is False
+        env.close()
+
+    def test_default_observation_schema_excludes_saturation(self, base_config):
+        env = CloseRangeTrackingEnv(base_config)
+        obs = env.reset(seed=0)
+        assert obs["observation_schema"]["include_saturation"] is False
+        env.close()
+
+    def test_include_saturation_increases_observation_dim(self, base_config):
+        env_base = CloseRangeTrackingEnv(base_config)
+        base_config["observation"] = {"include_saturation": True}
+        env_sat = CloseRangeTrackingEnv(base_config)
+        try:
+            base_obs = env_base.reset(seed=0)
+            sat_obs = env_sat.reset(seed=0)
+            assert (
+                sat_obs["observation_vector"].shape[0]
+                == base_obs["observation_vector"].shape[0] + 3
+            )
+            assert sat_obs["observation_schema"]["include_saturation"] is True
+        finally:
+            env_base.close()
+            env_sat.close()
+
+    def test_saturation_flags_detect_command_clipping(self, base_config):
+        """Extreme override commands should be flagged in observation when enabled."""
+        base_config["observation"] = {"include_saturation": True}
+        env = CloseRangeTrackingEnv(base_config)
+        env.reset(seed=0)
+        override = {
+            "nz_cmd": 100.0,
+            "roll_rate_cmd": -5.0,
+            "throttle_cmd": 2.0,
+        }
+        obs, _, _, _, info = env.step(np.zeros(3), command_override=override)
+        schema = obs["observation_schema"]
+        assert schema["include_saturation"] is True
+        # Identify saturation flags by keys in the observation schema would require
+        # index knowledge; instead assert they are in the dict returned by reset.
+        vec = obs["observation_vector"]
+        # Saturation flags are appended at the end in build_observation order.
+        assert vec[-3] == pytest.approx(1.0, abs=1e-6)  # nz_saturated
+        assert vec[-2] == pytest.approx(1.0, abs=1e-6)  # roll_rate_saturated
+        assert vec[-1] == pytest.approx(1.0, abs=1e-6)  # throttle_saturated
+        env.close()
+
+    def test_no_saturation_flags_for_in_range_commands(self, base_config):
+        """In-range override commands should not be flagged as saturated."""
+        base_config["observation"] = {"include_saturation": True}
+        env = CloseRangeTrackingEnv(base_config)
+        env.reset(seed=0)
+        override = {
+            "nz_cmd": 2.0,
+            "roll_rate_cmd": 0.0,
+            "throttle_cmd": 0.5,
+        }
+        obs, _, _, _, info = env.step(np.zeros(3), command_override=override)
+        vec = obs["observation_vector"]
+        assert vec[-3] == pytest.approx(0.0, abs=1e-6)
+        assert vec[-2] == pytest.approx(0.0, abs=1e-6)
+        assert vec[-1] == pytest.approx(0.0, abs=1e-6)
+        env.close()
+
+    def test_full_observation_dim_with_all_extensions(self, base_config):
+        base_config["observation"] = {
+            "include_gains": True,
+            "include_guidance_state": True,
+            "include_saturation": True,
+        }
+        env = CloseRangeTrackingEnv(base_config)
+        obs = env.reset(seed=0)
+        schema = obs["observation_schema"]
+        assert schema["include_gains"] is True
+        assert schema["include_guidance_state"] is True
+        assert schema["include_saturation"] is True
+        # After reset (before any step) saturation flags should all be zero.
+        assert obs["observation_vector"].shape[0] == 16 + 2 + 3 + 3
+        env.close()
+
+    def test_observation_schema_includes_feature_names(self, base_config):
+        env = CloseRangeTrackingEnv(base_config)
+        obs = env.reset(seed=0)
+        schema = obs["observation_schema"]
+        assert "feature_names" in schema
+        assert len(schema["feature_names"]) == schema["dim"]
+        assert schema["feature_names"][:4] == [
+            "range_m",
+            "range_rate_mps",
+            "altitude_diff_m",
+            "speed_diff_mps",
+        ]
+        env.close()
+
+    def test_provenance_present_in_reset_and_step(self, base_config):
+        env = CloseRangeTrackingEnv(base_config)
+        obs = env.reset(seed=0)
+        assert "provenance" in obs
+        assert obs["provenance"]["backend"] == env._backend
+        assert obs["provenance"]["backend_fallback_occurred"] is False
+        assert "observation_schema" in obs["provenance"]
+        assert "config_overrides" in obs["provenance"]
+
+        _, _, _, _, info = env.step(np.zeros(3))
+        assert "provenance" in info
+        assert info["provenance"]["backend"] == env._backend
+        env.close()
+
+    def test_backend_fallback_reason_recorded(self, base_config, monkeypatch):
+        base_config["env"]["use_jsbsim"] = True
+        base_config["env"]["strict_backend"] = False
+
+        def _fail_init(*args, **kwargs):
+            raise RuntimeError("Simulated JSBSim failure")
+
+        monkeypatch.setattr(
+            "uav_vpp_guidance.envs.tracking_env.JSBSimEnv",
+            _fail_init,
+        )
+        env = CloseRangeTrackingEnv(base_config)
+        obs = env.reset(seed=0)
+        assert obs["provenance"]["backend_fallback_occurred"] is True
+        assert obs["provenance"]["backend_fallback_reason"] == "Simulated JSBSim failure"
+        assert obs["provenance"]["backend"] == "simple"
+
+        _, _, _, _, info = env.step(np.zeros(3))
+        assert info["backend_fallback_reason"] == "Simulated JSBSim failure"
+        env.close()
+
+    def test_config_overrides_reflected_in_provenance(self, base_config):
+        from uav_vpp_guidance.common.provenance import record_config_override
+
+        record_config_override(
+            base_config,
+            "guidance.mode_switch.enabled",
+            False,
+            old_value=True,
+            source="test_override",
+        )
+        env = CloseRangeTrackingEnv(base_config)
+        obs = env.reset(seed=0)
+        overrides = obs["provenance"]["config_overrides"]
+        assert len(overrides) == 1
+        assert overrides[0]["source"] == "test_override"
+        assert overrides[0]["key"] == "guidance.mode_switch.enabled"
+        assert overrides[0]["new_value"] is False
+        env.close()

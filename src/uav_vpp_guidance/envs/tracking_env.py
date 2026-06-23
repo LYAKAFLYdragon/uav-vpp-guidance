@@ -14,14 +14,18 @@ P4 scope: JSBSim high-fidelity bridge with unified backend interface.
 """
 
 import inspect
+import logging
 import numpy as np
 from typing import Optional, Tuple
+
+logger = logging.getLogger(__name__)
 
 from .jsbsim_env import JSBSimEnv, neu2lla
 from .simple_point_mass_env import SimplePointMassEnv
 from .observation import compute_relative_geometry, build_observation
 from .reward import RewardCalculator
 from .termination import TerminationChecker
+from ..common.provenance import get_config_overrides
 from ..virtual_point.generator import VirtualPointGenerator
 from ..virtual_point.no_vpp_guidance import NoVPPGuidance
 from ..guidance.los_rate_guidance import LOSRateGuidance
@@ -37,6 +41,7 @@ from ..flight_control.pid_controllers import (
     EnhancedPIDController,
     GainScheduledPIDController,
     HybridPPOPIDAdapter,
+    RobustPIDController,
 )
 from ..utils.action_schema import ActionSchema, validate_action
 from ..trajectory_prediction import (
@@ -87,6 +92,8 @@ class CloseRangeTrackingEnv:
 
         # Backend initialization
         strict_backend = self.env_config.get("strict_backend", False)
+        self._backend_fallback_occurred = False
+        self._backend_fallback_reason: Optional[str] = None
         if requested_backend == "jsbsim":
             try:
                 self.jsbsim_env = JSBSimEnv(self.env_config)
@@ -109,6 +116,8 @@ class CloseRangeTrackingEnv:
                         f"(strict_backend=True): {exc}"
                     ) from exc
                 # Fallback to simple env if JSBSim init fails
+                self._backend_fallback_occurred = True
+                self._backend_fallback_reason = str(exc)
                 import warnings
                 warnings.warn(
                     f"JSBSim backend initialization failed: {exc}. "
@@ -125,6 +134,26 @@ class CloseRangeTrackingEnv:
             self._low_level_controller = None
             self._simple_env = SimplePointMassEnv(self.env_config)
             self._backend = "simple"
+
+        # Observation schema configuration
+        self.obs_config = config.get("observation", {})
+        self._include_gains_in_observation = bool(
+            self.obs_config.get("include_gains", False)
+        )
+        self._include_guidance_state_in_observation = bool(
+            self.obs_config.get("include_guidance_state", False)
+        )
+        self._include_saturation_in_observation = bool(
+            self.obs_config.get("include_saturation", False)
+        )
+        # Last virtual point for guidance-state features (e.g. VP tracking error)
+        self._last_virtual_point: Optional[dict] = None
+        # Last command saturation flags for observation
+        self._last_command_saturation = {
+            "nz_saturated": 0.0,
+            "roll_rate_saturated": 0.0,
+            "throttle_saturated": 0.0,
+        }
 
         # Submodules
         vp_config = config.get(
@@ -210,6 +239,7 @@ class CloseRangeTrackingEnv:
         self._prediction_error_tracker = PredictionErrorTracker(
             high_level_dt=self.env_config.get("high_level_dt", 0.2)
         )
+        self._prediction_buffer_synced_for_action = False
         tp_config = config.get("trajectory_prediction", {})
         if tp_config.get("enabled", False):
             strict_init = tp_config.get("strict_predictor_init", False)
@@ -244,6 +274,13 @@ class CloseRangeTrackingEnv:
         self._sim_time_s = 0.0
         self._last_aggressiveness = None
         self._last_pid_gain_deltas = None
+        self._last_virtual_point = None
+        self._last_observation_schema = {}
+        self._last_command_saturation = {
+            "nz_saturated": 0.0,
+            "roll_rate_saturated": 0.0,
+            "throttle_saturated": 0.0,
+        }
 
     # ------------------------------------------------------------------
     # Low-level controller factory
@@ -276,6 +313,8 @@ class CloseRangeTrackingEnv:
 
         if ll_controller_class in ("enhanced", "enhanced_pid"):
             return EnhancedPIDController(controller_config)
+        if ll_controller_class in ("robust", "robust_pid"):
+            return RobustPIDController(controller_config)
         if ll_controller_class in ("gain_scheduled", "gain_scheduled_pid"):
             return GainScheduledPIDController(controller_config)
         if ll_controller_class in ("baseline_pid",):
@@ -348,6 +387,7 @@ class CloseRangeTrackingEnv:
 
         if self.trajectory_predictor_adapter is not None:
             self.trajectory_predictor_adapter.reset()
+        self._prediction_buffer_synced_for_action = False
         self._prediction_error_tracker.reset()
 
         if self._backend == "jsbsim":
@@ -575,13 +615,9 @@ class CloseRangeTrackingEnv:
             "prediction_error_count": 0,
         }
         if tp_enabled and self.trajectory_predictor_adapter is not None:
-            try:
-                self.trajectory_predictor_adapter.update(
-                    own_state, target_state, rel_state
-                )
-            except Exception as exc:
-                prediction_info["prediction_fallback_reason"] = f"update_failed: {exc}"
-                prediction_info["prediction_fallback_phase"] = "runtime_failure"
+            self._sync_prediction_buffer_for_current_state(
+                own_state, target_state, rel_state, prediction_info
+            )
 
         # 4. 生成虚拟追踪点 (or use direct command override for diagnosis)
         anchor_mode = self.config.get("virtual_point", {}).get(
@@ -797,6 +833,9 @@ class CloseRangeTrackingEnv:
                 own_state, target_state, virtual_point, self.current_gains
             )
 
+        # Persist virtual point for observation features (e.g. VP tracking error)
+        self._last_virtual_point = virtual_point
+
         # 5b. Optional command post-processing (terminal protection, energy comp, etc.)
         if self.command_post_processor is not None and not use_command_override:
             rel_geom = compute_relative_geometry(own_state, target_state)
@@ -810,6 +849,18 @@ class CloseRangeTrackingEnv:
         # 6. Command clipping and filtering
         limits = self.config.get("limits", {})
         clipped_command = clip_command(raw_command, limits)
+        eps = 1e-6
+        self._last_command_saturation = {
+            "nz_saturated": float(
+                abs(raw_command.get("nz_cmd", 1.0) - clipped_command["nz_cmd"]) > eps
+            ),
+            "roll_rate_saturated": float(
+                abs(raw_command.get("roll_rate_cmd", 0.0) - clipped_command["roll_rate_cmd"]) > eps
+            ),
+            "throttle_saturated": float(
+                abs(raw_command.get("throttle_cmd", 0.5) - clipped_command["throttle_cmd"]) > eps
+            ),
+        }
         filtered_command = self._apply_command_filter(clipped_command)
 
         # 7. 环境 step
@@ -822,6 +873,7 @@ class CloseRangeTrackingEnv:
             )
         else:
             self._step_simple(filtered_command)
+        self._prediction_buffer_synced_for_action = False
 
         # 8. 获取 step 后的新状态（post-step）
         own_state_post, target_state_post = self._get_current_states()
@@ -880,6 +932,11 @@ class CloseRangeTrackingEnv:
             "current_step": self.current_step,
             "episode": self._episode_count,
             "backend": self._backend,
+            "backend_fallback_occurred": self._backend_fallback_occurred,
+            "backend_fallback_reason": self._backend_fallback_reason,
+            "provenance": self._build_provenance(
+                self._last_observation_schema if hasattr(self, "_last_observation_schema") else {}
+            ),
             "range_m": rel_state_post.get("range_m", np.nan),
             "ata_deg": float(np.rad2deg(rel_state_post.get("ata_rad", np.nan))),
             "aspect_deg": float(np.rad2deg(rel_state_post.get("aa_rad", np.nan))),
@@ -1034,6 +1091,148 @@ class CloseRangeTrackingEnv:
         """Apply independent first-order filters to each command channel."""
         return self._command_filter.filter(command)
 
+    def _sync_prediction_buffer_for_current_state(
+        self,
+        own_state: dict,
+        target_state: dict,
+        rel_state: dict,
+        prediction_info: Optional[dict] = None,
+    ) -> bool:
+        """Push the current state into the predictor history at most once.
+
+        When prediction features are included in the policy observation, the
+        observation builder updates the history before the action is selected.
+        The step path then reuses that same history instead of pushing a
+        duplicate frame.
+        """
+        if self.trajectory_predictor_adapter is None:
+            return False
+        if self._prediction_buffer_synced_for_action:
+            return True
+        try:
+            self.trajectory_predictor_adapter.update(
+                own_state, target_state, rel_state
+            )
+            self._prediction_buffer_synced_for_action = True
+            return True
+        except Exception as exc:
+            self._prediction_buffer_synced_for_action = True
+            if prediction_info is not None:
+                prediction_info["prediction_fallback_reason"] = (
+                    f"update_failed: {exc}"
+                )
+                prediction_info["prediction_fallback_phase"] = "runtime_failure"
+            return False
+
+    @staticmethod
+    def _extract_position_neu(state: dict) -> np.ndarray:
+        pos = state.get("position_neu")
+        if pos is None:
+            pos = state.get("position_m")
+        if pos is None:
+            pos = state.get("position")
+        if pos is None:
+            raise ValueError(
+                "State missing position field (position_neu, position_m, or position)"
+            )
+        return np.asarray(pos, dtype=np.float64)
+
+    def _prediction_observation_enabled(self) -> bool:
+        tp_cfg = self.config.get("trajectory_prediction", {})
+        int_cfg = tp_cfg.get("integration", {})
+        return bool(
+            int_cfg.get("add_prediction_to_observation", False)
+            or int_cfg.get("add_uncertainty_to_observation", False)
+        )
+
+    def _build_prediction_observation_features(
+        self, own_state: dict, target_state: dict, rel_state: dict
+    ) -> Optional[dict]:
+        """Build normalized prediction features for the high-level policy."""
+        if not self._prediction_observation_enabled():
+            return None
+
+        keys = (
+            "pred_rel_x",
+            "pred_rel_y",
+            "pred_rel_z",
+            "pred_disp_x",
+            "pred_disp_y",
+            "pred_disp_z",
+            "pred_vel_x",
+            "pred_vel_y",
+            "pred_vel_z",
+            "pred_var_x",
+            "pred_var_y",
+            "pred_var_z",
+            "pred_valid",
+            "pred_fallback",
+        )
+        features = {key: 0.0 for key in keys}
+
+        tp_cfg = self.config.get("trajectory_prediction", {})
+        if not tp_cfg.get("enabled", False) or self.trajectory_predictor_adapter is None:
+            features["pred_fallback"] = 1.0
+            return features
+
+        self._sync_prediction_buffer_for_current_state(
+            own_state, target_state, rel_state
+        )
+
+        try:
+            pred_pos, pred_var, pred_info = self.trajectory_predictor_adapter.predict(
+                target_state
+            )
+        except Exception as exc:
+            logger.warning(
+                "Prediction observation feature build failed: %s", exc
+            )
+            features["pred_fallback"] = 1.0
+            return features
+
+        pred_pos = np.asarray(pred_pos, dtype=np.float64).reshape(-1)[:3]
+        if pred_pos.shape[0] != 3 or not np.isfinite(pred_pos).all():
+            features["pred_fallback"] = 1.0
+            return features
+
+        own_pos = self._extract_position_neu(own_state)
+        target_pos = self._extract_position_neu(target_state)
+        pred_rel = pred_pos - own_pos
+        pred_disp = pred_pos - target_pos
+
+        pred_cfg = tp_cfg.get("prediction", {})
+        lookahead_time_s = max(float(pred_cfg.get("lookahead_time_s", 1.0)), 1e-6)
+        pred_vel = pred_disp / lookahead_time_s
+
+        norm_cfg = tp_cfg.get("normalization", {})
+        pos_scale = max(float(norm_cfg.get("position_scale_m", 1000.0)), 1e-6)
+        vel_scale = max(float(norm_cfg.get("velocity_scale_mps", 300.0)), 1e-6)
+
+        features["pred_rel_x"], features["pred_rel_y"], features["pred_rel_z"] = (
+            pred_rel / pos_scale
+        )
+        features["pred_disp_x"], features["pred_disp_y"], features["pred_disp_z"] = (
+            pred_disp / pos_scale
+        )
+        features["pred_vel_x"], features["pred_vel_y"], features["pred_vel_z"] = (
+            pred_vel / vel_scale
+        )
+
+        if pred_var is not None:
+            pred_var_arr = np.asarray(pred_var, dtype=np.float64).reshape(-1)[:3]
+            if pred_var_arr.shape[0] == 3 and np.isfinite(pred_var_arr).all():
+                var_scale = pos_scale * pos_scale
+                (
+                    features["pred_var_x"],
+                    features["pred_var_y"],
+                    features["pred_var_z"],
+                ) = pred_var_arr / var_scale
+
+        fallback = bool(pred_info.get("fallback", False))
+        features["pred_valid"] = 0.0 if fallback else 1.0
+        features["pred_fallback"] = 1.0 if fallback else 0.0
+        return features
+
     def _get_current_states(self):
         """获取当前本机和目标状态（统一格式）。"""
         if self._backend == "jsbsim":
@@ -1095,12 +1294,61 @@ class CloseRangeTrackingEnv:
     # Observation
     # ------------------------------------------------------------------
 
+    def _build_guidance_state_for_observation(
+        self, target_state: dict
+    ) -> Optional[dict]:
+        """Build guidance internal state for observation when enabled.
+
+        Currently exposes the virtual-point tracking error (VP - target).
+        On reset or before any step, the VP defaults to the target position so
+        the error is zero rather than undefined.
+        """
+        if not self._include_guidance_state_in_observation:
+            return None
+
+        target_pos = target_state.get("position_m")
+        if target_pos is None:
+            target_pos = target_state.get("position_neu")
+        if target_pos is None:
+            return None
+        target_pos = np.asarray(target_pos, dtype=np.float64)
+
+        if self._last_virtual_point is not None:
+            vp_pos = self._last_virtual_point.get("position_neu")
+            if vp_pos is None:
+                vp_pos = self._last_virtual_point.get("position")
+            if vp_pos is not None:
+                vp_pos = np.asarray(vp_pos, dtype=np.float64)
+                return {"vp_tracking_error": vp_pos - target_pos}
+
+        # Default: zero tracking error before first step
+        return {"vp_tracking_error": np.zeros(3, dtype=np.float64)}
+
+    def _build_provenance(self, observation_schema: dict) -> dict:
+        """Build a structured provenance record for this environment instance.
+
+        Records the final backend choice, whether a backend fallback occurred,
+        the observation schema actually seen by the policy, and any config
+        overrides that were declared before env construction.
+        """
+        provenance = {
+            "backend": self._backend,
+            "backend_fallback_occurred": self._backend_fallback_occurred,
+            "observation_schema": observation_schema,
+            "config_overrides": list(get_config_overrides(self.config)),
+        }
+        if self._backend_fallback_occurred:
+            provenance["backend_fallback_reason"] = self._backend_fallback_reason
+        return provenance
+
     def _get_observation(self) -> dict:
         """
         Build the current observation from environment states.
 
         Returns:
-            dict: Observation dictionary with relative geometry and raw states.
+            dict: Observation dictionary with relative geometry, raw states,
+            flattened observation vector, observation schema metadata, and
+            structured provenance.
         """
         own_state, target_state = self._get_current_states()
         rel_state = compute_relative_geometry(own_state, target_state)
@@ -1111,9 +1359,46 @@ class CloseRangeTrackingEnv:
             "relative_state": rel_state,
         }
 
+        prediction_features = self._build_prediction_observation_features(
+            own_state, target_state, rel_state
+        )
+
+        # Optionally expose gains / guidance internal state to the policy.
+        # Default is off for backward compatibility with existing checkpoints.
+        gains = self.current_gains if self._include_gains_in_observation else None
+        guidance_state = (
+            self._build_guidance_state_for_observation(target_state)
+            if self._include_guidance_state_in_observation
+            else None
+        )
+        saturation_features = (
+            self._last_command_saturation
+            if self._include_saturation_in_observation
+            else None
+        )
+
         # 同时返回展平向量（供策略网络使用）
-        obs_vec = build_observation(own_state, target_state)
+        obs_vec, feature_names = build_observation(
+            own_state,
+            target_state,
+            guidance_state=guidance_state,
+            gains=gains,
+            prediction_features=prediction_features,
+            saturation_features=saturation_features,
+            return_feature_names=True,
+        )
         obs_dict["observation_vector"] = obs_vec
+        observation_schema = {
+            "include_gains": self._include_gains_in_observation,
+            "include_guidance_state": self._include_guidance_state_in_observation,
+            "include_prediction_features": prediction_features is not None,
+            "include_saturation": self._include_saturation_in_observation,
+            "dim": int(obs_vec.shape[0]),
+            "feature_names": feature_names,
+        }
+        obs_dict["observation_schema"] = observation_schema
+        self._last_observation_schema = observation_schema
+        obs_dict["provenance"] = self._build_provenance(observation_schema)
         return obs_dict
 
     # ------------------------------------------------------------------
@@ -1161,9 +1446,11 @@ class CloseRangeTrackingEnv:
                 )
                 result["ic/long-gc-deg"] = float(lon_deg)
                 result["ic/lat-geod-deg"] = float(lat_deg)
-            except Exception:
+            except Exception as exc:
                 # If pymap3d is unavailable, keep default origin position.
-                pass
+                logger.warning(
+                    "Could not convert NEU position to geodetic coordinates: %s", exc
+                )
 
         return result
 

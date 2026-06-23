@@ -7,6 +7,7 @@ from uav_vpp_guidance.flight_control import (
     EnhancedPIDController,
     GainScheduledPIDController,
     HybridPPOPIDAdapter,
+    RobustPIDController,
 )
 
 
@@ -65,3 +66,18 @@ def test_baseline_disables_advanced_features():
     assert ctrl.use_pid is True
     assert ctrl.use_rudder is False
     assert ctrl.use_aoa_protection is False
+
+
+def test_robust_pid_controller():
+    ctrl = RobustPIDController({})
+    out = ctrl.compute_actuator(_dummy_guidance_command(), _dummy_aircraft_state())
+    _assert_jsbsim_props(out)
+
+
+def test_robust_pid_enables_protections():
+    ctrl = RobustPIDController({})
+    assert ctrl.use_rudder is True
+    assert ctrl.use_beta_suppression is True
+    assert ctrl.use_aoa_protection is True
+    assert ctrl.enable_altitude_hold is True
+    assert ctrl.enable_bank_angle_protection is True

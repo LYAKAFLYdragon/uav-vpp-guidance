@@ -5,6 +5,7 @@ from .pid_controllers import (
     EnhancedPIDController,
     GainScheduledPIDController,
     HybridPPOPIDAdapter,
+    RobustPIDController,
 )
 
 __all__ = [
@@ -12,4 +13,5 @@ __all__ = [
     "EnhancedPIDController",
     "GainScheduledPIDController",
     "HybridPPOPIDAdapter",
+    "RobustPIDController",
 ]

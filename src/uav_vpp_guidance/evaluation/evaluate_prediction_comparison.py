@@ -205,16 +205,31 @@ def evaluate_single_episode(env, agent, config, scenario=None, seed=0, save_traj
         if target_pos is None:
             target_pos = info.get("target_state", {}).get("position_neu")
         vp_pos = info.get("virtual_point", {}).get("position")
+        if vp_pos is None:
+            vp_pos = info.get("virtual_point", {}).get("position_neu")
         if target_pos is not None and vp_pos is not None:
             virtual_point_shifts.append(float(np.linalg.norm(np.asarray(vp_pos) - np.asarray(target_pos))))
 
         pred_target_pos = info.get("predicted_target_position")
+        target_vel = info.get("target_state", {}).get("velocity_vector_mps")
+        if target_vel is None:
+            target_vel = info.get("target_state", {}).get("velocity_ned")
+        if (
+            pred_target_pos is None
+            and info.get("anchor_mode") == "oracle_future_position"
+            and target_pos is not None
+            and target_vel is not None
+        ):
+            pred_target_pos = (
+                np.asarray(target_pos, dtype=np.float64)
+                + np.asarray(target_vel, dtype=np.float64) * lookahead_time_s
+            )
         if target_pos is not None and pred_target_pos is not None:
             anchor_shifts.append(float(np.linalg.norm(np.asarray(pred_target_pos) - np.asarray(target_pos))))
             prediction_records.append((
                 step,
-                np.asarray(pred_target_pos, dtype=np.float64),
-                np.asarray(target_pos, dtype=np.float64),
+                np.asarray(pred_target_pos, dtype=np.float64).copy(),
+                np.asarray(target_pos, dtype=np.float64).copy(),
             ))
 
         if save_trajectory:
@@ -224,7 +239,7 @@ def evaluate_single_episode(env, agent, config, scenario=None, seed=0, save_traj
             own_vel = own_s.get("velocity_vector_mps", own_s.get("velocity_ned", np.full(3, np.nan)))
             target_pos_arr = target_s.get("position_m", target_s.get("position_neu", np.full(3, np.nan)))
             target_vel = target_s.get("velocity_vector_mps", target_s.get("velocity_ned", np.full(3, np.nan)))
-            pred_target = info.get("predicted_target_position", [np.nan, np.nan, np.nan])
+            pred_target = pred_target_pos if pred_target_pos is not None else [np.nan, np.nan, np.nan]
             vp = info.get("virtual_point", {})
             vp_pos_arr = vp.get("position", vp.get("position_neu", np.full(3, np.nan)))
 

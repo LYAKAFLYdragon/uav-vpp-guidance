@@ -13,6 +13,7 @@ name strings for minimal dependency.
 
 import os
 import logging
+import math
 import numpy as np
 from typing import Dict, Any, Optional
 
@@ -322,6 +323,10 @@ class _JSBSimAircraft:
             except Exception:
                 nz_g = 1.0
 
+        # Sideslip angle (beta) from body velocities; needed by lateral-directional
+        # controllers for rudder/beta-suppression coordination.
+        beta = float(math.atan2(v_b, u_b + 1e-9))
+
         # 统一别名字段，供上层模块（TerminationChecker、feature_builder 等）直接使用
         self._state = {
             "position_neu": np.array([n, e, u], dtype=np.float64),
@@ -340,6 +345,8 @@ class _JSBSimAircraft:
             "q_rps": float(q_rps),
             "r_rps": float(r_rps),
             "nz_g": float(nz_g),
+            "beta_rad": beta,
+            "sideslip_rad": beta,
             "speed_mps": float(vt),
             "vt_mps": float(vt),
             "sim_time": self.jsbsim_exec.get_sim_time(),

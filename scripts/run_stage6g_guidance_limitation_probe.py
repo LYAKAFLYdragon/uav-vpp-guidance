@@ -20,6 +20,7 @@ Exit contract:
 import argparse
 import csv
 import json
+import logging
 import os
 import subprocess
 import sys
@@ -29,6 +30,8 @@ from typing import List, Tuple
 
 import yaml
 import numpy as np
+
+logger = logging.getLogger(__name__)
 
 from uav_vpp_guidance.evaluation.statistical_comparison import mcnemar_exact_pvalue
 
@@ -133,8 +136,8 @@ def get_git_info() -> dict:
         info["commit"] = sp.check_output(["git", "rev-parse", "--short", "HEAD"], text=True).strip()
         info["dirty"] = len(sp.check_output(["git", "status", "--short"], text=True).strip()) > 0
         info["branch"] = sp.check_output(["git", "branch", "--show-current"], text=True).strip()
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.warning("Could not capture git provenance: %s", exc)
     return info
 
 
@@ -150,6 +153,7 @@ def run_probe_cell(
     training_seed: int,
     output_dir: Path,
     dry_run: bool,
+    allow_random_policy: bool,
     log_file,
 ) -> Tuple[bool, List[dict]]:
     """Run one guidance_mode x scenario cell.
@@ -190,7 +194,7 @@ def run_probe_cell(
             print(f"  WARNING: Checkpoint not found: {ckpt}")
         method_overrides.append(f"{method['name']}={ckpt}")
 
-    if missing_ckpts and not dry_run:
+    if missing_ckpts and not dry_run and not allow_random_policy:
         msg = f"ERROR: Missing checkpoints: {missing_ckpts}. Cannot proceed without --allow-random-policy."
         print(msg)
         log_file.write(msg + "\n")
@@ -210,6 +214,8 @@ def run_probe_cell(
         "--output-dir", str(cell_dir),
         "--validation-mode", "raise",
     ]
+    if allow_random_policy:
+        cmd.append("--allow-random-policy")
     for override in method_overrides:
         cmd.extend(["--method-checkpoint", override])
 
@@ -642,6 +648,12 @@ def main():
     parser.add_argument("--scenarios", type=str, nargs="+", default=list(SCENARIO_CONFIGS.keys()))
     parser.add_argument("--training-seed", type=int, default=0)
     parser.add_argument("--allow-incomplete", action="store_true", help="Allow aggregation even if some probes fail")
+    parser.add_argument(
+        "--allow-random-policy",
+        action="store_true",
+        help="Allow fallback to random policy when checkpoints are missing. "
+             "Results will be marked invalid for paper claims.",
+    )
     args = parser.parse_args()
 
     start_time = datetime.now(timezone.utc).isoformat()
@@ -668,6 +680,7 @@ def main():
     log(f"Smoke: {args.smoke}")
     log(f"Dry-run: {args.dry_run}")
     log(f"Allow incomplete: {args.allow_incomplete}")
+    log(f"Allow random policy: {args.allow_random_policy}")
     log(f"Output dir: {output_dir}")
 
     # Smoke overrides
@@ -696,10 +709,12 @@ def main():
     for method in active_methods:
         if not os.path.exists(method["checkpoint"]):
             missing_ckpts.append(method["checkpoint"])
-    if missing_ckpts and not args.dry_run:
+    if missing_ckpts and not args.dry_run and not args.allow_random_policy:
         log(f"ERROR: Missing checkpoints: {missing_ckpts}")
         log_file.close()
         sys.exit(1)
+    if missing_ckpts and args.allow_random_policy:
+        log(f"WARNING: Missing checkpoints, will use random policy: {missing_ckpts}")
 
     # Git info
     git_info = get_git_info()
@@ -765,6 +780,7 @@ def main():
                 training_seed=args.training_seed,
                 output_dir=output_dir,
                 dry_run=False,
+                allow_random_policy=args.allow_random_policy,
                 log_file=log_file,
             )
             overall_ok.append(ok)

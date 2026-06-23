@@ -72,6 +72,7 @@ CONTROLLER_ALIASES = {
     "apic_pid": "APIC-PID",
     "ppo": "PPO",
     "enhanced_pid": "Enhanced PID",
+    "robust_pid": "Robust PID",
     "baseline_pid": "Baseline PID",
     "gain_scheduled_pid": "GainScheduled PID",
 }
@@ -387,6 +388,8 @@ def _build_adapter(
 
     if controller == "enhanced_pid":
         return ZeroOffsetAdapter(name="enhanced_pid", action_dim=4)
+    if controller == "robust_pid":
+        return ZeroOffsetAdapter(name="robust_pid", action_dim=4)
     if controller == "baseline_pid":
         return ZeroOffsetAdapter(name="baseline_pid", action_dim=4)
     if controller == "gain_scheduled_pid":
@@ -516,6 +519,7 @@ def _evaluate_worker(args: tuple) -> List[Dict[str, Any]]:
     else:
         ll_type = {
             "enhanced_pid": "enhanced_pid",
+            "robust_pid": "robust_pid",
             "baseline_pid": "baseline_pid",
             "gain_scheduled_pid": "gain_scheduled_pid",
         }[controller]
@@ -726,6 +730,7 @@ def main():
                 else:
                     ll_type = {
                         "enhanced_pid": "enhanced_pid",
+                        "robust_pid": "robust_pid",
                         "baseline_pid": "baseline_pid",
                         "gain_scheduled_pid": "gain_scheduled_pid",
                     }[controller]
@@ -809,6 +814,7 @@ def main():
             else:
                 ll_type = {
                     "enhanced_pid": "enhanced_pid",
+                    "robust_pid": "robust_pid",
                     "baseline_pid": "baseline_pid",
                     "gain_scheduled_pid": "gain_scheduled_pid",
                 }[controller]

@@ -17,6 +17,8 @@ All classes keep the same ``compute_actuator`` interface as the legacy
 
 from __future__ import annotations
 
+import math
+
 from .enhanced_low_level_controller import (
     EnhancedLowLevelController,
     GainScheduledEnhancedController,
@@ -57,6 +59,49 @@ class EnhancedPIDController(EnhancedLowLevelController):
     Full-featured closed-loop controller with rudder coordination, AoA
     protection, stall protection, energy boost, and altitude hold.
     """
+
+
+class RobustPIDController(EnhancedLowLevelController):
+    """
+    Robust fixed-gain PID controller for high-fidelity JSBSim evaluation.
+
+    Combines the enhanced PID feedback loops with stronger protections:
+
+    - rudder / beta suppression for lateral-directional coordination
+    - angle-of-attack and stall protection
+    - speed hold and energy boost
+    - altitude hold with an increased gain
+    - bank-angle protection to suppress spiral-dive instabilities
+
+    This controller is intended for the flight-control comparison when the
+    baseline PID is too stripped-down to fly the F-16 safely, while still
+    remaining a fixed (non-learned) controller.
+    """
+
+    def __init__(self, config=None):
+        config = config or {}
+        defaults = {
+            # Base behaviour mirrors EnhancedPIDController so small-crossing
+            # intercepts keep their authority.
+            "use_pid": True,
+            "use_rudder": True,
+            "use_aoa_protection": True,
+            "use_beta_suppression": True,
+            "enable_speed_hold": True,
+            "enable_stall_protection": True,
+            "enable_dynamic_nz_limit": True,
+            "enable_energy_boost": True,
+            "enable_altitude_hold": True,
+            # Added bank-angle protection: allow transient high bank for lead
+            # turns, but recover if the bank limit is exceeded for a sustained
+            # interval (the signature of a spiral-dive instability).
+            "enable_bank_angle_protection": True,
+            "max_bank_rad": math.radians(55.0),
+            "bank_violation_threshold": 25,
+            "bank_protection_nz_increment": 0.2,
+        }
+        merged = {**defaults, **config}
+        super().__init__(merged)
 
 
 class GainScheduledPIDController(GainScheduledEnhancedController):

@@ -17,6 +17,7 @@ import numpy as np
 import yaml
 
 from uav_vpp_guidance.agents.ppo_agent import PPOAgent
+from uav_vpp_guidance.common.provenance import record_config_override
 from uav_vpp_guidance.envs.scenario_registry import (
     ScenarioRegistry,
     initialize_canonical_scenarios,
@@ -146,19 +147,51 @@ def main():
 
     # Apply seed override
     if args.seed is not None:
+        old_seed = config.get("seed")
         config["seed"] = args.seed
+        record_config_override(
+            config, "seed", args.seed, old_value=old_seed, source="train_bilevel.py:--seed"
+        )
         print(f"[Bilevel] Seed override: {args.seed}")
 
+    # Respect the backend chosen in config; only fill in a safe default.
+    old_backend = config.get("backend")
     config.setdefault("backend", "simple")
+    if config.get("backend") != old_backend:
+        record_config_override(
+            config, "backend", config["backend"], old_value=old_backend, source="train_bilevel.py:default"
+        )
     if "env" not in config:
         config["env"] = {}
-    config["env"].setdefault("backend", "simple")
-    config["env"].setdefault("use_jsbsim", False)
+    old_env_backend = config["env"].get("backend")
+    config["env"].setdefault("backend", config.get("backend", "simple"))
+    if config["env"].get("backend") != old_env_backend:
+        record_config_override(
+            config, "env.backend", config["env"]["backend"], old_value=old_env_backend, source="train_bilevel.py:default"
+        )
+    old_use_jsbsim = config["env"].get("use_jsbsim")
+    config["env"].setdefault("use_jsbsim", config["env"].get("backend") == "jsbsim")
+    if config["env"].get("use_jsbsim") != old_use_jsbsim:
+        record_config_override(
+            config, "env.use_jsbsim", config["env"]["use_jsbsim"], old_value=old_use_jsbsim, source="train_bilevel.py:default"
+        )
+
+    # Gain-only / bilevel optimization assumes a fixed guidance law family;
+    # mode-switch is disabled so the optimized gains map to a single law.
+    old_mode_switch = config.get("guidance", {}).get("mode_switch", {}).get("enabled")
     if "guidance" not in config:
         config["guidance"] = {}
     if "mode_switch" not in config["guidance"]:
         config["guidance"]["mode_switch"] = {}
     config["guidance"]["mode_switch"]["enabled"] = False
+    if old_mode_switch is not False:
+        record_config_override(
+            config,
+            "guidance.mode_switch.enabled",
+            False,
+            old_value=old_mode_switch,
+            source="train_bilevel.py:bilevel_fixed_law",
+        )
 
     # Resolve checkpoint
     checkpoint = args.checkpoint

@@ -17,6 +17,7 @@ import numpy as np
 import yaml
 
 from uav_vpp_guidance.agents.ppo_agent import PPOAgent
+from uav_vpp_guidance.common.provenance import record_config_override
 from uav_vpp_guidance.envs.scenario_registry import (
     ScenarioRegistry,
     initialize_canonical_scenarios,
@@ -145,16 +146,44 @@ def main():
     print(f"[GainOnly] Loading config: {args.config}")
     config = _resolve_config(args.config, allow_missing_includes=args.allow_missing_includes)
 
-    config["backend"] = "simple"
+    # Respect the backend chosen in config; only fill in a safe default.
+    old_backend = config.get("backend")
+    config.setdefault("backend", "simple")
+    if config.get("backend") != old_backend:
+        record_config_override(
+            config, "backend", config["backend"], old_value=old_backend, source="train_gain_only.py:default"
+        )
     if "env" not in config:
         config["env"] = {}
-    config["env"]["backend"] = "simple"
-    config["env"]["use_jsbsim"] = False
+    old_env_backend = config["env"].get("backend")
+    config["env"].setdefault("backend", config.get("backend", "simple"))
+    if config["env"].get("backend") != old_env_backend:
+        record_config_override(
+            config, "env.backend", config["env"]["backend"], old_value=old_env_backend, source="train_gain_only.py:default"
+        )
+    old_use_jsbsim = config["env"].get("use_jsbsim")
+    config["env"].setdefault("use_jsbsim", config["env"].get("backend") == "jsbsim")
+    if config["env"].get("use_jsbsim") != old_use_jsbsim:
+        record_config_override(
+            config, "env.use_jsbsim", config["env"]["use_jsbsim"], old_value=old_use_jsbsim, source="train_gain_only.py:default"
+        )
+
+    # Gain-only optimization assumes a fixed guidance law family;
+    # mode-switch is disabled so the optimized gains map to a single law.
+    old_mode_switch = config.get("guidance", {}).get("mode_switch", {}).get("enabled")
     if "guidance" not in config:
         config["guidance"] = {}
     if "mode_switch" not in config["guidance"]:
         config["guidance"]["mode_switch"] = {}
     config["guidance"]["mode_switch"]["enabled"] = False
+    if old_mode_switch is not False:
+        record_config_override(
+            config,
+            "guidance.mode_switch.enabled",
+            False,
+            old_value=old_mode_switch,
+            source="train_gain_only.py:gain_only_fixed_law",
+        )
 
     checkpoint = args.checkpoint
     if checkpoint is None:

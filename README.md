@@ -102,10 +102,17 @@ experiments/                ← Git-ignored: weights, checkpoints, results
 pip install -e ".[dev]"
 ```
 
-**Reproducible install** (exact versions used for paper experiments):
+**Reproducible install** (exact runtime versions used for paper experiments):
 ```bash
 pip install -r requirements-lock.txt
 ```
+
+**Development install** (exact versions including pytest/black/ruff):
+```bash
+pip install -r requirements-dev-lock.txt
+```
+
+> `requirements-lock.txt` is generated from `pyproject.toml` with `uv pip compile` and contains only portable PyPI packages (no Windows/Conda `file://` paths). The previous platform-specific lock file was replaced.
 
 ### 5.2 Dry-run the Stage 6G probe (no simulation)
 
@@ -122,6 +129,8 @@ python scripts/run_stage6g_guidance_limitation_probe.py --smoke --output-dir out
 ```
 
 **Expected output**: All 12 probe cells (3 guidance × 4 scenarios) run 1 episode each, producing `raw_episodes.csv`, `scenario_method_summary.csv`, `pairwise_mcnemar.csv`, `paper_safe_claims.md`, `README_result_block.md`.
+
+If the required checkpoints are not available, add `--allow-random-policy` to run a true smoke test with random policies (results will be marked invalid for paper claims).
 
 **Time**: ~4–5 minutes.
 
@@ -225,6 +234,45 @@ python scripts/run_paper_benchmark.py \
 python -m pytest tests/ -v
 ```
 
+### 5.16 Portable artifact pipeline (Stage 6G/6H)
+
+Run Stage 6G/6H through the portable pipeline to produce a unified manifest,
+artifact contract, and verifiable bundle:
+
+```bash
+# Stage 6G smoke run with portable manifest/bundle
+python scripts/run_stage6g6h_pipeline.py \
+  --stage stage6g --smoke \
+  --output-root outputs/pipeline/stage6g_smoke
+
+# Stage 6H gain-only CEM with portable manifest/bundle
+python scripts/run_stage6g6h_pipeline.py \
+  --stage stage6h_gain_only \
+  --config config/experiment/gain_only_cem.yaml \
+  --checkpoint outputs/experiments/no_prediction_vpp_ppo_seed0/checkpoints/best.pt \
+  --output-root outputs/pipeline/stage6h_gain_only
+
+# Run all three stages end-to-end
+python scripts/run_stage6g6h_pipeline.py \
+  --stage all \
+  --config config/experiment/proposed_bilevel.yaml \
+  --checkpoint outputs/experiments/no_prediction_vpp_ppo_seed0/checkpoints/best.pt \
+  --output-root outputs/pipeline/stage6g6h
+```
+
+Each stage writes `run_manifest.json`, `artifact_contract.json`, and
+`resolved_config.yaml`. The orchestrator creates `bundles/<stage>/` containing
+copied artifacts with SHA-256 hashes. Verify a bundle on any machine:
+
+```bash
+python scripts/verify_artifact_bundle.py \
+  --bundle outputs/pipeline/stage6g6h/bundles/stage6g \
+  --output verification_report.json
+```
+
+**Pipeline design**: see `AGENTS.md` section 5 and
+`src/uav_vpp_guidance/pipeline/`.
+
 ---
 
 ## 6. Stage 6G Guidance-Law Limitation Probe
@@ -282,6 +330,35 @@ After a full run, copy `README_result_block.md` into Section 6 of this README, r
 
 ---
 
+> **Observation schema**: The policy observation is controlled by the `observation` config block. By default it contains relative geometry + speed/altitude (16 dims). You can opt-in to additional features for new ablations:
+> ```yaml
+> observation:
+>   include_gains: true          # append current guidance gains (+2 dims)
+>   include_guidance_state: true # append VP tracking error (+3 dims)
+>   include_saturation: true     # append per-channel command saturation flags (+3 dims)
+> ```
+> Existing checkpoints were trained without these features, so keep them `false` when loading legacy models. When `trajectory_prediction.enabled=true`, prediction-aware features (+14 dims) are appended automatically.
+>
+> **Backend selection**: Training scripts (`train_bilevel`, `train_gain_only`, `run_gain_only_cem`) respect the `backend` / `use_jsbsim` fields in config. No CLI flag overrides the backend; set `backend: jsbsim` or `env.use_jsbsim: true` in the experiment YAML to use JSBSim.
+>
+> **Provenance contract**: Every `reset()` and `step()` returns a `provenance` dict so ablations stay traceable:
+> ```python
+> {
+>   "backend": "simple" | "jsbsim",
+>   "backend_fallback_occurred": bool,
+>   "backend_fallback_reason": str | None,
+>   "observation_schema": {
+>       "include_gains": bool, "include_guidance_state": bool,
+>       "include_saturation": bool, "include_prediction_features": bool,
+>       "dim": int, "feature_names": [str, ...]
+>   },
+>   "config_overrides": [
+>       {"source": "script_or_CLI", "key": "...", "new_value": ..., "old_value": ...}
+>   ]
+> }
+> ```
+> Scripts that mutate config programmatically (e.g. disabling `mode_switch` for gain-only training) record the override via `uav_vpp_guidance.common.provenance.record_config_override` so it appears in `provenance["config_overrides"]`.
+>
 > **Current research status**: Stage 9B (simple backend benchmark) and Stage 10 (JSBSim validation) are complete. Stage 10 revealed a geometry-dependent partial transfer: head-on scenarios achieve 100% on JSBSim F-16, while crossing scenarios fail due to F-16 turn-rate/energy limits. The earlier 0% JSBSim claim was caused by a scenario-position initialization bug, now fixed in commit `c8809ca`.
 
 ## 7. Final Bilevel Roadmap

@@ -90,26 +90,44 @@ def compute_relative_geometry(own_state, target_state):
     }
 
 
-def build_observation(own_state, target_state, guidance_state=None, gains=None):
+def build_observation(
+    own_state,
+    target_state,
+    guidance_state=None,
+    gains=None,
+    prediction_features=None,
+    saturation_features=None,
+    return_feature_names=False,
+):
     """
     Build policy observation.
 
-    The new method should include:
-    - relative geometry
-    - own/target speed and altitude
-    - LOS angular rate
-    - virtual point tracking error
-    - current guidance gains
-    - saturation indicators if available
+    Observation schema (default + opt-in extensions):
+
+    Base (always present, 16 dims):
+      - relative geometry: range, range_rate, alt_diff, speed_diff
+      - LOS angles: azimuth/elevation sin/cos
+      - aspect geometry: ATA/AA sin/cos
+      - own/target speed and altitude
+
+    Optional extensions (controlled by caller / config):
+      - gains (+2): k_los, k_pos
+      - guidance_state (+3): VP tracking error [x, y, z]
+      - prediction_features (+14): prediction-aware relative/displacement/velocity/variance/valid/fallback
+      - saturation_features (+3): per-channel command saturation flags [nz, roll_rate, throttle]
 
     Args:
         own_state (dict): Own aircraft state.
         target_state (dict): Target aircraft state.
-        guidance_state (dict, optional): Guidance internal state.
+        guidance_state (dict, optional): Guidance internal state (e.g. VP tracking error).
         gains (GuidanceGains, optional): Current guidance gains.
+        prediction_features (dict, optional): Normalized prediction-aware features.
+        saturation_features (dict, optional): Per-channel command saturation indicators.
+        return_feature_names (bool): If True, also return the ordered list of feature names.
 
     Returns:
         np.ndarray: Flattened observation vector.
+        If return_feature_names is True, returns (obs_vec, feature_names).
     """
     rel = compute_relative_geometry(own_state, target_state)
 
@@ -146,11 +164,8 @@ def build_observation(own_state, target_state, guidance_state=None, gains=None):
 
     # 可选：guidance gains
     if gains is not None:
-        try:
-            obs_dict["gain_k_los"] = getattr(gains, "k_los", 1.0)
-            obs_dict["gain_k_pos"] = getattr(gains, "k_pos", 0.5)
-        except Exception:
-            pass
+        obs_dict["gain_k_los"] = float(getattr(gains, "k_los", 1.0))
+        obs_dict["gain_k_pos"] = float(getattr(gains, "k_pos", 0.5))
 
     # 可选：guidance state（虚拟点跟踪误差等）
     if guidance_state is not None:
@@ -159,8 +174,34 @@ def build_observation(own_state, target_state, guidance_state=None, gains=None):
         obs_dict["vp_error_y"] = vp_error[1] / ref_range
         obs_dict["vp_error_z"] = vp_error[2] / ref_alt
 
+    if prediction_features is not None:
+        for key in (
+            "pred_rel_x",
+            "pred_rel_y",
+            "pred_rel_z",
+            "pred_disp_x",
+            "pred_disp_y",
+            "pred_disp_z",
+            "pred_vel_x",
+            "pred_vel_y",
+            "pred_vel_z",
+            "pred_var_x",
+            "pred_var_y",
+            "pred_var_z",
+            "pred_valid",
+            "pred_fallback",
+        ):
+            obs_dict[key] = float(prediction_features.get(key, 0.0))
+
+    # 可选：指令饱和指示器
+    if saturation_features is not None:
+        for key in ("nz_saturated", "roll_rate_saturated", "throttle_saturated"):
+            obs_dict[key] = float(saturation_features.get(key, 0.0))
+
     # 展平为向量
     obs_vec = np.array(list(obs_dict.values()), dtype=np.float32)
+    if return_feature_names:
+        return obs_vec, list(obs_dict.keys())
     return obs_vec
 
 

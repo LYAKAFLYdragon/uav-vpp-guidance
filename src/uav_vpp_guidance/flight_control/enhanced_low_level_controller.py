@@ -110,6 +110,26 @@ class EnhancedLowLevelController:
         self.altitude_reference_m = self.config.get("altitude_reference_m", 5000.0)
         self.altitude_hold_gain = self.config.get("altitude_hold_gain", 0.002)
 
+        # Optional bank-angle protection to prevent spiral-dive crashes when
+        # guidance commands sustained high roll-rate (e.g. LOS-rate tail-chase).
+        self.enable_bank_angle_protection = self.config.get(
+            "enable_bank_angle_protection", False
+        )
+        self.max_bank_rad = self.config.get("max_bank_rad", math.radians(55.0))
+        self.bank_protection_nz_increment = self.config.get(
+            "bank_protection_nz_increment", 0.5
+        )
+        self.bank_taper_start_rad = self.config.get(
+            "bank_taper_start_rad", math.radians(5.0)
+        )
+        # Sustained-bank detection: allow transient high bank for lead turns,
+        # but recover if the limit is exceeded for many consecutive steps
+        # (the signature of a spiral-dive instability).
+        self.bank_violation_threshold = self.config.get(
+            "bank_violation_threshold", 25
+        )
+        self._bank_violation_steps = 0
+
         # Actuator interface (we use our own mapping, but keep interface compatible)
         actuator_cfg = self.config.get("actuator", {})
         # Override with our gains
@@ -210,6 +230,7 @@ class EnhancedLowLevelController:
         self._roll_integral = 0.0
         self._roll_prev_error = 0.0
         self._throttle_integral = 0.0
+        self._bank_violation_steps = 0
         self.command_history.clear()
 
     def compute_actuator(
@@ -292,6 +313,35 @@ class EnhancedLowLevelController:
             nz_filt += self.altitude_hold_gain * alt_error
             nz_filt = float(np.clip(nz_filt, self.nz_min, self.nz_max))
 
+        # --- Bank-angle protection ---
+        # Prevent the spiral-dive / overbank instability that fixed PID can
+        # excite when guidance requests sustained roll rate (e.g. LOS-rate
+        # tail-chase).  We allow transient high bank for lead turns, but
+        # recover if the bank limit is exceeded for many consecutive steps
+        # (sustained spiral) or if the aircraft blows far past the limit.
+        if self.enable_bank_angle_protection:
+            abs_roll = abs(roll)
+            if abs_roll > self.max_bank_rad:
+                self._bank_violation_steps += 1
+                overbank = abs_roll - self.max_bank_rad
+                # Trigger recovery if we are far past the limit OR if the
+                # limit has been breached for a sustained interval.
+                sustained = (
+                    self._bank_violation_steps > self.bank_violation_threshold
+                )
+                immediate = overbank > math.radians(10.0)
+                if sustained or immediate:
+                    recovery_rate = -math.copysign(
+                        min(overbank * 5.0, abs(self.roll_rate_max)), roll
+                    )
+                    roll_rate_filt = float(recovery_rate)
+                    nz_filt += self.bank_protection_nz_increment * (
+                        overbank / math.radians(20.0)
+                    )
+                    nz_filt = float(np.clip(nz_filt, self.nz_min, self.nz_max))
+            else:
+                self._bank_violation_steps = 0
+
         # --- APIC-style per-gain adaptation overrides aggressiveness ---
         if pid_gain_deltas is not None:
             (
@@ -367,6 +417,24 @@ class EnhancedLowLevelController:
         aileron_ff = roll_rate_filt * self.roll_rate_gain
         aileron = aileron_ff + aileron_pid
         aileron = np.clip(aileron, -self.aileron_max, self.aileron_max)
+
+        # Hard roll-recovery override only for sustained or extreme overbank.
+        if self.enable_bank_angle_protection and abs(roll) > self.max_bank_rad:
+            overbank = abs(roll) - self.max_bank_rad
+            sustained = (
+                self._bank_violation_steps > self.bank_violation_threshold
+            )
+            immediate = overbank > math.radians(10.0)
+            if sustained or immediate:
+                recovery_threshold = math.radians(5.0)
+                if overbank > recovery_threshold:
+                    override_mag = self.aileron_max
+                else:
+                    override_mag = self.aileron_max * (overbank / recovery_threshold)
+                aileron = -math.copysign(override_mag, roll)
+                # Dump roll integrator so the PID does not fight the recovery.
+                self._roll_integral = 0.0
+                self._roll_prev_error = 0.0
 
         # --- Rudder: coordinated turn + sideslip suppression ---
         if self.use_rudder:

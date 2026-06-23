@@ -69,9 +69,9 @@ DEFAULT_ANGLES = [0.0, 30.0, 45.0, 60.0, 75.0, 90.0]
 
 def _build_crossing_scenario(
     crossing_angle_deg: float,
-    initial_range_m: float = 8000.0,
-    ego_speed_mps: float = 340.0,
-    target_speed_mps: float = 240.0,
+    initial_range_m: float = 1000.0,
+    ego_speed_mps: float = 280.0,
+    target_speed_mps: float = 180.0,
     base_altitude_m: float = 5000.0,
 ) -> Dict[str, Any]:
     """
@@ -80,6 +80,11 @@ def _build_crossing_scenario(
     crossing_angle_deg is the target heading relative to the ego heading:
       0 deg  -> tail chase (target ahead, same direction)
       90 deg -> broadside crossing (target ahead, moving perpendicular)
+
+    Defaults are chosen to keep the F-16 near its training distribution
+    (Mach ~0.9 ego, ~0.6 target, 1 km initial separation) so the threshold
+    curve reflects the controllers' geometric capability boundary rather than
+    an out-of-distribution flight condition.
     """
     theta = math.radians(crossing_angle_deg)
     own_init = {
@@ -153,6 +158,7 @@ def _run_single_condition(
     else:
         ll_type = {
             "enhanced_pid": "enhanced_pid",
+            "robust_pid": "robust_pid",
             "baseline_pid": "baseline_pid",
             "gain_scheduled_pid": "gain_scheduled_pid",
         }[controller]
@@ -537,6 +543,7 @@ def main():
                     else:
                         ll_type = {
                             "enhanced_pid": "enhanced_pid",
+                            "robust_pid": "robust_pid",
                             "baseline_pid": "baseline_pid",
                             "gain_scheduled_pid": "gain_scheduled_pid",
                         }[controller]

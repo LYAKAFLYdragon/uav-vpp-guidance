@@ -20,6 +20,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
+from mpl_toolkits.mplot3d import Axes3D  # noqa: F401
 
 
 CONTROLLER_COLORS = {
@@ -42,6 +43,28 @@ CONTROLLER_LABELS = {
 MAX_RANGE_M = 50_000.0
 MAX_TURN_RADIUS_M = 50_000.0
 MAX_NZ_G = 20.0
+
+
+def _set_3d_spatial_aspect(ax):
+    """Keep x and y on a common scale; let z auto-scale so altitude detail is visible."""
+    xlim = ax.get_xlim3d()
+    ylim = ax.get_ylim3d()
+    zlim = ax.get_zlim3d()
+
+    # Equalize x/y only (typical flight trajectory is mostly horizontal).
+    xy_range = max(xlim[1] - xlim[0], ylim[1] - ylim[0]) / 2.0
+    x_center = (xlim[0] + xlim[1]) / 2.0
+    y_center = (ylim[0] + ylim[1]) / 2.0
+    ax.set_xlim3d([x_center - xy_range, x_center + xy_range])
+    ax.set_ylim3d([y_center - xy_range, y_center + xy_range])
+
+    # Keep z on its own scale with modest padding so vertical structure is visible.
+    z_range = zlim[1] - zlim[0]
+    if z_range <= 0:
+        z_range = 1.0
+    z_center = (zlim[0] + zlim[1]) / 2.0
+    pad = 0.05 * z_range
+    ax.set_zlim3d([z_center - z_range / 2.0 - pad, z_center + z_range / 2.0 + pad])
 
 
 def _find_representative_episode(run_dir: Path, task: str, controller: str, seed: int = 0, episode: int = 0) -> Optional[Path]:
@@ -82,7 +105,7 @@ def _plot_fig6(run_dir: Path, controllers: list, out_png: Path) -> None:
         return
 
     fig = plt.figure(figsize=(16, 10))
-    ax1 = fig.add_subplot(2, 2, 1)
+    ax1 = fig.add_subplot(2, 2, 1, projection="3d")
     ax2 = fig.add_subplot(2, 2, 2)
     ax3 = fig.add_subplot(2, 1, 2)
 
@@ -98,10 +121,11 @@ def _plot_fig6(run_dir: Path, controllers: list, out_png: Path) -> None:
 
         xs = [r["own_pos_m"][0] for r in traj if r.get("own_pos_m")]
         ys = [r["own_pos_m"][1] for r in traj if r.get("own_pos_m")]
+        zs = [r["own_pos_m"][2] if len(r["own_pos_m"]) > 2 else 0.0 for r in traj if r.get("own_pos_m")]
         ts = [r["time_s"] for r in traj]
         rng = _sanitize_range([r["range_m"] for r in traj])
 
-        ax1.plot(xs, ys, label=label, color=color, linewidth=1.5)
+        ax1.plot(xs, ys, zs, label=label, color=color, linewidth=1.5)
         ax2.plot(ts, rng, label=label, color=color, linewidth=1.5)
 
         # Segment-normalized error curves
@@ -135,15 +159,16 @@ def _plot_fig6(run_dir: Path, controllers: list, out_png: Path) -> None:
     if first_waypoints:
         for i, wp in enumerate(first_waypoints):
             pos = wp.get("pos", [0.0, 0.0, 0.0])
-            ax1.scatter([pos[0]], [pos[1]], marker="x", s=80, color="red", zorder=5)
-            ax1.text(pos[0], pos[1], f" W{i}", fontsize=9, color="red")
+            ax1.scatter([pos[0]], [pos[1]], [pos[2] if len(pos) > 2 else 0.0], marker="x", s=80, color="red", zorder=5)
+            ax1.text(pos[0], pos[1], pos[2] if len(pos) > 2 else 0.0, f" W{i}", fontsize=9, color="red")
 
-    ax1.set_title("Figure 6A: Top-view Trajectory")
+    ax1.set_title("Figure 6A: 3D Spatial Trajectory")
     ax1.set_xlabel("x / m")
     ax1.set_ylabel("y / m")
+    ax1.set_zlabel("z / m")
     ax1.legend(loc="best")
     ax1.grid(True, alpha=0.3)
-    ax1.set_aspect("equal", adjustable="datalim")
+    _set_3d_spatial_aspect(ax1)
 
     ax2.set_title("Figure 6B: Active Target Range vs Time")
     ax2.set_xlabel("time / s")
@@ -177,23 +202,23 @@ def _plot_fig7(run_dir: Path, controllers: list, out_png: Path) -> None:
         return
 
     fig = plt.figure(figsize=(16, 12))
-    ax1 = fig.add_subplot(2, 2, 1)
+    ax1 = fig.add_subplot(2, 2, 1, projection="3d")
     ax2 = fig.add_subplot(2, 2, 2)
     ax3 = fig.add_subplot(2, 2, 3)
     ax4 = fig.add_subplot(2, 2, 4)
 
     # Try to read target position from the first trajectory point or task config
-    target_pos = [2000.0, 0.0]
+    target_pos = [2000.0, 0.0, 0.0]
     first_json_path = next(iter(episodes.values()), None)
     if first_json_path is not None:
         first_obj = _load_episode(first_json_path)
         first_traj = first_obj.get("trajectory", [])
         if first_traj and first_traj[0].get("target_pos_m"):
-            target_pos = first_traj[0]["target_pos_m"][:2]
+            target_pos = first_traj[0]["target_pos_m"]
         elif first_obj.get("waypoints"):
             # Multi-waypoint fallback: use first waypoint as target
             wp_pos = first_obj["waypoints"][0].get("pos", [0.0, 0.0, 0.0])
-            target_pos = wp_pos[:2] if len(wp_pos) >= 2 else [0.0, 0.0]
+            target_pos = wp_pos if len(wp_pos) >= 3 else [wp_pos[0], wp_pos[1], 0.0]
     ppo_pid_plotted = False
 
     for controller, json_path in episodes.items():
@@ -206,11 +231,12 @@ def _plot_fig7(run_dir: Path, controllers: list, out_png: Path) -> None:
 
         xs = [r["own_pos_m"][0] for r in traj if r.get("own_pos_m")]
         ys = [r["own_pos_m"][1] for r in traj if r.get("own_pos_m")]
+        zs = [r["own_pos_m"][2] if len(r["own_pos_m"]) > 2 else 0.0 for r in traj if r.get("own_pos_m")]
         ts = [r["time_s"] for r in traj]
         nz = _sanitize_range([r.get("nz_g", np.nan) for r in traj], cap_m=MAX_NZ_G)
         radius = _sanitize_range([r.get("turn_radius_m", np.nan) for r in traj], cap_m=MAX_TURN_RADIUS_M)
 
-        ax1.plot(xs, ys, label=label, color=color, linewidth=1.5)
+        ax1.plot(xs, ys, zs, label=label, color=color, linewidth=1.5)
         ax2.plot(ts, nz, label=label, color=color, linewidth=1.5)
         ax3.plot(ts, radius, label=label, color=color, linewidth=1.5)
 
@@ -229,15 +255,16 @@ def _plot_fig7(run_dir: Path, controllers: list, out_png: Path) -> None:
 
         # Try to read target position from the first trajectory point
         if traj and traj[0].get("target_pos_m"):
-            target_pos = traj[0]["target_pos_m"][:2]
+            target_pos = traj[0]["target_pos_m"]
 
-    ax1.scatter([target_pos[0]], [target_pos[1]], marker="*", s=150, color="red", zorder=5)
-    ax1.set_title("Figure 7A: Sustained Turn Trajectory (Top-view)")
+    ax1.scatter([target_pos[0]], [target_pos[1]], [target_pos[2] if len(target_pos) > 2 else 0.0], marker="*", s=150, color="red", zorder=5)
+    ax1.set_title("Figure 7A: Sustained Turn 3D Spatial Trajectory")
     ax1.set_xlabel("x / m")
     ax1.set_ylabel("y / m")
+    ax1.set_zlabel("z / m")
     ax1.legend(loc="best")
     ax1.grid(True, alpha=0.3)
-    ax1.set_aspect("equal", adjustable="datalim")
+    _set_3d_spatial_aspect(ax1)
 
     ax2.set_title("Figure 7B: NZ Overload vs Time")
     ax2.set_xlabel("time / s")

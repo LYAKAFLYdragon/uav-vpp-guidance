@@ -135,6 +135,8 @@ def _multi_waypoint_trajectory(
         vy = (dy / dist) * speed_base + rng.gauss(0.0, 15.0)
         x += vx * dt
         y += vy * dt
+        # Mild altitude variation to make 3D plots interesting.
+        z = 5000.0 + 80.0 * math.sin(0.05 * t) + rng.gauss(0.0, 5.0)
         t += dt
 
         speed = math.hypot(vx, vy)
@@ -143,7 +145,7 @@ def _multi_waypoint_trajectory(
         trajectory.append(
             {
                 "time_s": round(t, 3),
-                "own_pos_m": [round(x, 2), round(y, 2), 5000.0],
+                "own_pos_m": [round(x, 2), round(y, 2), round(z, 2)],
                 "target_pos_m": [target[0], target[1], 5000.0],
                 "range_m": max(0.0, range_m),
                 "speed_mps": round(speed, 2),
@@ -189,6 +191,8 @@ def _sustained_turn_trajectory(
         theta += omega * dt
         x = target_pos[0] + radius * math.cos(theta)
         y = target_pos[1] + radius * math.sin(theta)
+        # Helical altitude variation for a nicer 3D trajectory.
+        z = 5000.0 + 120.0 * math.sin(2.0 * theta) + rng.gauss(0.0, 5.0)
         t += dt
         heading = (math.degrees(theta) + 90.0) % 360.0
 
@@ -198,7 +202,7 @@ def _sustained_turn_trajectory(
         trajectory.append(
             {
                 "time_s": round(t, 3),
-                "own_pos_m": [round(x, 2), round(y, 2), 5000.0],
+                "own_pos_m": [round(x, 2), round(y, 2), round(z, 2)],
                 "target_pos_m": target_pos,
                 "range_m": abs(radius),
                 "speed_mps": round(speed, 2),

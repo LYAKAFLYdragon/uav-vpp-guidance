@@ -4,7 +4,7 @@ Tracks config overrides and runtime choices so that ablation results can be
 traced back to the exact settings that produced them.
 """
 
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 
 PROVENANCE_KEY = "provenance"
@@ -54,6 +54,25 @@ def record_config_override(
 def get_config_overrides(config: Dict[str, Any]) -> List[Dict[str, Any]]:
     """Return recorded config overrides, or an empty list."""
     return config.get(PROVENANCE_KEY, {}).get(OVERRIDES_KEY, [])
+
+
+def record_config_override_if_changed(
+    config: Dict[str, Any],
+    key: str,
+    new_value: Any,
+    old_value: Any = None,
+    source: str = "script",
+) -> Optional[Dict[str, Any]]:
+    """Record a config override only when the effective value changed."""
+    if old_value == new_value:
+        return None
+    return record_config_override(
+        config,
+        key=key,
+        new_value=new_value,
+        old_value=old_value,
+        source=source,
+    )
 
 
 def _serialize(value: Any) -> Any:

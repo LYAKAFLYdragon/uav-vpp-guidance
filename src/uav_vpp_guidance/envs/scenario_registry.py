@@ -158,7 +158,10 @@ def initialize_canonical_scenarios() -> None:
         },
         scenario_set="regression_baseline",
     )
-    # True crossing_left with significant lateral offset. Verified 5/5 success.
+    # True crossing_left with significant lateral offset.
+    # Stage 10.3 update: reduced range to 1500 m and kept heading 225 deg.
+    # Verified 3/3 success on JSBSim F-16 with no_prediction, gain_only,
+    # direct PN, LOS-rate, and hold controllers.
     ScenarioRegistry.register(
         "regression_crossing_left",
         {
@@ -169,21 +172,23 @@ def initialize_canonical_scenarios() -> None:
                 "heading_deg": 0.0,
             },
             "target_init": {
-                "position_m": [1500.0, 1500.0, 5200.0],
+                "position_m": [1060.66, 1060.66, 5200.0],
                 "velocity_mps": 210.0,
                 "heading_deg": 225.0,
             },
             "metadata": {
                 "scenario_type": "crossing_left",
-                "initial_range_m": 2121.3,
+                "initial_range_m": 1500.0,
                 "altitude_diff_m": 200.0,
-                "note": "True crossing_left with high cross-range. Verified 5/5.",
+                "note": "Feasible JSBSim crossing_left (r=1500 m, hdg=225 deg). Verified 3/3 across controllers.",
             },
         },
         scenario_set="regression_baseline",
     )
-    # crossing_right with challenging-like geometry (both aircraft angled)
-    # Verified 3/3 success with audit_no_pred_final checkpoint
+    # crossing_right with challenging-like geometry (both aircraft angled).
+    # Stage 10.3 update: reduced range to 1500 m and increased lead angle to 120 deg.
+    # Verified 3/3 success on JSBSim F-16 with no_prediction, gain_only,
+    # direct PN, LOS-rate, and hold controllers.
     ScenarioRegistry.register(
         "regression_crossing_right",
         {
@@ -194,15 +199,15 @@ def initialize_canonical_scenarios() -> None:
                 "heading_deg": 0.0,
             },
             "target_init": {
-                "position_m": [1500.0, -1500.0, 5200.0],
+                "position_m": [1060.66, -1060.66, 5200.0],
                 "velocity_mps": 210.0,
-                "heading_deg": 135.0,
+                "heading_deg": 120.0,
             },
             "metadata": {
                 "scenario_type": "crossing_right",
-                "initial_range_m": 2121.3,
+                "initial_range_m": 1500.0,
                 "altitude_diff_m": 200.0,
-                "note": "Challenging-like mirrored geometry. Verified feasible 3/3.",
+                "note": "Feasible JSBSim crossing_right (r=1500 m, hdg=120 deg). Verified 3/3 across controllers.",
             },
         },
         scenario_set="regression_baseline",

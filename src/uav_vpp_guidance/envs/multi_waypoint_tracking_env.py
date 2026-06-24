@@ -23,8 +23,12 @@ class MultiWaypointTrackingEnv(CloseRangeTrackingEnv):
     switching logic in `_task_post_step`.
     """
 
-    def __init__(self, config: dict):
-        super().__init__(config)
+    def __init__(self, config: dict, opponent_policy=None, opponent_config=None):
+        super().__init__(
+            config,
+            opponent_policy=opponent_policy,
+            opponent_config=opponent_config,
+        )
         self.task_cfg = config.get("task", {}).get("multi_waypoint", {})
         self.rng = None
         self.waypoints = []
@@ -105,14 +109,25 @@ class MultiWaypointTrackingEnv(CloseRangeTrackingEnv):
             self.segment_elapsed_s = 0.0
 
             if self.active_idx >= len(self.waypoints):
-                # All waypoints completed -> real task success.
-                terminated = True
-                truncated = False
-                info["task_success"] = True
+                # Reached the end of the waypoint chain.
+                if self.completed_waypoints >= len(self.waypoints):
+                    # All waypoints actually reached -> real task success.
+                    terminated = True
+                    truncated = False
+                    info["task_success"] = True
+                    info["termination_reason"] = "all_waypoints_completed"
+                    info["reason"] = "all_waypoints_completed"
+                    info["is_success"] = True
+                else:
+                    # Waypoint chain exhausted but not all were actually reached
+                    # (e.g. every segment timed out). Treat as incomplete/timeout.
+                    terminated = False
+                    truncated = True
+                    info["task_success"] = False
+                    info["termination_reason"] = "waypoints_incomplete"
+                    info["reason"] = "waypoints_incomplete"
+                    info["is_success"] = False
                 info["completed_waypoints"] = self.completed_waypoints
-                info["termination_reason"] = "all_waypoints_completed"
-                info["reason"] = "all_waypoints_completed"
-                info["is_success"] = True
                 info["switch_events"] = copy.deepcopy(self.switch_events)
                 info["waypoints"] = [self._serialize_waypoint(wp) for wp in self.waypoints]
                 return reward, terminated, truncated, info

@@ -198,8 +198,18 @@ def build_observation(
         for key in ("nz_saturated", "roll_rate_saturated", "throttle_saturated"):
             obs_dict[key] = float(saturation_features.get(key, 0.0))
 
-    # 展平为向量
-    obs_vec = np.array(list(obs_dict.values()), dtype=np.float32)
+    # 展平为向量，并对极端值 / NaN / Inf 做保护，避免 float32 溢出或策略输入异常
+    safe_values = []
+    for v in obs_dict.values():
+        if v is None:
+            v = 0.0
+        v = float(v)
+        if not np.isfinite(v):
+            v = 0.0
+        # 限制在 float32 安全范围内，保留足够动态范围
+        v = float(np.clip(v, -1e6, 1e6))
+        safe_values.append(v)
+    obs_vec = np.array(safe_values, dtype=np.float32)
     if return_feature_names:
         return obs_vec, list(obs_dict.keys())
     return obs_vec

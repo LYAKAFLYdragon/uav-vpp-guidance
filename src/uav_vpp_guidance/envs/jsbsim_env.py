@@ -450,6 +450,22 @@ class JSBSimEnv:
             ac.reload(init_state)
         return self.get_state()
 
+    def reload_aircraft(self, uid: str, init_state: Optional[Dict[str, float]] = None):
+        """
+        Reload a single managed aircraft without affecting the others.
+
+        This is useful for task environments that need to hold the target
+        aircraft at a fixed state while the own aircraft continues to fly.
+
+        Args:
+            uid (str): Aircraft identifier.
+            init_state (dict, optional): JSBSim initial-condition properties.
+        """
+        ac = self._aircraft.get(uid)
+        if ac is None:
+            raise KeyError(f"Aircraft '{uid}' not found in JSBSimEnv.")
+        ac.reload(init_state or {})
+
     def step(self, control_inputs: Optional[Dict[str, Dict[str, float]]] = None) -> Dict[str, dict]:
         """
         Execute one simulation step for all aircraft.

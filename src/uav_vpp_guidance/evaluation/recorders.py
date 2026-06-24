@@ -15,6 +15,7 @@ from typing import Any, Dict, List, Optional
 import numpy as np
 
 from .flight_control_metrics import (
+    compute_break_turn_metrics,
     compute_multi_waypoint_metrics,
     compute_sustained_turn_metrics,
 )
@@ -122,6 +123,8 @@ class EpisodeRecorder:
             return compute_multi_waypoint_metrics(self.trajectory)
         if self.task == "sustained_turn":
             return compute_sustained_turn_metrics(self.trajectory)
+        if self.task == "break_turn":
+            return compute_break_turn_metrics(self.trajectory)
         return {}
 
     def finalize(

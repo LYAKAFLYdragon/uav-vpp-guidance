@@ -32,6 +32,7 @@ import numpy as np
 from typing import Tuple, Optional
 
 from .target_dynamics import create_target_dynamics
+from .wind_model import DrydenWindModel
 
 
 class SimplePointMassEnv:
@@ -62,6 +63,13 @@ class SimplePointMassEnv:
         # 目标机运动模式
         self._target_mode = config.get("target_mode", "constant_velocity")
         self._target_dynamics = create_target_dynamics(config)
+
+        # 可选风扰动模型（Dryden 湍流）
+        wind_cfg = config.get("wind", {})
+        if wind_cfg.get("enabled", False) and wind_cfg.get("model", "dryden").lower() == "dryden":
+            self._wind_model = DrydenWindModel(wind_cfg)
+        else:
+            self._wind_model = None
 
         # 内部状态
         self.own_state: Optional[dict] = None
@@ -101,6 +109,9 @@ class SimplePointMassEnv:
             }
         self.own_state = self._build_state(own_init)
         self._ensure_derived_fields(self.own_state)
+
+        if self._wind_model is not None:
+            self._wind_model.reset(seed)
 
         # 默认目标初始状态
         if target_init is None:
@@ -205,9 +216,16 @@ class SimplePointMassEnv:
         s["velocity_vector_mps"] = np.array([vx, vy, vz], dtype=np.float64)
         s["speed_mps"] = speed
 
-        # 6. 更新位置
+        # 6. 风扰动（影响地速，不影响空速与姿态动力学）
+        if self._wind_model is not None:
+            wind_neu = self._wind_model.update(speed, dt)
+        else:
+            wind_neu = np.zeros(3, dtype=np.float64)
+
+        # 7. 更新位置（使用地速 = 空速 + 风）
         pos = s.get("position_m", np.zeros(3))
-        pos += s["velocity_vector_mps"] * dt
+        ground_velocity = s["velocity_vector_mps"] + wind_neu
+        pos += ground_velocity * dt
         s["position_m"] = pos
         s["altitude_m"] = float(pos[2])
 

@@ -31,6 +31,8 @@ from typing import Dict, Any, Optional
 
 import numpy as np
 
+from uav_vpp_guidance.flight_control.command_limiter import effective_throttle_limits
+
 logger = logging.getLogger(__name__)
 
 # Global safe epsilon for all divisions and norm checks.
@@ -100,8 +102,7 @@ class LOSRateGuidance:
         self.nz_max = float(limits.get("nz_max", 7.0))
         self.roll_rate_min = float(limits.get("roll_rate_min", -1.5))
         self.roll_rate_max = float(limits.get("roll_rate_max", 1.5))
-        self.throttle_min = float(limits.get("throttle_min", 0.0))
-        self.throttle_max = float(limits.get("throttle_max", 1.0))
+        self.throttle_min, self.throttle_max = effective_throttle_limits(limits)
 
         # Sanity checks
         if self.distance_scale_m <= 0.0:

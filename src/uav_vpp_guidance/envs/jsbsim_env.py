@@ -256,6 +256,87 @@ class _JSBSimAircraft:
         for k, v in defaults.items():
             self.jsbsim_exec.set_property_value(k, v)
 
+    def _previous_finite_value(self, key: str, default: Any):
+        previous = self._state.get(key) if isinstance(self._state, dict) else None
+        if isinstance(default, np.ndarray):
+            if previous is not None:
+                arr = np.asarray(previous, dtype=np.float64)
+                if arr.shape == default.shape and np.isfinite(arr).all():
+                    return arr.copy(), "previous"
+            return default.copy(), "default"
+
+        try:
+            prev_float = float(previous)
+        except (TypeError, ValueError):
+            prev_float = None
+        if prev_float is not None and np.isfinite(prev_float):
+            return prev_float, "previous"
+        return float(default), "default"
+
+    def _sanitize_state_value(self, key: str, value: Any, default: Any):
+        if isinstance(default, np.ndarray):
+            try:
+                arr = np.asarray(value, dtype=np.float64)
+            except (TypeError, ValueError):
+                arr = np.full(default.shape, np.nan, dtype=np.float64)
+            if arr.shape == default.shape and np.isfinite(arr).all():
+                return arr
+            fallback, source = self._previous_finite_value(key, default)
+            logger.warning(
+                "Non-finite JSBSim state for %s.%s; using %s value",
+                self.uid,
+                key,
+                source,
+            )
+            return fallback
+
+        try:
+            val = float(value)
+        except (TypeError, ValueError):
+            val = float("nan")
+        if np.isfinite(val):
+            return val
+        fallback, source = self._previous_finite_value(key, default)
+        logger.warning(
+            "Non-finite JSBSim state for %s.%s; using %s value",
+            self.uid,
+            key,
+            source,
+        )
+        return fallback
+
+    def _sanitize_state(self, state: Dict[str, Any]) -> Dict[str, Any]:
+        default_position = np.array([0.0, 0.0, 5000.0], dtype=np.float64)
+        default_velocity_ned = np.array([250.0, 0.0, 0.0], dtype=np.float64)
+        default_velocity_neu = np.array([250.0, 0.0, -0.0], dtype=np.float64)
+        defaults = {
+            "position_neu": default_position,
+            "position_m": default_position,
+            "position_lla": np.array([self.lon0, self.lat0, 5000.0], dtype=np.float64),
+            "altitude_m": 5000.0,
+            "attitude_rpy": np.zeros(3, dtype=np.float64),
+            "roll_rad": 0.0,
+            "pitch_rad": 0.0,
+            "yaw_rad": 0.0,
+            "velocity_ned": default_velocity_ned,
+            "velocity_vector_mps": default_velocity_neu,
+            "velocity_body": np.array([250.0, 0.0, 0.0], dtype=np.float64),
+            "body_rates_rps": np.zeros(3, dtype=np.float64),
+            "p_rps": 0.0,
+            "q_rps": 0.0,
+            "r_rps": 0.0,
+            "nz_g": 1.0,
+            "beta_rad": 0.0,
+            "sideslip_rad": 0.0,
+            "speed_mps": 250.0,
+            "vt_mps": 250.0,
+            "sim_time": 0.0,
+        }
+        return {
+            key: self._sanitize_state_value(key, value, defaults[key])
+            for key, value in state.items()
+        }
+
     def _update_state(self):
         """
         Read essential properties from JSBSim and populate self._state.
@@ -328,7 +409,7 @@ class _JSBSimAircraft:
         beta = float(math.atan2(v_b, u_b + 1e-9))
 
         # 统一别名字段，供上层模块（TerminationChecker、feature_builder 等）直接使用
-        self._state = {
+        state = {
             "position_neu": np.array([n, e, u], dtype=np.float64),
             "position_m": np.array([n, e, u], dtype=np.float64),          # 兼容 simple 后端字段
             "position_lla": np.array([lon, lat, alt_m], dtype=np.float64),
@@ -351,6 +432,7 @@ class _JSBSimAircraft:
             "vt_mps": float(vt),
             "sim_time": self.jsbsim_exec.get_sim_time(),
         }
+        self._state = self._sanitize_state(state)
 
     def get_state(self) -> Dict[str, Any]:
         """
@@ -466,7 +548,11 @@ class JSBSimEnv:
             raise KeyError(f"Aircraft '{uid}' not found in JSBSimEnv.")
         ac.reload(init_state or {})
 
-    def step(self, control_inputs: Optional[Dict[str, Dict[str, float]]] = None) -> Dict[str, dict]:
+    def step(
+        self,
+        control_inputs: Optional[Dict[str, Dict[str, float]]] = None,
+        active_uids: Optional[list] = None,
+    ) -> Dict[str, dict]:
         """
         Execute one simulation step for all aircraft.
 
@@ -487,8 +573,10 @@ class JSBSimEnv:
                 for prop_name, value in inputs.items():
                     ac.set_property_value(prop_name, float(value))
 
-        # Run all aircraft
-        for ac in self._aircraft.values():
+        active = set(active_uids) if active_uids is not None else set(self._aircraft)
+        for uid, ac in self._aircraft.items():
+            if uid not in active:
+                continue
             ac.step()
 
         return self.get_state()

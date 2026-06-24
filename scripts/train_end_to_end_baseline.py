@@ -89,6 +89,12 @@ def main():
         help="Device override",
     )
     parser.add_argument(
+        "--total-timesteps",
+        type=int,
+        default=None,
+        help="Override ppo.total_timesteps without editing the YAML config.",
+    )
+    parser.add_argument(
         "--dry-run",
         action="store_true",
         help="Validate config and exit without training",
@@ -138,6 +144,8 @@ def main():
         cmd.extend(["--seed", str(args.seed)])
     if args.device is not None:
         cmd.extend(["--device", args.device])
+    if args.total_timesteps is not None:
+        cmd.extend(["--total-timesteps", str(args.total_timesteps)])
     if args.smoke:
         cmd.append("--smoke")
 
@@ -151,6 +159,7 @@ def main():
             "command_line": sys.argv,
             "config_path": args.config,
             "output_dir": output_dir,
+            "total_timesteps_override": args.total_timesteps,
             "git_info": _get_git_info(),
             "method": "end_to_end_ppo",
             "status": "completed",

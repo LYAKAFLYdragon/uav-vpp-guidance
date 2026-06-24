@@ -11,6 +11,8 @@ Provides:
 
 import numpy as np
 
+from .command_limiter import effective_throttle_limits
+
 
 class JSBSimActuatorInterface:
     """
@@ -42,8 +44,7 @@ class JSBSimActuatorInterface:
         self.aileron_max = self.config.get("aileron_max", 1.0)
         self.rudder_min = self.config.get("rudder_min", -1.0)
         self.rudder_max = self.config.get("rudder_max", 1.0)
-        self.throttle_min = self.config.get("throttle_min", 0.0)
-        self.throttle_max = self.config.get("throttle_max", 1.0)
+        self.throttle_min, self.throttle_max = effective_throttle_limits(self.config)
 
     def command_to_jsbsim_properties(self, command: dict, aircraft_state: dict = None) -> dict:
         """

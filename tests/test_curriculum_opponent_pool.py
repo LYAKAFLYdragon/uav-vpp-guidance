@@ -1,11 +1,15 @@
 import numpy as np
+import torch
 
 from scripts.train_curriculum_ppo import (
     LightweightEloOpponentPool,
+    SafetyPreCurriculumGate,
     SelfPlayCheckpointOpponent,
     evaluate_scenarios,
+    load_warm_start_checkpoint,
     run_evaluation,
 )
+from uav_vpp_guidance.agents.ppo_agent import PPOAgent
 
 
 class _FakeCombatHP:
@@ -72,3 +76,58 @@ def test_curriculum_evaluation_uses_combat_success_when_hp_enabled():
     assert metrics["success_rate"] == 1.0
     assert metrics["win_rate"] == 1.0
     assert scenario_sr["near"] == 1.0
+
+
+def _agent_config():
+    return {
+        "policy": {"hidden_sizes": [16], "activation": "tanh", "action_dim": 3},
+        "ppo": {"rollout_steps": 8, "minibatch_size": 4, "learning_rate": 3e-4},
+    }
+
+
+def test_warm_start_loads_policy_weights_without_requiring_optimizer(tmp_path):
+    source = PPOAgent(obs_dim=16, action_dim=3, config=_agent_config(), device="cpu")
+    with torch.no_grad():
+        for param in source.network.parameters():
+            param.fill_(0.123)
+    checkpoint_path = tmp_path / "warm.pt"
+    source.save(str(checkpoint_path))
+
+    target = PPOAgent(obs_dim=16, action_dim=3, config=_agent_config(), device="cpu")
+    meta = load_warm_start_checkpoint(
+        target,
+        checkpoint_path=str(checkpoint_path),
+        strict_dims=True,
+        load_optimizer=False,
+    )
+
+    assert meta["loaded"] is True
+    assert meta["checkpoint_path"] == str(checkpoint_path)
+    for param in target.network.parameters():
+        assert torch.allclose(param, torch.full_like(param, 0.123))
+
+
+def test_safety_precurriculum_blocks_adversary_until_survival_gate_passes():
+    gate = SafetyPreCurriculumGate(
+        {
+            "enabled": True,
+            "min_steps": 100,
+            "survival_threshold": 0.5,
+            "max_crash_rate": 0.5,
+            "max_out_of_bounds_rate": 0.5,
+        }
+    )
+
+    assert gate.allows_adversary(global_step=0) is False
+    gate.update_from_eval(
+        {"survival_rate": 1.0, "crash_rate": 0.0, "out_of_bounds_rate": 0.0},
+        global_step=50,
+    )
+    assert gate.allows_adversary(global_step=50) is False
+
+    gate.update_from_eval(
+        {"survival_rate": 1.0, "crash_rate": 0.0, "out_of_bounds_rate": 0.0},
+        global_step=100,
+    )
+    assert gate.passed is True
+    assert gate.allows_adversary(global_step=100) is True

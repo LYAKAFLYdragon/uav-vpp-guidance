@@ -66,6 +66,10 @@ class MultiWaypointTrackingEnv(CloseRangeTrackingEnv):
         """Return the synthetic waypoint target instead of the backend target."""
         return self.synthetic_target_state
 
+    def _task_uses_backend_target(self) -> bool:
+        """The waypoint target is synthetic; the backend target is a placeholder."""
+        return False
+
     def _task_pre_step(self, own_state: dict, target_state: dict) -> Tuple[dict, dict]:
         """Propagate the synthetic target forward at constant velocity."""
         dt = self.env_config.get("high_level_dt", 0.2)

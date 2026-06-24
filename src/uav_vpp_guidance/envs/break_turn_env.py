@@ -182,10 +182,11 @@ class BreakTurnEnv(CloseRangeTrackingEnv):
 
     def _generate_break_turn_trajectory(self) -> list:
         """
-        Build a break-turn trajectory.
+        Build a multi-segment break-turn trajectory with heading reversals.
 
-        Default: target starts ahead, flies straight for ``straight_delay_s``,
-        then turns at ``turn_rate_deg_s`` through ``turn_angle_deg`` degrees.
+        The trajectory consists of: straight → right turn → left turn → right turn.
+        The heading reversals force the controller to produce nz_cmd sign changes,
+        enabling _recovery_delay_steps and _overshoot_pct metrics to be measured.
         """
         cfg = self.task_cfg
         dt = float(self.env_config.get("high_level_dt", 0.2))
@@ -197,30 +198,40 @@ class BreakTurnEnv(CloseRangeTrackingEnv):
         speed = float(cfg.get("target_speed_mps", 250.0))
         delay = float(cfg.get("straight_delay_s", 2.0))
         turn_rate_dps = float(cfg.get("turn_rate_deg_s", 6.0))
-        turn_angle_deg = float(cfg.get("turn_angle_deg", 180.0))
 
-        # Randomize turn direction per seed.
-        direction = 1.0 if self.rng.random() < 0.5 else -1.0
-        self._turn_direction = direction
-
-        turn_rate_rps = math.radians(turn_rate_dps) * direction
-        turn_duration = math.radians(abs(turn_angle_deg)) / math.radians(turn_rate_dps)
+        # Define multi-segment maneuver: straight → R → L → R
+        # Each turn segment creates a heading reversal that forces nz sign changes.
+        segments = [
+            ("straight", delay, 0.0),           # 0-2s: straight
+            ("turn", 90.0 / turn_rate_dps, 1.0),  # 2-17s: right turn 90°
+            ("turn", 180.0 / turn_rate_dps, -1.0), # 17-47s: left turn 180° (reverse!)
+            ("turn", 90.0 / turn_rate_dps, 1.0),  # 47-62s: right turn 90° (reverse again)
+        ]
 
         pos = np.array([initial_range, 0.0, base_alt], dtype=float)
         heading = 0.0
         trajectory = []
+        segment_idx = 0
+        segment_elapsed = 0.0
+        turn_rate_rps = math.radians(turn_rate_dps)
 
         t = 0.0
         while t <= duration + 1e-9:
-            if t < delay:
-                # Straight inbound segment.
+            # Advance segment if needed
+            while segment_idx < len(segments) and segment_elapsed >= segments[segment_idx][1]:
+                segment_elapsed -= segments[segment_idx][1]
+                segment_idx += 1
+
+            if segment_idx >= len(segments):
+                # All segments done; continue with last heading
                 pass
-            elif t < delay + turn_duration:
-                # Turning segment.
-                heading = turn_rate_rps * (t - delay)
             else:
-                # Post-turn straight segment.
-                heading = turn_rate_rps * turn_duration
+                seg_type, seg_duration, seg_direction = segments[segment_idx]
+                if seg_type == "straight":
+                    pass  # heading unchanged
+                else:
+                    # Turning segment: heading changes at constant rate
+                    heading += turn_rate_rps * seg_direction * dt
 
             vel = np.array([speed * math.cos(heading), speed * math.sin(heading), 0.0])
             trajectory.append(
@@ -234,6 +245,7 @@ class BreakTurnEnv(CloseRangeTrackingEnv):
             )
             t += dt
             pos += vel * dt
+            segment_elapsed += dt
 
         return trajectory
 

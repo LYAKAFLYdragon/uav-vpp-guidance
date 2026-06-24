@@ -13,6 +13,7 @@ This controller is drop-in compatible with LowLevelController (same interface).
 import numpy as np
 import math
 from .actuator_interface import JSBSimActuatorInterface
+from .command_limiter import effective_throttle_limits
 
 
 class EnhancedLowLevelController:
@@ -81,10 +82,18 @@ class EnhancedLowLevelController:
         self.elevator_max = self.config.get("elevator_max", 1.0)
         self.aileron_max = self.config.get("aileron_max", 1.0)
         self.rudder_max = self.config.get("rudder_max", 0.5)
-        self.throttle_min = self.config.get("throttle_min", 0.4)
-        self.throttle_max = self.config.get("throttle_max", 0.9)
+        self.throttle_min, self.throttle_max = effective_throttle_limits(self.config)
         self.alpha_limit = self.config.get("alpha_limit", 0.5)
         self.integral_windup_limit = self.config.get("integral_windup_limit", 5.0)
+        self.use_conditional_integration = self.config.get(
+            "use_conditional_integration", True
+        )
+        self.conditional_integration_threshold = self.config.get(
+            "conditional_integration_threshold", 0.95
+        )
+        self.anti_windup_backcalc_gain = self.config.get(
+            "anti_windup_backcalc_gain", 0.25
+        )
 
         # Feature flags
         self.use_rudder = self.config.get("use_rudder", True)
@@ -118,6 +127,9 @@ class EnhancedLowLevelController:
         self.max_bank_rad = self.config.get("max_bank_rad", math.radians(55.0))
         self.bank_protection_nz_increment = self.config.get(
             "bank_protection_nz_increment", 0.5
+        )
+        self.bank_protection_nz_increment_max = self.config.get(
+            "bank_protection_nz_increment_max", 1.0
         )
         self.bank_taper_start_rad = self.config.get(
             "bank_taper_start_rad", math.radians(5.0)
@@ -220,6 +232,148 @@ class EnhancedLowLevelController:
             / (self.recovery_speed_mps - self.stall_speed_mps + 1e-9)
         )
 
+    def _integrate_with_anti_windup(
+        self,
+        *,
+        error: float,
+        integral: float,
+        feedforward: float,
+        non_integral_term: float,
+        integral_gain: float,
+        control_sign: float,
+        control_min: float,
+        control_max: float,
+    ) -> float:
+        """Update an integral term with conditional integration and back-calculation."""
+        if not self.use_conditional_integration:
+            return float(
+                np.clip(
+                    integral + error,
+                    -self.integral_windup_limit,
+                    self.integral_windup_limit,
+                )
+            )
+
+        if abs(integral_gain) < 1e-9:
+            return float(integral)
+
+        candidate_integral = integral + error
+        candidate_control = feedforward + control_sign * (
+            non_integral_term + integral_gain * candidate_integral
+        )
+        candidate_clipped = float(np.clip(candidate_control, control_min, control_max))
+        hard_saturated = abs(candidate_control - candidate_clipped) > 1e-6
+        threshold = (
+            max(abs(control_min), abs(control_max))
+            * self.conditional_integration_threshold
+        )
+        near_saturated = abs(candidate_control) >= threshold
+
+        next_integral = candidate_integral
+        if hard_saturated or near_saturated:
+            integral_control_delta = control_sign * integral_gain * error
+            saturation_error = candidate_control - candidate_clipped
+            if near_saturated and not hard_saturated:
+                saturation_error = math.copysign(
+                    abs(candidate_control) - threshold,
+                    candidate_control,
+                )
+            drives_deeper = saturation_error * integral_control_delta > 0.0
+            if drives_deeper:
+                if hard_saturated:
+                    next_integral = (
+                        (candidate_clipped - feedforward) / control_sign
+                        - non_integral_term
+                    ) / integral_gain
+                else:
+                    next_integral = integral
+
+        control = feedforward + control_sign * (
+            non_integral_term + integral_gain * next_integral
+        )
+        control_clipped = float(np.clip(control, control_min, control_max))
+        if hard_saturated and self.anti_windup_backcalc_gain > 0.0:
+            next_integral += self.anti_windup_backcalc_gain * (
+                control_clipped - control
+            ) / (control_sign * integral_gain)
+
+        return float(
+            np.clip(
+                next_integral,
+                -self.integral_windup_limit,
+                self.integral_windup_limit,
+            )
+        )
+
+    def _apply_protection_arbitration(
+        self,
+        nz_filt: float,
+        roll_rate_filt: float,
+        *,
+        speed: float,
+        altitude: float,
+        roll: float,
+    ) -> tuple:
+        """Apply stall, bank, and altitude protections in priority order."""
+        flags = {
+            "stall_limited": False,
+            "bank_recovery": False,
+            "altitude_hold": False,
+        }
+
+        stall_margin = self._stall_margin(speed)
+        nz_upper = self.nz_max
+        if self.enable_dynamic_nz_limit:
+            nz_upper = 1.0 + stall_margin * (self.nz_max - 1.0)
+            flags["stall_limited"] = nz_upper < self.nz_max - 1e-6
+
+        nz_out = float(np.clip(nz_filt, self.nz_min, nz_upper))
+
+        if self.enable_stall_protection:
+            roll_scale = (
+                0.0 if speed <= self.stall_speed_mps else max(0.1, stall_margin)
+            )
+            roll_rate_filt *= roll_scale
+            roll_rate_filt = float(
+                np.clip(roll_rate_filt, self.roll_rate_min, self.roll_rate_max)
+            )
+
+        bank_active = False
+        if self.enable_bank_angle_protection:
+            abs_roll = abs(roll)
+            if abs_roll > self.max_bank_rad:
+                self._bank_violation_steps += 1
+                overbank = abs_roll - self.max_bank_rad
+                sustained = self._bank_violation_steps > self.bank_violation_threshold
+                immediate = overbank > math.radians(10.0)
+                if sustained or immediate:
+                    bank_active = True
+                    flags["bank_recovery"] = True
+                    roll_rate_filt = float(
+                        -math.copysign(
+                            min(overbank * 5.0, abs(self.roll_rate_max)),
+                            roll,
+                        )
+                    )
+                    bank_delta = self.bank_protection_nz_increment * (
+                        overbank / math.radians(20.0)
+                    )
+                    bank_delta = min(bank_delta, self.bank_protection_nz_increment_max)
+                    nz_out += bank_delta
+            else:
+                self._bank_violation_steps = 0
+
+        if self.enable_altitude_hold:
+            alt_error = self.altitude_reference_m - altitude
+            alt_delta = self.altitude_hold_gain * alt_error
+            if bank_active and alt_delta < 0.0:
+                alt_delta = 0.0
+            nz_out += alt_delta
+            flags["altitude_hold"] = abs(alt_delta) > 1e-9
+
+        nz_out = float(np.clip(nz_out, self.nz_min, nz_upper))
+        return nz_out, roll_rate_filt, flags
+
     def reset(self):
         """Reset controller internal state."""
         self._prev_nz = 1.0
@@ -290,57 +444,15 @@ class EnhancedLowLevelController:
         speed = self._safe_float(aircraft_state.get("speed_mps", 250.0))
         altitude = self._safe_float(aircraft_state.get("altitude_m", 5000.0))
 
-        # --- Speed-aware stall protection ---
-        # Shrink the allowable manoeuvre envelope as speed drops.
-        stall_margin = self._stall_margin(speed)
-
-        if self.enable_dynamic_nz_limit:
-            # At/below stall: allow only 1g level flight.
-            # At/above recovery: allow full configured nz_max.
-            nz_max_dynamic = 1.0 + stall_margin * (self.nz_max - 1.0)
-            nz_filt = float(np.clip(nz_filt, self.nz_min, nz_max_dynamic))
-
-        if self.enable_stall_protection:
-            # Gradually remove roll-rate authority as speed drops.
-            roll_scale = 0.0 if speed <= self.stall_speed_mps else max(0.1, stall_margin)
-            roll_rate_filt *= roll_scale
-            roll_rate_filt = float(np.clip(roll_rate_filt, self.roll_rate_min, self.roll_rate_max))
-
-        # --- Altitude-hold correction in the controller ---
-        # Compensates for guidance commands that would otherwise climb/dive.
-        if self.enable_altitude_hold:
-            alt_error = self.altitude_reference_m - altitude
-            nz_filt += self.altitude_hold_gain * alt_error
-            nz_filt = float(np.clip(nz_filt, self.nz_min, self.nz_max))
-
-        # --- Bank-angle protection ---
-        # Prevent the spiral-dive / overbank instability that fixed PID can
-        # excite when guidance requests sustained roll rate (e.g. LOS-rate
-        # tail-chase).  We allow transient high bank for lead turns, but
-        # recover if the bank limit is exceeded for many consecutive steps
-        # (sustained spiral) or if the aircraft blows far past the limit.
-        if self.enable_bank_angle_protection:
-            abs_roll = abs(roll)
-            if abs_roll > self.max_bank_rad:
-                self._bank_violation_steps += 1
-                overbank = abs_roll - self.max_bank_rad
-                # Trigger recovery if we are far past the limit OR if the
-                # limit has been breached for a sustained interval.
-                sustained = (
-                    self._bank_violation_steps > self.bank_violation_threshold
-                )
-                immediate = overbank > math.radians(10.0)
-                if sustained or immediate:
-                    recovery_rate = -math.copysign(
-                        min(overbank * 5.0, abs(self.roll_rate_max)), roll
-                    )
-                    roll_rate_filt = float(recovery_rate)
-                    nz_filt += self.bank_protection_nz_increment * (
-                        overbank / math.radians(20.0)
-                    )
-                    nz_filt = float(np.clip(nz_filt, self.nz_min, self.nz_max))
-            else:
-                self._bank_violation_steps = 0
+        # --- Flight-envelope protection arbitration ---
+        # Priority: stall hard limits > bank recovery > altitude-hold correction.
+        nz_filt, roll_rate_filt, protection_flags = self._apply_protection_arbitration(
+            nz_filt,
+            roll_rate_filt,
+            speed=speed,
+            altitude=altitude,
+            roll=roll,
+        )
 
         # --- APIC-style per-gain adaptation overrides aggressiveness ---
         if pid_gain_deltas is not None:
@@ -376,23 +488,35 @@ class EnhancedLowLevelController:
 
         # --- Elevator: PID + feedforward for nz tracking ---
         nz_error = nz_filt - actual_nz
-        self._nz_integral += nz_error
-        self._nz_integral = np.clip(self._nz_integral, -self.integral_windup_limit, self.integral_windup_limit)
         nz_derivative = nz_error - self._nz_prev_error
-        self._nz_prev_error = nz_error
 
         if self.use_pid:
-            elevator_pid = Kp_nz_eff * nz_error + Ki_nz_eff * self._nz_integral + Kd_nz_eff * nz_derivative
+            elevator_pd = Kp_nz_eff * nz_error + Kd_nz_eff * nz_derivative
         else:
-            elevator_pid = 0.0
+            elevator_pd = 0.0
 
         # Feedforward: expected elevator for the commanded nz (inverted plant model)
         # NOTE: elevator is negative for positive nz (pull-up)
         elevator_ff = -nz_filt * self.nz_gain
+        if self.use_pid:
+            self._nz_integral = self._integrate_with_anti_windup(
+                error=nz_error,
+                integral=self._nz_integral,
+                feedforward=elevator_ff,
+                non_integral_term=elevator_pd,
+                integral_gain=Ki_nz_eff,
+                control_sign=-1.0,
+                control_min=-self.elevator_max,
+                control_max=self.elevator_max,
+            )
+            elevator_pid = elevator_pd + Ki_nz_eff * self._nz_integral
+        else:
+            elevator_pid = 0.0
         # PID correction: if actual_nz < nz_cmd, need MORE negative elevator (more pull-up)
         # nz_error = nz_cmd - actual_nz > 0  =>  need to subtract elevator_pid
         elevator = elevator_ff - elevator_pid
         elevator = np.clip(elevator, -self.elevator_max, self.elevator_max)
+        self._nz_prev_error = nz_error
 
         # --- Angle-of-attack protection ---
         if self.use_aoa_protection and abs(alpha) > self.alpha_limit:
@@ -403,20 +527,32 @@ class EnhancedLowLevelController:
 
         # --- Aileron: PID + feedforward for roll rate tracking ---
         roll_rate_error = roll_rate_filt - actual_roll_rate
-        self._roll_integral += roll_rate_error
-        self._roll_integral = np.clip(self._roll_integral, -self.integral_windup_limit, self.integral_windup_limit)
         roll_derivative = roll_rate_error - self._roll_prev_error
-        self._roll_prev_error = roll_rate_error
 
         if self.use_pid:
-            aileron_pid = Kp_roll_eff * roll_rate_error + Ki_roll_eff * self._roll_integral + Kd_roll_eff * roll_derivative
+            aileron_pd = Kp_roll_eff * roll_rate_error + Kd_roll_eff * roll_derivative
         else:
-            aileron_pid = 0.0
+            aileron_pd = 0.0
 
         # Feedforward: expected aileron for the commanded roll rate
         aileron_ff = roll_rate_filt * self.roll_rate_gain
+        if self.use_pid:
+            self._roll_integral = self._integrate_with_anti_windup(
+                error=roll_rate_error,
+                integral=self._roll_integral,
+                feedforward=aileron_ff,
+                non_integral_term=aileron_pd,
+                integral_gain=Ki_roll_eff,
+                control_sign=1.0,
+                control_min=-self.aileron_max,
+                control_max=self.aileron_max,
+            )
+            aileron_pid = aileron_pd + Ki_roll_eff * self._roll_integral
+        else:
+            aileron_pid = 0.0
         aileron = aileron_ff + aileron_pid
         aileron = np.clip(aileron, -self.aileron_max, self.aileron_max)
+        self._roll_prev_error = roll_rate_error
 
         # Hard roll-recovery override only for sustained or extreme overbank.
         if self.enable_bank_angle_protection and abs(roll) > self.max_bank_rad:
@@ -510,6 +646,7 @@ class EnhancedLowLevelController:
             "aileron_raw": float(aileron),
             "rudder_raw": float(rudder),
             "filtered_command": filtered,
+            "protection_flags": protection_flags,
         }
 
         # Record history
@@ -530,6 +667,7 @@ class EnhancedLowLevelController:
                 "beta_rad": beta,
                 "speed_mps": speed,
             },
+            "protection_flags": protection_flags,
             "saturation_flag": False,
         }
         self.command_history.append(record)

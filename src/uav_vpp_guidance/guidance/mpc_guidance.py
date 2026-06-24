@@ -11,6 +11,8 @@ policies, not as a production flight controller.
 
 from typing import Dict, Any, Optional
 import numpy as np
+
+from uav_vpp_guidance.flight_control.command_limiter import effective_throttle_limits
 from scipy.optimize import minimize
 
 
@@ -28,8 +30,7 @@ class MPCGuidance:
         self.nz_min = float(limits.get("nz_min", 1.0))
         self.nz_max = float(limits.get("nz_max", 5.0))
         self.roll_rate_max = float(limits.get("roll_rate_max", 1.5))
-        self.throttle_min = float(limits.get("throttle_min", 0.0))
-        self.throttle_max = float(limits.get("throttle_max", 1.0))
+        self.throttle_min, self.throttle_max = effective_throttle_limits(limits)
 
         self.w_range = float(params.get("w_range", 1.0))
         self.w_ata = float(params.get("w_ata", 0.01))

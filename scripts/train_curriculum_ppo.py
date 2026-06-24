@@ -20,6 +20,7 @@ import os
 import time
 import copy
 from dataclasses import asdict, dataclass
+from pathlib import Path
 
 import numpy as np
 
@@ -181,6 +182,134 @@ DEFAULT_CURRICULUM = [
 ]
 
 
+def load_warm_start_checkpoint(
+    agent,
+    checkpoint_path,
+    strict_dims=True,
+    load_optimizer=False,
+):
+    """Load policy weights from an existing PPO checkpoint for warm-starting."""
+    import torch
+
+    path = Path(checkpoint_path)
+    if not path.exists():
+        raise FileNotFoundError(f"Warm-start checkpoint not found: {path}")
+    checkpoint = torch.load(str(path), map_location=agent.device)
+    ckpt_obs_dim = int(checkpoint.get("obs_dim", agent.obs_dim))
+    ckpt_action_dim = int(checkpoint.get("action_dim", agent.action_dim))
+    if strict_dims and (ckpt_obs_dim != agent.obs_dim or ckpt_action_dim != agent.action_dim):
+        raise ValueError(
+            "Warm-start checkpoint dim mismatch: "
+            f"checkpoint obs/action=({ckpt_obs_dim}, {ckpt_action_dim}) "
+            f"agent obs/action=({agent.obs_dim}, {agent.action_dim})"
+        )
+    missing, unexpected = agent.network.load_state_dict(
+        checkpoint["network_state_dict"],
+        strict=False,
+    )
+    optimizer_loaded = False
+    if load_optimizer and "optimizer_state_dict" in checkpoint:
+        agent.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+        optimizer_loaded = True
+    return {
+        "loaded": True,
+        "checkpoint_path": str(path),
+        "checkpoint_obs_dim": ckpt_obs_dim,
+        "checkpoint_action_dim": ckpt_action_dim,
+        "agent_obs_dim": int(agent.obs_dim),
+        "agent_action_dim": int(agent.action_dim),
+        "optimizer_loaded": optimizer_loaded,
+        "missing_keys": list(missing),
+        "unexpected_keys": list(unexpected),
+    }
+
+
+class SafetyPreCurriculumGate:
+    """Block adversarial opponents until basic survival behavior is demonstrated."""
+
+    def __init__(self, cfg=None):
+        cfg = cfg or {}
+        self.enabled = bool(cfg.get("enabled", False))
+        self.disable_adversary = bool(cfg.get("disable_adversary", True))
+        self.min_steps = int(cfg.get("min_steps", 0))
+        self.survival_threshold = float(cfg.get("survival_threshold", 0.5))
+        self.max_crash_rate = float(cfg.get("max_crash_rate", 0.5))
+        self.max_out_of_bounds_rate = float(cfg.get("max_out_of_bounds_rate", 0.5))
+        self.passed = not self.enabled
+        self.passed_step = None
+        self.last_metrics = {}
+
+    def allows_adversary(self, global_step=0):
+        if not self.enabled or not self.disable_adversary:
+            return True
+        return bool(self.passed)
+
+    def update_from_eval(self, metrics, global_step):
+        self.last_metrics = dict(metrics or {})
+        if not self.enabled or self.passed:
+            return self.passed
+        if int(global_step) < self.min_steps:
+            return False
+        survival = _finite_metric(metrics.get("survival_rate"))
+        crash = _finite_metric(metrics.get("crash_rate"))
+        oob = _finite_metric(metrics.get("out_of_bounds_rate"))
+        if (
+            np.isfinite(survival)
+            and np.isfinite(crash)
+            and np.isfinite(oob)
+            and survival >= self.survival_threshold
+            and crash <= self.max_crash_rate
+            and oob <= self.max_out_of_bounds_rate
+        ):
+            self.passed = True
+            self.passed_step = int(global_step)
+        return self.passed
+
+    def status(self, global_step=0):
+        if not self.enabled:
+            return "disabled"
+        if self.passed:
+            return "passed"
+        if int(global_step) < self.min_steps:
+            return "min_steps"
+        return "waiting_survival"
+
+    def as_dict(self, global_step=0):
+        return {
+            "enabled": self.enabled,
+            "disable_adversary": self.disable_adversary,
+            "min_steps": self.min_steps,
+            "survival_threshold": self.survival_threshold,
+            "max_crash_rate": self.max_crash_rate,
+            "max_out_of_bounds_rate": self.max_out_of_bounds_rate,
+            "passed": self.passed,
+            "passed_step": self.passed_step,
+            "status": self.status(global_step),
+            "last_metrics": dict(self.last_metrics),
+        }
+
+
+def _finite_metric(value):
+    try:
+        out = float(value)
+    except (TypeError, ValueError):
+        return float("nan")
+    return out if np.isfinite(out) else float("nan")
+
+
+def _json_safe(value):
+    if isinstance(value, dict):
+        return {str(k): _json_safe(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_json_safe(v) for v in value]
+    if isinstance(value, (np.floating, float)):
+        out = float(value)
+        return out if np.isfinite(out) else None
+    if isinstance(value, (np.integer,)):
+        return int(value)
+    return value
+
+
 @dataclass
 class OpponentPoolEntry:
     path: str
@@ -322,8 +451,28 @@ class LightweightEloOpponentPool:
             )
 
 
-def _set_training_opponent(env, pool, bucket, rng, device, cfg):
+def _set_training_opponent(
+    env,
+    pool,
+    bucket,
+    rng,
+    device,
+    cfg,
+    adversary_allowed=True,
+    blocked_reason=None,
+):
     if not cfg.get("enabled", False):
+        return None
+    if not adversary_allowed:
+        env.set_opponent_policy(
+            None,
+            {
+                "stage": "safety_precurriculum",
+                "bucket": bucket,
+                "type": "none",
+                "blocked_reason": blocked_reason or "safety_gate",
+            },
+        )
         return None
     final_opponent = cfg.get("final_opponent")
     if bucket == "strong" and final_opponent == "expert":
@@ -401,6 +550,30 @@ def train_ppo_curriculum(config, output_dir, smoke=False):
     agent = PPOAgent(obs_dim=obs_dim, action_dim=action_dim, config=config, device=device)
     print(f"Network parameters: {agent.network.count_parameters()}")
 
+    training_metadata = {
+        "warm_start": {
+            "enabled": bool(config.get("warm_start", {}).get("enabled", False)),
+            "loaded": False,
+        },
+        "safety_precurriculum": {},
+    }
+    warm_start_cfg = config.get("warm_start", {})
+    if warm_start_cfg.get("enabled", False):
+        checkpoint_path = warm_start_cfg.get("checkpoint") or warm_start_cfg.get("checkpoint_path")
+        if not checkpoint_path:
+            raise ValueError("warm_start.enabled=true requires warm_start.checkpoint")
+        warm_start_meta = load_warm_start_checkpoint(
+            agent,
+            checkpoint_path=checkpoint_path,
+            strict_dims=bool(warm_start_cfg.get("strict_dims", True)),
+            load_optimizer=bool(warm_start_cfg.get("load_optimizer", False)),
+        )
+        training_metadata["warm_start"] = {
+            "enabled": True,
+            **warm_start_meta,
+        }
+        print(f"Warm-start loaded from {warm_start_meta['checkpoint_path']}")
+
     # Curriculum config
     curriculum = config.get("curriculum", {}).get("stages", DEFAULT_CURRICULUM)
     stage_gate_sr = config.get("curriculum", {}).get("stage_gate_sr", 0.50)
@@ -411,6 +584,7 @@ def train_ppo_curriculum(config, output_dir, smoke=False):
     )
     opponent_bucket = str(adversarial_cfg.get("initial_bucket", "weak"))
     active_opponent_entry = None
+    safety_gate = SafetyPreCurriculumGate(config.get("safety_precurriculum", {}))
 
     global_step = 0
     episode_count = 0
@@ -450,9 +624,12 @@ def train_ppo_curriculum(config, output_dir, smoke=False):
         cur_writer = csv.DictWriter(f_cur, fieldnames=[
             "step", "stage", "allowed_scenarios", "scenario_sr",
             "opponent_bucket", "opponent_pool_size", "opponent_eval_win_rate",
+            "safety_gate_status", "safety_gate_passed", "adversary_allowed",
+            "safety_gate_passed_step",
         ])
         cur_writer.writeheader()
 
+        adversary_allowed = safety_gate.allows_adversary(global_step)
         active_opponent_entry = _set_training_opponent(
             env,
             opponent_pool,
@@ -460,6 +637,8 @@ def train_ppo_curriculum(config, output_dir, smoke=False):
             rng,
             device,
             adversarial_cfg,
+            adversary_allowed=adversary_allowed,
+            blocked_reason=safety_gate.status(global_step),
         )
         obs = env.reset(seed=rng.integers(0, 1000000))
         episode_return = 0.0
@@ -542,6 +721,7 @@ def train_ppo_curriculum(config, output_dir, smoke=False):
                     episode_length = 0
                     episode_ranges = []
 
+                    adversary_allowed = safety_gate.allows_adversary(global_step)
                     active_opponent_entry = _set_training_opponent(
                         env,
                         opponent_pool,
@@ -549,6 +729,8 @@ def train_ppo_curriculum(config, output_dir, smoke=False):
                         rng,
                         device,
                         adversarial_cfg,
+                        adversary_allowed=adversary_allowed,
+                        blocked_reason=safety_gate.status(global_step),
                     )
                     scenario = sample_scenario({"scenarios": active_scenarios}, rng)
                     obs = env.reset(scenario=scenario, seed=rng.integers(0, 1000000))
@@ -585,11 +767,14 @@ def train_ppo_curriculum(config, output_dir, smoke=False):
             if eval_interval > 0 and global_step % eval_interval == 0 and global_step > 0:
                 print(f"\n--- Evaluation at step {global_step} ---")
                 eval_cfg = config.get("evaluation", {})
+                adversary_allowed_for_eval = safety_gate.allows_adversary(global_step)
                 eval_metrics = run_evaluation(
                     env, agent, config,
                     num_episodes=eval_cfg.get("eval_episodes", 10),
                     seeds=eval_cfg.get("seeds", [0, 1, 2]),
                 )
+                safety_gate.update_from_eval(eval_metrics, global_step)
+                adversary_allowed_after_eval = safety_gate.allows_adversary(global_step)
                 eval_writer.writerow({
                     "step": global_step, "num_episodes": eval_metrics["num_episodes"],
                     "mean_return": eval_metrics["mean_return"],
@@ -621,11 +806,20 @@ def train_ppo_curriculum(config, output_dir, smoke=False):
                     "opponent_bucket": opponent_bucket,
                     "opponent_pool_size": len(opponent_pool.entries),
                     "opponent_eval_win_rate": eval_metrics["win_rate"],
+                    "safety_gate_status": safety_gate.status(global_step),
+                    "safety_gate_passed": int(safety_gate.passed),
+                    "adversary_allowed": int(adversary_allowed_after_eval),
+                    "safety_gate_passed_step": safety_gate.passed_step
+                    if safety_gate.passed_step is not None else "",
                 })
                 f_cur.flush()
                 print(f"Per-scenario SR: {per_scenario}")
 
-                if adversarial_cfg.get("enabled", False):
+                if (
+                    adversarial_cfg.get("enabled", False)
+                    and adversary_allowed_for_eval
+                    and active_opponent_entry is not None
+                ):
                     opponent_metric = eval_metrics["win_rate"]
                     if not np.isfinite(opponent_metric):
                         opponent_metric = eval_metrics["success_rate"]
@@ -643,6 +837,31 @@ def train_ppo_curriculum(config, output_dir, smoke=False):
                             f"*** Opponent curriculum advanced to {opponent_bucket} "
                             f"(win_rate={opponent_metric:.2%}) ***"
                         )
+                elif adversarial_cfg.get("enabled", False):
+                    skip_reason = (
+                        safety_gate.status(global_step)
+                        if not adversary_allowed_for_eval
+                        else "no_active_opponent"
+                    )
+                    print(
+                        "Opponent curriculum: skipping opponent ELO update "
+                        f"({skip_reason})"
+                    )
+
+                if (
+                    adversarial_cfg.get("enabled", False)
+                    and adversary_allowed_after_eval != adversary_allowed_for_eval
+                ):
+                    active_opponent_entry = _set_training_opponent(
+                        env,
+                        opponent_pool,
+                        opponent_bucket,
+                        rng,
+                        device,
+                        adversarial_cfg,
+                        adversary_allowed=adversary_allowed_after_eval,
+                        blocked_reason=safety_gate.status(global_step),
+                    )
 
                 # Check if we should advance stage
                 current_scenario_sr = [per_scenario.get(s, 0.0) for s in allowed_names]
@@ -676,6 +895,9 @@ def train_ppo_curriculum(config, output_dir, smoke=False):
             print(f"\nSaved last checkpoint")
 
     elapsed = time.time() - start_time
+    training_metadata["safety_precurriculum"] = safety_gate.as_dict(global_step)
+    with open(os.path.join(output_dir, "training_metadata.json"), "w", encoding="utf-8") as f_meta:
+        json.dump(_json_safe(training_metadata), f_meta, indent=2, ensure_ascii=False)
     print(f"\nTraining complete! Steps: {global_step}, Episodes: {episode_count}, Time: {elapsed:.1f}s")
     env.close()
     return output_dir

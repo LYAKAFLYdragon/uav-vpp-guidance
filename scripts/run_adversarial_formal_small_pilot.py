@@ -15,6 +15,7 @@ import os
 import subprocess
 import sys
 import time
+import copy
 from collections import Counter
 from pathlib import Path
 from typing import Any, Dict, Iterable, List
@@ -28,6 +29,35 @@ DEFAULT_JSBSIM_ROOT = (
     if os.environ.get("JSBSIM_ROOT")
     else Path(r"E:\CloseAirCombat_control")
 )
+sys.path.insert(0, str(REPO_ROOT / "src"))
+from uav_vpp_guidance.common.provenance import record_config_override_if_changed
+
+
+FLIGHT_CONTROL_PROFILE = {
+    "name": "bank76_alt_hold_lift_smooth",
+    "config_path": "config/experiment/ablation_mw_bank76_alt_hold_lift_smooth.yaml",
+    "validated_run_id": "_codex_bank76_20seed",
+    "note": (
+        "Default low-level profile for upper-level air-combat experiments; "
+        "aggressive break-turn and sustained-turn limits remain under validation."
+    ),
+}
+BANK76_LOW_LEVEL = {
+    "type": "enhanced",
+    "enable_bank_angle_protection": True,
+    "max_bank_rad": 1.3264502315156905,
+    "bank_violation_threshold": 25,
+    "bank_protection_nz_increment": 0.5,
+    "altitude_hold_gain": 0.01,
+}
+BANK76_POST_PROCESS = {
+    "enabled": True,
+    "enable_lift_compensation": True,
+    "lift_compensation_factor": 1.0,
+    "lift_compensation_source": "actual_roll",
+    "lift_compensation_filter_alpha": 0.3,
+    "lift_compensation_min_cos": 0.5,
+}
 
 
 def _parse_float_list(value: str) -> List[float]:
@@ -51,6 +81,42 @@ def _write_yaml(path: Path, data: Dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with open(path, "w", encoding="utf-8") as f:
         yaml.safe_dump(data, f, default_flow_style=False, sort_keys=False, allow_unicode=True)
+
+
+def _set_config_value(config: Dict[str, Any], dotted_key: str, value: Any, source: str) -> None:
+    parent = config
+    keys = dotted_key.split(".")
+    for key in keys[:-1]:
+        node = parent.setdefault(key, {})
+        if not isinstance(node, dict):
+            node = {}
+            parent[key] = node
+        parent = node
+    leaf = keys[-1]
+    old_value = copy.deepcopy(parent.get(leaf))
+    parent[leaf] = copy.deepcopy(value)
+    record_config_override_if_changed(
+        config,
+        key=dotted_key,
+        new_value=value,
+        old_value=old_value,
+        source=source,
+    )
+
+
+def _apply_bank76_flight_control_profile(config: Dict[str, Any], source: str) -> None:
+    _set_config_value(
+        config,
+        "experiment.flight_control_profile",
+        FLIGHT_CONTROL_PROFILE,
+        source=source,
+    )
+    for key, value in BANK76_LOW_LEVEL.items():
+        _set_config_value(config, f"low_level_controller.{key}", value, source=source)
+    for key, value in BANK76_POST_PROCESS.items():
+        _set_config_value(config, f"guidance.post_process.{key}", value, source=source)
+    _set_config_value(config, "limits.throttle_min", 0.4, source=source)
+    _set_config_value(config, "limits.throttle_max", 0.9, source=source)
 
 
 def _run_command(cmd: List[str], log_path: Path) -> Dict[str, Any]:
@@ -169,6 +235,10 @@ def _write_hp_config(
     close_range_max_km: float,
 ) -> Path:
     cfg = _load_yaml(base_config)
+    _apply_bank76_flight_control_profile(
+        cfg,
+        source="run_adversarial_formal_small_pilot.py:bank76_profile",
+    )
     attack_cfg = cfg.setdefault("attack_zone", {})
     attack_cfg["damage_per_step"] = float(damage_per_step)
     attack_cfg["close_range_max_km"] = float(close_range_max_km)
@@ -248,6 +318,10 @@ def _write_curriculum_config(
     total_timesteps: int,
 ) -> Path:
     cfg = _load_yaml(base_config)
+    _apply_bank76_flight_control_profile(
+        cfg,
+        source="run_adversarial_formal_small_pilot.py:bank76_profile",
+    )
     cfg.setdefault("experiment", {})
     cfg["experiment"]["name"] = "adversarial_curriculum_formal_small_pilot"
     cfg["experiment"]["description"] = "Formal-small pilot config for adversarial curriculum stability."
@@ -274,6 +348,21 @@ def _write_curriculum_config(
     checkpoint_cfg["save_interval"] = max(1024, min(int(total_timesteps) // 2, 2048))
     checkpoint_cfg["save_best"] = True
     checkpoint_cfg["save_last"] = True
+
+    cfg["warm_start"] = {
+        "enabled": True,
+        "checkpoint": "outputs/experiments/no_prediction_vpp_ppo_jsbsim_compare/checkpoints/last.pt",
+        "strict_dims": True,
+        "load_optimizer": False,
+    }
+    cfg["safety_precurriculum"] = {
+        "enabled": True,
+        "disable_adversary": True,
+        "min_steps": 1024,
+        "survival_threshold": 0.5,
+        "max_crash_rate": 0.5,
+        "max_out_of_bounds_rate": 0.5,
+    }
 
     attack_cfg = cfg.setdefault("attack_zone", {})
     attack_cfg["enabled"] = True

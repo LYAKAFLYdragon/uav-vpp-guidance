@@ -9,6 +9,7 @@ import pandas as pd
 import pytest
 
 from uav_vpp_guidance.evaluation.flight_control_metrics import (
+    compute_break_turn_metrics,
     compute_multi_waypoint_metrics,
     compute_sustained_turn_metrics,
 )
@@ -46,6 +47,22 @@ def _make_sustained_turn_trajectory():
     ]
 
 
+def _make_break_turn_trajectory():
+    nz_cmds = [1.0, 2.0, 2.0, 0.0, 0.0]
+    nz_actual = [1.0, 1.8, 2.2, 1.1, 0.0]
+    return [
+        {
+            "time_s": float(i * 0.2),
+            "range_m": 500.0,
+            "speed_mps": 240.0,
+            "nz_cmd": nz_cmds[i],
+            "nz_g": nz_actual[i],
+            "saturation_flag": False,
+        }
+        for i in range(len(nz_cmds))
+    ]
+
+
 def test_multi_waypoint_metrics():
     traj = _make_multi_waypoint_trajectory()
     stats = compute_multi_waypoint_metrics(traj)
@@ -66,6 +83,17 @@ def test_sustained_turn_metrics():
     assert "avg_speed_mps" in stats
     assert "energy_loss_rate_mps2" in stats
     assert "mean_aggressiveness" in stats
+
+
+def test_break_turn_acceptance_metrics():
+    traj = _make_break_turn_trajectory()
+    stats = compute_break_turn_metrics(traj)
+    assert "nz_tracking_rmse" in stats
+    assert "recovery_delay" in stats
+    assert "overshoot_pct" in stats
+    assert stats["nz_tracking_rmse"] == pytest.approx(0.5079, abs=1e-4)
+    assert stats["recovery_delay"] == pytest.approx(0.0, abs=1e-9)
+    assert stats["overshoot_pct"] == pytest.approx(20.0, abs=1e-9)
 
 
 def test_aggregate_script_runs(tmp_path: Path, monkeypatch):

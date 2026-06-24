@@ -41,7 +41,10 @@ from ..guidance.hybrid_guidance import HybridGuidance
 from ..guidance.mpc_guidance import MPCGuidance
 from ..guidance.overload_rollrate import CommandPostProcessor
 from ..guidance.gain_config import GuidanceGains
-from ..flight_control.command_limiter import clip_command
+from ..flight_control.command_limiter import (
+    clip_command,
+    effective_throttle_limits,
+)
 from ..flight_control.command_filter import MultiChannelCommandFilter
 from ..flight_control.low_level_controller import LowLevelController
 from ..flight_control.pid_controllers import (
@@ -384,6 +387,10 @@ class CloseRangeTrackingEnv:
     def _task_get_target_state(self, backend_target_state, own_state):
         """Subclasses may replace the backend target with a synthetic target."""
         return backend_target_state
+
+    def _task_uses_backend_target(self) -> bool:
+        """Return False for tasks whose target state is fully synthetic."""
+        return True
 
     def _task_pre_step(self, own_state, target_state):
         """Subclasses may update task state before guidance is computed."""
@@ -758,8 +765,7 @@ class CloseRangeTrackingEnv:
         nz_max = limits.get("nz_max", 7.0)
         rr_min = limits.get("roll_rate_min", -1.5)
         rr_max = limits.get("roll_rate_max", 1.5)
-        th_min = limits.get("throttle_min", 0.0)
-        th_max = limits.get("throttle_max", 1.0)
+        th_min, th_max = effective_throttle_limits(limits)
         action = np.clip(action[:3], -1.0, 1.0)
         return {
             "nz_cmd": float(action[0]) * (nz_max - nz_min) / 2.0 + (nz_max + nz_min) / 2.0,
@@ -1067,8 +1073,7 @@ class CloseRangeTrackingEnv:
             nz_max = limits.get("nz_max", 7.0)
             rr_min = limits.get("roll_rate_min", -1.5)
             rr_max = limits.get("roll_rate_max", 1.5)
-            th_min = limits.get("throttle_min", 0.0)
-            th_max = limits.get("throttle_max", 1.0)
+            th_min, th_max = effective_throttle_limits(limits)
             raw_command = {
                 "nz_cmd": float(action[0]) * (nz_max - nz_min) / 2.0 + (nz_max + nz_min) / 2.0,
                 "roll_rate_cmd": float(action[1]) * (rr_max - rr_min) / 2.0 + (rr_max + rr_min) / 2.0,
@@ -1670,8 +1675,12 @@ class CloseRangeTrackingEnv:
                 if k.startswith("fcs/")
             }
 
+        active_uids = [self.own_uid]
+        if target_command is not None or self._task_uses_backend_target():
+            active_uids.append(self.target_uid)
+
         for _ in range(self._sim_steps_per_decision):
-            self.jsbsim_env.step(control_inputs)
+            self.jsbsim_env.step(control_inputs, active_uids=active_uids)
             control_inputs = None
 
         return {

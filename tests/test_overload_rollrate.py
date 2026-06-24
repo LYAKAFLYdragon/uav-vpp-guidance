@@ -6,6 +6,10 @@ import numpy as np
 import pytest
 
 from uav_vpp_guidance.guidance.overload_rollrate import CommandPostProcessor
+from uav_vpp_guidance.flight_control.command_limiter import (
+    DEFAULT_THROTTLE_MAX,
+    DEFAULT_THROTTLE_MIN,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -133,11 +137,11 @@ def test_saturation_roll_rate(default_post):
 def test_saturation_throttle(default_post):
     cmd = {"nz_cmd": 1.0, "roll_rate_cmd": 0.0, "throttle_cmd": 1.5}
     result = default_post.process(cmd)
-    assert result["throttle_cmd"] == pytest.approx(1.0)
+    assert result["throttle_cmd"] == pytest.approx(DEFAULT_THROTTLE_MAX)
 
     cmd["throttle_cmd"] = -0.2
     result = default_post.process(cmd)
-    assert result["throttle_cmd"] == pytest.approx(0.0)
+    assert result["throttle_cmd"] == pytest.approx(DEFAULT_THROTTLE_MIN)
 
 
 # ---------------------------------------------------------------------------

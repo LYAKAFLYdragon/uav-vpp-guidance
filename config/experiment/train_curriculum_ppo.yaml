@@ -10,6 +10,11 @@ experiment:
   seed: 0
   mode: train
   output_root: outputs
+  flight_control_profile:
+    name: bank76_alt_hold_lift_smooth
+    config_path: config/experiment/ablation_mw_bank76_alt_hold_lift_smooth.yaml
+    validated_run_id: _codex_bank76_20seed
+    note: "Use the same low-level profile tag as JSBSim upper-level air-combat experiments."
 
 env:
   backend: simple
@@ -35,6 +40,20 @@ curriculum:
     - [0.75, ["favorable", "neutral", "disadvantage", "challenging"]]
     - [1.00, ["favorable", "neutral", "disadvantage", "challenging"]]
   stage_gate_sr: 0.50
+
+warm_start:
+  enabled: false
+  checkpoint: ""
+  strict_dims: true
+  load_optimizer: false
+
+safety_precurriculum:
+  enabled: false
+  disable_adversary: true
+  min_steps: 0
+  survival_threshold: 0.5
+  max_crash_rate: 0.5
+  max_out_of_bounds_rate: 0.5
 
 trajectory_prediction:
   enabled: false
@@ -64,8 +83,8 @@ limits:
   nz_max: 7.0
   roll_rate_min: -1.5
   roll_rate_max: 1.5
-  throttle_min: 0.0
-  throttle_max: 1.0
+  throttle_min: 0.4
+  throttle_max: 0.9
 
 reward:
   w_range: 0.5

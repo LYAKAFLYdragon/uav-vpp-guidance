@@ -7,8 +7,19 @@ initialize correctly and expose the expected interfaces.
 
 import os
 
+import numpy as np
 import pytest
-from uav_vpp_guidance.envs.jsbsim_env import lla2neu, neu2lla, JSBSimEnv
+from uav_vpp_guidance.envs.jsbsim_env import (
+    _JSBSimAircraft,
+    lla2neu,
+    neu2lla,
+    JSBSimEnv,
+)
+
+
+class _DummyJSBSimExec:
+    def get_sim_time(self):
+        return float("nan")
 
 
 class TestCoordinateConversion:
@@ -38,6 +49,70 @@ class TestCoordinateConversion:
 
 class TestJSBSimEnv:
     """Tests for migrated JSBSimEnv."""
+
+    def test_update_state_sanitizes_non_finite_values(self, caplog):
+        aircraft = object.__new__(_JSBSimAircraft)
+        aircraft.uid = "own"
+        aircraft.lon0 = 120.0
+        aircraft.lat0 = 60.0
+        aircraft.alt0 = 0.0
+        aircraft.origin = (aircraft.lon0, aircraft.lat0, aircraft.alt0)
+        aircraft.jsbsim_exec = _DummyJSBSimExec()
+        aircraft._state = {
+            "position_neu": np.array([10.0, 20.0, 3000.0], dtype=np.float64),
+            "position_m": np.array([10.0, 20.0, 3000.0], dtype=np.float64),
+            "position_lla": np.array([120.1, 60.1, 3000.0], dtype=np.float64),
+            "altitude_m": 3000.0,
+            "attitude_rpy": np.array([0.1, 0.2, 0.3], dtype=np.float64),
+            "velocity_ned": np.array([200.0, 0.0, 0.0], dtype=np.float64),
+            "velocity_vector_mps": np.array([200.0, 0.0, -0.0], dtype=np.float64),
+            "velocity_body": np.array([200.0, 0.0, 0.0], dtype=np.float64),
+            "body_rates_rps": np.zeros(3, dtype=np.float64),
+            "roll_rad": 0.1,
+            "pitch_rad": 0.2,
+            "yaw_rad": 0.3,
+            "p_rps": 0.0,
+            "q_rps": 0.0,
+            "r_rps": 0.0,
+            "nz_g": 0.9,
+            "beta_rad": 0.0,
+            "sideslip_rad": 0.0,
+            "speed_mps": 200.0,
+            "vt_mps": 200.0,
+            "sim_time": 12.0,
+        }
+        values = {
+            "position/long-gc-deg": float("nan"),
+            "position/lat-geod-deg": 60.0,
+            "position/h-sl-ft": float("inf"),
+            "attitude/roll-rad": 0.0,
+            "attitude/pitch-rad": 0.0,
+            "attitude/heading-true-rad": 0.0,
+            "velocities/v-north-fps": 700.0,
+            "velocities/v-east-fps": 0.0,
+            "velocities/v-down-fps": 0.0,
+            "velocities/vt-fps": float("nan"),
+            "velocities/u-fps": float("nan"),
+            "velocities/v-fps": 0.0,
+            "velocities/w-fps": 0.0,
+            "velocities/p-rad_sec": 0.0,
+            "velocities/q-rad_sec": 0.0,
+            "velocities/r-rad_sec": 0.0,
+            "accelerations/Nz": float("inf"),
+        }
+        aircraft.get_property_value = values.__getitem__
+
+        with caplog.at_level("WARNING"):
+            aircraft._update_state()
+
+        state = aircraft.get_state()
+        assert np.isfinite(state["position_neu"]).all()
+        assert np.isfinite(state["attitude_rpy"]).all()
+        np.testing.assert_allclose(state["position_neu"], [10.0, 20.0, 3000.0])
+        assert state["altitude_m"] == pytest.approx(3000.0)
+        assert state["speed_mps"] == pytest.approx(200.0)
+        assert state["nz_g"] == pytest.approx(0.9)
+        assert any("Non-finite JSBSim state" in rec.message for rec in caplog.records)
 
     def test_init_reads_config(self):
         root = os.environ.get("JSBSIM_ROOT", "")

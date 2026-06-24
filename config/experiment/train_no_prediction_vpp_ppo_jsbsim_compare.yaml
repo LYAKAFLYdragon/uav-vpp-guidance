@@ -16,6 +16,11 @@ experiment:
   seed: 0
   mode: train
   output_root: outputs
+  flight_control_profile:
+    name: bank76_alt_hold_lift_smooth
+    config_path: config/experiment/ablation_mw_bank76_alt_hold_lift_smooth.yaml
+    validated_run_id: _codex_bank76_20seed
+    note: "Shared low-level profile for JSBSim VPP air-combat experiments."
 
 backend: jsbsim
 
@@ -80,17 +85,29 @@ guidance:
       max_roll_rad: 1.3963
       attenuation_power: 2.0
     use_distance_aware_speed: true
+  post_process:
+    enabled: true
+    enable_lift_compensation: true
+    lift_compensation_factor: 1.0
+    lift_compensation_source: actual_roll
+    lift_compensation_filter_alpha: 0.3
+    lift_compensation_min_cos: 0.5
 
 limits:
   nz_min: -2.0
   nz_max: 7.0
   roll_rate_min: -1.5
   roll_rate_max: 1.5
-  throttle_min: 0.0
-  throttle_max: 1.0
+  throttle_min: 0.4
+  throttle_max: 0.9
 
 low_level_controller:
   type: enhanced
+  enable_bank_angle_protection: true
+  max_bank_rad: 1.3264502315156905   # 76 deg
+  bank_violation_threshold: 25
+  bank_protection_nz_increment: 0.5
+  altitude_hold_gain: 0.01
 
 reward:
   w_range: 0.6

@@ -31,6 +31,7 @@ from uav_vpp_guidance.utils.seed import set_seed
 from uav_vpp_guidance.envs.tracking_env import CloseRangeTrackingEnv
 from uav_vpp_guidance.agents.end_to_end_ppo_agent import EndToEndPPOAgent
 from uav_vpp_guidance.common.provenance import record_config_override_if_changed
+from uav_vpp_guidance.flight_control.command_limiter import effective_throttle_limits
 
 
 def load_experiment_config(config_path):
@@ -52,6 +53,36 @@ def sample_scenario(config, rng):
         return None
     name = rng.choice(list(scenarios.keys()))
     return scenarios[name]
+
+
+def _finite_float(value, default=np.nan):
+    try:
+        out = float(value)
+    except (TypeError, ValueError):
+        return float(default)
+    return out if np.isfinite(out) else float(default)
+
+
+def _command_stats(values, th_min, th_max, eps=1e-6):
+    arr = np.asarray(values, dtype=float)
+    arr = arr[np.isfinite(arr)]
+    if len(arr) == 0:
+        return {
+            "mean": np.nan,
+            "min": np.nan,
+            "max": np.nan,
+            "at_min_rate": np.nan,
+            "at_max_rate": np.nan,
+            "outside_rate": np.nan,
+        }
+    return {
+        "mean": float(np.mean(arr)),
+        "min": float(np.min(arr)),
+        "max": float(np.max(arr)),
+        "at_min_rate": float(np.mean(arr <= th_min + eps)),
+        "at_max_rate": float(np.mean(arr >= th_max - eps)),
+        "outside_rate": float(np.mean((arr < th_min - eps) | (arr > th_max + eps))),
+    }
 
 
 def run_evaluation(
@@ -113,9 +144,13 @@ def run_evaluation(
                             "range_m": range_m,
                             "ata_deg": ata_deg,
                             "reward": reward,
-                            "nz_cmd": float(action[0]),
-                            "roll_rate_cmd": float(action[1]),
-                            "throttle_cmd": float(action[2]),
+                            "action_nz_norm": float(action[0]),
+                            "action_roll_rate_norm": float(action[1]),
+                            "action_throttle_norm": float(action[2]),
+                            "nz_cmd": _finite_float(info.get("nz_cmd")),
+                            "roll_rate_cmd": _finite_float(info.get("roll_rate_cmd")),
+                            "throttle_cmd": _finite_float(info.get("throttle_cmd")),
+                            "throttle_saturated": int(bool(info.get("throttle_saturated", False))),
                         }
                     )
 
@@ -215,6 +250,7 @@ def train_ppo(config, output_dir, smoke=False):
     # Environment
     env = CloseRangeTrackingEnv(config)
     backend = env._backend
+    th_min, th_max = effective_throttle_limits(config.get("limits", {}))
     print(f"Backend: {backend}")
 
     # Get observation and action dimensions
@@ -254,6 +290,13 @@ def train_ppo(config, output_dir, smoke=False):
         "mean_range",
         "final_range",
         "final_ata",
+        "mean_throttle_cmd",
+        "min_throttle_cmd",
+        "max_throttle_cmd",
+        "throttle_at_min_rate",
+        "throttle_at_max_rate",
+        "throttle_outside_effective_rate",
+        "throttle_saturation_rate",
     ]
     update_fieldnames = [
         "step",
@@ -300,6 +343,8 @@ def train_ppo(config, output_dir, smoke=False):
                 episode_return = 0.0
                 episode_length = 0
                 episode_ranges = []
+                episode_throttles = []
+                episode_throttle_saturated = []
                 episode_success = False
                 episode_crash = False
                 episode_oob = False
@@ -333,6 +378,12 @@ def train_ppo(config, output_dir, smoke=False):
                         rel_state = obs.get("relative_state", {})
                         range_m = rel_state.get("range_m", 0.0)
                         episode_ranges.append(range_m)
+                        throttle_cmd = _finite_float(info.get("throttle_cmd"))
+                        if np.isfinite(throttle_cmd):
+                            episode_throttles.append(throttle_cmd)
+                        episode_throttle_saturated.append(
+                            bool(info.get("throttle_saturated", False))
+                        )
 
                         if terminated or truncated:
                             # Episode ended
@@ -357,6 +408,14 @@ def train_ppo(config, output_dir, smoke=False):
                                 if episode_ranges
                                 else 0.0
                             )
+                            throttle_stats = _command_stats(
+                                episode_throttles, th_min=th_min, th_max=th_max
+                            )
+                            throttle_saturation_rate = (
+                                float(np.mean(episode_throttle_saturated))
+                                if episode_throttle_saturated
+                                else np.nan
+                            )
 
                             # Log episode stats immediately
                             ep_row = {
@@ -372,6 +431,13 @@ def train_ppo(config, output_dir, smoke=False):
                                 "mean_range": mean_range,
                                 "final_range": final_range,
                                 "final_ata": final_ata,
+                                "mean_throttle_cmd": throttle_stats["mean"],
+                                "min_throttle_cmd": throttle_stats["min"],
+                                "max_throttle_cmd": throttle_stats["max"],
+                                "throttle_at_min_rate": throttle_stats["at_min_rate"],
+                                "throttle_at_max_rate": throttle_stats["at_max_rate"],
+                                "throttle_outside_effective_rate": throttle_stats["outside_rate"],
+                                "throttle_saturation_rate": throttle_saturation_rate,
                             }
                             ep_writer.writerow(ep_row)
                             f_ep.flush()
@@ -380,6 +446,8 @@ def train_ppo(config, output_dir, smoke=False):
                             episode_return = 0.0
                             episode_length = 0
                             episode_ranges = []
+                            episode_throttles = []
+                            episode_throttle_saturated = []
 
                             # Reset environment
                             scenario = sample_scenario(config, rng)
@@ -552,6 +620,12 @@ def main():
         help="Override compute device (default: from config).",
     )
     parser.add_argument(
+        "--total-timesteps",
+        type=int,
+        default=None,
+        help="Override ppo.total_timesteps without editing the YAML config.",
+    )
+    parser.add_argument(
         "--backend",
         type=str,
         default=None,
@@ -696,6 +770,20 @@ def main():
             source="train_end_to_end_ppo.py:--device",
         )
         print(f"Device override: {args.device}")
+
+    if args.total_timesteps is not None:
+        if "ppo" not in config:
+            config["ppo"] = {}
+        old_total_timesteps = config["ppo"].get("total_timesteps")
+        config["ppo"]["total_timesteps"] = int(args.total_timesteps)
+        record_config_override_if_changed(
+            config,
+            "ppo.total_timesteps",
+            int(args.total_timesteps),
+            old_value=old_total_timesteps,
+            source="train_end_to_end_ppo.py:--total-timesteps",
+        )
+        print(f"Total timesteps override: {args.total_timesteps}")
 
     train_ppo(config, output_dir, smoke=args.smoke)
 

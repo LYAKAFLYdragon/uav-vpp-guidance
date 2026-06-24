@@ -1,0 +1,6 @@
+# Ablation: 78 deg bank + altitude hold + smoothed lift compensation.
+includes:
+  - ablation_mw_bank75_alt_hold_lift_smooth.yaml
+
+low_level_controller:
+  max_bank_rad: 1.361356816555577    # 78 deg

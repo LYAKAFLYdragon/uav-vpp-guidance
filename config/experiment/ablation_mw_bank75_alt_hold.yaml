@@ -1,0 +1,11 @@
+# Ablation: bank-angle protection (75 deg) + stronger altitude hold.
+includes:
+  - task_multi_waypoint.yaml
+
+low_level_controller:
+  type: enhanced
+  enable_bank_angle_protection: true
+  max_bank_rad: 1.3089969389957472   # 75 deg
+  bank_violation_threshold: 25
+  bank_protection_nz_increment: 0.5
+  altitude_hold_gain: 0.01

@@ -1,0 +1,6 @@
+# Ablation: relax bank-angle protection to 80 deg + altitude hold.
+includes:
+  - ablation_mw_bank75_alt_hold.yaml
+
+low_level_controller:
+  max_bank_rad: 1.3962634015954636   # 80 deg

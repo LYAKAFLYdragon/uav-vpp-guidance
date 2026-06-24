@@ -1,0 +1,10 @@
+# Ablation: enable coordinated-turn lift compensation in the post-processor.
+includes:
+  - task_multi_waypoint.yaml
+
+guidance:
+  post_process:
+    enabled: true
+    enable_lift_compensation: true
+    lift_compensation_factor: 1.0
+    lift_compensation_min_cos: 0.5

@@ -1,0 +1,26 @@
+backend: jsbsim
+
+task:
+  name: break_turn
+  env_class: BreakTurnEnv
+  break_turn:
+    # Maneuver type: "break_turn" or "yo_yo"
+    maneuver_type: break_turn
+    initial_range_m: 1500.0
+    own_speed_mps: 280.0
+    target_speed_mps: 250.0
+    base_altitude_m: 5000.0
+    # break-turn parameters
+    straight_delay_s: 2.0
+    turn_rate_deg_s: 6.0
+    turn_angle_deg: 180.0
+    # yo-yo parameters
+    altitude_amplitude_m: 500.0
+    speed_amplitude_mps: 30.0
+    oscillation_freq_hz: 0.05
+    min_safe_speed_mps: 150.0
+    reward_shaping:
+      w_range_error: 0.01
+
+env:
+  max_high_level_steps: 450

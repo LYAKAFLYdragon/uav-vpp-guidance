@@ -1,0 +1,8 @@
+# Ablation: reduce roll authority/damping from the guidance law.
+includes:
+  - task_multi_waypoint.yaml
+
+guidance:
+  gains:
+    k_roll: 0.5
+    k_damp: 0.5

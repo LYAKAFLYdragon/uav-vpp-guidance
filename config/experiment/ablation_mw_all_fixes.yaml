@@ -1,0 +1,22 @@
+# Ablation: combine bank protection (75 deg), stronger altitude hold,
+# reduced roll authority, and lift compensation.
+includes:
+  - task_multi_waypoint.yaml
+
+low_level_controller:
+  type: enhanced
+  enable_bank_angle_protection: true
+  max_bank_rad: 1.3089969389957472   # 75 deg
+  bank_violation_threshold: 25
+  bank_protection_nz_increment: 0.5
+  altitude_hold_gain: 0.01
+
+guidance:
+  gains:
+    k_roll: 0.5
+    k_damp: 0.5
+  post_process:
+    enabled: true
+    enable_lift_compensation: true
+    lift_compensation_factor: 1.0
+    lift_compensation_min_cos: 0.5

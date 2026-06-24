@@ -1,0 +1,8 @@
+# Ablation: increase altitude-hold gain for the fixed PID low-level controllers
+# in the multi-waypoint task.
+includes:
+  - task_multi_waypoint.yaml
+
+low_level_controller:
+  type: enhanced
+  altitude_hold_gain: 0.01

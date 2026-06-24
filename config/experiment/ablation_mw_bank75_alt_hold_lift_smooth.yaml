@@ -1,0 +1,12 @@
+# Ablation: bank-angle protection (75 deg) + altitude hold + smoothed lift compensation.
+includes:
+  - ablation_mw_bank75_alt_hold.yaml
+
+guidance:
+  post_process:
+    enabled: true
+    enable_lift_compensation: true
+    lift_compensation_factor: 1.0
+    lift_compensation_source: "actual_roll"
+    lift_compensation_filter_alpha: 0.3
+    lift_compensation_min_cos: 0.5

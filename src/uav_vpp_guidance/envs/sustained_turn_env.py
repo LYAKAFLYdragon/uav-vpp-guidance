@@ -22,8 +22,12 @@ class SustainedTurnEnv(CloseRangeTrackingEnv):
     episodes terminate only on timeout, stall, or absolute bounds violation.
     """
 
-    def __init__(self, config: dict):
-        super().__init__(config)
+    def __init__(self, config: dict, opponent_policy=None, opponent_config=None):
+        super().__init__(
+            config,
+            opponent_policy=opponent_policy,
+            opponent_config=opponent_config,
+        )
         self.task_cfg = config.get("task", {}).get("sustained_turn", {})
         self.target_pos = np.array(
             self.task_cfg.get("target_pos_m", [2000.0, 0.0, 5000.0]), dtype=float
@@ -129,8 +133,9 @@ class SustainedTurnEnv(CloseRangeTrackingEnv):
         info["turn_radius_m"] = radius
         info["orbit_direction"] = self.orbit_direction
 
-        # Disable the default "success" termination (proximity to target).
-        if info.get("is_success"):
+        # Disable only the default proximity success termination. Combat wins
+        # also set is_success=True and must keep their terminal state.
+        if info.get("is_success") and not info.get("combat_outcome"):
             terminated = False
             truncated = False
             info["is_success"] = False
@@ -225,9 +230,9 @@ class SustainedTurnEnv(CloseRangeTrackingEnv):
     # Helpers
     # ------------------------------------------------------------------
 
-    def _get_current_states(self):
+    def _get_current_states(self, noisy: bool = False):
         """Override to return a fixed target state (orbit center)."""
-        own, target = super()._get_current_states()
+        own, target = super()._get_current_states(noisy=noisy)
         # Force target to remain fixed at the orbit center.
         # This prevents JSBSim target aircraft dynamics from drifting
         # (e.g., descending under gravity) and corrupting range/reward computations.
@@ -240,7 +245,13 @@ class SustainedTurnEnv(CloseRangeTrackingEnv):
         }
         return own, target
 
-    def _step_jsbsim(self, command, aggressiveness=None, pid_gain_deltas=None):
+    def _step_jsbsim(
+        self,
+        command,
+        aggressiveness=None,
+        pid_gain_deltas=None,
+        target_command=None,
+    ):
         """Step JSBSim after resetting the target aircraft to fixed position."""
         # Re-apply the target aircraft initial condition BEFORE stepping JSBSim
         # to prevent any target_dynamics movement from affecting the step.
@@ -251,8 +262,13 @@ class SustainedTurnEnv(CloseRangeTrackingEnv):
             "pitch_deg": 0.0,
             "roll_deg": 0.0,
         })
-        self.jsbsim_env.apply_aircraft_ic_state(self.target_uid, target_init)
-        result = super()._step_jsbsim(command, aggressiveness, pid_gain_deltas)
+        self.jsbsim_env.reload_aircraft(self.target_uid, target_init)
+        result = super()._step_jsbsim(
+            command,
+            aggressiveness,
+            pid_gain_deltas,
+            target_command=target_command,
+        )
         return result
 
     def _build_default_scenario(self, seed):

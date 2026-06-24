@@ -16,13 +16,20 @@ P4 scope: JSBSim high-fidelity bridge with unified backend interface.
 import inspect
 import logging
 import numpy as np
-from typing import Optional, Tuple
+from typing import Any, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
+
+def _wrap_angle(angle: float) -> float:
+    """Wrap an angle in radians to [-pi, pi]."""
+    return float((angle + np.pi) % (2.0 * np.pi) - np.pi)
+
 from .jsbsim_env import JSBSimEnv, neu2lla
 from .simple_point_mass_env import SimplePointMassEnv
+from .attack_zone import CombatHPManager
 from .observation import compute_relative_geometry, build_observation
+from .opponent_policy import OpponentPolicy
 from .reward import RewardCalculator
 from .termination import TerminationChecker
 from ..common.provenance import get_config_overrides
@@ -31,6 +38,7 @@ from ..virtual_point.no_vpp_guidance import NoVPPGuidance
 from ..guidance.los_rate_guidance import LOSRateGuidance
 from ..guidance.proportional_navigation import ProportionalNavigationGuidance
 from ..guidance.hybrid_guidance import HybridGuidance
+from ..guidance.mpc_guidance import MPCGuidance
 from ..guidance.overload_rollrate import CommandPostProcessor
 from ..guidance.gain_config import GuidanceGains
 from ..flight_control.command_limiter import clip_command
@@ -65,13 +73,27 @@ class CloseRangeTrackingEnv:
     - SimplePointMassEnv: simplified kinematics for smoke testing.
     """
 
-    def __init__(self, config: dict):
+    def __init__(
+        self,
+        config: dict,
+        opponent_policy: Optional[OpponentPolicy] = None,
+        opponent_config: Optional[dict] = None,
+    ):
         """
         Args:
             config (dict): Full environment and guidance configuration.
+            opponent_policy: Optional embedded target-aircraft controller.
+            opponent_config: Optional serializable opponent metadata.
         """
         self.config = config
         self.env_config = config.get("env", {})
+        self.opponent_policy = opponent_policy
+        self.opponent_config = (
+            dict(opponent_config)
+            if opponent_config is not None
+            else dict(config.get("opponent", {}))
+        )
+        self._opponent_stage = self.opponent_config.get("stage", "none")
         self.sim_freq = self.env_config.get("sim_freq", 60)
         self.decision_freq = self.env_config.get("decision_freq", 5)
         self.max_steps = self.env_config.get("max_high_level_steps", 512)
@@ -109,6 +131,9 @@ class CloseRangeTrackingEnv:
                 self._low_level_controller = self._build_low_level_controller(
                     config
                 )
+                self._target_low_level_controller = self._build_low_level_controller(
+                    config
+                )
             except Exception as exc:
                 if strict_backend:
                     raise RuntimeError(
@@ -127,11 +152,13 @@ class CloseRangeTrackingEnv:
                 )
                 self.jsbsim_env = None
                 self._low_level_controller = None
+                self._target_low_level_controller = None
                 self._simple_env = SimplePointMassEnv(self.env_config)
                 self._backend = "simple"
         else:
             self.jsbsim_env = None
             self._low_level_controller = None
+            self._target_low_level_controller = None
             self._simple_env = SimplePointMassEnv(self.env_config)
             self._backend = "simple"
 
@@ -189,14 +216,8 @@ class CloseRangeTrackingEnv:
         # Guidance law selection based on mode
         guidance_config = config.get("guidance", {})
         guidance_mode = str(guidance_config.get("mode", "los_rate")).lower()
-        if guidance_mode == "los_rate":
-            self.guidance = LOSRateGuidance(guidance_config)
-        elif guidance_mode == "proportional_navigation":
-            self.guidance = ProportionalNavigationGuidance(guidance_config)
-        elif guidance_mode == "hybrid":
-            self.guidance = HybridGuidance(guidance_config)
-        else:
-            raise ValueError(f"Unknown guidance mode: {guidance_mode}")
+        self.guidance = self._build_guidance_law(guidance_config)
+        self._target_guidance = self._build_guidance_law(guidance_config)
 
         # Mode-switch: store PN guidance for runtime switching
         self._guidance_pn = None
@@ -220,12 +241,14 @@ class CloseRangeTrackingEnv:
 
         self.reward_calculator = RewardCalculator(config)
         self.termination_checker = TerminationChecker(self.env_config)
+        self.combat_hp = CombatHPManager.from_config(config)
 
         # Command filter (three independent channels)
         filter_alpha = (
             config.get("guidance", {}).get("gains", {}).get("alpha_filter", 0.3)
         )
         self._command_filter = MultiChannelCommandFilter(alpha=filter_alpha)
+        self._target_command_filter = MultiChannelCommandFilter(alpha=filter_alpha)
 
         # Current guidance gains (loaded from config so external gain overrides
         # actually propagate into the guidance law)
@@ -269,6 +292,18 @@ class CloseRangeTrackingEnv:
         self.domain_rand_scale = float(self.domain_rand_config.get("scale", 0.0))
         self._domain_rand_rng = np.random.default_rng(42)
 
+        # Robustness testing: sensor noise, communication delay, wind.
+        self._robustness = config.get("robustness", {})
+        self._sensor_noise = self._robustness.get("sensor_noise", {})
+        self._comm_delay = self._robustness.get("communication_delay", {})
+        self._high_level_dt = float(self.env_config.get("high_level_dt", 1.0 / self.decision_freq))
+        self._robustness_seed_base = int(self._robustness.get("seed", 0))
+        self._robustness_rng = np.random.default_rng(self._robustness_seed_base)
+        self._prediction_noise_rng = np.random.default_rng(
+            self._robustness_seed_base + 7919
+        )
+        self._prev_delayed_command: Optional[dict] = None
+
         self.current_step = 0
         self._episode_count = 0
         self._sim_time_s = 0.0
@@ -285,6 +320,19 @@ class CloseRangeTrackingEnv:
     # ------------------------------------------------------------------
     # Low-level controller factory
     # ------------------------------------------------------------------
+
+    def _build_guidance_law(self, guidance_config: dict):
+        """Construct a guidance law from the existing guidance config."""
+        guidance_mode = str(guidance_config.get("mode", "los_rate")).lower()
+        if guidance_mode == "los_rate":
+            return LOSRateGuidance(guidance_config)
+        if guidance_mode == "proportional_navigation":
+            return ProportionalNavigationGuidance(guidance_config)
+        if guidance_mode == "hybrid":
+            return HybridGuidance(guidance_config)
+        if guidance_mode == "mpc":
+            return MPCGuidance(guidance_config)
+        raise ValueError(f"Unknown guidance mode: {guidance_mode}")
 
     def _build_low_level_controller(self, config: dict):
         """
@@ -373,6 +421,16 @@ class CloseRangeTrackingEnv:
         self._sim_time_s = 0.0
         self._last_aggressiveness = None
         self._last_pid_gain_deltas = None
+        self._prev_delayed_command = None
+        # Deterministic sensor-noise stream per episode.
+        self._robustness_rng = np.random.default_rng(
+            self._robustness_seed_base + (seed if seed is not None else self._episode_count)
+        )
+        self._prediction_noise_rng = np.random.default_rng(
+            self._robustness_seed_base
+            + 7919
+            + (seed if seed is not None else self._episode_count)
+        )
         self.reward_calculator.reset()
         self.termination_checker.reset()
         self._task_reset(seed)
@@ -382,8 +440,14 @@ class CloseRangeTrackingEnv:
             self._guidance_pn.reset()
         self._mode_switch_latched = False
         self._command_filter.reset()
+        self._target_command_filter.reset()
         if self._low_level_controller is not None:
             self._low_level_controller.reset()
+        if self._target_low_level_controller is not None:
+            self._target_low_level_controller.reset()
+        if self.opponent_policy is not None:
+            self.opponent_policy.reset()
+        self.combat_hp.reset()
 
         if self.trajectory_predictor_adapter is not None:
             self.trajectory_predictor_adapter.reset()
@@ -548,6 +612,194 @@ class CloseRangeTrackingEnv:
                 target_init = self._scenario_to_simple_init(target_scenario)
         self._simple_env.reset(own_init=own_init, target_init=target_init)
 
+    def set_opponent_policy(
+        self,
+        opponent_policy: Optional[OpponentPolicy],
+        opponent_config: Optional[dict] = None,
+    ) -> None:
+        """Replace the embedded opponent policy at runtime."""
+        self.opponent_policy = opponent_policy
+        self.opponent_config = dict(opponent_config or {})
+        self._opponent_stage = self.opponent_config.get("stage", "custom")
+        if self.opponent_policy is not None:
+            self.opponent_policy.reset()
+
+    def _get_opponent_obs(
+        self,
+        own_state: Optional[dict] = None,
+        target_state: Optional[dict] = None,
+    ) -> dict:
+        """Build role-reversed observation for the target-aircraft opponent."""
+        if own_state is None or target_state is None:
+            own_state, target_state = self._get_current_states(noisy=True)
+
+        rel_state = compute_relative_geometry(own_state, target_state)
+        physical_rel_state = compute_relative_geometry(target_state, own_state)
+
+        gains = self.current_gains if self._include_gains_in_observation else None
+        prediction_features = None
+        guidance_state = None
+        if self._include_guidance_state_in_observation:
+            guidance_state = {"vp_tracking_error": np.zeros(3, dtype=np.float64)}
+        saturation_features = (
+            self._last_command_saturation
+            if self._include_saturation_in_observation
+            else None
+        )
+        ego_vec, feature_names = build_observation(
+            own_state,
+            target_state,
+            guidance_state=guidance_state,
+            gains=gains,
+            prediction_features=prediction_features,
+            saturation_features=saturation_features,
+            return_feature_names=True,
+        )
+        opponent_vec = self._invert_observation_vector(ego_vec, feature_names)
+        opponent_rel_state = self._invert_relative_state(rel_state)
+
+        return {
+            "own_state": self._copy_state(target_state),
+            "target_state": self._copy_state(own_state),
+            "relative_state": opponent_rel_state,
+            "physical_relative_state": physical_rel_state,
+            "observation_vector": opponent_vec,
+            "observation_schema": {
+                "dim": int(opponent_vec.shape[0]),
+                "feature_names": list(feature_names),
+                "role_reversed": True,
+            },
+            "dt": float(self.env_config.get("high_level_dt", 0.2)),
+        }
+
+    @staticmethod
+    def _invert_observation_vector(obs_vec: np.ndarray, feature_names: list) -> np.ndarray:
+        """Invert the ordered policy observation according to the combat role table."""
+        values = {name: float(obs_vec[i]) for i, name in enumerate(feature_names)}
+        inverted = dict(values)
+        sign_flip = (
+            "range_rate_mps",
+            "altitude_diff_m",
+            "speed_diff_mps",
+            "los_azimuth_sin",
+            "los_elevation_sin",
+        )
+        for key in sign_flip:
+            if key in inverted:
+                inverted[key] = -inverted[key]
+        swaps = (
+            ("ata_sin", "aa_sin"),
+            ("ata_cos", "aa_cos"),
+            ("own_speed", "target_speed"),
+            ("own_altitude", "target_altitude"),
+        )
+        for left, right in swaps:
+            if left in inverted and right in inverted:
+                inverted[left], inverted[right] = values[right], values[left]
+        return np.array([inverted[name] for name in feature_names], dtype=np.float32)
+
+    @staticmethod
+    def _invert_relative_state(rel_state: dict) -> dict:
+        inverted = dict(rel_state)
+        if "range_rate_mps" in inverted:
+            inverted["range_rate_mps"] = -float(inverted["range_rate_mps"])
+        if "altitude_diff_m" in inverted:
+            inverted["altitude_diff_m"] = -float(inverted["altitude_diff_m"])
+        if "speed_diff_mps" in inverted:
+            inverted["speed_diff_mps"] = -float(inverted["speed_diff_mps"])
+        if "los_azimuth_rad" in inverted:
+            inverted["los_azimuth_rad"] = -float(inverted["los_azimuth_rad"])
+        if "los_elevation_rad" in inverted:
+            inverted["los_elevation_rad"] = -float(inverted["los_elevation_rad"])
+        if "ata_rad" in rel_state and "aa_rad" in rel_state:
+            inverted["ata_rad"] = rel_state["aa_rad"]
+            inverted["aa_rad"] = rel_state["ata_rad"]
+        if "relative_position" in inverted:
+            inverted["relative_position"] = -np.asarray(inverted["relative_position"])
+        if "relative_velocity" in inverted:
+            inverted["relative_velocity"] = -np.asarray(inverted["relative_velocity"])
+        return inverted
+
+    def _compute_opponent_command(self, own_state: dict, target_state: dict):
+        """Run the embedded opponent and convert its action into target commands."""
+        if self.opponent_policy is None:
+            return None, {}
+
+        opponent_obs = self._get_opponent_obs(own_state, target_state)
+        action = np.asarray(self.opponent_policy.act(opponent_obs), dtype=np.float64)
+        action_mode = getattr(self.opponent_policy, "action_mode", "direct_command")
+        if action_mode == "vpp":
+            raw_command = self._build_vpp_command_for_actor(
+                actor_state=target_state,
+                target_state=own_state,
+                action=action,
+            )
+        else:
+            raw_command = self._normalized_direct_action_to_command(action)
+
+        clipped_command = clip_command(raw_command, self.config.get("limits", {}))
+        filtered_command = self._target_command_filter.filter(clipped_command)
+        diagnostics = {
+            "opponent_stage": self._opponent_stage,
+            "opponent_action_mode": action_mode,
+            "opponent_action": action.tolist(),
+            "opponent_raw_command": raw_command,
+            "opponent_command": filtered_command,
+        }
+        diagnostics.update(self.opponent_policy.get_diagnostics())
+        return filtered_command, diagnostics
+
+    def _normalized_direct_action_to_command(self, action: np.ndarray) -> dict:
+        action = np.asarray(action, dtype=np.float64).reshape(-1)
+        if action.shape[0] < 3:
+            raise ValueError(f"Opponent direct action must have at least 3 dims, got {action.shape}")
+        limits = self.config.get("limits", {})
+        nz_min = limits.get("nz_min", -2.0)
+        nz_max = limits.get("nz_max", 7.0)
+        rr_min = limits.get("roll_rate_min", -1.5)
+        rr_max = limits.get("roll_rate_max", 1.5)
+        th_min = limits.get("throttle_min", 0.0)
+        th_max = limits.get("throttle_max", 1.0)
+        action = np.clip(action[:3], -1.0, 1.0)
+        return {
+            "nz_cmd": float(action[0]) * (nz_max - nz_min) / 2.0 + (nz_max + nz_min) / 2.0,
+            "roll_rate_cmd": float(action[1]) * (rr_max - rr_min) / 2.0 + (rr_max + rr_min) / 2.0,
+            "throttle_cmd": float(action[2]) * (th_max - th_min) / 2.0 + (th_max + th_min) / 2.0,
+        }
+
+    def _build_vpp_command_for_actor(
+        self,
+        actor_state: dict,
+        target_state: dict,
+        action: np.ndarray,
+    ) -> dict:
+        target_pos = target_state.get("position_m")
+        if target_pos is None:
+            target_pos = target_state.get("position_neu")
+        target_for_vp = {"position_neu": np.asarray(target_pos, dtype=np.float64)}
+        target_vel = target_state.get("velocity_vector_mps")
+        if target_vel is not None:
+            target_for_vp["velocity_vector_mps"] = np.asarray(target_vel, dtype=np.float64)
+        action = np.asarray(action, dtype=np.float64).reshape(-1)[:3]
+        if self.virtual_point_generator is not None:
+            virtual_point, _vp_info = self.virtual_point_generator.action_to_virtual_point(
+                action,
+                actor_state,
+                target_for_vp,
+                anchor_mode="current_target",
+                trajectory_predictor_adapter=None,
+                predicted_target_position=None,
+                return_info=True,
+            )
+        else:
+            virtual_point = {"position_neu": np.asarray(target_for_vp["position_neu"], dtype=np.float64)}
+        return self._target_guidance.compute_command(
+            actor_state,
+            target_state,
+            virtual_point,
+            self.current_gains,
+        )
+
     def step(
         self,
         action: Optional[np.ndarray] = None,
@@ -583,14 +835,17 @@ class CloseRangeTrackingEnv:
         high_level_dt = self.env_config.get("high_level_dt", 0.2)
         self._sim_time_s += high_level_dt
 
-        # 1. 获取当前状态
-        own_state, target_state = self._get_current_states()
+        # 1. 获取当前状态（带传感器噪声的测量值用于闭环）
+        own_state, target_state = self._get_current_states(noisy=True)
 
         # 1b. 任务钩子：允许子类替换/合成目标状态
         target_state = self._task_get_target_state(target_state, own_state)
 
         # 1c. 任务钩子：允许子类在 guidance 前更新任务状态
         own_state, target_state = self._task_pre_step(own_state, target_state)
+        target_command, opponent_info = self._compute_opponent_command(
+            own_state, target_state
+        )
 
         # 2. 计算相对态势
         rel_state = compute_relative_geometry(own_state, target_state)
@@ -608,6 +863,8 @@ class CloseRangeTrackingEnv:
             "prediction_fallback_model": None,
             "prediction_fallback_phase": None,
             "predicted_target_position": None,
+            "prediction_noise_std_m": 0.0,
+            "prediction_noise_applied": False,
             "prediction_error_m": np.nan,
             "latest_prediction_error_m": np.nan,
             "mean_prediction_error_m": np.nan,
@@ -705,6 +962,17 @@ class CloseRangeTrackingEnv:
                 )
                 if pred_pos is not None and np.isfinite(pred_pos).all():
                     predicted_target_pos = np.asarray(pred_pos, dtype=np.float64)
+                    noise_std_m = float(
+                        self.config.get("trajectory_prediction", {})
+                        .get("integration", {})
+                        .get("prediction_noise_std_m", 0.0)
+                    )
+                    if noise_std_m > 0.0:
+                        predicted_target_pos = predicted_target_pos + self._prediction_noise_rng.normal(
+                            loc=0.0, scale=noise_std_m, size=3
+                        )
+                        prediction_info["prediction_noise_std_m"] = noise_std_m
+                        prediction_info["prediction_noise_applied"] = True
                     prediction_info["predicted_target_position"] = (
                         predicted_target_pos.tolist()
                     )
@@ -863,16 +1131,20 @@ class CloseRangeTrackingEnv:
         }
         filtered_command = self._apply_command_filter(clipped_command)
 
+        # 6b. 通信延迟：对滤波后的指令做一步滞后近似
+        delayed_command = self._apply_communication_delay(filtered_command)
+
         # 7. 环境 step
         actuator_info = {}
         if self._backend == "jsbsim":
             actuator_info = self._step_jsbsim(
-                filtered_command,
+                delayed_command,
                 aggressiveness=self._last_aggressiveness,
                 pid_gain_deltas=self._last_pid_gain_deltas,
+                target_command=target_command,
             )
         else:
-            self._step_simple(filtered_command)
+            self._step_simple(delayed_command, target_command=target_command)
         self._prediction_buffer_synced_for_action = False
 
         # 8. 获取 step 后的新状态（post-step）
@@ -900,6 +1172,35 @@ class CloseRangeTrackingEnv:
         terminated, truncated, term_info = self._check_done(
             own_state_post, target_state_post, rel_state_post
         )
+        if self.combat_hp.enabled and term_info.get("is_success"):
+            terminated = False
+            truncated = False
+            term_info["tracking_success_suppressed_by_combat"] = True
+            term_info["reason"] = None
+            term_info["is_success"] = False
+            if self.current_step >= self.max_steps:
+                truncated = True
+                term_info["reason"] = "timeout"
+                term_info["is_timeout"] = True
+        combat_step_info = self.combat_hp.step(own_state_post, target_state_post)
+        target_failed = self._aircraft_failed(target_state_post)
+        ego_failed = bool(term_info.get("is_crash") or term_info.get("is_out_of_bounds"))
+        combat_terminated, combat_truncated, combat_info = self.combat_hp.resolve_terminal(
+            term_info,
+            current_time_s=self._sim_time_s,
+            ego_failed=ego_failed,
+            target_failed=target_failed,
+        )
+        if combat_terminated or combat_truncated:
+            terminated = combat_terminated
+            truncated = combat_truncated
+            term_info.update(combat_info)
+            term_info["reason"] = combat_info.get("combat_reason", term_info.get("reason"))
+            term_info["is_success"] = bool(combat_info.get("combat_success", False))
+            term_info["is_crash"] = ego_failed or bool(term_info.get("is_crash", False))
+            term_info["is_timeout"] = bool(combat_truncated)
+        else:
+            term_info.update(combat_step_info)
 
         # 10. 计算 reward（基于 post-step 状态，含 terminal_reward 注入）
         reward, reward_terms = self._compute_reward(
@@ -923,6 +1224,10 @@ class CloseRangeTrackingEnv:
             "virtual_point": _serialize_vp(virtual_point),
             "guidance_command": filtered_command,
             "raw_command": raw_command,
+            "opponent_info": opponent_info,
+            "opponent_stage": self._opponent_stage,
+            "opponent_command": opponent_info.get("opponent_command"),
+            "opponent_action": opponent_info.get("opponent_action"),
             "reward_terms": reward_terms,
             "termination_info": term_info,
             "relative_state": rel_state_post,
@@ -954,6 +1259,8 @@ class CloseRangeTrackingEnv:
             "prediction_fallback_model": prediction_info["prediction_fallback_model"],
             "prediction_fallback_phase": prediction_info["prediction_fallback_phase"],
             "predicted_target_position": prediction_info["predicted_target_position"],
+            "prediction_noise_std_m": prediction_info["prediction_noise_std_m"],
+            "prediction_noise_applied": prediction_info["prediction_noise_applied"],
             "prediction_error_m": prediction_info["prediction_error_m"],
             "latest_prediction_error_m": prediction_info["latest_prediction_error_m"],
             "mean_prediction_error_m": prediction_info["mean_prediction_error_m"],
@@ -1009,7 +1316,13 @@ class CloseRangeTrackingEnv:
 
         # Inject terminal reward based on termination reason
         terminal_reward = 0.0
-        if term_info.get("is_success"):
+        if term_info.get("combat_outcome") == "win":
+            terminal_reward = self.reward_calculator.terminal_success
+        elif term_info.get("combat_outcome") == "loss":
+            terminal_reward = self.reward_calculator.terminal_failure
+        elif term_info.get("combat_outcome") == "draw":
+            terminal_reward = 0.0
+        elif term_info.get("is_success"):
             terminal_reward = self.reward_calculator.terminal_success
         elif term_info.get("is_crash"):
             terminal_reward = self.reward_calculator.terminal_crash
@@ -1019,6 +1332,24 @@ class CloseRangeTrackingEnv:
 
         reward, reward_terms = self.reward_calculator.compute(info)
         return reward, reward_terms
+
+    def _aircraft_failed(self, state: dict) -> bool:
+        """Return True if an aircraft has crashed or left configured bounds."""
+        altitude_m = float(state.get("altitude_m", 5000.0))
+        min_alt = float(self.env_config.get("min_altitude_m", 500.0))
+        max_alt = float(self.env_config.get("max_altitude_m", 15000.0))
+        if altitude_m < min_alt or altitude_m > max_alt:
+            return True
+        pos = np.asarray(
+            state.get("position_m", state.get("position_neu", [0.0, 0.0, altitude_m])),
+            dtype=np.float64,
+        )
+        xy_limit = self.env_config.get("xy_limit_m")
+        if xy_limit is not None and pos.shape[0] >= 2:
+            limit = float(xy_limit)
+            if abs(float(pos[0])) > limit or abs(float(pos[1])) > limit:
+                return True
+        return False
 
     def _evaluate_mode_switch_gate(self, rel_state):
         """Evaluate geometry-triggered mode-switch gate.
@@ -1233,23 +1564,76 @@ class CloseRangeTrackingEnv:
         features["pred_fallback"] = 1.0 if fallback else 0.0
         return features
 
-    def _get_current_states(self):
-        """获取当前本机和目标状态（统一格式）。"""
+    def _get_current_states(self, noisy: bool = False):
+        """获取当前本机和目标状态（统一格式）。
+
+        Args:
+            noisy: If True, apply sensor-noise perturbations to the returned
+                measurement copy.  The true environment state is never mutated.
+        """
         if self._backend == "jsbsim":
             states = self.jsbsim_env.get_state()
             own = states[self.own_uid]
             target = states[self.target_uid]
-            return own, target
         else:
-            return self._simple_env.get_state()
+            own, target = self._simple_env.get_state()
+        own = self._copy_state(own)
+        target = self._copy_state(target)
+        if noisy and self._sensor_noise.get("enabled", False):
+            own, target = self._apply_sensor_noise(own, target)
+        return own, target
+
+    @staticmethod
+    def _copy_state(state: dict) -> dict:
+        """Return a shallow copy with array fields duplicated."""
+        copied = {}
+        for k, v in state.items():
+            if isinstance(v, np.ndarray):
+                copied[k] = v.copy()
+            else:
+                copied[k] = v
+        return copied
+
+    def _apply_sensor_noise(self, own_state: dict, target_state: dict):
+        """Apply Gaussian IMU/GPS noise to a measurement copy."""
+        rng = self._robustness_rng
+        dt = self._high_level_dt
+
+        imu_std_deg_s = float(self._sensor_noise.get("imu_noise_std_deg_s", 0.0))
+        imu_std_rad = np.deg2rad(imu_std_deg_s) * dt
+        gps_std_m = float(self._sensor_noise.get("gps_position_noise_std_m", 0.0))
+
+        def _add_position_noise(state):
+            if "position_m" in state and gps_std_m > 0.0:
+                state["position_m"] = state["position_m"] + rng.normal(0.0, gps_std_m, size=3)
+            return state
+
+        def _add_attitude_noise(state):
+            if imu_std_rad <= 0.0:
+                return state
+            for key in ("heading_rad", "pitch_rad", "roll_rad", "yaw_rad"):
+                if key in state:
+                    state[key] = _wrap_angle(float(state[key]) + rng.normal(0.0, imu_std_rad))
+            return state
+
+        own_state = _add_position_noise(own_state)
+        own_state = _add_attitude_noise(own_state)
+        target_state = _add_position_noise(target_state)
+        target_state = _add_attitude_noise(target_state)
+        return own_state, target_state
 
     def _step_jsbsim(
-        self, command, aggressiveness: Optional[float] = None, pid_gain_deltas=None
+        self,
+        command,
+        aggressiveness: Optional[float] = None,
+        pid_gain_deltas=None,
+        target_command: Optional[dict] = None,
     ):
         """在 JSBSim 后端执行控制，返回 actuator info。"""
         # Get current aircraft state for the low-level controller
         states = self.jsbsim_env.get_state()
         own_state_raw = states[self.own_uid]
+        target_state_raw = states[self.target_uid]
 
         # Use low-level controller to map guidance commands to JSBSim properties.
         # New PID controllers accept aggressiveness/pid_gain_deltas; the legacy
@@ -1273,6 +1657,18 @@ class CloseRangeTrackingEnv:
             k: v for k, v in actuator_output.items() if k.startswith("fcs/")
         }
         control_inputs = {self.own_uid: jsbsim_props}
+        target_actuator_output = {}
+        if target_command is not None and self._target_low_level_controller is not None:
+            target_actuator_output = self._compute_actuator_output(
+                self._target_low_level_controller,
+                target_command,
+                target_state_raw,
+            )
+            control_inputs[self.target_uid] = {
+                k: v
+                for k, v in target_actuator_output.items()
+                if k.startswith("fcs/")
+            }
 
         for _ in range(self._sim_steps_per_decision):
             self.jsbsim_env.step(control_inputs)
@@ -1284,11 +1680,37 @@ class CloseRangeTrackingEnv:
             "rudder_cmd": actuator_output.get("fcs/rudder-cmd-norm", np.nan),
             "throttle_actual": actuator_output.get("fcs/throttle-cmd-norm", np.nan),
             "saturation_flag": actuator_output.get("saturation_flag", False),
+            "target_elevator_cmd": target_actuator_output.get("fcs/elevator-cmd-norm", np.nan),
+            "target_aileron_cmd": target_actuator_output.get("fcs/aileron-cmd-norm", np.nan),
+            "target_rudder_cmd": target_actuator_output.get("fcs/rudder-cmd-norm", np.nan),
+            "target_throttle_actual": target_actuator_output.get("fcs/throttle-cmd-norm", np.nan),
+            "target_saturation_flag": target_actuator_output.get("saturation_flag", False),
         }
 
-    def _step_simple(self, command):
+    def _compute_actuator_output(
+        self,
+        controller,
+        command,
+        state,
+        aggressiveness: Optional[float] = None,
+        pid_gain_deltas=None,
+    ):
+        sig = inspect.signature(controller.compute_actuator)
+        supports_extras = any(
+            p in sig.parameters for p in ("aggressiveness", "pid_gain_deltas")
+        )
+        if supports_extras:
+            return controller.compute_actuator(
+                command,
+                state,
+                aggressiveness=aggressiveness,
+                pid_gain_deltas=pid_gain_deltas,
+            )
+        return controller.compute_actuator(command, state)
+
+    def _step_simple(self, command, target_command: Optional[dict] = None):
         """在简化后端执行控制。"""
-        self._simple_env.step(own_command=command)
+        self._simple_env.step(own_command=command, target_command=target_command)
 
     # ------------------------------------------------------------------
     # Observation
@@ -1336,6 +1758,9 @@ class CloseRangeTrackingEnv:
             "backend_fallback_occurred": self._backend_fallback_occurred,
             "observation_schema": observation_schema,
             "config_overrides": list(get_config_overrides(self.config)),
+            "opponent_stage": self._opponent_stage,
+            "opponent_config": self.opponent_config,
+            "attack_zone_enabled": bool(self.combat_hp.enabled),
         }
         if self._backend_fallback_occurred:
             provenance["backend_fallback_reason"] = self._backend_fallback_reason
@@ -1350,7 +1775,7 @@ class CloseRangeTrackingEnv:
             flattened observation vector, observation schema metadata, and
             structured provenance.
         """
-        own_state, target_state = self._get_current_states()
+        own_state, target_state = self._get_current_states(noisy=True)
         rel_state = compute_relative_geometry(own_state, target_state)
 
         obs_dict = {
@@ -1400,6 +1825,30 @@ class CloseRangeTrackingEnv:
         self._last_observation_schema = observation_schema
         obs_dict["provenance"] = self._build_provenance(observation_schema)
         return obs_dict
+
+    def _apply_communication_delay(self, command: dict) -> dict:
+        """Apply a communication delay to the filtered command.
+
+        The delay is modeled as a convex combination of the current command and
+        the previous one: alpha = delay_s / high_level_dt.  This is equivalent
+        to a one-step zero-order hold interpolation for delays shorter than the
+        decision interval.
+        """
+        if not self._comm_delay.get("enabled", False):
+            return command
+        delay_s = float(self._comm_delay.get("delay_s", 0.0))
+        if delay_s <= 0.0:
+            return command
+        alpha = min(delay_s / self._high_level_dt, 1.0)
+        if self._prev_delayed_command is None:
+            self._prev_delayed_command = dict(command)
+        prev = self._prev_delayed_command
+        delayed = {
+            k: (1.0 - alpha) * float(command[k]) + alpha * float(prev.get(k, command[k]))
+            for k in command.keys()
+        }
+        self._prev_delayed_command = dict(command)
+        return delayed
 
     # ------------------------------------------------------------------
     # Helpers

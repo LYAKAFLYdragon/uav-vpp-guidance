@@ -8,8 +8,10 @@ Trains PPO in stages:
   Stage 3 (50-75%): + challenging (crossing)
   Stage 4 (75-100%): all scenarios, with emphasis on crossing
 
-Each stage transition is gated by performance: all current scenarios must
-achieve SR >= 50% before advancing.
+Scenario progression is progress-based up to a maximum stage, but that maximum
+stage is unlocked by performance: all currently allowed scenarios must achieve
+SR >= 50% before the next stage becomes available.  This prevents the agent
+from being exposed to harder scenarios before it masters the current set.
 """
 import argparse
 import csv
@@ -17,13 +19,18 @@ import json
 import os
 import time
 import copy
+from dataclasses import asdict, dataclass
 
 import numpy as np
 
 from uav_vpp_guidance.utils.config import load_yaml_config, merge_config
 from uav_vpp_guidance.utils.seed import set_seed
 from uav_vpp_guidance.envs.tracking_env import CloseRangeTrackingEnv
+from uav_vpp_guidance.envs.opponent_policy import OpponentPolicy
+from uav_vpp_guidance.envs.expert_opponent import ExpertOpponent
 from uav_vpp_guidance.agents.ppo_agent import PPOAgent
+from uav_vpp_guidance.common.provenance import record_config_override_if_changed
+from uav_vpp_guidance.metrics.combat_evaluator import compute_combat_metrics
 
 
 def load_experiment_config(config_path):
@@ -76,15 +83,46 @@ def run_evaluation(env, agent, config, num_episodes=10, seeds=None, save_traject
                 if terminated or truncated:
                     reason = info.get("reason", "unknown")
                     break
+            combat_enabled = bool(getattr(getattr(env, "combat_hp", None), "enabled", False))
+            combat_success = bool(info.get("combat_success", False))
+            combat_reason = str(info.get("combat_reason", ""))
+            is_success = combat_success if combat_enabled else (reason == "success")
+            if combat_enabled:
+                is_crash = combat_reason in {
+                    "ego_crash_or_out_of_bounds",
+                    "target_crash_or_out_of_bounds",
+                    "crash",
+                }
+                is_timeout = combat_reason in {
+                    "timeout_hp_advantage",
+                    "timeout_hp_disadvantage",
+                    "timeout_draw",
+                    "timeout",
+                }
+                is_out_of_bounds = combat_reason in {
+                    "ego_crash_or_out_of_bounds",
+                    "out_of_bounds",
+                }
+            else:
+                is_crash = reason == "crash"
+                is_timeout = reason == "timeout"
+                is_out_of_bounds = reason == "out_of_bounds"
             all_episodes.append({
                 "seed": seed, "episode": ep, "return": ep_reward,
                 "length": ep_length, "min_range_m": min_range,
                 "final_range_m": final_range, "final_ata_deg": final_ata,
                 "reason": reason,
-                "is_success": reason == "success",
-                "is_crash": reason == "crash",
-                "is_timeout": reason == "timeout",
-                "is_out_of_bounds": reason == "out_of_bounds",
+                "is_success": is_success,
+                "is_crash": is_crash,
+                "is_timeout": is_timeout,
+                "is_out_of_bounds": is_out_of_bounds,
+                "termination_reason": reason,
+                "combat_outcome": info.get("combat_outcome"),
+                "combat_success": combat_success,
+                "combat_reason": info.get("combat_reason"),
+                "ego_hp": info.get("ego_hp"),
+                "target_hp": info.get("target_hp"),
+                "combat_time_to_kill": info.get("combat_time_to_kill"),
             })
 
     success_count = sum(1 for e in all_episodes if e["is_success"])
@@ -92,12 +130,17 @@ def run_evaluation(env, agent, config, num_episodes=10, seeds=None, save_traject
     oob_count = sum(1 for e in all_episodes if e["is_out_of_bounds"])
     timeout_count = sum(1 for e in all_episodes if e["is_timeout"])
     returns = [e["return"] for e in all_episodes]
+    combat_metrics = compute_combat_metrics(all_episodes)
 
     return {
         "num_episodes": len(all_episodes),
         "mean_return": float(np.mean(returns)) if returns else 0.0,
         "std_return": float(np.std(returns)) if returns else 0.0,
         "success_rate": success_count / max(1, len(all_episodes)),
+        "win_rate": combat_metrics["win_rate"],
+        "survival_rate": combat_metrics["survival_rate"],
+        "hp_advantage": combat_metrics["hp_advantage"],
+        "mean_time_to_kill": combat_metrics["mean_time_to_kill"],
         "crash_rate": crash_count / max(1, len(all_episodes)),
         "out_of_bounds_rate": oob_count / max(1, len(all_episodes)),
         "timeout_rate": timeout_count / max(1, len(all_episodes)),
@@ -107,6 +150,7 @@ def run_evaluation(env, agent, config, num_episodes=10, seeds=None, save_traject
 def evaluate_scenarios(env, agent, scenarios, num_episodes=5, seed_base=1000):
     """Evaluate each scenario individually and return per-scenario SR."""
     results = {}
+    combat_enabled = bool(getattr(getattr(env, "combat_hp", None), "enabled", False))
     for name, scenario in scenarios.items():
         successes = 0
         total = num_episodes
@@ -117,7 +161,11 @@ def evaluate_scenarios(env, agent, scenarios, num_episodes=5, seed_base=1000):
                 action = agent.get_deterministic_action(obs["observation_vector"])
                 obs, reward, terminated, truncated, info = env.step(action)
                 if terminated or truncated:
-                    if info.get("reason") == "success":
+                    if combat_enabled:
+                        is_success = bool(info.get("combat_success", False))
+                    else:
+                        is_success = info.get("reason") == "success"
+                    if is_success:
                         successes += 1
                     break
         results[name] = successes / max(1, total)
@@ -133,11 +181,195 @@ DEFAULT_CURRICULUM = [
 ]
 
 
+@dataclass
+class OpponentPoolEntry:
+    path: str
+    step: int
+    elo: float = 1000.0
+    wins: int = 0
+    losses: int = 0
+    draws: int = 0
+
+
+class SelfPlayCheckpointOpponent(OpponentPolicy):
+    """PPO checkpoint opponent that consumes role-reversed observations."""
+
+    def __init__(self, checkpoint_path, device="cpu", action_mode=None):
+        import torch
+
+        checkpoint = torch.load(checkpoint_path, map_location=device)
+        self.checkpoint_path = checkpoint_path
+        self.obs_dim = int(checkpoint.get("obs_dim", 16))
+        self.action_dim = int(checkpoint.get("action_dim", 3))
+        cfg = checkpoint.get("config", {})
+        self.action_mode = action_mode or self._infer_action_mode(cfg)
+        self.agent = PPOAgent(
+            obs_dim=self.obs_dim,
+            action_dim=self.action_dim,
+            config=cfg,
+            device=device,
+        )
+        self.agent.network.load_state_dict(checkpoint["network_state_dict"], strict=False)
+        self.agent.network.eval()
+
+    def act(self, opponent_obs):
+        obs_vec = opponent_obs["observation_vector"]
+        return self.agent.get_deterministic_action(obs_vec)
+
+    def get_diagnostics(self):
+        return {
+            "opponent_type": "self_play_checkpoint",
+            "opponent_checkpoint": self.checkpoint_path,
+            "opponent_action_mode": self.action_mode,
+        }
+
+    @staticmethod
+    def _infer_action_mode(config):
+        if config.get("end_to_end", {}).get("enabled", False):
+            return "direct_command"
+        if not config.get("virtual_point", {}).get("enabled", True):
+            return "direct_command"
+        return "vpp"
+
+
+class LightweightEloOpponentPool:
+    """Minimal opponent pool for curriculum scheduling."""
+
+    def __init__(self, cfg, pool_dir):
+        self.cfg = cfg or {}
+        self.pool_dir = pool_dir
+        os.makedirs(self.pool_dir, exist_ok=True)
+        self.entries = []
+        self.threshold = float(self.cfg.get("switch_threshold", 0.7))
+        self.weak_max = float(self.cfg.get("weak_elo_max", 1050.0))
+        self.medium_max = float(self.cfg.get("medium_elo_max", 1150.0))
+
+    def add_checkpoint(self, checkpoint_path, step, elo=None):
+        entry = OpponentPoolEntry(
+            path=str(checkpoint_path),
+            step=int(step),
+            elo=float(elo if elo is not None else self.cfg.get("initial_elo", 1000.0)),
+        )
+        self.entries.append(entry)
+        self.save_manifest()
+        return entry
+
+    def bucket_for(self, entry):
+        if entry.elo < self.weak_max:
+            return "weak"
+        if entry.elo < self.medium_max:
+            return "medium"
+        return "strong"
+
+    def entries_for_bucket(self, bucket):
+        selected = [e for e in self.entries if self.bucket_for(e) == bucket]
+        if selected:
+            return selected
+        if bucket == "medium":
+            return [e for e in self.entries if self.bucket_for(e) in {"weak", "medium"}]
+        if bucket == "strong":
+            return list(self.entries)
+        return selected
+
+    def sample(self, bucket, rng):
+        candidates = self.entries_for_bucket(bucket)
+        if not candidates:
+            return None
+        idx = int(rng.integers(0, len(candidates)))
+        return candidates[idx]
+
+    @staticmethod
+    def next_bucket(bucket):
+        if bucket == "weak":
+            return "medium"
+        if bucket == "medium":
+            return "strong"
+        return "strong"
+
+    def update_from_eval(self, entry, ego_win_rate, num_episodes=1):
+        if entry is None or not np.isfinite(ego_win_rate):
+            return
+        expected = 1.0 / (1.0 + 10.0 ** ((entry.elo - 1000.0) / 400.0))
+        k_factor = float(self.cfg.get("elo_k_factor", 32.0))
+        entry.elo += k_factor * (expected - float(ego_win_rate))
+        episodes = max(1, int(num_episodes))
+        ego_wins = int(round(float(ego_win_rate) * episodes))
+        ego_wins = max(0, min(episodes, ego_wins))
+        opponent_wins = episodes - ego_wins
+        if ego_win_rate > 0.5:
+            entry.losses += ego_wins
+            entry.wins += opponent_wins
+        elif ego_win_rate < 0.5:
+            entry.wins += opponent_wins
+            entry.losses += ego_wins
+        else:
+            entry.draws += episodes
+        self.save_manifest()
+
+    def save_manifest(self):
+        path = os.path.join(self.pool_dir, "opponent_pool.json")
+        entries = []
+        for entry in self.entries:
+            item = asdict(entry)
+            item["bucket"] = self.bucket_for(entry)
+            entries.append(item)
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(
+                {"entries": entries},
+                f,
+                indent=2,
+                ensure_ascii=False,
+            )
+
+
+def _set_training_opponent(env, pool, bucket, rng, device, cfg):
+    if not cfg.get("enabled", False):
+        return None
+    final_opponent = cfg.get("final_opponent")
+    if bucket == "strong" and final_opponent == "expert":
+        policy = ExpertOpponent(cfg.get("expert", {}))
+        env.set_opponent_policy(policy, {"stage": "curriculum", "bucket": bucket, "type": "expert"})
+        return None
+    entry = pool.sample(bucket, rng)
+    if entry is None:
+        env.set_opponent_policy(None, {"stage": "curriculum", "bucket": bucket, "type": "none"})
+        return None
+    policy = SelfPlayCheckpointOpponent(
+        entry.path,
+        device=device,
+        action_mode=cfg.get("self_play_action_mode"),
+    )
+    env.set_opponent_policy(
+        policy,
+        {
+            "stage": "curriculum",
+            "bucket": bucket,
+            "type": "self_play_checkpoint",
+            "checkpoint": entry.path,
+            "elo": entry.elo,
+        },
+    )
+    return entry
+
+
 def train_ppo_curriculum(config, output_dir, smoke=False):
     checkpoint_dir = os.path.join(output_dir, "checkpoints")
     log_dir = os.path.join(output_dir, "logs")
     os.makedirs(checkpoint_dir, exist_ok=True)
     os.makedirs(log_dir, exist_ok=True)
+
+    adversarial_cfg = config.get("adversarial_curriculum", config.get("opponent_curriculum", {}))
+    if adversarial_cfg.get("enabled", False):
+        attack_cfg = config.setdefault("attack_zone", {})
+        old_attack_enabled = attack_cfg.get("enabled")
+        attack_cfg["enabled"] = True
+        record_config_override_if_changed(
+            config,
+            "attack_zone.enabled",
+            True,
+            old_value=old_attack_enabled,
+            source="train_curriculum_ppo.py:adversarial_curriculum",
+        )
 
     import yaml
     with open(os.path.join(output_dir, "config_snapshot.yaml"), "w", encoding="utf-8") as f:
@@ -173,6 +405,12 @@ def train_ppo_curriculum(config, output_dir, smoke=False):
     curriculum = config.get("curriculum", {}).get("stages", DEFAULT_CURRICULUM)
     stage_gate_sr = config.get("curriculum", {}).get("stage_gate_sr", 0.50)
     all_scenarios = config.get("scenarios", {})
+    opponent_pool = LightweightEloOpponentPool(
+        adversarial_cfg,
+        os.path.join(output_dir, "opponent_pool"),
+    )
+    opponent_bucket = str(adversarial_cfg.get("initial_bucket", "weak"))
+    active_opponent_entry = None
 
     global_step = 0
     episode_count = 0
@@ -204,15 +442,25 @@ def train_ppo_curriculum(config, output_dir, smoke=False):
 
         eval_writer = csv.DictWriter(f_eval, fieldnames=[
             "step", "num_episodes", "mean_return", "std_return",
-            "success_rate", "crash_rate", "out_of_bounds_rate", "timeout_rate",
+            "success_rate", "win_rate", "survival_rate", "hp_advantage",
+            "mean_time_to_kill", "crash_rate", "out_of_bounds_rate", "timeout_rate",
         ])
         eval_writer.writeheader()
 
         cur_writer = csv.DictWriter(f_cur, fieldnames=[
             "step", "stage", "allowed_scenarios", "scenario_sr",
+            "opponent_bucket", "opponent_pool_size", "opponent_eval_win_rate",
         ])
         cur_writer.writeheader()
 
+        active_opponent_entry = _set_training_opponent(
+            env,
+            opponent_pool,
+            opponent_bucket,
+            rng,
+            device,
+            adversarial_cfg,
+        )
         obs = env.reset(seed=rng.integers(0, 1000000))
         episode_return = 0.0
         episode_length = 0
@@ -220,17 +468,23 @@ def train_ppo_curriculum(config, output_dir, smoke=False):
         start_time = time.time()
         update_num = 0
         current_stage = 0
+        unlocked_stage = 0
+        combat_enabled = bool(getattr(getattr(env, "combat_hp", None), "enabled", False))
 
         while global_step < total_timesteps:
-            # Determine current curriculum stage
+            # Determine current curriculum stage.
+            # Progress suggests a stage, but scenarios beyond unlocked_stage are
+            # withheld until the performance gate is cleared.
             progress = global_step / max(1, total_timesteps)
+            progress_stage = 0
             for i, (thresh, _) in enumerate(curriculum):
                 if progress <= thresh:
-                    current_stage = i
+                    progress_stage = i
                     break
             else:
-                current_stage = len(curriculum) - 1
+                progress_stage = len(curriculum) - 1
 
+            current_stage = min(progress_stage, unlocked_stage)
             allowed_names = curriculum[current_stage][1]
             active_scenarios = {k: v for k, v in all_scenarios.items() if k in allowed_names}
 
@@ -252,13 +506,33 @@ def train_ppo_curriculum(config, output_dir, smoke=False):
                     episode_count += 1
                     reason = info.get("reason", "unknown")
                     final_ata = float(np.rad2deg(rel_state.get("ata_rad", 0.0)))
+                    combat_reason = str(info.get("combat_reason", ""))
+                    if combat_enabled:
+                        ep_success = bool(info.get("combat_success", False))
+                        ep_crash = combat_reason in {
+                            "ego_crash_or_out_of_bounds",
+                            "target_crash_or_out_of_bounds",
+                            "crash",
+                        }
+                        ep_oob = combat_reason in {"ego_crash_or_out_of_bounds", "out_of_bounds"}
+                        ep_timeout = combat_reason in {
+                            "timeout_hp_advantage",
+                            "timeout_hp_disadvantage",
+                            "timeout_draw",
+                            "timeout",
+                        }
+                    else:
+                        ep_success = reason == "success"
+                        ep_crash = reason == "crash"
+                        ep_oob = reason == "out_of_bounds"
+                        ep_timeout = reason == "timeout"
                     ep_writer.writerow({
                         "step": global_step, "episode": episode_count,
                         "episode_return": episode_return, "episode_length": episode_length,
-                        "success": int(reason == "success"),
-                        "crash": int(reason == "crash"),
-                        "out_of_bounds": int(reason == "out_of_bounds"),
-                        "timeout": int(reason == "timeout"),
+                        "success": int(ep_success),
+                        "crash": int(ep_crash),
+                        "out_of_bounds": int(ep_oob),
+                        "timeout": int(ep_timeout),
                         "mean_range": float(np.mean(episode_ranges)) if episode_ranges else 0.0,
                         "final_range": range_m, "final_ata": final_ata,
                     })
@@ -268,6 +542,14 @@ def train_ppo_curriculum(config, output_dir, smoke=False):
                     episode_length = 0
                     episode_ranges = []
 
+                    active_opponent_entry = _set_training_opponent(
+                        env,
+                        opponent_pool,
+                        opponent_bucket,
+                        rng,
+                        device,
+                        adversarial_cfg,
+                    )
                     scenario = sample_scenario({"scenarios": active_scenarios}, rng)
                     obs = env.reset(scenario=scenario, seed=rng.integers(0, 1000000))
 
@@ -313,6 +595,10 @@ def train_ppo_curriculum(config, output_dir, smoke=False):
                     "mean_return": eval_metrics["mean_return"],
                     "std_return": eval_metrics["std_return"],
                     "success_rate": eval_metrics["success_rate"],
+                    "win_rate": eval_metrics["win_rate"],
+                    "survival_rate": eval_metrics["survival_rate"],
+                    "hp_advantage": eval_metrics["hp_advantage"],
+                    "mean_time_to_kill": eval_metrics["mean_time_to_kill"],
                     "crash_rate": eval_metrics["crash_rate"],
                     "out_of_bounds_rate": eval_metrics["out_of_bounds_rate"],
                     "timeout_rate": eval_metrics["timeout_rate"],
@@ -321,6 +607,7 @@ def train_ppo_curriculum(config, output_dir, smoke=False):
                 print(
                     f"Eval Return: {eval_metrics['mean_return']:.2f} ± {eval_metrics['std_return']:.2f} | "
                     f"Success: {eval_metrics['success_rate']:.2%} | "
+                    f"Win: {eval_metrics['win_rate']:.2%} | "
                     f"Crash: {eval_metrics['crash_rate']:.2%} | "
                     f"OOB: {eval_metrics['out_of_bounds_rate']:.2%}"
                 )
@@ -331,28 +618,61 @@ def train_ppo_curriculum(config, output_dir, smoke=False):
                     "step": global_step, "stage": current_stage,
                     "allowed_scenarios": "|".join(allowed_names),
                     "scenario_sr": json.dumps(per_scenario),
+                    "opponent_bucket": opponent_bucket,
+                    "opponent_pool_size": len(opponent_pool.entries),
+                    "opponent_eval_win_rate": eval_metrics["win_rate"],
                 })
                 f_cur.flush()
                 print(f"Per-scenario SR: {per_scenario}")
 
+                if adversarial_cfg.get("enabled", False):
+                    opponent_metric = eval_metrics["win_rate"]
+                    if not np.isfinite(opponent_metric):
+                        opponent_metric = eval_metrics["success_rate"]
+                    opponent_pool.update_from_eval(
+                        active_opponent_entry,
+                        opponent_metric,
+                        num_episodes=eval_metrics.get("num_episodes", 1),
+                    )
+                    if (
+                        opponent_metric >= opponent_pool.threshold
+                        and opponent_bucket != "strong"
+                    ):
+                        opponent_bucket = opponent_pool.next_bucket(opponent_bucket)
+                        print(
+                            f"*** Opponent curriculum advanced to {opponent_bucket} "
+                            f"(win_rate={opponent_metric:.2%}) ***"
+                        )
+
                 # Check if we should advance stage
                 current_scenario_sr = [per_scenario.get(s, 0.0) for s in allowed_names]
                 min_sr = min(current_scenario_sr) if current_scenario_sr else 0.0
-                if min_sr >= stage_gate_sr and current_stage < len(curriculum) - 1:
-                    print(f"*** Curriculum gate passed (min SR={min_sr:.2%}). Advancing to stage {current_stage+1} ***")
+                if min_sr >= stage_gate_sr and unlocked_stage < len(curriculum) - 1:
+                    unlocked_stage += 1
+                    current_stage = min(progress_stage, unlocked_stage)
+                    print(f"*** Curriculum gate passed (min SR={min_sr:.2%}). Unlocked stage {unlocked_stage} (current {current_stage}) ***")
                 elif min_sr < stage_gate_sr:
                     print(f"Curriculum gate NOT passed (min SR={min_sr:.2%}). Staying in stage {current_stage}")
 
                 if save_best and eval_metrics["mean_return"] > best_eval_return:
                     best_eval_return = eval_metrics["mean_return"]
-                    agent.save(os.path.join(checkpoint_dir, "best.pt"))
+                    best_path = os.path.join(checkpoint_dir, "best.pt")
+                    agent.save(best_path)
+                    if adversarial_cfg.get("enabled", False):
+                        opponent_pool.add_checkpoint(best_path, global_step)
                     print(f"  -> Saved best checkpoint")
 
             if save_interval > 0 and global_step % save_interval == 0 and global_step > 0:
-                agent.save(os.path.join(checkpoint_dir, f"step_{global_step}.pt"))
+                step_path = os.path.join(checkpoint_dir, f"step_{global_step}.pt")
+                agent.save(step_path)
+                if adversarial_cfg.get("enabled", False):
+                    opponent_pool.add_checkpoint(step_path, global_step)
 
         if save_last:
-            agent.save(os.path.join(checkpoint_dir, "last.pt"))
+            last_path = os.path.join(checkpoint_dir, "last.pt")
+            agent.save(last_path)
+            if adversarial_cfg.get("enabled", False):
+                opponent_pool.add_checkpoint(last_path, global_step)
             print(f"\nSaved last checkpoint")
 
     elapsed = time.time() - start_time
@@ -373,10 +693,46 @@ def main():
 
     config = load_experiment_config(args.config)
     if args.backend is not None:
+        old_backend = config.get("backend")
         config["backend"] = args.backend
-        config.setdefault("env", {})["backend"] = args.backend
-        config.setdefault("env", {})["use_jsbsim"] = (args.backend == "jsbsim")
+        record_config_override_if_changed(
+            config,
+            "backend",
+            args.backend,
+            old_value=old_backend,
+            source="train_curriculum_ppo.py:--backend",
+        )
+        env_cfg = config.setdefault("env", {})
+        old_env_backend = env_cfg.get("backend")
+        old_use_jsbsim = env_cfg.get("use_jsbsim")
+        env_cfg["backend"] = args.backend
+        env_cfg["use_jsbsim"] = (args.backend == "jsbsim")
+        record_config_override_if_changed(
+            config,
+            "env.backend",
+            args.backend,
+            old_value=old_env_backend,
+            source="train_curriculum_ppo.py:--backend",
+        )
+        record_config_override_if_changed(
+            config,
+            "env.use_jsbsim",
+            args.backend == "jsbsim",
+            old_value=old_use_jsbsim,
+            source="train_curriculum_ppo.py:--backend",
+        )
     seed = args.seed if args.seed is not None else config.get("experiment", {}).get("seed", 0)
+    if args.seed is not None:
+        config.setdefault("experiment", {})
+        old_seed = config["experiment"].get("seed")
+        config["experiment"]["seed"] = int(seed)
+        record_config_override_if_changed(
+            config,
+            "experiment.seed",
+            int(seed),
+            old_value=old_seed,
+            source="train_curriculum_ppo.py:--seed",
+        )
     set_seed(seed)
     exp_name = config.get("experiment", {}).get("name", "curriculum_ppo")
     output_dir = args.output_dir or os.path.join(
@@ -384,7 +740,16 @@ def main():
     )
     os.makedirs(output_dir, exist_ok=True)
     if args.device is not None:
-        config.setdefault("ppo", {})["device"] = args.device
+        ppo_cfg = config.setdefault("ppo", {})
+        old_device = ppo_cfg.get("device")
+        ppo_cfg["device"] = args.device
+        record_config_override_if_changed(
+            config,
+            "ppo.device",
+            args.device,
+            old_value=old_device,
+            source="train_curriculum_ppo.py:--device",
+        )
     train_ppo_curriculum(config, output_dir, smoke=args.smoke)
 
 

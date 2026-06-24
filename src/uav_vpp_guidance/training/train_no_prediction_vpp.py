@@ -17,6 +17,7 @@ from uav_vpp_guidance.utils.config import load_yaml_config, merge_config
 from uav_vpp_guidance.utils.seed import set_seed
 from uav_vpp_guidance.envs.tracking_env import CloseRangeTrackingEnv
 from uav_vpp_guidance.baselines.rule_based_pursuit import RuleBasedPursuitPolicy
+from uav_vpp_guidance.common.provenance import record_config_override_if_changed
 
 
 def smoke_rollout(env: CloseRangeTrackingEnv, num_steps: int = 100, seed: int = 0, policy=None):
@@ -102,6 +103,17 @@ def main():
     config = merge_config(merged, base_config)
 
     seed = args.seed if args.seed is not None else config.get("experiment", {}).get("seed", 0)
+    if args.seed is not None:
+        config.setdefault("experiment", {})
+        old_seed = config["experiment"].get("seed")
+        config["experiment"]["seed"] = int(seed)
+        record_config_override_if_changed(
+            config,
+            "experiment.seed",
+            int(seed),
+            old_value=old_seed,
+            source="train_no_prediction_vpp.py:--seed",
+        )
     set_seed(seed)
 
     exp_name = config.get("experiment", {}).get("name", "no_prediction_vpp")

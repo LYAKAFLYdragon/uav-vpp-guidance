@@ -26,6 +26,7 @@ from uav_vpp_guidance.utils.config import load_yaml_config, merge_config
 from uav_vpp_guidance.utils.seed import set_seed
 from uav_vpp_guidance.envs.tracking_env import CloseRangeTrackingEnv
 from uav_vpp_guidance.agents.ppo_agent import PPOAgent
+from uav_vpp_guidance.common.provenance import record_config_override_if_changed
 
 
 def load_experiment_config(config_path):
@@ -560,14 +561,49 @@ def main():
     if args.use_jsbsim:
         backend = "jsbsim"
     if backend is not None:
+        old_backend = config.get("backend")
         config["backend"] = backend
+        record_config_override_if_changed(
+            config,
+            "backend",
+            backend,
+            old_value=old_backend,
+            source="train_no_prediction_vpp_ppo.py:--backend",
+        )
         if "env" not in config:
             config["env"] = {}
+        old_env_backend = config["env"].get("backend")
+        old_use_jsbsim = config["env"].get("use_jsbsim")
         config["env"]["backend"] = backend
         config["env"]["use_jsbsim"] = (backend == "jsbsim")
+        record_config_override_if_changed(
+            config,
+            "env.backend",
+            backend,
+            old_value=old_env_backend,
+            source="train_no_prediction_vpp_ppo.py:--backend",
+        )
+        record_config_override_if_changed(
+            config,
+            "env.use_jsbsim",
+            backend == "jsbsim",
+            old_value=old_use_jsbsim,
+            source="train_no_prediction_vpp_ppo.py:--backend",
+        )
         print(f"Backend override: {backend}")
 
     seed = args.seed if args.seed is not None else config.get("experiment", {}).get("seed", 0)
+    if args.seed is not None:
+        config.setdefault("experiment", {})
+        old_seed = config["experiment"].get("seed")
+        config["experiment"]["seed"] = int(seed)
+        record_config_override_if_changed(
+            config,
+            "experiment.seed",
+            int(seed),
+            old_value=old_seed,
+            source="train_no_prediction_vpp_ppo.py:--seed",
+        )
     set_seed(seed)
 
     exp_name = config.get("experiment", {}).get("name", "no_prediction_vpp_ppo")
@@ -589,8 +625,24 @@ def main():
     if args.domain_rand_scale is not None:
         if "domain_randomization" not in config:
             config["domain_randomization"] = {}
+        old_enabled = config["domain_randomization"].get("enabled")
+        old_fixed_scale = config["domain_randomization"].get("fixed_scale")
         config["domain_randomization"]["enabled"] = (args.domain_rand_scale > 0.0)
         config["domain_randomization"]["fixed_scale"] = args.domain_rand_scale
+        record_config_override_if_changed(
+            config,
+            "domain_randomization.enabled",
+            args.domain_rand_scale > 0.0,
+            old_value=old_enabled,
+            source="train_no_prediction_vpp_ppo.py:--domain-rand-scale",
+        )
+        record_config_override_if_changed(
+            config,
+            "domain_randomization.fixed_scale",
+            args.domain_rand_scale,
+            old_value=old_fixed_scale,
+            source="train_no_prediction_vpp_ppo.py:--domain-rand-scale",
+        )
         print(f"Domain randomization scale override: {args.domain_rand_scale}")
 
     # Verify trajectory prediction is disabled
@@ -598,6 +650,13 @@ def main():
     if tp_enabled:
         print("WARNING: trajectory_prediction.enabled is True! Forcing to False for this baseline.")
         config["trajectory_prediction"]["enabled"] = False
+        record_config_override_if_changed(
+            config,
+            "trajectory_prediction.enabled",
+            False,
+            old_value=tp_enabled,
+            source="train_no_prediction_vpp_ppo.py:no_prediction_baseline",
+        )
 
     anchor_mode = config.get("virtual_point", {}).get("anchor_mode", "current_target")
     print(f"Anchor mode: {anchor_mode}")
@@ -607,7 +666,15 @@ def main():
     if args.device is not None:
         if "ppo" not in config:
             config["ppo"] = {}
+        old_device = config["ppo"].get("device")
         config["ppo"]["device"] = args.device
+        record_config_override_if_changed(
+            config,
+            "ppo.device",
+            args.device,
+            old_value=old_device,
+            source="train_no_prediction_vpp_ppo.py:--device",
+        )
         print(f"Device override: {args.device}")
 
     train_ppo(config, output_dir, smoke=args.smoke)

@@ -25,6 +25,7 @@ if _current_dir not in sys.path:
     sys.path.insert(0, _current_dir)
 
 from train_no_prediction_vpp_ppo import load_experiment_config, train_ppo, run_evaluation
+from uav_vpp_guidance.common.provenance import record_config_override_if_changed
 from uav_vpp_guidance.utils.seed import set_seed
 from uav_vpp_guidance.envs.tracking_env import CloseRangeTrackingEnv
 import numpy as np
@@ -113,14 +114,49 @@ def main():
     if args.use_jsbsim:
         backend = "jsbsim"
     if backend is not None:
+        old_backend = config.get("backend")
         config["backend"] = backend
+        record_config_override_if_changed(
+            config,
+            "backend",
+            backend,
+            old_value=old_backend,
+            source="train_fixed_gain.py:--backend",
+        )
         if "env" not in config:
             config["env"] = {}
+        old_env_backend = config["env"].get("backend")
+        old_use_jsbsim = config["env"].get("use_jsbsim")
         config["env"]["backend"] = backend
         config["env"]["use_jsbsim"] = (backend == "jsbsim")
+        record_config_override_if_changed(
+            config,
+            "env.backend",
+            backend,
+            old_value=old_env_backend,
+            source="train_fixed_gain.py:--backend",
+        )
+        record_config_override_if_changed(
+            config,
+            "env.use_jsbsim",
+            backend == "jsbsim",
+            old_value=old_use_jsbsim,
+            source="train_fixed_gain.py:--backend",
+        )
         print(f"Backend override: {backend}")
 
     seed = args.seed if args.seed is not None else config.get("experiment", {}).get("seed", 0)
+    if args.seed is not None:
+        config.setdefault("experiment", {})
+        old_seed = config["experiment"].get("seed")
+        config["experiment"]["seed"] = int(seed)
+        record_config_override_if_changed(
+            config,
+            "experiment.seed",
+            int(seed),
+            old_value=old_seed,
+            source="train_fixed_gain.py:--seed",
+        )
     set_seed(seed)
 
     exp_name = config.get("experiment", {}).get("name", "fixed_gain_vpp")
@@ -145,6 +181,13 @@ def main():
     if tp_enabled:
         print("WARNING: trajectory_prediction.enabled is True! Forcing to False for fixed-gain baseline.")
         config["trajectory_prediction"]["enabled"] = False
+        record_config_override_if_changed(
+            config,
+            "trajectory_prediction.enabled",
+            False,
+            old_value=tp_enabled,
+            source="train_fixed_gain.py:fixed_gain_baseline",
+        )
 
     print(f"Experiment: {exp_name}")
     print(f"Output dir: {output_dir}")

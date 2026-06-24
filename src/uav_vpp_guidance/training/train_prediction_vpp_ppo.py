@@ -27,6 +27,7 @@ from uav_vpp_guidance.utils.config import load_yaml_config, merge_config
 from uav_vpp_guidance.utils.seed import set_seed
 from uav_vpp_guidance.envs.tracking_env import CloseRangeTrackingEnv
 from uav_vpp_guidance.agents.ppo_agent import PPOAgent
+from uav_vpp_guidance.common.provenance import record_config_override_if_changed
 from uav_vpp_guidance.trajectory_prediction._telemetry import PredictorHealthAccumulator
 from uav_vpp_guidance.trajectory_prediction.config_validator import validate_full_config
 
@@ -678,26 +679,85 @@ def main():
     if args.use_jsbsim:
         backend = "jsbsim"
     if backend is not None:
+        old_backend = config.get("backend")
         config["backend"] = backend
+        record_config_override_if_changed(
+            config,
+            "backend",
+            backend,
+            old_value=old_backend,
+            source="train_prediction_vpp_ppo.py:--backend",
+        )
         if "env" not in config:
             config["env"] = {}
+        old_env_backend = config["env"].get("backend")
+        old_use_jsbsim = config["env"].get("use_jsbsim")
         config["env"]["backend"] = backend
         config["env"]["use_jsbsim"] = (backend == "jsbsim")
+        record_config_override_if_changed(
+            config,
+            "env.backend",
+            backend,
+            old_value=old_env_backend,
+            source="train_prediction_vpp_ppo.py:--backend",
+        )
+        record_config_override_if_changed(
+            config,
+            "env.use_jsbsim",
+            backend == "jsbsim",
+            old_value=old_use_jsbsim,
+            source="train_prediction_vpp_ppo.py:--backend",
+        )
         print(f"Backend override: {backend}")
 
     # Override predictor settings from CLI if provided
     tp_cfg = config.setdefault("trajectory_prediction", {})
     if args.predictor_type is not None:
+        old_enabled = tp_cfg.get("enabled")
+        old_predictor_type = tp_cfg.get("predictor_type")
         if args.predictor_type == "none":
             tp_cfg["enabled"] = False
             tp_cfg["predictor_type"] = "none"
         else:
             tp_cfg["enabled"] = True
             tp_cfg["predictor_type"] = args.predictor_type
+        record_config_override_if_changed(
+            config,
+            "trajectory_prediction.enabled",
+            tp_cfg["enabled"],
+            old_value=old_enabled,
+            source="train_prediction_vpp_ppo.py:--predictor-type",
+        )
+        record_config_override_if_changed(
+            config,
+            "trajectory_prediction.predictor_type",
+            tp_cfg["predictor_type"],
+            old_value=old_predictor_type,
+            source="train_prediction_vpp_ppo.py:--predictor-type",
+        )
     if args.checkpoint is not None:
+        old_checkpoint = tp_cfg.get("checkpoint_path")
         tp_cfg["checkpoint_path"] = args.checkpoint
+        record_config_override_if_changed(
+            config,
+            "trajectory_prediction.checkpoint_path",
+            args.checkpoint,
+            old_value=old_checkpoint,
+            source="train_prediction_vpp_ppo.py:--checkpoint",
+        )
 
     seed = args.seed if args.seed is not None else config.get("experiment", {}).get("seed", 0)
+    if args.seed is not None:
+        config.setdefault("experiment", {})
+        old_seed = config["experiment"].get("seed")
+        config["experiment"]["seed"] = int(seed)
+        record_config_override_if_changed(
+            config,
+            "experiment.seed",
+            int(seed),
+            old_value=old_seed,
+            source="train_prediction_vpp_ppo.py:--seed",
+        )
     set_seed(seed)
 
     exp_name = config.get("experiment", {}).get("name", "vpp_ppo_prediction")
@@ -729,7 +789,15 @@ def main():
     if args.device is not None:
         if "ppo" not in config:
             config["ppo"] = {}
+        old_device = config["ppo"].get("device")
         config["ppo"]["device"] = args.device
+        record_config_override_if_changed(
+            config,
+            "ppo.device",
+            args.device,
+            old_value=old_device,
+            source="train_prediction_vpp_ppo.py:--device",
+        )
         print(f"Device override: {args.device}")
 
     on_unknown = "warn" if args.smoke else "raise"

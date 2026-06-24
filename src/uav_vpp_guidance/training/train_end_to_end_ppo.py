@@ -30,6 +30,7 @@ from uav_vpp_guidance.utils.config import load_yaml_config, merge_config
 from uav_vpp_guidance.utils.seed import set_seed
 from uav_vpp_guidance.envs.tracking_env import CloseRangeTrackingEnv
 from uav_vpp_guidance.agents.end_to_end_ppo_agent import EndToEndPPOAgent
+from uav_vpp_guidance.common.provenance import record_config_override_if_changed
 
 
 def load_experiment_config(config_path):
@@ -571,11 +572,35 @@ def main():
     if args.use_jsbsim:
         backend = "jsbsim"
     if backend is not None:
+        old_backend = config.get("backend")
         config["backend"] = backend
+        record_config_override_if_changed(
+            config,
+            "backend",
+            backend,
+            old_value=old_backend,
+            source="train_end_to_end_ppo.py:--backend",
+        )
         if "env" not in config:
             config["env"] = {}
+        old_env_backend = config["env"].get("backend")
+        old_use_jsbsim = config["env"].get("use_jsbsim")
         config["env"]["backend"] = backend
         config["env"]["use_jsbsim"] = (backend == "jsbsim")
+        record_config_override_if_changed(
+            config,
+            "env.backend",
+            backend,
+            old_value=old_env_backend,
+            source="train_end_to_end_ppo.py:--backend",
+        )
+        record_config_override_if_changed(
+            config,
+            "env.use_jsbsim",
+            backend == "jsbsim",
+            old_value=old_use_jsbsim,
+            source="train_end_to_end_ppo.py:--backend",
+        )
         print(f"Backend override: {backend}")
 
     seed = (
@@ -583,6 +608,17 @@ def main():
         if args.seed is not None
         else config.get("experiment", {}).get("seed", 0)
     )
+    if args.seed is not None:
+        config.setdefault("experiment", {})
+        old_seed = config["experiment"].get("seed")
+        config["experiment"]["seed"] = int(seed)
+        record_config_override_if_changed(
+            config,
+            "experiment.seed",
+            int(seed),
+            old_value=old_seed,
+            source="train_end_to_end_ppo.py:--seed",
+        )
     set_seed(seed)
 
     exp_name = config.get("experiment", {}).get("name", "end_to_end_ppo")
@@ -603,19 +639,43 @@ def main():
     # Force end-to-end mode
     if "end_to_end" not in config:
         config["end_to_end"] = {}
+    old_e2e_enabled = config["end_to_end"].get("enabled")
     config["end_to_end"]["enabled"] = True
+    record_config_override_if_changed(
+        config,
+        "end_to_end.enabled",
+        True,
+        old_value=old_e2e_enabled,
+        source="train_end_to_end_ppo.py:end_to_end_baseline",
+    )
     print("Mode: END-TO-END (direct control commands)")
 
     # Disable virtual point layer
     if "virtual_point" not in config:
         config["virtual_point"] = {}
+    old_vp_enabled = config["virtual_point"].get("enabled")
     config["virtual_point"]["enabled"] = False
+    record_config_override_if_changed(
+        config,
+        "virtual_point.enabled",
+        False,
+        old_value=old_vp_enabled,
+        source="train_end_to_end_ppo.py:end_to_end_baseline",
+    )
     print("Virtual point: DISABLED")
 
     # Disable trajectory prediction
     if "trajectory_prediction" not in config:
         config["trajectory_prediction"] = {}
+    old_tp_enabled = config["trajectory_prediction"].get("enabled")
     config["trajectory_prediction"]["enabled"] = False
+    record_config_override_if_changed(
+        config,
+        "trajectory_prediction.enabled",
+        False,
+        old_value=old_tp_enabled,
+        source="train_end_to_end_ppo.py:end_to_end_baseline",
+    )
     print("Trajectory prediction: DISABLED")
 
     # Guidance mode info (not used in end-to-end, but logged for reference)
@@ -626,7 +686,15 @@ def main():
     if args.device is not None:
         if "ppo" not in config:
             config["ppo"] = {}
+        old_device = config["ppo"].get("device")
         config["ppo"]["device"] = args.device
+        record_config_override_if_changed(
+            config,
+            "ppo.device",
+            args.device,
+            old_value=old_device,
+            source="train_end_to_end_ppo.py:--device",
+        )
         print(f"Device override: {args.device}")
 
     train_ppo(config, output_dir, smoke=args.smoke)

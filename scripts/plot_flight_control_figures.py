@@ -26,7 +26,9 @@ from mpl_toolkits.mplot3d import Axes3D  # noqa: F401
 CONTROLLER_COLORS = {
     "ppo_pid": "C0",
     "ppo": "C1",
+    "apic_pid": "C5",
     "enhanced_pid": "C2",
+    "robust_pid": "C6",
     "baseline_pid": "C3",
     "gain_scheduled_pid": "C4",
 }
@@ -34,7 +36,9 @@ CONTROLLER_COLORS = {
 CONTROLLER_LABELS = {
     "ppo_pid": "PPO+PID",
     "ppo": "PPO",
+    "apic_pid": "APIC-PID",
     "enhanced_pid": "Enhanced PID",
+    "robust_pid": "Robust PID",
     "baseline_pid": "Baseline PID",
     "gain_scheduled_pid": "GainScheduled PID",
 }
@@ -42,6 +46,7 @@ CONTROLLER_LABELS = {
 # Visualization caps (match physical caps in flight_control_metrics.py).
 MAX_RANGE_M = 50_000.0
 MAX_TURN_RADIUS_M = 50_000.0
+MAX_SPEED_MPS = 1_000.0
 MAX_NZ_G = 20.0
 
 
@@ -298,6 +303,77 @@ def _plot_fig7(run_dir: Path, controllers: list, out_png: Path) -> None:
     print(f"Saved Figure 7 to {out_png}")
 
 
+def _plot_break_turn(run_dir: Path, controllers: list, out_png: Path) -> None:
+    episodes = _get_controller_episodes(run_dir, "break_turn", controllers)
+    if not episodes:
+        print("No break-turn episodes found; skipping Figure 8")
+        return
+
+    fig = plt.figure(figsize=(16, 12))
+    ax1 = fig.add_subplot(2, 2, 1, projection="3d")
+    ax2 = fig.add_subplot(2, 2, 2)
+    ax3 = fig.add_subplot(2, 2, 3)
+    ax4 = fig.add_subplot(2, 2, 4)
+
+    for controller, json_path in episodes.items():
+        obj = _load_episode(json_path)
+        traj = obj.get("trajectory", [])
+        if not traj:
+            continue
+        color = CONTROLLER_COLORS.get(controller, None)
+        label = CONTROLLER_LABELS.get(controller, controller)
+
+        xs = [r["own_pos_m"][0] for r in traj if r.get("own_pos_m")]
+        ys = [r["own_pos_m"][1] for r in traj if r.get("own_pos_m")]
+        zs = [r["own_pos_m"][2] if len(r["own_pos_m"]) > 2 else 0.0 for r in traj if r.get("own_pos_m")]
+        ts = [r["time_s"] for r in traj]
+        rng = _sanitize_range([r["range_m"] for r in traj])
+        speed = _sanitize_range([r.get("speed_mps", np.nan) for r in traj], cap_m=MAX_SPEED_MPS if "MAX_SPEED_MPS" in globals() else 1_000.0)
+        nz = _sanitize_range([r.get("nz_g", np.nan) for r in traj], cap_m=MAX_NZ_G)
+
+        ax1.plot(xs, ys, zs, label=label, color=color, linewidth=1.5)
+        ax2.plot(ts, rng, label=label, color=color, linewidth=1.5)
+        ax3.plot(ts, speed, label=label, color=color, linewidth=1.5)
+        ax4.plot(ts, nz, label=label, color=color, linewidth=1.5)
+
+    ax1.set_title("Figure 8A: Break-Turn / Yo-Yo 3D Spatial Trajectory")
+    ax1.set_xlabel("x / m")
+    ax1.set_ylabel("y / m")
+    ax1.set_zlabel("z / m")
+    ax1.legend(loc="best")
+    ax1.grid(True, alpha=0.3)
+    _set_3d_spatial_aspect(ax1)
+
+    ax2.set_title("Figure 8B: Range vs Time")
+    ax2.set_xlabel("time / s")
+    ax2.set_ylabel("range / m")
+    ax2.set_ylim(bottom=0.0)
+    ax2.legend(loc="best")
+    ax2.grid(True, alpha=0.3)
+
+    ax3.set_title("Figure 8C: Speed vs Time")
+    ax3.set_xlabel("time / s")
+    ax3.set_ylabel("speed / m/s")
+    ax3.legend(loc="best")
+    ax3.grid(True, alpha=0.3)
+
+    ax4.set_title("Figure 8D: NZ vs Time")
+    ax4.set_xlabel("time / s")
+    ax4.set_ylabel("NZ / g")
+    ax4.legend(loc="best")
+    ax4.grid(True, alpha=0.3)
+
+    plt.tight_layout()
+    plt.savefig(
+        out_png,
+        dpi=300,
+        bbox_inches="tight",
+        metadata={"Creator": "uav-vpp-guidance", "Title": "Figure 8 Break-Turn / Yo-Yo"},
+    )
+    plt.close(fig)
+    print(f"Saved Figure 8 to {out_png}")
+
+
 def main():
     parser = argparse.ArgumentParser(description="Plot flight-control comparison figures")
     parser.add_argument("--run-dir", type=Path, required=True, help="Run root directory")
@@ -315,6 +391,7 @@ def main():
 
     _plot_fig6(args.run_dir, args.controllers, figures_dir / "fig6_multi_waypoint.png")
     _plot_fig7(args.run_dir, args.controllers, figures_dir / "fig7_sustained_turn.png")
+    _plot_break_turn(args.run_dir, args.controllers, figures_dir / "fig8_break_turn.png")
 
 
 if __name__ == "__main__":

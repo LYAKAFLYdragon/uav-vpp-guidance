@@ -5,7 +5,7 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional, Set
 
 from ...common.artifact_contract import ArtifactContract
 from ...common.hash import file_info
@@ -61,9 +61,61 @@ class Stage6GGuidanceLimitationProbe(PipelineStage):
         for scenario, cfg_path in base_configs.items():
             self.manifest.record_input_file(f"config_{scenario}", cfg_path)
 
+    def _find_runner_output_dir(self, existing_run_dirs: Set[Path]) -> Optional[Path]:
+        """Return the runner-created run directory, if one was produced."""
+        run_dirs = [
+            path
+            for path in self.output_dir.glob("run_*")
+            if path.is_dir() and path.resolve() not in existing_run_dirs
+        ]
+        if not run_dirs:
+            run_dirs = [
+                path
+                for path in self.output_dir.glob("run_*")
+                if path.is_dir() and (path / "run_manifest.json").exists()
+            ]
+        if not run_dirs:
+            return None
+        return max(run_dirs, key=lambda path: path.stat().st_mtime)
+
+    def _copy_runner_artifacts(self, runner_output_dir: Path) -> None:
+        """Copy timestamped runner outputs into the stable stage directory."""
+        top_level_files = [
+            "resolved_config.yaml",
+            "raw_episodes.csv",
+            "scenario_method_summary.csv",
+            "pairwise_mcnemar.csv",
+            "paper_safe_claims.md",
+            "README_result_block.md",
+            "run.log",
+        ]
+        for rel in top_level_files:
+            src = runner_output_dir / rel
+            if src.exists():
+                shutil.copy2(src, self.output_dir / rel)
+
+        runner_manifest = runner_output_dir / "run_manifest.json"
+        if runner_manifest.exists():
+            shutil.copy2(runner_manifest, self.output_dir / "runner_run_manifest.json")
+
+        cells_dir = self.output_dir / "cells"
+        cells_dir.mkdir(exist_ok=True)
+        for child in runner_output_dir.iterdir():
+            if not child.is_dir():
+                continue
+            dst = cells_dir / child.name
+            if dst.exists():
+                shutil.rmtree(dst)
+            shutil.copytree(child, dst)
+
     def run(self) -> StageResult:
         self.manifest.mark_started()
         self.output_dir.mkdir(parents=True, exist_ok=True)
+        existing_run_dirs = {
+            path.resolve()
+            for path in self.output_dir.glob("run_*")
+            if path.is_dir()
+        }
 
         # Build subprocess command to existing Stage 6G runner
         cmd = [
@@ -101,8 +153,17 @@ class Stage6GGuidanceLimitationProbe(PipelineStage):
             self.manifest.save(self.output_dir)
             return StageResult(success=False, output_dir=str(self.output_dir), manifest=self.manifest, errors=[str(exc)])
 
+        runner_output_dir = self._find_runner_output_dir(existing_run_dirs)
+        if runner_output_dir is not None:
+            self._copy_runner_artifacts(runner_output_dir)
+            self.manifest.extra["runner_output_dir"] = str(runner_output_dir)
+
         # Read the runner's manifest if present and merge key fields
-        runner_manifest_path = self.output_dir / "run_manifest.json"
+        runner_manifest_path = (
+            runner_output_dir / "run_manifest.json"
+            if runner_output_dir is not None
+            else self.output_dir / "run_manifest.json"
+        )
         if runner_manifest_path.exists():
             with open(runner_manifest_path, "r", encoding="utf-8") as f:
                 runner_manifest = json.load(f)
@@ -122,14 +183,5 @@ class Stage6GGuidanceLimitationProbe(PipelineStage):
             path = self.output_dir / rel
             if path.exists():
                 self.manifest.artifacts_present[rel] = True
-
-        # Move cells into a stable subdirectory if they are at top level
-        cell_dirs = [d for d in self.output_dir.iterdir() if d.is_dir() and d.name != "cells"]
-        if cell_dirs:
-            cells_dir = self.output_dir / "cells"
-            cells_dir.mkdir(exist_ok=True)
-            for cell_dir in cell_dirs:
-                if cell_dir.name not in {"cells", "bundle"}:
-                    shutil.move(str(cell_dir), str(cells_dir / cell_dir.name))
 
         return self.finalize(success=True, paper_safe=self.manifest.paper_safe)

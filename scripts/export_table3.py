@@ -14,6 +14,7 @@ import json
 from pathlib import Path
 from typing import Dict, List
 
+import numpy as np
 import pandas as pd
 
 
@@ -22,6 +23,7 @@ CONTROLLER_LABELS = {
     "ppo": "PPO",
     "apic_pid": "APIC-PID",
     "enhanced_pid": "Enhanced PID",
+    "robust_pid": "Robust PID",
     "baseline_pid": "Baseline PID",
     "gain_scheduled_pid": "GainScheduled PID",
 }
@@ -126,43 +128,149 @@ def _build_table3b(summary: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
-def _build_table3c(summary: pd.DataFrame, pairwise: pd.DataFrame) -> pd.DataFrame:
-    """Build a simple overall ranking table."""
+def _build_table3d(summary: pd.DataFrame) -> pd.DataFrame:
+    """Break-turn / yo-yo maneuver tracking table."""
     rows = []
-    mw_controllers = set(summary[summary["task"] == "multi_waypoint"]["controller"].unique())
-    st_controllers = set(summary[summary["task"] == "sustained_turn"]["controller"].unique())
-    evaluated = mw_controllers | st_controllers
+    evaluated = set(summary[summary["task"] == "break_turn"]["controller"].unique())
     for controller in CONTROLLER_LABELS:
         if controller not in evaluated:
             continue
-        mw = summary[(summary["task"] == "multi_waypoint") & (summary["controller"] == controller)]
-        st = summary[(summary["task"] == "sustained_turn") & (summary["controller"] == controller)]
-        mw_score = mw["completed_waypoints_mean"].values[0] if not mw.empty else -float("inf")
-        st_score = st["completed_orbits_mean"].values[0] if not st.empty else -float("inf")
+        sub = summary[(summary["task"] == "break_turn") & (summary["controller"] == controller)]
+        if sub.empty:
+            continue
+        row = sub.iloc[0]
         rows.append(
             {
                 "Controller": CONTROLLER_LABELS[controller],
-                "Multi-waypoint score": float(mw_score) if pd.notna(mw_score) else -float("inf"),
-                "Sustained-turn score": float(st_score) if pd.notna(st_score) else -float("inf"),
+                "Mean track error m": _fmt_mean_std(row.get("mean_track_error_m_mean"), row.get("mean_track_error_m_std")),
+                "Max track error m": _fmt_mean_std(row.get("max_track_error_m_mean"), row.get("max_track_error_m_std")),
+                "Mean speed m/s": _fmt_mean_std(row.get("mean_speed_mps_mean"), row.get("mean_speed_mps_std")),
+                "Mean NZ g": _fmt_mean_std(row.get("mean_nz_g_mean"), row.get("mean_nz_g_std")),
+                "Max NZ g": _fmt_mean_std(row.get("max_nz_g_mean"), row.get("max_nz_g_std")),
+                "Energy loss rate m/s²": _fmt_mean_std(row.get("energy_loss_rate_mps2_mean"), row.get("energy_loss_rate_mps2_std")),
+                "Mean aggressiveness": (
+                    f"{row.get('mean_aggressiveness_mean'):.3f}"
+                    if pd.notna(row.get("mean_aggressiveness_mean"))
+                    else "N/A"
+                ),
             }
         )
-    df = pd.DataFrame(rows)
-    df["Multi-waypoint rank"] = df["Multi-waypoint score"].rank(ascending=False, method="min").astype(int)
-    df["Sustained-turn rank"] = df["Sustained-turn score"].rank(ascending=False, method="min").astype(int)
-    df["Average rank"] = (df["Multi-waypoint rank"] + df["Sustained-turn rank"]) / 2.0
-    df["Overall rank"] = df["Average rank"].rank(method="min").astype(int)
+    return pd.DataFrame(rows)
 
-    # Simple recommendation based on overall rank.
+
+def _build_table3d_mean_only(summary: pd.DataFrame) -> pd.DataFrame:
+    """Mean-only version of Table 3D."""
+    rows = []
+    evaluated = set(summary[summary["task"] == "break_turn"]["controller"].unique())
+    for controller in CONTROLLER_LABELS:
+        if controller not in evaluated:
+            continue
+        sub = summary[(summary["task"] == "break_turn") & (summary["controller"] == controller)]
+        if sub.empty:
+            continue
+        row = sub.iloc[0]
+        rows.append(
+            {
+                "Controller": CONTROLLER_LABELS[controller],
+                "Mean track error m": _fmt_value(row.get("mean_track_error_m_mean")),
+                "Max track error m": _fmt_value(row.get("max_track_error_m_mean")),
+                "Mean speed m/s": _fmt_value(row.get("mean_speed_mps_mean")),
+                "Mean NZ g": _fmt_value(row.get("mean_nz_g_mean")),
+                "Max NZ g": _fmt_value(row.get("max_nz_g_mean")),
+                "Energy loss rate m/s²": _fmt_value(row.get("energy_loss_rate_mps2_mean")),
+                "Mean aggressiveness": (
+                    f"{row.get('mean_aggressiveness_mean'):.3f}"
+                    if pd.notna(row.get("mean_aggressiveness_mean")) else "N/A"
+                ),
+            }
+        )
+    return pd.DataFrame(rows)
+
+
+def _build_table3d_std_ci(summary: pd.DataFrame) -> pd.DataFrame:
+    """Std + CI95 version of Table 3D."""
+    rows = []
+    evaluated = set(summary[summary["task"] == "break_turn"]["controller"].unique())
+    for controller in CONTROLLER_LABELS:
+        if controller not in evaluated:
+            continue
+        sub = summary[(summary["task"] == "break_turn") & (summary["controller"] == controller)]
+        if sub.empty:
+            continue
+        row = sub.iloc[0]
+        rows.append(
+            {
+                "Controller": CONTROLLER_LABELS[controller],
+                "Mean track error m": _fmt_mean_ci(
+                    row.get("mean_track_error_m_mean"), row.get("mean_track_error_m_ci95_low"), row.get("mean_track_error_m_ci95_high")
+                ),
+                "Max track error m": _fmt_mean_ci(
+                    row.get("max_track_error_m_mean"), row.get("max_track_error_m_ci95_low"), row.get("max_track_error_m_ci95_high")
+                ),
+                "Mean speed m/s": _fmt_mean_ci(
+                    row.get("mean_speed_mps_mean"), row.get("mean_speed_mps_ci95_low"), row.get("mean_speed_mps_ci95_high")
+                ),
+                "Mean NZ g": _fmt_mean_ci(
+                    row.get("mean_nz_g_mean"), row.get("mean_nz_g_ci95_low"), row.get("mean_nz_g_ci95_high")
+                ),
+                "Max NZ g": _fmt_mean_ci(
+                    row.get("max_nz_g_mean"), row.get("max_nz_g_ci95_low"), row.get("max_nz_g_ci95_high")
+                ),
+                "Energy loss rate m/s²": _fmt_mean_ci(
+                    row.get("energy_loss_rate_mps2_mean"), row.get("energy_loss_rate_mps2_ci95_low"), row.get("energy_loss_rate_mps2_ci95_high")
+                ),
+                "Mean aggressiveness": "N/A",
+            }
+        )
+    return pd.DataFrame(rows)
+
+
+def _build_table3c(summary: pd.DataFrame, pairwise: pd.DataFrame) -> pd.DataFrame:
+    """Build a simple overall ranking table across all available tasks."""
+    tasks = [
+        ("multi_waypoint", "completed_waypoints_mean", True, "Multi-waypoint rank"),
+        ("sustained_turn", "completed_orbits_mean", True, "Sustained-turn rank"),
+        ("break_turn", "mean_track_error_m_mean", False, "Break-turn rank"),
+    ]
+    evaluated = set()
+    for task, metric, higher_is_better, _ in tasks:
+        sub = summary[summary["task"] == task]
+        if not sub.empty and metric in sub.columns:
+            evaluated.update(sub["controller"].unique())
+
+    rows = []
+    for controller in CONTROLLER_LABELS:
+        if controller not in evaluated:
+            continue
+        row = {"Controller": CONTROLLER_LABELS[controller]}
+        for task, metric, higher_is_better, rank_col in tasks:
+            sub = summary[(summary["task"] == task) & (summary["controller"] == controller)]
+            score = sub[metric].values[0] if not sub.empty and metric in sub.columns and pd.notna(sub[metric].values[0]) else None
+            row[task.replace("_", "-") + " score"] = float(score) if score is not None else None
+        rows.append(row)
+
+    df = pd.DataFrame(rows)
+    rank_cols = []
+    for task, metric, higher_is_better, rank_col in tasks:
+        score_col = task.replace("_", "-") + " score"
+        if score_col in df.columns and df[score_col].notna().any():
+            df[rank_col] = df[score_col].rank(ascending=not higher_is_better, method="min").astype("Int64")
+            rank_cols.append(rank_col)
+
+    if rank_cols:
+        df["Average rank"] = df[rank_cols].mean(axis=1)
+        df["Overall rank"] = df["Average rank"].rank(method="min").astype(int)
+    else:
+        df["Average rank"] = np.nan
+        df["Overall rank"] = 1
+
     best_rank = df["Overall rank"].min()
     df["Recommendation"] = df["Overall rank"].apply(
         lambda r: "Recommended" if r == best_rank else "Keep under review"
     )
 
-    # Drop helper numeric columns for display.
-    display = df[
-        ["Controller", "Overall rank", "Multi-waypoint rank", "Sustained-turn rank", "Recommendation"]
-    ]
-    return display
+    display_cols = ["Controller", "Overall rank"] + rank_cols + ["Recommendation"]
+    return df[display_cols]
 
 
 def _build_table3a_mean_only(summary: pd.DataFrame) -> pd.DataFrame:
@@ -309,27 +417,22 @@ def _fmt_value(value) -> str:
     return f"{value:.2f}"
 
 
-def _combine_sectioned_sheets(
-    table_a: pd.DataFrame,
-    table_b: pd.DataFrame,
-    table_c: pd.DataFrame,
-    label_a: str,
-    label_b: str,
-    label_c: str,
-) -> pd.DataFrame:
-    """Combine three tables with a Section label column, padding missing columns."""
-    a = table_a.copy()
-    b = table_b.copy()
-    c = table_c.copy()
-    a.insert(0, "Section", label_a)
-    b.insert(0, "Section", label_b)
-    c.insert(0, "Section", label_c)
-    all_cols = ["Section"] + sorted((set(a.columns) | set(b.columns) | set(c.columns)) - {"Section"})
-    for df in (a, b, c):
+def _combine_sectioned_sheets(*tables_and_labels) -> pd.DataFrame:
+    """Combine N tables with alternating labels, adding a Section column and padding columns."""
+    if len(tables_and_labels) % 2 != 0:
+        raise ValueError("Arguments must be (table, label, table, label, ...)")
+    parts = []
+    for i in range(0, len(tables_and_labels), 2):
+        df = tables_and_labels[i].copy()
+        label = tables_and_labels[i + 1]
+        df.insert(0, "Section", label)
+        parts.append(df)
+    all_cols = ["Section"] + sorted(set().union(*(set(df.columns) for df in parts)) - {"Section"})
+    for df in parts:
         for col in all_cols:
             if col not in df.columns:
                 df[col] = ""
-    return pd.concat([a[all_cols], b[all_cols], c[all_cols]], ignore_index=True)
+    return pd.concat([df[all_cols] for df in parts], ignore_index=True)
 
 
 def _build_pairwise_summary(pairwise: pd.DataFrame) -> pd.DataFrame:
@@ -369,6 +472,7 @@ def main():
 
     table3a = _build_table3a(summary)
     table3b = _build_table3b(summary)
+    table3d = _build_table3d(summary)
     table3c = _build_table3c(summary, pairwise)
 
     # Markdown (manual formatter to avoid optional tabulate dependency)
@@ -378,6 +482,13 @@ def main():
         _df_to_markdown(table3a),
         "\n## Table 3B: Sustained Turn\n",
         _df_to_markdown(table3b),
+    ]
+    if not table3d.empty:
+        md_lines += [
+            "\n## Table 3D: Break-Turn / Yo-Yo Maneuver Tracking\n",
+            _df_to_markdown(table3d),
+        ]
+    md_lines += [
         "\n## Table 3C: Overall Ranking\n",
         _df_to_markdown(table3c),
     ]
@@ -392,6 +503,8 @@ def main():
     # CSV
     table3a.to_csv(tables_dir / "table3a_multi_waypoint.csv", index=False)
     table3b.to_csv(tables_dir / "table3b_sustained_turn.csv", index=False)
+    if not table3d.empty:
+        table3d.to_csv(tables_dir / "table3d_break_turn.csv", index=False)
     table3c.to_csv(tables_dir / "table3c_overall.csv", index=False)
 
     # Combined Table 3 CSV with a section column for convenience.
@@ -399,38 +512,42 @@ def main():
     table3a_combined.insert(0, "Section", "Table 3A: Multi-Waypoint Tracking")
     table3b_combined = table3b.copy()
     table3b_combined.insert(0, "Section", "Table 3B: Sustained Turn")
+    table3d_combined = None
+    if not table3d.empty:
+        table3d_combined = table3d.copy()
+        table3d_combined.insert(0, "Section", "Table 3D: Break-Turn / Yo-Yo Maneuver Tracking")
     table3c_combined = table3c.copy()
     table3c_combined.insert(0, "Section", "Table 3C: Overall Ranking")
     # Align columns by taking the union and filling missing values with empty strings.
+    combined_parts = [table3a_combined, table3b_combined]
+    if table3d_combined is not None:
+        combined_parts.append(table3d_combined)
+    combined_parts.append(table3c_combined)
     all_cols = ["Section"] + sorted(
-        (
-            set(table3a_combined.columns)
-            | set(table3b_combined.columns)
-            | set(table3c_combined.columns)
-        )
-        - {"Section"}
+        set().union(*(set(df.columns) for df in combined_parts)) - {"Section"}
     )
-    for df in (table3a_combined, table3b_combined, table3c_combined):
+    for df in combined_parts:
         for col in all_cols:
             if col not in df.columns:
                 df[col] = ""
-    table3_summary = pd.concat(
-        [table3a_combined[all_cols], table3b_combined[all_cols], table3c_combined[all_cols]],
-        ignore_index=True,
-    )
+    table3_summary = pd.concat([df[all_cols] for df in combined_parts], ignore_index=True)
     table3_summary.to_csv(tables_dir / "table3_summary.csv", index=False)
 
     # Excel with multiple sheets (include spec-mandated table3_mean / table3_std_ci / pairwise_tests).
     table3a_mean = _build_table3a_mean_only(summary)
     table3b_mean = _build_table3b_mean_only(summary)
+    table3d_mean = _build_table3d_mean_only(summary)
     table3a_std_ci = _build_table3a_std_ci(summary)
     table3b_std_ci = _build_table3b_std_ci(summary)
+    table3d_std_ci = _build_table3d_std_ci(summary)
 
     excel_path = tables_dir / "table3_summary.xlsx"
     try:
         with pd.ExcelWriter(excel_path, engine="openpyxl") as writer:
             table3a.to_excel(writer, sheet_name="multi_waypoint", index=False)
             table3b.to_excel(writer, sheet_name="sustained_turn", index=False)
+            if not table3d.empty:
+                table3d.to_excel(writer, sheet_name="break_turn", index=False)
             table3c.to_excel(writer, sheet_name="overall", index=False)
             if pairwise is not None and not pairwise.empty:
                 pw_summary = _build_pairwise_summary(pairwise)
@@ -438,15 +555,25 @@ def main():
             summary.to_excel(writer, sheet_name="summary_mean_std_ci", index=False)
 
             # Mean-only combined sheet.
-            table3_mean = _combine_sectioned_sheets(
-                table3a_mean, table3b_mean, table3c, "Table 3A: Multi-Waypoint", "Table 3B: Sustained Turn", "Table 3C: Overall"
-            )
+            mean_sheets = [
+                table3a_mean, "Table 3A: Multi-Waypoint",
+                table3b_mean, "Table 3B: Sustained Turn",
+            ]
+            if table3d_mean is not None and not table3d_mean.empty:
+                mean_sheets.extend([table3d_mean, "Table 3D: Break-Turn / Yo-Yo"])
+            mean_sheets.extend([table3c, "Table 3C: Overall"])
+            table3_mean = _combine_sectioned_sheets(*mean_sheets)
             table3_mean.to_excel(writer, sheet_name="table3_mean", index=False)
 
             # Std + CI95 combined sheet.
-            table3_std_ci = _combine_sectioned_sheets(
-                table3a_std_ci, table3b_std_ci, table3c, "Table 3A: Multi-Waypoint", "Table 3B: Sustained Turn", "Table 3C: Overall"
-            )
+            stdci_sheets = [
+                table3a_std_ci, "Table 3A: Multi-Waypoint",
+                table3b_std_ci, "Table 3B: Sustained Turn",
+            ]
+            if table3d_std_ci is not None and not table3d_std_ci.empty:
+                stdci_sheets.extend([table3d_std_ci, "Table 3D: Break-Turn / Yo-Yo"])
+            stdci_sheets.extend([table3c, "Table 3C: Overall"])
+            table3_std_ci = _combine_sectioned_sheets(*stdci_sheets)
             table3_std_ci.to_excel(writer, sheet_name="table3_std_ci", index=False)
     except ImportError:
         print(f"WARNING: openpyxl not installed; skipping Excel output at {excel_path}")
@@ -472,19 +599,21 @@ def _build_summary_report(
     backend: str = "unknown",
 ) -> str:
     """Generate a short analytical report from aggregated results."""
+    task_names = sorted(summary["task"].unique().tolist())
+    task_label = ", ".join(t.replace("_", " ") for t in task_names)
     lines = [
         "# Flight-Control Comparison: Summary Report\n",
         "## 1. Scope and Methods\n",
-        "- Controllers: PPO+PID-Hybrid, PPO-FixedPID, Enhanced PID, Baseline PID.\n",
-        "- Tasks: Multi-waypoint tracking (5 waypoints) and sustained turn (90 s).\n",
+        "- Controllers: PPO+PID-Hybrid, PPO-FixedPID, Enhanced PID, Robust PID, Baseline PID.\n",
+        f"- Tasks: {task_label}.\n",
         f"- Backend: {backend}.\n",
         "- Seeds are paired across controllers for fair comparison.\n",
-        "- Statistical tests: Shapiro-Wilk → paired t-test or Wilcoxon, with Holm correction applied separately within each comparison family (system-level: PPO+PID vs PPO; low-level isolation: Enhanced PID vs Baseline PID).\n",
+        "- Statistical tests: Shapiro-Wilk → paired t-test or Wilcoxon, with Holm correction applied separately within each comparison family (system-level: PPO+PID vs PPO; low-level isolation: Enhanced PID vs Robust PID vs Baseline PID).\n",
         "\n## 2. Multi-Waypoint Task (Primary Metric: Completed Waypoints)\n",
     ]
 
     mw = summary[summary["task"] == "multi_waypoint"].set_index("controller")
-    for controller in ["ppo_pid", "ppo", "enhanced_pid", "baseline_pid"]:
+    for controller in ["ppo_pid", "ppo", "enhanced_pid", "robust_pid", "baseline_pid"]:
         if controller in mw.index:
             row = mw.loc[controller]
             mean = row.get("completed_waypoints_mean")
@@ -493,14 +622,23 @@ def _build_summary_report(
 
     lines.append("\n## 3. Sustained Turn Task (Primary Metric: Completed Orbits)\n")
     st = summary[summary["task"] == "sustained_turn"].set_index("controller")
-    for controller in ["ppo_pid", "ppo", "enhanced_pid", "baseline_pid"]:
+    for controller in ["ppo_pid", "ppo", "enhanced_pid", "robust_pid", "baseline_pid"]:
         if controller in st.index:
             row = st.loc[controller]
             mean = row.get("completed_orbits_mean")
             std = row.get("completed_orbits_std")
             lines.append(f"- {CONTROLLER_LABELS[controller]}: {mean:.2f} ± {std:.2f} orbits\n")
 
-    lines.append("\n## 4. Pairwise Statistical Conclusions\n")
+    lines.append("\n## 4. Break-Turn / Yo-Yo Task (Primary Metric: Mean Track Error)\n")
+    bt = summary[summary["task"] == "break_turn"].set_index("controller")
+    for controller in ["ppo_pid", "ppo", "enhanced_pid", "robust_pid", "baseline_pid"]:
+        if controller in bt.index:
+            row = bt.loc[controller]
+            mean = row.get("mean_track_error_m_mean")
+            std = row.get("mean_track_error_m_std")
+            lines.append(f"- {CONTROLLER_LABELS[controller]}: {mean:.2f} ± {std:.2f} m\n")
+
+    lines.append("\n## 5. Pairwise Statistical Conclusions\n")
     if pairwise is not None and not pairwise.empty:
         primary_metrics = [("multi_waypoint", "completed_waypoints"), ("sustained_turn", "completed_orbits")]
         for task, metric in primary_metrics:
@@ -521,7 +659,7 @@ def _build_summary_report(
     else:
         lines.append("- No pairwise statistics available.\n")
 
-    lines.append("\n## 5. Answers to the Two Core Questions\n")
+    lines.append("\n## 6. Answers to the Two Core Questions\n")
 
     def _primary_text(direction: str, significant: bool, metric: str) -> str:
         """For primary metrics, higher is better."""
@@ -634,14 +772,17 @@ def _build_summary_report(
         q2_conclusions.append("- **Conclusion**: No pairwise statistics available for Enhanced PID vs Baseline PID.")
     lines.extend([c + "\n" for c in q2_conclusions])
 
-    lines.append("\n## 6. Overall Ranking\n")
+    lines.append("\n## 7. Overall Ranking\n")
+    rank_cols = [c for c in ranking.columns if c.endswith(" rank") and c != "Overall rank"]
     for _, row in ranking.iterrows():
+        rank_parts = [f"{c.replace(' rank', '')} rank {row[c]}" for c in rank_cols]
+        rank_str = "; ".join(rank_parts) if rank_parts else "no task ranks available"
         lines.append(
             f"- {row['Controller']}: overall rank {row['Overall rank']} "
-            f"(MW rank {row['Multi-waypoint rank']}, ST rank {row['Sustained-turn rank']}) — {row['Recommendation']}\n"
+            f"({rank_str}) — {row['Recommendation']}\n"
         )
 
-    lines.append("\n## 7. Scope Honesty and Limitations\n")
+    lines.append("\n## 8. Scope Honesty and Limitations\n")
     lines.append("- Cross scenarios are explicitly scoped out of this deliverable.\n")
     lines.append("- GainScheduled PID is implemented as an optional controller but is not part of the main four-controller comparison.\n")
     lines.append("- All physical limits follow the current actuator mapping (7 g / 1.5 rad/s).\n")

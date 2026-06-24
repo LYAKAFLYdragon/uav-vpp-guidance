@@ -64,6 +64,10 @@ from uav_vpp_guidance.evaluation.flight_control_metrics import (
     compute_sustained_turn_metrics,
 )
 from uav_vpp_guidance.evaluation.recorders import EpisodeRecorder, RunRecorder
+from uav_vpp_guidance.common.provenance import (
+    get_config_overrides,
+    record_config_override_if_changed,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -121,6 +125,22 @@ def _deep_update(target: dict, source: dict) -> dict:
     return out
 
 
+def _record_override(
+    config: dict,
+    key: str,
+    new_value: Any,
+    old_value: Any = None,
+    source: str = "run_flight_control_comparison.py",
+) -> None:
+    record_config_override_if_changed(
+        config,
+        key=key,
+        new_value=new_value,
+        old_value=old_value,
+        source=source,
+    )
+
+
 def _get_git_commit() -> str:
     try:
         return (
@@ -147,6 +167,9 @@ def _build_env(config: dict):
     if class_name == "SustainedTurnEnv":
         from uav_vpp_guidance.envs.sustained_turn_env import SustainedTurnEnv
         return SustainedTurnEnv(config)
+    if class_name == "BreakTurnEnv":
+        from uav_vpp_guidance.envs.break_turn_env import BreakTurnEnv
+        return BreakTurnEnv(config)
     from uav_vpp_guidance.envs.tracking_env import CloseRangeTrackingEnv
     return CloseRangeTrackingEnv(config)
 
@@ -179,9 +202,13 @@ def _build_ppo_eval_config(
     # Overlay backend from task/base config, with optional CLI override.
     backend = backend_override or task_config.get("backend") or base_config.get("backend") or "jsbsim"
     backend = str(backend).lower()
+    source = "run_flight_control_comparison.py:ppo_eval_config"
+    old_backend = config.get("backend")
     config["backend"] = backend
+    _record_override(config, "backend", backend, old_value=old_backend, source=source)
     if "env" not in config:
         config["env"] = {}
+    old_env = copy.deepcopy(config.get("env", {}))
     use_jsbsim = backend == "jsbsim"
     env_overrides = {
         "backend": backend,
@@ -206,19 +233,43 @@ def _build_ppo_eval_config(
             if key in src:
                 env_overrides[key] = src[key]
     config["env"] = _deep_update(config.get("env", {}), env_overrides)
+    for key in env_overrides:
+        _record_override(
+            config,
+            f"env.{key}",
+            config["env"].get(key),
+            old_value=old_env.get(key),
+            source=source,
+        )
 
     # Preserve guidance gains from checkpoint but ensure mode is available.
+    old_guidance = copy.deepcopy(config.get("guidance", {}))
     guidance_overrides = {"mode": "los_rate"}
     for src in (base_config.get("guidance", {}), task_config.get("guidance", {})):
         if "mode" in src:
             guidance_overrides["mode"] = src["mode"]
     config["guidance"] = _deep_update(config.get("guidance", {}), guidance_overrides)
+    _record_override(
+        config,
+        "guidance.mode",
+        config.get("guidance", {}).get("mode"),
+        old_value=old_guidance.get("mode"),
+        source=source,
+    )
 
     # Preserve limits from comparison configs (physical limits are part of the task).
-    limits_overrides = base_config.get("limits", {})
+    old_limits = copy.deepcopy(config.get("limits"))
+    limits_overrides = copy.deepcopy(base_config.get("limits", {}))
     limits_overrides.update(task_config.get("limits", {}))
     if limits_overrides:
         config["limits"] = _deep_update(config.get("limits", {}), limits_overrides)
+        _record_override(
+            config,
+            "limits",
+            config.get("limits"),
+            old_value=old_limits,
+            source=source,
+        )
 
     # Detect APIC-style checkpoints (PPO outputs PID gain deltas, not VPP offsets).
     ckpt_ll = ckpt_config.get("low_level_controller", {})
@@ -240,37 +291,86 @@ def _build_ppo_eval_config(
     if is_apic:
         if ll_override is not None:
             # Merge base type but keep checkpoint's apic block.
+            old_ll = copy.deepcopy(config.get("low_level_controller"))
             merged_ll = copy.deepcopy(ll_override)
             if isinstance(merged_ll, dict):
                 merged_ll["apic"] = ckpt_ll.get("apic", {"enabled": True})
             config["low_level_controller"] = merged_ll
+            _record_override(
+                config,
+                "low_level_controller",
+                config.get("low_level_controller"),
+                old_value=old_ll,
+                source=source,
+            )
     else:
         if ll_override is not None:
+            old_ll = copy.deepcopy(config.get("low_level_controller"))
             config["low_level_controller"] = copy.deepcopy(ll_override)
+            _record_override(
+                config,
+                "low_level_controller",
+                config.get("low_level_controller"),
+                old_value=old_ll,
+                source=source,
+            )
 
     # Ensure VPP is enabled for PPO controllers.
     if "virtual_point" not in config:
         config["virtual_point"] = {}
+    old_vp = copy.deepcopy(config.get("virtual_point", {}))
     config["virtual_point"]["enabled"] = True
     # APIC uses zero_offset/direct_track; legacy PPO uses normal VPP mode.
     config["virtual_point"]["mode"] = "zero_offset" if is_apic else "normal"
     if is_apic:
         if "guidance" not in config:
             config["guidance"] = {}
+        old_direct_track = config["guidance"].get("direct_track_mode")
         config["guidance"]["direct_track_mode"] = True
+        _record_override(
+            config,
+            "guidance.direct_track_mode",
+            True,
+            old_value=old_direct_track,
+            source=source,
+        )
+    for key in ("enabled", "mode"):
+        _record_override(
+            config,
+            f"virtual_point.{key}",
+            config["virtual_point"].get(key),
+            old_value=old_vp.get(key),
+            source=source,
+        )
 
     # Merge task/base virtual_point overrides (e.g. dynamics_aware for sustained turn)
     # while preserving the policy action_dim from the checkpoint.
+    old_vp_before_overrides = copy.deepcopy(config.get("virtual_point", {}))
     vp_overrides = {}
     for src in (base_config.get("virtual_point", {}), task_config.get("virtual_point", {})):
         for k, v in src.items():
             vp_overrides[k] = v
     if vp_overrides:
         config["virtual_point"] = _deep_update(config.get("virtual_point", {}), vp_overrides)
+        _record_override(
+            config,
+            "virtual_point",
+            config.get("virtual_point"),
+            old_value=old_vp_before_overrides,
+            source=source,
+        )
 
     # Task block overrides everything.
     if "task" in task_config:
+        old_task = copy.deepcopy(config.get("task"))
         config["task"] = copy.deepcopy(task_config["task"])
+        _record_override(
+            config,
+            "task",
+            config.get("task"),
+            old_value=old_task,
+            source=source,
+        )
 
     return config
 
@@ -289,25 +389,44 @@ def _build_pid_eval_config(
     # Overlay backend from task/base config, with optional CLI override.
     backend = backend_override or task_config.get("backend") or base_config.get("backend") or "jsbsim"
     backend = str(backend).lower()
+    source = f"run_flight_control_comparison.py:{ll_type}_eval_config"
+    old_backend = config.get("backend")
     config["backend"] = backend
+    _record_override(config, "backend", backend, old_value=old_backend, source=source)
     if "env" not in config:
         config["env"] = {}
+    old_env_backend = config["env"].get("backend")
+    old_use_jsbsim = config["env"].get("use_jsbsim")
+    old_strict_backend = config["env"].get("strict_backend")
     use_jsbsim = backend == "jsbsim"
     config["env"]["backend"] = backend
     config["env"]["use_jsbsim"] = use_jsbsim
     config["env"]["strict_backend"] = use_jsbsim
+    _record_override(config, "env.backend", backend, old_value=old_env_backend, source=source)
+    _record_override(config, "env.use_jsbsim", use_jsbsim, old_value=old_use_jsbsim, source=source)
+    _record_override(config, "env.strict_backend", use_jsbsim, old_value=old_strict_backend, source=source)
 
     # Ensure zero-offset VPP so the guidance chain tracks the reference target.
     if "virtual_point" not in config:
         config["virtual_point"] = {}
+    old_vp = copy.deepcopy(config.get("virtual_point", {}))
     config["virtual_point"]["enabled"] = True
     config["virtual_point"]["mode"] = "zero_offset"
     config["virtual_point"]["action_dim"] = action_dim
+    for key in ("enabled", "mode", "action_dim"):
+        _record_override(
+            config,
+            f"virtual_point.{key}",
+            config["virtual_point"].get(key),
+            old_value=old_vp.get(key),
+            source=source,
+        )
 
     # Set low-level controller type.
     # Baseline PID is upgraded from a simple feedforward filter to a real PID
     # using the enhanced controller architecture but with advanced protections
     # disabled, so the comparison is against a genuine low-level PID.
+    old_ll = copy.deepcopy(config.get("low_level_controller"))
     if ll_type == "baseline":
         ll_cfg = config.get("low_level_controller", {})
         if isinstance(ll_cfg, str):
@@ -323,11 +442,26 @@ def _build_pid_eval_config(
             config["low_level_controller"]["type"] = ll_type
         else:
             config["low_level_controller"] = {"type": ll_type}
+    _record_override(
+        config,
+        "low_level_controller",
+        config.get("low_level_controller"),
+        old_value=old_ll,
+        source=source,
+    )
 
     # Policy block is irrelevant for PID but kept for config consistency.
     if "policy" not in config:
         config["policy"] = {}
+    old_action_dim = config["policy"].get("action_dim")
     config["policy"]["action_dim"] = action_dim
+    _record_override(
+        config,
+        "policy.action_dim",
+        action_dim,
+        old_value=old_action_dim,
+        source=source,
+    )
 
     return config
 
@@ -491,7 +625,12 @@ def _run_episode(
 
 
 def _evaluate_worker(args: tuple) -> List[Dict[str, Any]]:
-    """Worker that runs all episodes for one (task, controller, seed) triplet."""
+    """Worker that runs all episodes for one (task, controller, seed) triplet.
+
+    If the task config contains a ``scenarios`` list, one episode is run per
+    scenario (with ``n_episodes`` episodes per scenario when ``n_episodes > 1``).
+    The scenario name is recorded in the episode JSON for downstream aggregation.
+    """
     (
         run_id,
         task,
@@ -515,7 +654,7 @@ def _evaluate_worker(args: tuple) -> List[Dict[str, Any]]:
             "apic_pid": checkpoint_apic_pid,
             "ppo": checkpoint_ppo,
         }[controller]
-        config = _build_ppo_eval_config(path, base_config, task_config, backend_override=backend_override)
+        base_eval_config = _build_ppo_eval_config(path, base_config, task_config, backend_override=backend_override)
     else:
         ll_type = {
             "enhanced_pid": "enhanced_pid",
@@ -523,32 +662,68 @@ def _evaluate_worker(args: tuple) -> List[Dict[str, Any]]:
             "baseline_pid": "baseline_pid",
             "gain_scheduled_pid": "gain_scheduled_pid",
         }[controller]
-        config = _build_pid_eval_config(base_config, task_config, ll_type, backend_override=backend_override)
+        base_eval_config = _build_pid_eval_config(base_config, task_config, ll_type, backend_override=backend_override)
 
-    env = _build_env(config)
-    adapter = _build_adapter(controller, config, checkpoint_ppo_pid, checkpoint_ppo, checkpoint_apic_pid, device=device)
-
-    config_sha256 = _config_sha256(config)
     git_commit = _get_git_commit()
     records = []
-    for ep in range(n_episodes):
-        ep_seed = seed * 10000 + ep
-        ep_json = _run_episode(
-            env,
-            adapter,
-            ep_seed,
-            run_id,
-            task,
-            controller,
-            ep,
-            config,
-            config_sha256,
-            git_commit,
-            save_full=save_full,
-        )
-        records.append(ep_json)
 
-    env.close()
+    scenarios = task_config.get("task", {}).get("scenarios")
+    if scenarios:
+        # Each scenario may specify a different guidance mode, so we build a
+        # fresh env/adapter per scenario to respect the override.
+        for scenario_idx, scenario in enumerate(scenarios):
+            scenario_config = copy.deepcopy(base_eval_config)
+            meta_guidance = scenario.get("metadata", {}).get("guidance_mode")
+            if meta_guidance is not None:
+                if "guidance" not in scenario_config:
+                    scenario_config["guidance"] = {}
+                scenario_config["guidance"]["mode"] = meta_guidance
+            env = _build_env(scenario_config)
+            adapter = _build_adapter(controller, scenario_config, checkpoint_ppo_pid, checkpoint_ppo, checkpoint_apic_pid, device=device)
+            config_sha256 = _config_sha256(scenario_config)
+            for ep in range(n_episodes):
+                ep_seed = seed * 100000 + scenario_idx * 100 + ep
+                episode_id = scenario_idx * n_episodes + ep
+                ep_json = _run_episode(
+                    env,
+                    adapter,
+                    ep_seed,
+                    run_id,
+                    task,
+                    controller,
+                    episode_id,
+                    scenario_config,
+                    config_sha256,
+                    git_commit,
+                    save_full=save_full,
+                    scenario=scenario,
+                )
+                ep_json["scenario"] = scenario.get("name", f"scenario_{scenario_idx}")
+                ep_json["scenario_metadata"] = scenario.get("metadata", {})
+                records.append(ep_json)
+            env.close()
+    else:
+        env = _build_env(base_eval_config)
+        adapter = _build_adapter(controller, base_eval_config, checkpoint_ppo_pid, checkpoint_ppo, checkpoint_apic_pid, device=device)
+        config_sha256 = _config_sha256(base_eval_config)
+        for ep in range(n_episodes):
+            ep_seed = seed * 10000 + ep
+            ep_json = _run_episode(
+                env,
+                adapter,
+                ep_seed,
+                run_id,
+                task,
+                controller,
+                ep,
+                base_eval_config,
+                config_sha256,
+                git_commit,
+                save_full=save_full,
+            )
+            records.append(ep_json)
+        env.close()
+
     return records
 
 
@@ -630,6 +805,18 @@ def _parse_args():
         help="Sustained-turn task config",
     )
     parser.add_argument(
+        "--config-bt",
+        type=str,
+        default="config/experiment/task_break_turn.yaml",
+        help="Break-turn / yo-yo maneuver task config",
+    )
+    parser.add_argument(
+        "--config-ct",
+        type=str,
+        default="config/experiment/task_crossing_threshold.yaml",
+        help="Crossing-angle threshold task config",
+    )
+    parser.add_argument(
         "--output-root",
         type=str,
         default="outputs/flight_control_compare",
@@ -694,10 +881,14 @@ def main():
     base_config = load_experiment_config(args.config_base)
     mw_config = load_experiment_config(args.config_mw)
     st_config = load_experiment_config(args.config_st)
+    bt_config = load_experiment_config(args.config_bt)
+    ct_config = load_experiment_config(args.config_ct)
 
     task_configs = {
         "multi_waypoint": mw_config,
         "sustained_turn": st_config,
+        "break_turn": bt_config,
+        "crossing_threshold": ct_config,
     }
 
     git_commit = _get_git_commit()
@@ -762,7 +953,7 @@ def main():
                     )
                 )
 
-    logger.info(f"Total work items: {len(work_items)} ({len(args.controllers)} controllers x {len(args.tasks)} tasks x {len(args.seeds)} seeds x {args.n_episodes} episodes)")
+    logger.info(f"Total work items: {len(work_items)} ({len(args.controllers)} controllers x {len(args.tasks)} tasks x {len(args.seeds)} seeds x {args.n_episodes} episodes; scenario lists are expanded inside workers)")
 
     # Run workers
     all_records = []
@@ -825,6 +1016,7 @@ def main():
             config_snapshots[f"{controller}/{task}"] = {
                 "path": str(snapshot_path),
                 "sha256": _config_sha256(cfg),
+                "config_overrides": get_config_overrides(cfg),
             }
     logger.info(f"Saved {len(config_snapshots)} merged config snapshots to {manifest_dir}")
 
@@ -851,6 +1043,10 @@ def main():
         "config_mw_sha256": _sha256_file(args.config_mw),
         "config_st": args.config_st,
         "config_st_sha256": _sha256_file(args.config_st),
+        "config_bt": args.config_bt,
+        "config_bt_sha256": _sha256_file(args.config_bt),
+        "config_ct": args.config_ct,
+        "config_ct_sha256": _sha256_file(args.config_ct),
         "config_snapshots": config_snapshots,
         "total_episodes": len(all_records),
         "episodes_per_controller_task": {

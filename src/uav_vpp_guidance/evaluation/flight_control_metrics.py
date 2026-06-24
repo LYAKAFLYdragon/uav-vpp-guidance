@@ -135,6 +135,53 @@ def compute_multi_waypoint_metrics(trajectory: List[Dict[str, Any]]) -> Dict[str
     return stats
 
 
+def compute_break_turn_metrics(trajectory: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """Compute per-episode statistics for the break-turn / yo-yo task."""
+    ranges = _clip_to_physical(
+        [float(r.get("range_m", np.nan)) for r in trajectory], 0.0, MAX_RANGE_M
+    )
+    speeds = _clip_to_physical(
+        [float(r.get("speed_mps", np.nan)) for r in trajectory], 0.0, MAX_SPEED_MPS
+    )
+    nz = _clip_to_physical(
+        [float(r.get("nz_g", np.nan)) for r in trajectory], MIN_NZ_G, MAX_NZ_G
+    )
+    times = [float(r.get("time_s", np.nan)) for r in trajectory]
+    aggressiveness = [
+        float(r.get("aggressiveness"))
+        for r in trajectory
+        if r.get("aggressiveness") is not None
+    ]
+    gain_scales = [
+        float(r.get("gain_scale"))
+        for r in trajectory
+        if r.get("gain_scale") is not None
+    ]
+    saturation_flags = [bool(r.get("saturation_flag", False)) for r in trajectory]
+
+    stats = {
+        "mean_track_error_m": _safe_mean(ranges),
+        "std_track_error_m": _safe_std(ranges),
+        "median_track_error_m": _safe_median(ranges),
+        "max_track_error_m": _safe_max(ranges),
+        "mean_speed_mps": _safe_mean(speeds),
+        "max_speed_mps": _safe_max(speeds),
+        "mean_nz_g": _safe_mean(nz),
+        "max_nz_g": _safe_max(nz),
+        "energy_loss_rate_mps2": _energy_loss_rate_mps2(speeds, times),
+        "saturation_ratio": float(np.mean(saturation_flags)) if saturation_flags else 0.0,
+    }
+
+    if aggressiveness:
+        stats["mean_aggressiveness"] = _safe_mean(aggressiveness)
+        stats["mean_gain_scale"] = _safe_mean(gain_scales)
+    else:
+        stats["mean_aggressiveness"] = None
+        stats["mean_gain_scale"] = None
+
+    return stats
+
+
 def compute_sustained_turn_metrics(trajectory: List[Dict[str, Any]]) -> Dict[str, Any]:
     """Compute per-episode statistics for the sustained-turn task."""
     radii = _clip_to_physical(

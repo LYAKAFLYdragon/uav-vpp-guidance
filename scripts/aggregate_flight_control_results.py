@@ -90,6 +90,34 @@ METRICS_BY_TASK = {
         "mean_aggressiveness",
         "mean_gain_scale",
     ],
+    "break_turn": [
+        "mean_track_error_m",
+        "std_track_error_m",
+        "median_track_error_m",
+        "max_track_error_m",
+        "mean_speed_mps",
+        "max_speed_mps",
+        "mean_nz_g",
+        "max_nz_g",
+        "energy_loss_rate_mps2",
+        "saturation_ratio",
+        "mean_aggressiveness",
+        "mean_gain_scale",
+    ],
+    "crossing_threshold": [
+        "mean_track_error_m",
+        "std_track_error_m",
+        "median_track_error_m",
+        "max_track_error_m",
+        "mean_speed_mps",
+        "max_speed_mps",
+        "mean_nz_g",
+        "max_nz_g",
+        "energy_loss_rate_mps2",
+        "saturation_ratio",
+        "mean_aggressiveness",
+        "mean_gain_scale",
+    ],
 }
 
 
@@ -129,6 +157,7 @@ def _load_episode_rows(run_dir: Path) -> pd.DataFrame:
             "controller": obj["controller"],
             "seed": obj["seed"],
             "episode": obj["episode"],
+            "scenario": obj.get("scenario"),
             "success": obj.get("success", False),
             "termination_reason": obj.get("termination_reason", "unknown"),
             "total_time_s": obj.get("total_time_s", np.nan),
@@ -163,41 +192,59 @@ def ci95_bca(x: np.ndarray, seed: int = 1234) -> tuple[float, float]:
     return float(res.confidence_interval.low), float(res.confidence_interval.high)
 
 
+def _summarize_group(g: pd.DataFrame, metrics: list, top_level_metrics: list, row_base: dict) -> dict:
+    """Compute mean/std/BCa-CI for a single group and return a row dict."""
+    row = dict(row_base)
+    row["n"] = int(len(g))
+    for m in metrics:
+        if m not in g.columns:
+            continue
+        vals = g[m].to_numpy(dtype=float)
+        vals = vals[np.isfinite(vals)]
+        row[f"{m}_mean"] = float(np.mean(vals)) if len(vals) else np.nan
+        row[f"{m}_std"] = float(np.std(vals, ddof=1)) if len(vals) > 1 else np.nan
+        lo, hi = ci95_bca(vals)
+        row[f"{m}_ci95_low"] = lo
+        row[f"{m}_ci95_high"] = hi
+    for m in top_level_metrics:
+        if m not in g.columns:
+            continue
+        vals = g[m].to_numpy(dtype=float)
+        vals = vals[np.isfinite(vals)]
+        row[f"{m}_mean"] = float(np.mean(vals)) if len(vals) else np.nan
+        row[f"{m}_std"] = float(np.std(vals, ddof=1)) if len(vals) > 1 else np.nan
+        lo, hi = ci95_bca(vals)
+        row[f"{m}_ci95_low"] = lo
+        row[f"{m}_ci95_high"] = hi
+    return row
+
+
 def summarize_metrics(df: pd.DataFrame) -> pd.DataFrame:
     """Compute mean/std/BCa-CI for every task x controller x metric."""
     rows = []
     metrics = sorted({m for ms in METRICS_BY_TASK.values() for m in ms})
-    # Top-level episode fields that should also be summarized but are not part
-    # of the per-task statistics blocks.
     top_level_metrics = ["total_time_s"]
     for (task, controller), g in df.groupby(["task", "controller"], sort=False):
-        row = {
-            "task": task,
-            "controller": controller,
-            "n": int(len(g)),
-        }
-        for m in metrics:
-            if m not in g.columns:
-                continue
-            vals = g[m].to_numpy(dtype=float)
-            vals = vals[np.isfinite(vals)]
-            row[f"{m}_mean"] = float(np.mean(vals)) if len(vals) else np.nan
-            row[f"{m}_std"] = float(np.std(vals, ddof=1)) if len(vals) > 1 else np.nan
-            lo, hi = ci95_bca(vals)
-            row[f"{m}_ci95_low"] = lo
-            row[f"{m}_ci95_high"] = hi
-        # Summarize top-level fields when present.
-        for m in top_level_metrics:
-            if m not in g.columns:
-                continue
-            vals = g[m].to_numpy(dtype=float)
-            vals = vals[np.isfinite(vals)]
-            row[f"{m}_mean"] = float(np.mean(vals)) if len(vals) else np.nan
-            row[f"{m}_std"] = float(np.std(vals, ddof=1)) if len(vals) > 1 else np.nan
-            lo, hi = ci95_bca(vals)
-            row[f"{m}_ci95_low"] = lo
-            row[f"{m}_ci95_high"] = hi
-        rows.append(row)
+        rows.append(_summarize_group(g, metrics, top_level_metrics, {"task": task, "controller": controller}))
+    return pd.DataFrame(rows)
+
+
+def summarize_by_scenario(df: pd.DataFrame) -> pd.DataFrame:
+    """Compute mean/std/BCa-CI for every task x scenario x controller x metric."""
+    rows = []
+    metrics = sorted({m for ms in METRICS_BY_TASK.values() for m in ms})
+    top_level_metrics = ["total_time_s"]
+    df = df.copy()
+    df["scenario"] = df["scenario"].fillna("__default__")
+    for (task, scenario, controller), g in df.groupby(["task", "scenario", "controller"], sort=False):
+        rows.append(
+            _summarize_group(
+                g,
+                metrics,
+                top_level_metrics,
+                {"task": task, "scenario": scenario, "controller": controller},
+            )
+        )
     return pd.DataFrame(rows)
 
 
@@ -365,6 +412,10 @@ def main():
     summary = summarize_metrics(df)
     summary.to_csv(aggregate_dir / "summary.csv", index=False)
     summary.to_json(aggregate_dir / "summary.json", orient="records", indent=2)
+
+    by_scenario = summarize_by_scenario(df)
+    by_scenario.to_csv(aggregate_dir / "summary_by_scenario.csv", index=False)
+    by_scenario.to_json(aggregate_dir / "summary_by_scenario.json", orient="records", indent=2)
 
     def _agg_key(m: str, prefix: str) -> str:
         """Build aggregate JSON key: strip redundant 'mean_' when present."""

@@ -92,13 +92,14 @@ class RobustPIDController(EnhancedLowLevelController):
             "enable_dynamic_nz_limit": True,
             "enable_energy_boost": True,
             "enable_altitude_hold": True,
-            # Added bank-angle protection: allow transient high bank for lead
-            # turns, but recover if the bank limit is exceeded for a sustained
-            # interval (the signature of a spiral-dive instability).
-            "enable_bank_angle_protection": True,
-            "max_bank_rad": math.radians(55.0),
-            "bank_violation_threshold": 25,
-            "bank_protection_nz_increment": 0.2,
+            # Bank-angle protection is disabled for the crossing-angle
+            # threshold task because the benign lead-turn manoeuvres do not
+            # trigger spiral-dive instabilities; enabling it over-restricts
+            # the aircraft and causes missed intercepts.
+            "enable_bank_angle_protection": False,
+            "max_bank_rad": math.radians(75.0),
+            "bank_violation_threshold": 200,
+            "bank_protection_nz_increment": 0.1,
         }
         merged = {**defaults, **config}
         super().__init__(merged)

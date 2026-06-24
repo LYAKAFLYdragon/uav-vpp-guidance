@@ -10,6 +10,7 @@ mirror the hardened style of los_rate_guidance.py.
 """
 
 import logging
+import math
 from typing import Dict, Any, Optional
 
 import numpy as np
@@ -64,6 +65,25 @@ class CommandPostProcessor:
         self.terminal_roll_scale = float(params.get("terminal_roll_scale", 0.8))
         self.base_nz = float(guidance_params.get("base_nz", params.get("base_nz", 1.0)))
 
+        # Lift compensation for coordinated turns
+        self.enable_lift_compensation = bool(
+            params.get("enable_lift_compensation", False)
+        )
+        self.lift_compensation_factor = float(
+            params.get("lift_compensation_factor", 1.0)
+        )
+        self.lift_compensation_min_cos = float(
+            params.get("lift_compensation_min_cos", 0.5)
+        )
+        self.lift_compensation_source = str(
+            params.get("lift_compensation_source", "actual_roll")
+        )
+        self.lift_compensation_filter_alpha = float(
+            params.get("lift_compensation_filter_alpha", 0.3)
+        )
+        # Low-pass filter state for smooth compensation transitions
+        self._lift_compensation_state = 0.0
+
         self.epsilon = float(params.get("epsilon", 1.0e-6))
 
     # ------------------------------------------------------------------
@@ -97,6 +117,10 @@ class CommandPostProcessor:
         nz = float(raw_command["nz_cmd"])
         roll = float(raw_command["roll_rate_cmd"])
         throttle = float(raw_command["throttle_cmd"])
+
+        # Lift compensation: in a banked turn, increase nz_cmd to maintain altitude.
+        if self.enable_lift_compensation and own_state is not None:
+            nz = self._apply_lift_compensation(nz, own_state, roll)
 
         # Terminal-phase protection
         if self.enable_terminal_protection and relative_state is not None:
@@ -161,6 +185,41 @@ class CommandPostProcessor:
         # Roll still scales toward zero
         roll_factor = scale + (1.0 - scale) * self.terminal_roll_scale
         return nz, roll * roll_factor
+
+    def _apply_lift_compensation(
+        self,
+        nz: float,
+        own_state: Dict[str, Any],
+        roll_rate_cmd: float = 0.0,
+    ) -> float:
+        """Increase normal load factor during banked turns to maintain altitude.
+
+        Supports two roll-angle sources:
+          - "actual_roll": use the current aircraft roll angle (robust, but
+            lags the command by one step).
+          - "roll_rate_cmd": use the commanded roll rate as a proxy for the
+            intended bank angle (faster feedforward, but noisier).
+
+        A first-order low-pass filter is applied to the compensation increment
+        to avoid abrupt nz jumps when the aircraft rolls in/out.
+        """
+        if self.lift_compensation_source == "roll_rate_cmd":
+            # Treat the roll-rate command as a proxy for intended bank magnitude.
+            # Clamp to a physically plausible range.
+            roll_rad = float(np.clip(abs(roll_rate_cmd), 0.0, math.radians(85.0)))
+        else:
+            roll_rad = float(own_state.get("roll_rad", 0.0))
+
+        cos_roll = math.cos(abs(roll_rad))
+        cos_roll = max(cos_roll, self.lift_compensation_min_cos)
+        target_delta = (1.0 / cos_roll - 1.0) * self.lift_compensation_factor
+
+        # Smooth the compensation transition
+        self._lift_compensation_state = (
+            self.lift_compensation_filter_alpha * target_delta
+            + (1.0 - self.lift_compensation_filter_alpha) * self._lift_compensation_state
+        )
+        return nz + self._lift_compensation_state
 
     def _apply_load_roll_coordination(self, nz: float, roll: float) -> float:
         """Reduce roll rate when nz is near its limits (structural/energy protection)."""

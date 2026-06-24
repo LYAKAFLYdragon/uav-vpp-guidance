@@ -74,6 +74,11 @@ guidance:
     terminal_range_m: 500.0
     terminal_nz_scale: 0.7
     terminal_roll_scale: 0.8
+    enable_lift_compensation: false
+    lift_compensation_factor: 1.0
+    lift_compensation_source: "actual_roll"
+    lift_compensation_filter_alpha: 0.3
+    lift_compensation_min_cos: 0.5
 
   limits:
     nz_min: -2.0

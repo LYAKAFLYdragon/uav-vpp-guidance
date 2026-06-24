@@ -5,6 +5,7 @@ import pytest
 from uav_vpp_guidance.common.provenance import (
     get_config_overrides,
     record_config_override,
+    record_config_override_if_changed,
 )
 
 
@@ -53,3 +54,28 @@ class TestRecordConfigOverride:
         record_config_override(config, "obj", object())
         entry = get_config_overrides(config)[0]
         assert isinstance(entry["new_value"], str)
+
+    def test_if_changed_skips_equal_values(self):
+        config = {}
+        entry = record_config_override_if_changed(
+            config,
+            "backend",
+            "simple",
+            old_value="simple",
+            source="test_script",
+        )
+        assert entry is None
+        assert get_config_overrides(config) == []
+
+    def test_if_changed_records_different_values(self):
+        config = {}
+        entry = record_config_override_if_changed(
+            config,
+            "backend",
+            "jsbsim",
+            old_value="simple",
+            source="test_script",
+        )
+        assert entry["key"] == "backend"
+        assert entry["old_value"] == "simple"
+        assert entry["new_value"] == "jsbsim"

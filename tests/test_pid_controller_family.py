@@ -1,5 +1,6 @@
 """Tests for the named PID controller family."""
 
+import math
 import numpy as np
 
 from uav_vpp_guidance.flight_control import (
@@ -80,4 +81,7 @@ def test_robust_pid_enables_protections():
     assert ctrl.use_beta_suppression is True
     assert ctrl.use_aoa_protection is True
     assert ctrl.enable_altitude_hold is True
-    assert ctrl.enable_bank_angle_protection is True
+    # Bank-angle protection is intentionally disabled so lead-turn authority
+    # is not restricted during crossing-angle intercepts.
+    assert ctrl.enable_bank_angle_protection is False
+    assert ctrl.max_bank_rad > math.radians(70.0)

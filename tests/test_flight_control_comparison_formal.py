@@ -26,6 +26,7 @@ def test_formal_mode_dry_run():
             "--tasks",
             "multi_waypoint",
             "sustained_turn",
+            "break_turn",
             "--seeds",
             "0",
             "1",

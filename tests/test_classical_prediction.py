@@ -8,6 +8,7 @@ Covers:
 - TrajectoryPredictorAdapter config creation
 """
 
+import copy
 import csv
 import os
 import subprocess
@@ -746,6 +747,39 @@ class TestCloseRangeTrackingEnvPredictionAnchorHardening:
         for field in required_fields:
             assert field in info, f"Missing info field: {field}"
         env.close()
+
+    def test_prediction_noise_is_reported_and_seeded(self):
+        config = self._make_base_config()
+        config["virtual_point"]["anchor_mode"] = "predicted_target"
+        config["trajectory_prediction"] = {
+            "enabled": True,
+            "predictor_type": "constant_velocity",
+            "freeze_predictor_during_rl": True,
+            "prediction": {"lookahead_time_s": 1.0, "output_mode": "absolute_position"},
+            "integration": {"prediction_noise_std_m": 50.0},
+            "history": {"history_len": 5, "padding_mode": "repeat_first"},
+            "model": {"input_dim": 16},
+            "normalization": {"position_scale_m": 1000.0, "velocity_scale_mps": 300.0, "overload_scale": 9.0},
+        }
+        env = CloseRangeTrackingEnv(config)
+        env.reset(seed=123)
+        _, _, _, _, noisy_info = env.step(np.zeros(3))
+        env.close()
+
+        config_no_noise = self._make_base_config()
+        config_no_noise["virtual_point"]["anchor_mode"] = "predicted_target"
+        config_no_noise["trajectory_prediction"] = copy.deepcopy(config["trajectory_prediction"])
+        config_no_noise["trajectory_prediction"]["integration"]["prediction_noise_std_m"] = 0.0
+        env = CloseRangeTrackingEnv(config_no_noise)
+        env.reset(seed=123)
+        _, _, _, _, clean_info = env.step(np.zeros(3))
+        env.close()
+
+        assert noisy_info["prediction_noise_applied"] is True
+        assert noisy_info["prediction_noise_std_m"] == 50.0
+        noisy_pos = np.asarray(noisy_info["predicted_target_position"])
+        clean_pos = np.asarray(clean_info["predicted_target_position"])
+        assert np.linalg.norm(noisy_pos - clean_pos) > 1.0
 
     def test_virtual_point_based_on_predicted_target(self):
         """virtual_point 应基于 predicted_target_position，而非 current target position。"""

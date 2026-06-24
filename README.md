@@ -326,7 +326,7 @@ After a full run, copy `README_result_block.md` into Section 6 of this README, r
 
 > **Latest Stage 6G result**: `Status: complete` (probe full run completed, 720 episodes, 12 cells, McNemar exact p-values computed). See `docs/stage6g_guidance_limitation_probe.md` for detailed results.
 >
-> **Latest Stage 10 result**: `Status: complete` (corrected benchmark). Head-on 100% success (20/20), crossing 0% success (0/20). Full analysis in `docs/stage10_3_crossing_failure_analysis.md`.
+> **Latest Stage 10 result**: `Status: complete` (Stage 10.3 feasible regression suite). Head-on and feasible crossing scenarios reach 100% success under JSBSim for the documented methods. The original canonical 90-degree crossing geometry remains an aerodynamic feasibility-boundary case. Full analysis: `docs/stage10_3_crossing_failure_analysis.md`.
 
 ---
 
@@ -339,7 +339,7 @@ After a full run, copy `README_result_block.md` into Section 6 of this README, r
 > ```
 > Existing checkpoints were trained without these features, so keep them `false` when loading legacy models. When `trajectory_prediction.enabled=true`, prediction-aware features (+14 dims) are appended automatically.
 >
-> **Backend selection**: Training scripts (`train_bilevel`, `train_gain_only`, `run_gain_only_cem`) respect the `backend` / `use_jsbsim` fields in config. No CLI flag overrides the backend; set `backend: jsbsim` or `env.use_jsbsim: true` in the experiment YAML to use JSBSim.
+> **Backend selection**: Training and evaluation scripts respect the loaded `backend` / `env.use_jsbsim` fields unless a documented CLI override such as `--backend` or `--use-jsbsim` is provided. Any script-level override must be recorded through `record_config_override` so it appears in `provenance["config_overrides"]`.
 >
 > **Provenance contract**: Every `reset()` and `step()` returns a `provenance` dict so ablations stay traceable:
 > ```python
@@ -357,9 +357,9 @@ After a full run, copy `README_result_block.md` into Section 6 of this README, r
 >   ]
 > }
 > ```
-> Scripts that mutate config programmatically (e.g. disabling `mode_switch` for gain-only training) record the override via `uav_vpp_guidance.common.provenance.record_config_override` so it appears in `provenance["config_overrides"]`.
+> Scripts that mutate config programmatically (e.g. disabling `mode_switch`, setting CLI backend/seed/device overrides, or forcing baseline-specific prediction settings) record the override via `uav_vpp_guidance.common.provenance.record_config_override` so it appears in `provenance["config_overrides"]`.
 >
-> **Current research status**: Stage 9B (simple backend benchmark) and Stage 10 (JSBSim validation) are complete. Stage 10 revealed a geometry-dependent partial transfer: head-on scenarios achieve 100% on JSBSim F-16, while crossing scenarios fail due to F-16 turn-rate/energy limits. The earlier 0% JSBSim claim was caused by a scenario-position initialization bug, now fixed in commit `c8809ca`.
+> **Current research status**: Stage 9B (simple backend benchmark) and Stage 10 (JSBSim validation) are complete for the frozen regression suite. Stage 10.3 uses feasible crossing variants that transfer successfully to JSBSim F-16; the earlier canonical 90-degree crossing failures are retained as a physical feasibility-boundary analysis rather than the default regression result.
 
 ## 7. Final Bilevel Roadmap
 
@@ -373,7 +373,7 @@ The goal is a **bilevel optimization system** where an outer loop optimizes guid
 | **6H.1** | Fixed-policy gain optimization | Frozen VPP policy, optimize guidance gains, multi-seed comparison of fixed vs optimized | ✅ Complete |
 | **6I.0** | Alternating bilevel training | Strategy step and gain step have explicit schedule, checkpoint, and rollback strategy | ✅ Complete |
 | **6I.1** | Regret and stability audit | Report regret, success, stability, and failure roots | ✅ Complete |
-| **7A** | JSBSim/F-16 validation | Simple backend conclusions transfer to 6DOF backend | ✅ Complete (Stage 10.2 corrected) — partial geometry-dependent transfer; head-on 100%, crossing 0% |
+| **7A** | JSBSim/F-16 validation | Simple backend conclusions transfer to 6DOF backend | Complete for Stage 10.3 feasible regression suite; original 90-degree crossing case remains a documented feasibility boundary |
 | **7B** | Paper release package | Frozen configs, seeds, CSVs, figures, summary, commit hash, environment file | ✅ Complete (Stage 9A–10.3 frozen) |
 
 ### 7.1 Minimal Bilevel Architecture (Target)
@@ -463,9 +463,10 @@ The remaining work is strictly sequential. Do not start a later phase until the 
 2. **Stage 9B**: Simple backend official paper-safe benchmark  
    — full method matrix on simple backend, no `--allow-random-smoke`, all artifacts valid.
 3. **Stage 10**: JSBSim/F-16 high-fidelity validation  
-   — replicate paper-safe claims on JSBSim backend.  
-   — **Status**: ✅ Complete (corrected). Head-on geometries 100% success; crossing geometries 0% success.  
-   — **Superseded artifact**: `outputs/stage10_jsbsim_validation/` (0% raw result) → corrected run at `outputs/stage10_2_jsbsim_corrected_official_20260607_164836`.
+   - Replicate paper-safe claims on JSBSim backend.
+   - **Status**: Complete for the Stage 10.3 feasible regression suite; head-on and feasible crossing geometries achieve 100% success in the documented run.
+   - **Boundary case**: The original canonical 90-degree crossing geometry remains infeasible at the tested F-16 flight condition and is retained for discussion.
+   - **Superseded artifact**: `outputs/stage10_jsbsim_validation/` (0% raw result) -> corrected run at `outputs/stage10_2_jsbsim_corrected_official_20260607_164836`.
 
 ### 8.5 Benchmark Types
 
@@ -534,4 +535,4 @@ uav-vpp-guidance/
 
 ---
 
-*Last updated: 2026-06-07 | Active branch: `main` | Stage 10.3 complete | 922 passed, 0 failed, 0 xpassed*
+*Last updated: 2026-06-24 | Active branch: `fix/flight-control-comparison-sync` | Current workflow audit: targeted tests pass; full-suite runtime depends on local artifacts and machine configuration*

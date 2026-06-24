@@ -36,7 +36,15 @@ paper_materials/
 
 # Evaluation results (generated locally)
 docs/results/
+results/
+outputs_cloud/
+
+# One-off cloud dispatch/diagnostic helpers generated during remote runs.
+scripts/_cloud_*
 
 # Runtime logs and temporary archives
 logs/
 *.tar.gz
+
+# External JSBSim flight dynamics data (copied from legacy project)
+envs/JSBSim/

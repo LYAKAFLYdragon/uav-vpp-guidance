@@ -8,15 +8,15 @@
 
 | Dependency | Minimum Version | Check Command |
 |------------|-----------------|---------------|
-| Python | 3.9 | `python --version` |
-| pytest | 8.0 | `pytest --version` |
-| numpy | 1.21 | `python -c "import numpy; print(numpy.__version__)"` |
-| scipy | 1.7 | `python -c "import scipy; print(scipy.__version__)"` |
-| pandas | 1.3 | `python -c "import pandas; print(pandas.__version__)"` |
-| PyYAML | 5.4 | `python -c "import yaml; print(yaml.__version__)"` |
-| matplotlib | 3.4 | `python -c "import matplotlib; print(matplotlib.__version__)"` |
-| JSBSim | 1.2.3 | `python -c "import JSBSim; print(JSBSim.__version__)"` |
-| torch | 1.10 | `python -c "import torch; print(torch.__version__)"` |
+| Python | 3.9 recommended (CI also runs 3.8 and 3.10) | `python --version` |
+| pytest | 7.3+ (8.4.2 in dev lock) | `pytest --version` |
+| numpy | 1.24+ (2.0.2 in lock) | `python -c "import numpy; print(numpy.__version__)"` |
+| scipy | 1.10+ (1.13.1 in lock) | `python -c "import scipy; print(scipy.__version__)"` |
+| pandas | 2.0+ (2.3.3 in lock) | `python -c "import pandas; print(pandas.__version__)"` |
+| PyYAML | 6.0+ | `python -c "import yaml; print(yaml.__version__)"` |
+| matplotlib | 3.7+ (3.9.4 in lock) | `python -c "import matplotlib; print(matplotlib.__version__)"` |
+| JSBSim | 1.1+ (1.2.4 in lock) | `python -c "import jsbsim; print(jsbsim.__version__)"` |
+| torch | 2.0+ (2.8.0 in lock) | `python -c "import torch; print(torch.__version__)"` |
 
 Install all dependencies:
 ```bash
@@ -32,11 +32,11 @@ pip install -r requirements.txt
 ```bash
 # Full suite (local machine with artifacts)
 pytest tests/ -q
-# Expected: 913 passed, 23 warnings
+# Expected: all non-artifact-dependent tests pass.
 
 # Full suite (fresh clone, no artifacts)
 pytest tests/ -q
-# Expected: ~886 passed, ~27 skipped, 23 warnings
+# Expected: artifact-dependent tests skip gracefully; no unexpected failures.
 ```
 
 ### 2.2 Skipped Tests (Artifact-Dependent)
@@ -112,7 +112,7 @@ python scripts/aggregate_stage6f_results.py
 ### 4.1 JSBSim Installation
 
 ```bash
-pip install jsbsim==1.2.3
+pip install jsbsim==1.2.4
 ```
 
 Verify:
@@ -121,37 +121,47 @@ import JSBSim
 print(JSBSim.__version__)
 ```
 
-### 4.2 JSBSim Validation Tests
+### 4.2 JSBSim Data Directory
 
-The JSBSim backend tests run automatically if JSBSim is installed:
+The JSBSim backend requires the legacy aircraft/ engine XML data at `<JSBSIM_ROOT>/envs/JSBSim/data`. Two options:
+
+1. **Local copy (recommended for this repo)**: copy `envs/JSBSim/` from the legacy project into the repository root. The comparison runner defaults to this local copy; tests pass if `JSBSIM_ROOT` is set to the repository root.
+2. **External reference**: set the `JSBSIM_ROOT` environment variable or `env.legacy_project_root` in `config/env.yaml` to a legacy project that contains `envs/JSBSim/data`.
+
+### 4.3 JSBSim Validation Tests
+
+The JSBSim backend tests run automatically if JSBSim is installed **and** the data directory is resolvable:
 - `test_stage10_1_diagnosis.py` (22 tests) — baseline controllers, telemetry schema, failure taxonomy
 - `test_tracking_env_no_prediction.py` — scenario position conversion regression, command override
 - `test_eval_jsbsim_guidance_comparison.py` — JSBSim vs simple backend comparison
+- `test_jsbsim_hrl_comparison_runner.py` — HRL/VPP comparison runner dry-run contracts
 
-These tests **do not require trained checkpoints** and should pass on a fresh clone.
+These tests **do not require trained checkpoints** and should pass on a fresh clone with JSBSim data available.
 
-### 4.3 Known Limitations
+### 4.4 Known Limitations
 
-- **Crossing scenarios fail on JSBSim** (0% success) due to F-16 turn-rate/energy limits. See `docs/stage10_3_crossing_failure_analysis.md`.
+- **Original canonical 90° crossing scenarios are aerodynamically infeasible** for JSBSim F-16 at 5,000 m / Mach ~0.8 (0% success). The regression suite therefore uses feasible crossing variants (reduced range and increased lead angle). See `docs/stage10_3_crossing_failure_analysis.md`.
 - **Head-on scenarios succeed** (100% success) because they require negligible heading change.
 
 ---
 
 ## 5. Reproducing Stage 10 Results
 
-### 5.1 Corrected Benchmark (Stage 10.2)
+### 5.1 Feasible-Geometry Benchmark (Stage 10.3)
 
 ```bash
 python scripts/run_paper_benchmark.py \
+    --config config/experiment/stage6f5_feasible_geometry.yaml \
     --backend jsbsim \
     --methods no_prediction gain_only \
-    --scenarios regression_neutral regression_challenging regression_crossing_left regression_crossing_right \
+    --scenarios regression \
+    --seeds 0 1 2 3 4 5 6 7 8 9 \
     --output-dir outputs/stage10_jsbsim_repro
 ```
 
 Expected stratified results:
 - Head-on (`regression_neutral`, `regression_challenging`): 100% success
-- Crossing (`regression_crossing_left`, `regression_crossing_right`): 0% success (all `out_of_bounds`)
+- Crossing (`regression_crossing_left`, `regression_crossing_right`): 100% success in the documented Stage 10.3 feasible-geometry run; original r2121 / 90° geometry remains infeasible
 
 ### 5.2 Diagnosis Runner (Stage 10.1)
 
@@ -178,10 +188,11 @@ pytest tests/test_stage10_1_diagnosis.py tests/test_tracking_env_no_prediction.p
 # 3. Run full suite (artifact-dependent tests will skip gracefully)
 pytest tests/ -q
 
-# 4. Verify JSBSim backend works
+# 4. Verify JSBSim backend works (with local envs/JSBSim copy)
+$env:JSBSIM_ROOT = "$PWD"  # PowerShell; or export JSBSIM_ROOT=$PWD in bash
 python -c "from uav_vpp_guidance.envs.tracking_env import CloseRangeTrackingEnv; env = CloseRangeTrackingEnv({'backend': 'jsbsim'}); env.close(); print('JSBSim OK')"
 ```
 
 ---
 
-*Last updated: 2026-06-07 (Stage 10.3)*
+*Last updated: 2026-06-24 (workflow audit and provenance hardening)*

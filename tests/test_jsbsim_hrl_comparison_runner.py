@@ -221,6 +221,19 @@ def test_single_episode_smoke_writes_tracking_metrics_and_observation_audit(tmp_
     manifest = json.loads((run_dir / "run_manifest.json").read_text(encoding="utf-8"))
     assert manifest["extra"]["artifact_validation"]["valid"] is True
     assert (run_dir / "observation_audit.json").exists()
+    aggregate = json.loads(
+        (run_dir / "aggregate" / "method_task_summary.json").read_text(encoding="utf-8")
+    )
+    assert aggregate["rows"]
+    row = aggregate["rows"][0]
+    for field in (
+        "damage_exchange_rate",
+        "effective_engagement_rate",
+        "damaging_win_rate",
+        "mean_damage_dealt",
+        "mean_damage_taken",
+    ):
+        assert field in row
 
     header = (run_dir / "summary.csv").read_text(encoding="utf-8").splitlines()[0].split(",")
     for field in (

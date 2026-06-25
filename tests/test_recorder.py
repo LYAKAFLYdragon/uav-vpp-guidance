@@ -78,6 +78,7 @@ def test_episode_recorder_multi_waypoint():
     assert point["throttle_cmd"] == 0.95
     assert point["task_supervisor_state"] == "recovery"
     assert point["task_supervisor_pause_orbit_tracking"] is True
+    assert point["task_supervisor_recovery_active"] is True
 
 
 def test_run_recorder_writes_files():

@@ -506,6 +506,22 @@ class SustainedTurnEnv(CloseRangeTrackingEnv):
             "speed_mps": 0.0,
         }
 
+    @staticmethod
+    def _extract_vertical_speed_mps(state: dict) -> float:
+        vel = state.get("velocity_vector_mps")
+        if vel is not None:
+            vel_arr = np.asarray(vel, dtype=float).reshape(-1)
+            if vel_arr.size >= 3 and np.isfinite(vel_arr[2]):
+                return float(vel_arr[2])
+
+        vel_ned = state.get("velocity_ned")
+        if vel_ned is not None:
+            vel_ned_arr = np.asarray(vel_ned, dtype=float).reshape(-1)
+            if vel_ned_arr.size >= 3 and np.isfinite(vel_ned_arr[2]):
+                return float(-vel_ned_arr[2])
+
+        return 0.0
+
     def _get_supervisor_snapshot(self, own_state: dict) -> dict:
         speed = float(
             own_state.get(
@@ -516,6 +532,7 @@ class SustainedTurnEnv(CloseRangeTrackingEnv):
         roll_rad = float(own_state.get("roll_rad", 0.0))
         if not np.isfinite(roll_rad):
             roll_rad = 0.0
+        vertical_speed_mps = self._extract_vertical_speed_mps(own_state)
         altitude = float(
             own_state.get(
                 "altitude_m",
@@ -621,18 +638,73 @@ class SustainedTurnEnv(CloseRangeTrackingEnv):
                 "resume_specific_energy_m", specific_energy_caution_m
             )
         )
+        min_altitude_m = float(self.env_config.get("min_altitude_m", 500.0))
+        recovery_altitude_margin_m = float(
+            self.supervisor_cfg.get("recovery_altitude_margin_m", 400.0)
+        )
+        caution_altitude_margin_m = float(
+            self.supervisor_cfg.get(
+                "caution_altitude_margin_m",
+                max(recovery_altitude_margin_m + 500.0, 900.0),
+            )
+        )
+        resume_altitude_m = float(
+            self.supervisor_cfg.get(
+                "resume_altitude_m",
+                min_altitude_m + caution_altitude_margin_m,
+            )
+        )
+        min_descent_rate_mps = float(
+            self.supervisor_cfg.get("min_descent_rate_mps", 5.0)
+        )
+        caution_time_to_floor_s = float(
+            self.supervisor_cfg.get("caution_time_to_floor_s", 30.0)
+        )
+        recovery_time_to_floor_s = float(
+            self.supervisor_cfg.get("recovery_time_to_floor_s", 20.0)
+        )
+        descending_mps = max(-vertical_speed_mps, 0.0)
+        time_to_min_altitude_s = float("inf")
+        if descending_mps >= min_descent_rate_mps and altitude > min_altitude_m:
+            time_to_min_altitude_s = (altitude - min_altitude_m) / max(
+                descending_mps, 1e-6
+            )
 
         state = "nominal"
         pause_orbit_tracking = self._task_supervisor_pause_orbit_tracking
+        low_altitude_recovery_triggered = (
+            altitude <= min_altitude_m + recovery_altitude_margin_m
+        )
+        low_altitude_caution_triggered = (
+            altitude <= min_altitude_m + caution_altitude_margin_m
+        )
+        descent_recovery_triggered = (
+            time_to_min_altitude_s <= recovery_time_to_floor_s
+        )
+        descent_caution_triggered = (
+            time_to_min_altitude_s <= caution_time_to_floor_s
+        )
         recovery_triggered = (
-            speed < speed_floor or specific_energy_m < specific_energy_floor_m
+            speed < speed_floor
+            or specific_energy_m < specific_energy_floor_m
+            or low_altitude_recovery_triggered
+            or descent_recovery_triggered
         )
         caution_triggered = (
-            speed < recovery_speed or specific_energy_m < specific_energy_caution_m
+            speed < recovery_speed
+            or specific_energy_m < specific_energy_caution_m
+            or low_altitude_caution_triggered
+            or descent_caution_triggered
         )
 
         if pause_orbit_tracking:
-            if speed >= resume_speed_mps and specific_energy_m >= resume_specific_energy_m:
+            if (
+                speed >= resume_speed_mps
+                and specific_energy_m >= resume_specific_energy_m
+                and altitude >= resume_altitude_m
+                and not low_altitude_caution_triggered
+                and not descent_caution_triggered
+            ):
                 pause_orbit_tracking = False
             else:
                 state = "recovery"
@@ -668,6 +740,11 @@ class SustainedTurnEnv(CloseRangeTrackingEnv):
             "specific_energy_m": specific_energy_m,
             "specific_energy_floor_m": specific_energy_floor_m,
             "specific_energy_caution_m": specific_energy_caution_m,
+            "vertical_speed_mps": vertical_speed_mps,
+            "time_to_min_altitude_s": time_to_min_altitude_s,
+            "resume_altitude_m": resume_altitude_m,
+            "low_altitude_recovery_triggered": low_altitude_recovery_triggered,
+            "low_altitude_caution_triggered": low_altitude_caution_triggered,
         }
 
     def _compute_orbit_virtual_point(self, own_pos: np.ndarray) -> np.ndarray:

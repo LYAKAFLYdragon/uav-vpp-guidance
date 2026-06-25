@@ -32,6 +32,11 @@ def compute_combat_metrics(
     survived = 0
     hp_advantages: List[float] = []
     ttk_values: List[float] = []
+    damage_dealt_values: List[float] = []
+    damage_taken_values: List[float] = []
+    damage_exchange_count = 0
+    effective_engagement_count = 0
+    damaging_win_count = 0
 
     for row in rows:
         outcome = _outcome(row)
@@ -45,6 +50,23 @@ def compute_combat_metrics(
         failed_survival = outcome == "loss" and reason in LOSS_REASONS_FOR_SURVIVAL
         if not failed_survival:
             survived += 1
+
+        damage_dealt, damage_taken = _extract_damage(row)
+        if np.isfinite(damage_dealt):
+            damage_dealt_values.append(float(damage_dealt))
+        if np.isfinite(damage_taken):
+            damage_taken_values.append(float(damage_taken))
+        exchanged = (
+            (np.isfinite(damage_dealt) and damage_dealt > 1e-6)
+            or (np.isfinite(damage_taken) and damage_taken > 1e-6)
+        )
+        effective_engagement = np.isfinite(damage_dealt) and damage_dealt > 1e-6
+        if exchanged:
+            damage_exchange_count += 1
+        if effective_engagement:
+            effective_engagement_count += 1
+        if outcome == "win" and effective_engagement:
+            damaging_win_count += 1
 
         if outcome == "win":
             ego_hp = _float(row.get("ego_hp", row.get("ego_hp_remaining")))
@@ -71,6 +93,13 @@ def compute_combat_metrics(
         "hp_advantage": _finite_mean(hp_advantages),
         "mean_time_to_kill": _finite_mean(ttk_values),
         "time_to_kill": ttk_values,
+        "damage_exchange_rate": damage_exchange_count / total if total else float("nan"),
+        "effective_engagement_rate": (
+            effective_engagement_count / total if total else float("nan")
+        ),
+        "damaging_win_rate": damaging_win_count / total if total else float("nan"),
+        "mean_damage_dealt": _finite_mean(damage_dealt_values),
+        "mean_damage_taken": _finite_mean(damage_taken_values),
     }
 
 
@@ -99,6 +128,23 @@ def _exclude_from_win_rate(row: Dict[str, Any], reason: str) -> bool:
     if reason in {"timeout", "timeout_draw"}:
         return True
     return bool(row.get("is_timeout") is True and not reason)
+
+
+def _extract_damage(row: Dict[str, Any]) -> tuple[float, float]:
+    initial_hp = _float(row.get("combat_initial_hp", row.get("initial_hp", 100.0)))
+    if not np.isfinite(initial_hp):
+        initial_hp = 100.0
+
+    ego_hp = _float(row.get("ego_hp", row.get("ego_hp_remaining")))
+    target_hp = _float(row.get("target_hp", row.get("target_hp_remaining")))
+
+    damage_dealt = (
+        max(0.0, initial_hp - target_hp) if np.isfinite(target_hp) else float("nan")
+    )
+    damage_taken = (
+        max(0.0, initial_hp - ego_hp) if np.isfinite(ego_hp) else float("nan")
+    )
+    return damage_dealt, damage_taken
 
 
 def _float(value: Any) -> float:

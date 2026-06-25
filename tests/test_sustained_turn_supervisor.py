@@ -89,6 +89,12 @@ def _base_config():
                     "recovery_roll_rate_scale": 0.5,
                     "caution_roll_rate_scale": 0.75,
                     "high_altitude_nz_cap": 3.0,
+                    "recovery_altitude_margin_m": 400.0,
+                    "caution_altitude_margin_m": 900.0,
+                    "resume_altitude_m": 1400.0,
+                    "min_descent_rate_mps": 5.0,
+                    "recovery_time_to_floor_s": 20.0,
+                    "caution_time_to_floor_s": 30.0,
                 },
             },
         },
@@ -170,6 +176,27 @@ def test_task_supervisor_rolls_out_of_existing_bank(env, roll_rad, expected_sign
     assert abs(adjusted["roll_rate_cmd"]) == pytest.approx(1.2)
 
 
+def test_task_supervisor_escalates_low_altitude_descent_to_recovery(env):
+    adjusted, meta = env._task_adjust_command(
+        {"nz_cmd": 3.4, "roll_rate_cmd": 0.6, "throttle_cmd": 0.6},
+        own_state={
+            "position_m": np.array([200.0, -150.0, 850.0], dtype=float),
+            "altitude_m": 850.0,
+            "roll_rad": 0.35,
+            "speed_mps": 350.0,
+            "velocity_vector_mps": np.array([330.0, 0.0, -20.0], dtype=float),
+        },
+        target_state={},
+        rel_state={},
+        use_command_override=False,
+    )
+    assert meta["task_supervisor_state"] == "recovery"
+    assert meta["task_supervisor_pause_orbit_tracking"] is True
+    assert adjusted["nz_cmd"] == pytest.approx(1.35)
+    assert adjusted["throttle_cmd"] == pytest.approx(0.95)
+    assert adjusted["roll_rate_cmd"] == pytest.approx(-1.2)
+
+
 def test_task_supervisor_pauses_and_resumes_orbit_tracking_with_hysteresis(env):
     own_state_recovery = {
         "position_m": np.array([800.0, 200.0, 5000.0], dtype=float),
@@ -218,6 +245,45 @@ def test_task_supervisor_pauses_and_resumes_orbit_tracking_with_hysteresis(env):
     _, resumed_target = env._task_pre_step(own_state_recovered, base_target)
     assert env._task_supervisor_pause_orbit_tracking is False
     assert not np.allclose(resumed_target["position_m"], env.target_pos)
+
+
+def test_task_supervisor_holds_pause_until_altitude_margin_and_descent_recover(env):
+    env._task_supervisor_pause_orbit_tracking = True
+
+    adjusted_low, meta_low = env._task_adjust_command(
+        {"nz_cmd": 2.8, "roll_rate_cmd": 0.1, "throttle_cmd": 0.7},
+        own_state={
+            "position_m": np.array([200.0, 100.0, 1000.0], dtype=float),
+            "altitude_m": 1000.0,
+            "roll_rad": 0.1,
+            "speed_mps": 350.0,
+            "velocity_vector_mps": np.array([340.0, 0.0, -8.0], dtype=float),
+        },
+        target_state={},
+        rel_state={},
+        use_command_override=False,
+    )
+    assert meta_low["task_supervisor_state"] == "recovery"
+    assert meta_low["task_supervisor_pause_orbit_tracking"] is True
+    assert adjusted_low["nz_cmd"] == pytest.approx(1.35)
+
+    adjusted_high, meta_high = env._task_adjust_command(
+        {"nz_cmd": 2.8, "roll_rate_cmd": 0.1, "throttle_cmd": 0.7},
+        own_state={
+            "position_m": np.array([200.0, 100.0, 1500.0], dtype=float),
+            "altitude_m": 1500.0,
+            "roll_rad": 0.0,
+            "speed_mps": 350.0,
+            "velocity_vector_mps": np.array([340.0, 0.0, 4.0], dtype=float),
+        },
+        target_state={},
+        rel_state={},
+        use_command_override=False,
+    )
+    assert meta_high["task_supervisor_pause_orbit_tracking"] is False
+    assert meta_high["task_supervisor_state"] == "nominal"
+    assert adjusted_high["nz_cmd"] == pytest.approx(2.8)
+    assert adjusted_high["throttle_cmd"] == pytest.approx(0.7)
 
 
 def test_recovery_can_bypass_high_level_command_filter(env):

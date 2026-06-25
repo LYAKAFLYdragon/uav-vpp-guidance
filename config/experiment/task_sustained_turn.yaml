@@ -24,6 +24,12 @@ task:
       caution_throttle_cmd: 0.8
       recovery_roll_rate_scale: 0.5
       caution_roll_rate_scale: 0.75
+      recovery_altitude_margin_m: 400.0
+      caution_altitude_margin_m: 900.0
+      resume_altitude_m: 1400.0
+      min_descent_rate_mps: 5.0
+      recovery_time_to_floor_s: 20.0
+      caution_time_to_floor_s: 30.0
       high_altitude_threshold_m: 5000.0
       high_altitude_nz_cap: 3.0
       high_altitude_roll_rate_scale: 0.7

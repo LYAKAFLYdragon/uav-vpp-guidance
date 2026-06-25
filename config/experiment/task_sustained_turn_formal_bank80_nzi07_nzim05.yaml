@@ -1,0 +1,28 @@
+# Task-specific configuration for the validated sustained-turn formal run.
+# This keeps the supervisor/recovery logic from task_sustained_turn.yaml and
+# applies the first cloud-validated narrow-grid candidate that met the gate:
+#   bank=80 deg, altitude_hold_gain=0.03,
+#   bank_protection_nz_increment=0.7,
+#   bank_protection_nz_increment_max=0.5
+
+includes:
+  - task_sustained_turn.yaml
+
+experiment:
+  flight_control_profile:
+    name: sustained_turn_bank80_nzi07_nzim05
+    source: cloud_narrow_grid_20260625
+    gate:
+      crashes_max: 1
+      episodes: 5
+      mean_completed_orbits_min: 1.0
+
+low_level_controller:
+  type: enhanced
+  enable_bank_angle_protection: true
+  enable_altitude_hold: true
+  max_bank_rad: 1.3962634015954636   # 80 deg
+  bank_violation_threshold: 25
+  bank_protection_nz_increment: 0.7
+  bank_protection_nz_increment_max: 0.5
+  altitude_hold_gain: 0.03

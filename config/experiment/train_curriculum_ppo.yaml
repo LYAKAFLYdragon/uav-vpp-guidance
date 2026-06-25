@@ -40,6 +40,13 @@ curriculum:
     - [0.75, ["favorable", "neutral", "disadvantage", "challenging"]]
     - [1.00, ["favorable", "neutral", "disadvantage", "challenging"]]
   stage_gate_sr: 0.50
+  rollout_gate:
+    enabled: false
+    window_episodes: 16
+    min_episodes: 8
+    max_raw_crash_rate: 0.35
+    max_raw_out_of_bounds_rate: 0.35
+    max_high_altitude_failure_rate: 0.30
 
 warm_start:
   enabled: false

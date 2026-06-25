@@ -19,6 +19,7 @@ import json
 import os
 import time
 import copy
+from collections import deque
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
@@ -53,6 +54,53 @@ def sample_scenario(config, rng):
     return scenarios[name]
 
 
+def _env_limit(env, config, key, default):
+    env_cfg = getattr(env, "env_config", None)
+    if isinstance(env_cfg, dict) and key in env_cfg:
+        return float(env_cfg.get(key, default))
+    cfg_env = config.get("env", {}) if isinstance(config, dict) else {}
+    if isinstance(cfg_env, dict) and key in cfg_env:
+        return float(cfg_env.get(key, default))
+    return float(config.get(key, default)) if isinstance(config, dict) else float(default)
+
+
+def _safe_float(value, default=np.nan):
+    try:
+        out = float(value)
+    except (TypeError, ValueError):
+        return float(default)
+    return out
+
+
+def _raw_failure_diagnostics(info, reason, env, config, final_range_m=np.nan):
+    term_info = info.get("termination_info") if isinstance(info, dict) else {}
+    term_info = term_info if isinstance(term_info, dict) else {}
+    raw_reason = term_info.get("raw_termination_reason") or term_info.get("reason") or reason
+    raw_is_crash = bool(term_info.get("raw_is_crash", term_info.get("is_crash", raw_reason == "crash")))
+    raw_is_oob = bool(
+        term_info.get("raw_is_out_of_bounds", term_info.get("is_out_of_bounds", raw_reason == "out_of_bounds"))
+    )
+    raw_is_timeout = bool(term_info.get("raw_is_timeout", term_info.get("is_timeout", raw_reason == "timeout")))
+    own_state = info.get("own_state", {}) if isinstance(info, dict) else {}
+    altitude_m = _safe_float(own_state.get("altitude_m"), np.nan)
+    min_alt = _env_limit(env, config, "min_altitude_m", 500.0)
+    max_alt = _env_limit(env, config, "max_altitude_m", 15000.0)
+    max_range = _env_limit(env, config, "max_range_m", 8000.0)
+    high_altitude_failure = bool(raw_is_crash and np.isfinite(altitude_m) and altitude_m > max_alt)
+    low_altitude_failure = bool(raw_is_crash and np.isfinite(altitude_m) and altitude_m < min_alt)
+    range_oob_failure = bool(raw_is_oob or (np.isfinite(final_range_m) and final_range_m > max_range))
+    return {
+        "raw_termination_reason": raw_reason,
+        "raw_is_crash": raw_is_crash,
+        "raw_is_out_of_bounds": raw_is_oob,
+        "raw_is_timeout": raw_is_timeout,
+        "final_altitude_m": altitude_m,
+        "high_altitude_failure": high_altitude_failure,
+        "low_altitude_failure": low_altitude_failure,
+        "range_oob_failure": range_oob_failure,
+    }
+
+
 def run_evaluation(env, agent, config, num_episodes=10, seeds=None, save_trajectories=False, output_dir=None):
     if seeds is None:
         seeds = [0, 1, 2]
@@ -69,6 +117,7 @@ def run_evaluation(env, agent, config, num_episodes=10, seeds=None, save_traject
             final_range = 0.0
             final_ata = 0.0
             reason = "timeout"
+            info = {}
             for step in range(env.max_steps):
                 obs_vec = obs["observation_vector"]
                 action = agent.get_deterministic_action(obs_vec)
@@ -108,6 +157,13 @@ def run_evaluation(env, agent, config, num_episodes=10, seeds=None, save_traject
                 is_crash = reason == "crash"
                 is_timeout = reason == "timeout"
                 is_out_of_bounds = reason == "out_of_bounds"
+            diagnostics = _raw_failure_diagnostics(
+                info,
+                reason,
+                env,
+                config,
+                final_range_m=final_range,
+            )
             all_episodes.append({
                 "seed": seed, "episode": ep, "return": ep_reward,
                 "length": ep_length, "min_range_m": min_range,
@@ -124,12 +180,18 @@ def run_evaluation(env, agent, config, num_episodes=10, seeds=None, save_traject
                 "ego_hp": info.get("ego_hp"),
                 "target_hp": info.get("target_hp"),
                 "combat_time_to_kill": info.get("combat_time_to_kill"),
+                **diagnostics,
             })
 
     success_count = sum(1 for e in all_episodes if e["is_success"])
     crash_count = sum(1 for e in all_episodes if e["is_crash"])
     oob_count = sum(1 for e in all_episodes if e["is_out_of_bounds"])
     timeout_count = sum(1 for e in all_episodes if e["is_timeout"])
+    raw_crash_count = sum(1 for e in all_episodes if e["raw_is_crash"])
+    raw_oob_count = sum(1 for e in all_episodes if e["raw_is_out_of_bounds"])
+    high_alt_count = sum(1 for e in all_episodes if e["high_altitude_failure"])
+    low_alt_count = sum(1 for e in all_episodes if e["low_altitude_failure"])
+    range_oob_count = sum(1 for e in all_episodes if e["range_oob_failure"])
     returns = [e["return"] for e in all_episodes]
     combat_metrics = compute_combat_metrics(all_episodes)
 
@@ -144,6 +206,11 @@ def run_evaluation(env, agent, config, num_episodes=10, seeds=None, save_traject
         "mean_time_to_kill": combat_metrics["mean_time_to_kill"],
         "crash_rate": crash_count / max(1, len(all_episodes)),
         "out_of_bounds_rate": oob_count / max(1, len(all_episodes)),
+        "raw_crash_rate": raw_crash_count / max(1, len(all_episodes)),
+        "raw_out_of_bounds_rate": raw_oob_count / max(1, len(all_episodes)),
+        "high_altitude_failure_rate": high_alt_count / max(1, len(all_episodes)),
+        "low_altitude_failure_rate": low_alt_count / max(1, len(all_episodes)),
+        "range_oob_failure_rate": range_oob_count / max(1, len(all_episodes)),
         "timeout_rate": timeout_count / max(1, len(all_episodes)),
     }
 
@@ -251,8 +318,8 @@ class SafetyPreCurriculumGate:
         if int(global_step) < self.min_steps:
             return False
         survival = _finite_metric(metrics.get("survival_rate"))
-        crash = _finite_metric(metrics.get("crash_rate"))
-        oob = _finite_metric(metrics.get("out_of_bounds_rate"))
+        crash = _finite_metric(metrics.get("raw_crash_rate", metrics.get("crash_rate")))
+        oob = _finite_metric(metrics.get("raw_out_of_bounds_rate", metrics.get("out_of_bounds_rate")))
         if (
             np.isfinite(survival)
             and np.isfinite(crash)
@@ -308,6 +375,54 @@ def _json_safe(value):
     if isinstance(value, (np.integer,)):
         return int(value)
     return value
+
+
+def compute_rollout_safety_metrics(episodes):
+    rows = list(episodes or [])
+    count = len(rows)
+    raw_crash = sum(int(_finite_metric(row.get("raw_crash", 0)) > 0.5) for row in rows)
+    raw_oob = sum(int(_finite_metric(row.get("raw_out_of_bounds", 0)) > 0.5) for row in rows)
+    high_alt = sum(int(_finite_metric(row.get("high_altitude_failure", 0)) > 0.5) for row in rows)
+    low_alt = sum(int(_finite_metric(row.get("low_altitude_failure", 0)) > 0.5) for row in rows)
+    range_oob = sum(int(_finite_metric(row.get("range_oob_failure", 0)) > 0.5) for row in rows)
+    denom = max(1, count)
+    return {
+        "train_episode_count": count,
+        "train_raw_crash_rate": raw_crash / denom,
+        "train_raw_out_of_bounds_rate": raw_oob / denom,
+        "train_high_altitude_failure_rate": high_alt / denom,
+        "train_low_altitude_failure_rate": low_alt / denom,
+        "train_range_oob_failure_rate": range_oob / denom,
+    }
+
+
+def rollout_safety_gate_passed(metrics, cfg=None):
+    cfg = cfg or {}
+    if not cfg.get("enabled", False):
+        return True, "disabled"
+
+    min_episodes = int(cfg.get("min_episodes", 0))
+    episode_count = int(metrics.get("train_episode_count", 0))
+    if episode_count < min_episodes:
+        return False, "insufficient_episodes"
+
+    checks = [
+        ("raw_crash_rate", "max_raw_crash_rate"),
+        ("raw_out_of_bounds_rate", "max_raw_out_of_bounds_rate"),
+        ("high_altitude_failure_rate", "max_high_altitude_failure_rate"),
+        ("low_altitude_failure_rate", "max_low_altitude_failure_rate"),
+        ("range_oob_failure_rate", "max_range_oob_failure_rate"),
+    ]
+    for metric_name, threshold_name in checks:
+        threshold = cfg.get(threshold_name)
+        if threshold is None:
+            continue
+        value = _finite_metric(
+            metrics.get(f"train_{metric_name}", metrics.get(metric_name))
+        )
+        if np.isfinite(value) and value > float(threshold):
+            return False, metric_name
+    return True, "passed"
 
 
 @dataclass
@@ -556,6 +671,7 @@ def train_ppo_curriculum(config, output_dir, smoke=False):
             "loaded": False,
         },
         "safety_precurriculum": {},
+        "rollout_gate": {},
     }
     warm_start_cfg = config.get("warm_start", {})
     if warm_start_cfg.get("enabled", False):
@@ -585,6 +701,10 @@ def train_ppo_curriculum(config, output_dir, smoke=False):
     opponent_bucket = str(adversarial_cfg.get("initial_bucket", "weak"))
     active_opponent_entry = None
     safety_gate = SafetyPreCurriculumGate(config.get("safety_precurriculum", {}))
+    rollout_gate_cfg = config.get("curriculum", {}).get("rollout_gate", {})
+    rollout_window = max(1, int(rollout_gate_cfg.get("window_episodes", 16)))
+    recent_rollout_episodes = deque(maxlen=rollout_window)
+    env.set_command_post_processor_safety_mode(not safety_gate.passed)
 
     global_step = 0
     episode_count = 0
@@ -604,7 +724,13 @@ def train_ppo_curriculum(config, output_dir, smoke=False):
         ep_writer = csv.DictWriter(f_ep, fieldnames=[
             "step", "episode", "episode_return", "episode_length",
             "success", "crash", "out_of_bounds", "timeout",
-            "mean_range", "final_range", "final_ata",
+            "mean_range", "final_range", "max_range", "final_ata",
+            "termination_reason", "raw_termination_reason", "combat_reason",
+            "combat_outcome", "raw_crash", "raw_out_of_bounds",
+            "raw_timeout", "high_altitude_failure", "low_altitude_failure",
+            "range_oob_failure", "final_altitude_m", "min_altitude_m",
+            "max_altitude_m", "final_pitch_deg", "mean_nz_cmd",
+            "max_abs_nz_cmd",
         ])
         ep_writer.writeheader()
 
@@ -617,7 +743,10 @@ def train_ppo_curriculum(config, output_dir, smoke=False):
         eval_writer = csv.DictWriter(f_eval, fieldnames=[
             "step", "num_episodes", "mean_return", "std_return",
             "success_rate", "win_rate", "survival_rate", "hp_advantage",
-            "mean_time_to_kill", "crash_rate", "out_of_bounds_rate", "timeout_rate",
+            "mean_time_to_kill", "crash_rate", "out_of_bounds_rate",
+            "raw_crash_rate", "raw_out_of_bounds_rate",
+            "high_altitude_failure_rate", "low_altitude_failure_rate",
+            "range_oob_failure_rate", "timeout_rate",
         ])
         eval_writer.writeheader()
 
@@ -626,6 +755,10 @@ def train_ppo_curriculum(config, output_dir, smoke=False):
             "opponent_bucket", "opponent_pool_size", "opponent_eval_win_rate",
             "safety_gate_status", "safety_gate_passed", "adversary_allowed",
             "safety_gate_passed_step",
+            "train_rollout_episode_count", "train_raw_crash_rate",
+            "train_raw_out_of_bounds_rate", "train_high_altitude_failure_rate",
+            "train_low_altitude_failure_rate", "train_range_oob_failure_rate",
+            "rollout_gate_passed", "rollout_gate_reason",
         ])
         cur_writer.writeheader()
 
@@ -644,6 +777,9 @@ def train_ppo_curriculum(config, output_dir, smoke=False):
         episode_return = 0.0
         episode_length = 0
         episode_ranges = []
+        episode_altitudes = []
+        episode_nz_cmds = []
+        episode_pitch_degs = []
         start_time = time.time()
         update_num = 0
         current_stage = 0
@@ -680,6 +816,17 @@ def train_ppo_curriculum(config, output_dir, smoke=False):
                 rel_state = obs.get("relative_state", {})
                 range_m = rel_state.get("range_m", 0.0)
                 episode_ranges.append(range_m)
+                own_state = info.get("own_state", {})
+                altitude_m = _safe_float(own_state.get("altitude_m"), np.nan)
+                if np.isfinite(altitude_m):
+                    episode_altitudes.append(altitude_m)
+                guidance_command = info.get("guidance_command", {})
+                nz_cmd = _safe_float(info.get("nz_cmd", guidance_command.get("nz_cmd")), np.nan)
+                if np.isfinite(nz_cmd):
+                    episode_nz_cmds.append(nz_cmd)
+                pitch_rad = _safe_float(own_state.get("pitch_rad"), np.nan)
+                if np.isfinite(pitch_rad):
+                    episode_pitch_degs.append(float(np.rad2deg(pitch_rad)))
 
                 if terminated or truncated:
                     episode_count += 1
@@ -705,6 +852,20 @@ def train_ppo_curriculum(config, output_dir, smoke=False):
                         ep_crash = reason == "crash"
                         ep_oob = reason == "out_of_bounds"
                         ep_timeout = reason == "timeout"
+                    diagnostics = _raw_failure_diagnostics(
+                        info,
+                        reason,
+                        env,
+                        config,
+                        final_range_m=range_m,
+                    )
+                    recent_rollout_episodes.append({
+                        "raw_crash": int(diagnostics["raw_is_crash"]),
+                        "raw_out_of_bounds": int(diagnostics["raw_is_out_of_bounds"]),
+                        "high_altitude_failure": int(diagnostics["high_altitude_failure"]),
+                        "low_altitude_failure": int(diagnostics["low_altitude_failure"]),
+                        "range_oob_failure": int(diagnostics["range_oob_failure"]),
+                    })
                     ep_writer.writerow({
                         "step": global_step, "episode": episode_count,
                         "episode_return": episode_return, "episode_length": episode_length,
@@ -713,13 +874,34 @@ def train_ppo_curriculum(config, output_dir, smoke=False):
                         "out_of_bounds": int(ep_oob),
                         "timeout": int(ep_timeout),
                         "mean_range": float(np.mean(episode_ranges)) if episode_ranges else 0.0,
-                        "final_range": range_m, "final_ata": final_ata,
+                        "final_range": range_m,
+                        "max_range": float(np.max(episode_ranges)) if episode_ranges else range_m,
+                        "final_ata": final_ata,
+                        "termination_reason": reason,
+                        "raw_termination_reason": diagnostics["raw_termination_reason"],
+                        "combat_reason": info.get("combat_reason", ""),
+                        "combat_outcome": info.get("combat_outcome", ""),
+                        "raw_crash": int(diagnostics["raw_is_crash"]),
+                        "raw_out_of_bounds": int(diagnostics["raw_is_out_of_bounds"]),
+                        "raw_timeout": int(diagnostics["raw_is_timeout"]),
+                        "high_altitude_failure": int(diagnostics["high_altitude_failure"]),
+                        "low_altitude_failure": int(diagnostics["low_altitude_failure"]),
+                        "range_oob_failure": int(diagnostics["range_oob_failure"]),
+                        "final_altitude_m": diagnostics["final_altitude_m"],
+                        "min_altitude_m": float(np.min(episode_altitudes)) if episode_altitudes else "",
+                        "max_altitude_m": float(np.max(episode_altitudes)) if episode_altitudes else "",
+                        "final_pitch_deg": episode_pitch_degs[-1] if episode_pitch_degs else "",
+                        "mean_nz_cmd": float(np.mean(episode_nz_cmds)) if episode_nz_cmds else "",
+                        "max_abs_nz_cmd": float(np.max(np.abs(episode_nz_cmds))) if episode_nz_cmds else "",
                     })
                     f_ep.flush()
 
                     episode_return = 0.0
                     episode_length = 0
                     episode_ranges = []
+                    episode_altitudes = []
+                    episode_nz_cmds = []
+                    episode_pitch_degs = []
 
                     adversary_allowed = safety_gate.allows_adversary(global_step)
                     active_opponent_entry = _set_training_opponent(
@@ -768,12 +950,19 @@ def train_ppo_curriculum(config, output_dir, smoke=False):
                 print(f"\n--- Evaluation at step {global_step} ---")
                 eval_cfg = config.get("evaluation", {})
                 adversary_allowed_for_eval = safety_gate.allows_adversary(global_step)
+                safety_status_before_eval = safety_gate.status(global_step)
                 eval_metrics = run_evaluation(
                     env, agent, config,
                     num_episodes=eval_cfg.get("eval_episodes", 10),
                     seeds=eval_cfg.get("seeds", [0, 1, 2]),
                 )
+                rollout_metrics = compute_rollout_safety_metrics(recent_rollout_episodes)
+                rollout_gate_ok, rollout_gate_reason = rollout_safety_gate_passed(
+                    rollout_metrics,
+                    rollout_gate_cfg,
+                )
                 safety_gate.update_from_eval(eval_metrics, global_step)
+                env.set_command_post_processor_safety_mode(not safety_gate.passed)
                 adversary_allowed_after_eval = safety_gate.allows_adversary(global_step)
                 eval_writer.writerow({
                     "step": global_step, "num_episodes": eval_metrics["num_episodes"],
@@ -786,6 +975,11 @@ def train_ppo_curriculum(config, output_dir, smoke=False):
                     "mean_time_to_kill": eval_metrics["mean_time_to_kill"],
                     "crash_rate": eval_metrics["crash_rate"],
                     "out_of_bounds_rate": eval_metrics["out_of_bounds_rate"],
+                    "raw_crash_rate": eval_metrics["raw_crash_rate"],
+                    "raw_out_of_bounds_rate": eval_metrics["raw_out_of_bounds_rate"],
+                    "high_altitude_failure_rate": eval_metrics["high_altitude_failure_rate"],
+                    "low_altitude_failure_rate": eval_metrics["low_altitude_failure_rate"],
+                    "range_oob_failure_rate": eval_metrics["range_oob_failure_rate"],
                     "timeout_rate": eval_metrics["timeout_rate"],
                 })
                 f_eval.flush()
@@ -811,9 +1005,24 @@ def train_ppo_curriculum(config, output_dir, smoke=False):
                     "adversary_allowed": int(adversary_allowed_after_eval),
                     "safety_gate_passed_step": safety_gate.passed_step
                     if safety_gate.passed_step is not None else "",
+                    "train_rollout_episode_count": rollout_metrics["train_episode_count"],
+                    "train_raw_crash_rate": rollout_metrics["train_raw_crash_rate"],
+                    "train_raw_out_of_bounds_rate": rollout_metrics["train_raw_out_of_bounds_rate"],
+                    "train_high_altitude_failure_rate": rollout_metrics["train_high_altitude_failure_rate"],
+                    "train_low_altitude_failure_rate": rollout_metrics["train_low_altitude_failure_rate"],
+                    "train_range_oob_failure_rate": rollout_metrics["train_range_oob_failure_rate"],
+                    "rollout_gate_passed": int(rollout_gate_ok),
+                    "rollout_gate_reason": rollout_gate_reason,
                 })
                 f_cur.flush()
                 print(f"Per-scenario SR: {per_scenario}")
+                print(
+                    "Recent rollout safety: "
+                    f"episodes={rollout_metrics['train_episode_count']} | "
+                    f"raw_crash={rollout_metrics['train_raw_crash_rate']:.2%} | "
+                    f"high_alt={rollout_metrics['train_high_altitude_failure_rate']:.2%} | "
+                    f"gate={rollout_gate_reason}"
+                )
 
                 if (
                     adversarial_cfg.get("enabled", False)
@@ -832,14 +1041,20 @@ def train_ppo_curriculum(config, output_dir, smoke=False):
                         opponent_metric >= opponent_pool.threshold
                         and opponent_bucket != "strong"
                     ):
-                        opponent_bucket = opponent_pool.next_bucket(opponent_bucket)
-                        print(
-                            f"*** Opponent curriculum advanced to {opponent_bucket} "
-                            f"(win_rate={opponent_metric:.2%}) ***"
-                        )
+                        if rollout_gate_ok:
+                            opponent_bucket = opponent_pool.next_bucket(opponent_bucket)
+                            print(
+                                f"*** Opponent curriculum advanced to {opponent_bucket} "
+                                f"(win_rate={opponent_metric:.2%}) ***"
+                            )
+                        else:
+                            print(
+                                "Opponent curriculum gate blocked by rollout safety "
+                                f"({rollout_gate_reason})"
+                            )
                 elif adversarial_cfg.get("enabled", False):
                     skip_reason = (
-                        safety_gate.status(global_step)
+                        safety_status_before_eval
                         if not adversary_allowed_for_eval
                         else "no_active_opponent"
                     )
@@ -867,9 +1082,18 @@ def train_ppo_curriculum(config, output_dir, smoke=False):
                 current_scenario_sr = [per_scenario.get(s, 0.0) for s in allowed_names]
                 min_sr = min(current_scenario_sr) if current_scenario_sr else 0.0
                 if min_sr >= stage_gate_sr and unlocked_stage < len(curriculum) - 1:
-                    unlocked_stage += 1
-                    current_stage = min(progress_stage, unlocked_stage)
-                    print(f"*** Curriculum gate passed (min SR={min_sr:.2%}). Unlocked stage {unlocked_stage} (current {current_stage}) ***")
+                    if rollout_gate_ok:
+                        unlocked_stage += 1
+                        current_stage = min(progress_stage, unlocked_stage)
+                        print(
+                            f"*** Curriculum gate passed (min SR={min_sr:.2%}). "
+                            f"Unlocked stage {unlocked_stage} (current {current_stage}) ***"
+                        )
+                    else:
+                        print(
+                            "Curriculum gate blocked by rollout safety "
+                            f"({rollout_gate_reason}); staying in stage {current_stage}"
+                        )
                 elif min_sr < stage_gate_sr:
                     print(f"Curriculum gate NOT passed (min SR={min_sr:.2%}). Staying in stage {current_stage}")
 
@@ -896,6 +1120,14 @@ def train_ppo_curriculum(config, output_dir, smoke=False):
 
     elapsed = time.time() - start_time
     training_metadata["safety_precurriculum"] = safety_gate.as_dict(global_step)
+    training_metadata["rollout_gate"] = {
+        "config": dict(rollout_gate_cfg or {}),
+        "last_metrics": compute_rollout_safety_metrics(recent_rollout_episodes),
+        "last_result": rollout_safety_gate_passed(
+            compute_rollout_safety_metrics(recent_rollout_episodes),
+            rollout_gate_cfg,
+        ),
+    }
     with open(os.path.join(output_dir, "training_metadata.json"), "w", encoding="utf-8") as f_meta:
         json.dump(_json_safe(training_metadata), f_meta, indent=2, ensure_ascii=False)
     print(f"\nTraining complete! Steps: {global_step}, Episodes: {episode_count}, Time: {elapsed:.1f}s")

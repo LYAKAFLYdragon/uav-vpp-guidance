@@ -147,3 +147,28 @@ def test_combat_mode_timeout_after_suppressed_tracking_success():
     assert info["reason"] == "timeout_draw"
     assert info["combat_outcome"] == "draw"
     env.close()
+
+
+def test_combat_mode_preserves_raw_termination_reason_after_overlay():
+    cfg = _config()
+    cfg["attack_zone"] = {"enabled": True, "damage_per_step": 0.0}
+    env = CloseRangeTrackingEnv(cfg)
+    env.reset(
+        scenario={
+            "own_init": {"position_m": [0, 0, 490], "velocity_mps": 200, "heading_deg": 0},
+            "target_init": {"position_m": [1000, 0, 5000], "velocity_mps": 200, "heading_deg": 180},
+        },
+        seed=0,
+    )
+
+    _obs, _reward, terminated, truncated, info = env.step(
+        command_override={"nz_cmd": 1.0, "roll_rate_cmd": 0.0, "throttle_cmd": 0.5}
+    )
+
+    assert terminated is True
+    assert truncated is False
+    assert info["reason"] == "ego_crash_or_out_of_bounds"
+    assert info["termination_info"]["raw_termination_reason"] == "crash"
+    assert info["termination_info"]["raw_is_crash"] is True
+    assert info["termination_info"]["raw_is_out_of_bounds"] is False
+    env.close()

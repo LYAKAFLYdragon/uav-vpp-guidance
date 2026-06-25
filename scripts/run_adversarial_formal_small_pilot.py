@@ -349,20 +349,50 @@ def _write_curriculum_config(
     checkpoint_cfg["save_best"] = True
     checkpoint_cfg["save_last"] = True
 
-    cfg["warm_start"] = {
-        "enabled": True,
-        "checkpoint": "outputs/experiments/no_prediction_vpp_ppo_jsbsim_compare/checkpoints/last.pt",
-        "strict_dims": True,
-        "load_optimizer": False,
-    }
-    cfg["safety_precurriculum"] = {
-        "enabled": True,
-        "disable_adversary": True,
-        "min_steps": 1024,
-        "survival_threshold": 0.5,
-        "max_crash_rate": 0.5,
-        "max_out_of_bounds_rate": 0.5,
-    }
+    shaping_source = "run_adversarial_formal_small_pilot.py:safety_precurriculum_boundary_shaping"
+    _set_config_value(cfg, "reward.w_boundary", 2.0, source=shaping_source)
+    _set_config_value(cfg, "reward.boundary_range_m", 9000.0, source=shaping_source)
+    _set_config_value(cfg, "reward.boundary_alt_min_m", 1000.0, source=shaping_source)
+    _set_config_value(cfg, "reward.boundary_alt_max_m", 12000.0, source=shaping_source)
+    protection_source = "run_adversarial_formal_small_pilot.py:high_altitude_protection"
+    _set_config_value(cfg, "guidance.post_process.enable_high_altitude_protection", True, source=protection_source)
+    _set_config_value(cfg, "guidance.post_process.high_altitude_start_m", 10500.0, source=protection_source)
+    _set_config_value(cfg, "guidance.post_process.high_altitude_limit_m", 12000.0, source=protection_source)
+    _set_config_value(cfg, "guidance.post_process.high_altitude_nz_at_limit", 0.85, source=protection_source)
+    _set_config_value(cfg, "guidance.post_process.high_altitude_roll_scale", 0.65, source=protection_source)
+    _set_config_value(cfg, "guidance.post_process.high_altitude_pitch_ref_deg", 5.0, source=protection_source)
+    _set_config_value(cfg, "guidance.post_process.safety_high_altitude_start_m", 9500.0, source=protection_source)
+    _set_config_value(cfg, "guidance.post_process.safety_high_altitude_limit_m", 12000.0, source=protection_source)
+    _set_config_value(cfg, "guidance.post_process.safety_high_altitude_nz_at_limit", 0.45, source=protection_source)
+    _set_config_value(cfg, "guidance.post_process.safety_high_altitude_roll_scale", 0.20, source=protection_source)
+    _set_config_value(cfg, "guidance.post_process.safety_high_altitude_pitch_ref_deg", 2.0, source=protection_source)
+
+    warm_start_source = "run_adversarial_formal_small_pilot.py:warm_start"
+    _set_config_value(cfg, "warm_start.enabled", True, source=warm_start_source)
+    _set_config_value(
+        cfg,
+        "warm_start.checkpoint",
+        "outputs/experiments/no_prediction_vpp_ppo_jsbsim_compare/checkpoints/last.pt",
+        source=warm_start_source,
+    )
+    _set_config_value(cfg, "warm_start.strict_dims", True, source=warm_start_source)
+    _set_config_value(cfg, "warm_start.load_optimizer", False, source=warm_start_source)
+
+    safety_source = "run_adversarial_formal_small_pilot.py:safety_precurriculum"
+    _set_config_value(cfg, "safety_precurriculum.enabled", True, source=safety_source)
+    _set_config_value(cfg, "safety_precurriculum.disable_adversary", True, source=safety_source)
+    _set_config_value(cfg, "safety_precurriculum.min_steps", 1024, source=safety_source)
+    _set_config_value(cfg, "safety_precurriculum.survival_threshold", 0.5, source=safety_source)
+    _set_config_value(cfg, "safety_precurriculum.max_crash_rate", 0.5, source=safety_source)
+    _set_config_value(cfg, "safety_precurriculum.max_out_of_bounds_rate", 0.5, source=safety_source)
+
+    rollout_gate_source = "run_adversarial_formal_small_pilot.py:rollout_gate"
+    _set_config_value(cfg, "curriculum.rollout_gate.enabled", True, source=rollout_gate_source)
+    _set_config_value(cfg, "curriculum.rollout_gate.window_episodes", 8, source=rollout_gate_source)
+    _set_config_value(cfg, "curriculum.rollout_gate.min_episodes", 4, source=rollout_gate_source)
+    _set_config_value(cfg, "curriculum.rollout_gate.max_raw_crash_rate", 0.35, source=rollout_gate_source)
+    _set_config_value(cfg, "curriculum.rollout_gate.max_raw_out_of_bounds_rate", 0.35, source=rollout_gate_source)
+    _set_config_value(cfg, "curriculum.rollout_gate.max_high_altitude_failure_rate", 0.30, source=rollout_gate_source)
 
     attack_cfg = cfg.setdefault("attack_zone", {})
     attack_cfg["enabled"] = True
@@ -373,17 +403,16 @@ def _write_curriculum_config(
     attack_cfg.setdefault("close_range_full_score_km", 1.0)
     attack_cfg.setdefault("close_range_max_km", 3.0)
 
-    cfg["adversarial_curriculum"] = {
-        "enabled": True,
-        "initial_bucket": "weak",
-        "switch_threshold": 0.7,
-        "initial_elo": 1000.0,
-        "elo_k_factor": 32.0,
-        "weak_elo_max": 1050.0,
-        "medium_elo_max": 1150.0,
-        "final_opponent": "expert",
-        "expert": {},
-    }
+    adversarial_source = "run_adversarial_formal_small_pilot.py:adversarial_curriculum"
+    _set_config_value(cfg, "adversarial_curriculum.enabled", True, source=adversarial_source)
+    _set_config_value(cfg, "adversarial_curriculum.initial_bucket", "weak", source=adversarial_source)
+    _set_config_value(cfg, "adversarial_curriculum.switch_threshold", 0.7, source=adversarial_source)
+    _set_config_value(cfg, "adversarial_curriculum.initial_elo", 1000.0, source=adversarial_source)
+    _set_config_value(cfg, "adversarial_curriculum.elo_k_factor", 32.0, source=adversarial_source)
+    _set_config_value(cfg, "adversarial_curriculum.weak_elo_max", 1050.0, source=adversarial_source)
+    _set_config_value(cfg, "adversarial_curriculum.medium_elo_max", 1150.0, source=adversarial_source)
+    _set_config_value(cfg, "adversarial_curriculum.final_opponent", "expert", source=adversarial_source)
+    _set_config_value(cfg, "adversarial_curriculum.expert", {}, source=adversarial_source)
 
     out_path = config_dir / "train_curriculum_adversarial_formal_small.yaml"
     _write_yaml(out_path, cfg)
@@ -457,14 +486,29 @@ def run_curriculum_stability(args: argparse.Namespace, output_root: Path) -> Dic
     )
     last_eval = eval_rows[-1] if eval_rows else {}
     survival_rate = _safe_float(last_eval.get("survival_rate"))
-    crash_rate = _safe_float(last_eval.get("crash_rate"))
-    oob_rate = _safe_float(last_eval.get("out_of_bounds_rate"))
+    crash_rate = _safe_float(last_eval.get("raw_crash_rate", last_eval.get("crash_rate")))
+    oob_rate = _safe_float(last_eval.get("raw_out_of_bounds_rate", last_eval.get("out_of_bounds_rate")))
+    train_episode_count = len(episode_rows)
+    train_raw_crashes = sum(1 for row in episode_rows if _safe_float(row.get("raw_crash")) > 0.5)
+    train_raw_oobs = sum(1 for row in episode_rows if _safe_float(row.get("raw_out_of_bounds")) > 0.5)
+    train_high_alt_failures = sum(
+        1 for row in episode_rows if _safe_float(row.get("high_altitude_failure")) > 0.5
+    )
+    train_range_oob_failures = sum(
+        1 for row in episode_rows if _safe_float(row.get("range_oob_failure")) > 0.5
+    )
+    train_raw_crash_rate = train_raw_crashes / max(1, train_episode_count)
+    train_raw_oob_rate = train_raw_oobs / max(1, train_episode_count)
     behavior_stable = (
         numerically_stable
         and math.isfinite(survival_rate)
         and survival_rate >= float(args.curriculum_min_survival_rate)
         and (not math.isfinite(crash_rate) or crash_rate <= float(args.curriculum_max_crash_rate))
         and (not math.isfinite(oob_rate) or oob_rate <= float(args.curriculum_max_oob_rate))
+        and train_raw_crash_rate <= float(args.curriculum_max_crash_rate)
+        and train_raw_oob_rate <= float(args.curriculum_max_oob_rate)
+        and (train_high_alt_failures / max(1, train_episode_count))
+        <= float(args.curriculum_max_high_alt_failure_rate)
     )
     return {
         "run_id": run_id,
@@ -480,11 +524,16 @@ def run_curriculum_stability(args: argparse.Namespace, output_root: Path) -> Dic
             "min_survival_rate": float(args.curriculum_min_survival_rate),
             "max_crash_rate": float(args.curriculum_max_crash_rate),
             "max_out_of_bounds_rate": float(args.curriculum_max_oob_rate),
+            "max_high_altitude_failure_rate": float(args.curriculum_max_high_alt_failure_rate),
         },
         "updates": len(update_rows),
         "eval_rows": len(eval_rows),
         "curriculum_rows": len(curriculum_rows),
         "episodes": len(episode_rows),
+        "train_raw_crash_rate": train_raw_crash_rate,
+        "train_raw_out_of_bounds_rate": train_raw_oob_rate,
+        "train_high_altitude_failure_rate": train_high_alt_failures / max(1, train_episode_count),
+        "train_range_oob_failure_rate": train_range_oob_failures / max(1, train_episode_count),
         "last_checkpoint_exists": (train_dir / "checkpoints" / "last.pt").exists(),
         "best_checkpoint_exists": (train_dir / "checkpoints" / "best.pt").exists(),
         "opponent_pool_size": len(pool.get("entries", [])),
@@ -619,6 +668,7 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--curriculum-min-survival-rate", type=float, default=0.5)
     parser.add_argument("--curriculum-max-crash-rate", type=float, default=0.5)
     parser.add_argument("--curriculum-max-oob-rate", type=float, default=0.5)
+    parser.add_argument("--curriculum-max-high-alt-failure-rate", type=float, default=0.30)
     parser.add_argument("--skip-hp", action="store_true")
     parser.add_argument("--skip-curriculum", action="store_true")
     return parser.parse_args()

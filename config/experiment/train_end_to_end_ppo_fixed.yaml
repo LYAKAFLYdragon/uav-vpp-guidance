@@ -52,8 +52,8 @@ limits:
   nz_min: -2.0
   roll_rate_max: 1.5
   roll_rate_min: -1.5
-  throttle_max: 1.0
-  throttle_min: 0.0
+  throttle_max: 0.9
+  throttle_min: 0.4
 policy:
   action_dim: 3
   action_high:

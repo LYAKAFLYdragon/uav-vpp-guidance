@@ -96,8 +96,31 @@ class EpisodeRecorder:
             "range_m": float(info.get("range_m", np.nan)),
             "heading_deg": float(np.degrees(own_state.get("yaw_rad", 0.0))),
             "speed_mps": float(own_state.get("speed_mps", 250.0)),
+            "altitude_m": float(
+                own_state.get(
+                    "altitude_m",
+                    np.asarray(
+                        own_state.get(
+                            "position_m",
+                            own_state.get("position_neu", [np.nan, np.nan, np.nan]),
+                        ),
+                        dtype=float,
+                    )[2],
+                )
+            ),
             "nz_g": float(own_state.get("nz_g", 1.0)),
             "nz_cmd": float(info.get("nz_cmd", np.nan)),
+            "roll_rad": float(own_state.get("roll_rad", np.nan)),
+            "roll_deg": float(np.degrees(own_state.get("roll_rad", np.nan))),
+            "roll_rate_cmd": float(info.get("roll_rate_cmd", np.nan)),
+            "throttle_cmd": float(info.get("throttle_cmd", np.nan)),
+            "task_supervisor_state": info.get("task_supervisor_state"),
+            "task_supervisor_pause_orbit_tracking": bool(
+                info.get("task_supervisor_pause_orbit_tracking", False)
+            ),
+            "task_supervisor_recovery_active": bool(
+                info.get("task_supervisor_recovery_active", False)
+            ),
             "aggressiveness": info.get("aggressiveness"),
             "gain_scale": info.get("gain_scale"),
             "saturation_flag": bool(info.get("saturation_flag", False)),

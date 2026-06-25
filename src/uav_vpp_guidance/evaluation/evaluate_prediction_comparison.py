@@ -113,7 +113,7 @@ def evaluate_single_episode(env, agent, config, scenario=None, seed=0, save_traj
     roll_rate_min = float(limits.get("roll_rate_min", -1.5))
     roll_rate_max = float(limits.get("roll_rate_max", 1.5))
     throttle_min = float(limits.get("throttle_min", 0.4))
-    throttle_max = float(limits.get("throttle_max", 1.0))
+    throttle_max = float(limits.get("throttle_max", 0.9))
 
     step_altitudes = []
     step_speeds = []

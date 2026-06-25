@@ -385,6 +385,8 @@ class TestCommandOverrideBackwardCompatibility:
         )
         assert info.get("effective_guidance_mode") == "command_override"
         assert info.get("virtual_point_source") == "command_override"
+        assert info.get("command_override_active") is True
+        assert info.get("raw_command") == override
         # The command should still be clipped/filtered but originate from override
         gc = info.get("guidance_command", {})
         assert abs(gc.get("nz_cmd", 0.0) - 2.0) < 0.5  # close after filter

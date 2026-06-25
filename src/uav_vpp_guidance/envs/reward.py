@@ -63,6 +63,24 @@ class RewardCalculator:
         self.terminal_success = self.config.get("terminal_success", 200.0)
         self.terminal_failure = self.config.get("terminal_failure", -200.0)
         self.terminal_crash = self.config.get("terminal_crash", -300.0)
+        self.energy_reference_speed_mps = float(
+            self.config.get("energy_reference_speed_mps", 250.0)
+        )
+        self.energy_reference_altitude_m = float(
+            self.config.get("energy_reference_altitude_m", 5000.0)
+        )
+        self.energy_min_speed_mps = float(
+            self.config.get("energy_min_speed_mps", 170.0)
+        )
+        self.energy_floor_altitude_m = float(
+            self.config.get("energy_floor_altitude_m", 3000.0)
+        )
+        self.energy_speed_weight = float(
+            self.config.get("energy_speed_weight", 0.5)
+        )
+        self.energy_altitude_weight = float(
+            self.config.get("energy_altitude_weight", 0.5)
+        )
 
         # 归一化参考值
         self._ref_range_m = 2000.0
@@ -118,6 +136,7 @@ class RewardCalculator:
         if altitude_m < min_alt + 1000.0:
             safety_penalty = self.w_safety * max(0.0, 1.0 - altitude_margin)
         reward_safety = -safety_penalty
+        reward_energy = self._compute_energy_reward(own_state)
 
         # 4. 指令饱和惩罚
         saturation_penalty = 0.0
@@ -178,6 +197,7 @@ class RewardCalculator:
             reward_range
             + reward_angle
             + reward_safety
+            + reward_energy
             + reward_saturation
             + reward_smooth
             + reward_turn
@@ -192,6 +212,7 @@ class RewardCalculator:
             "reward_range": reward_range,
             "reward_angle": reward_angle,
             "reward_safety": reward_safety,
+            "reward_energy": reward_energy,
             "reward_saturation": reward_saturation,
             "reward_smooth": reward_smooth,
             "reward_turn": reward_turn,
@@ -274,6 +295,44 @@ class RewardCalculator:
             penalty += excess / self.max_heading_rate
 
         return penalty
+
+    def _compute_energy_reward(self, own_state: dict) -> float:
+        """Reward healthy specific-energy margin and penalize low-speed states."""
+        speed_mps = own_state.get("speed_mps")
+        if speed_mps is None:
+            vel = np.asarray(
+                own_state.get("velocity_vector_mps", [0.0, 0.0, 0.0]), dtype=float
+            )
+            speed_mps = float(np.linalg.norm(vel))
+        speed_mps = float(speed_mps)
+        altitude_m = float(own_state.get("altitude_m", 5000.0))
+
+        ref_speed = max(self.energy_reference_speed_mps, 1.0)
+        min_speed = min(self.energy_min_speed_mps, ref_speed - 1e-3)
+        g = 9.80665
+
+        specific_energy_m = altitude_m + speed_mps ** 2 / (2.0 * g)
+        ref_specific_energy_m = (
+            self.energy_reference_altitude_m + ref_speed ** 2 / (2.0 * g)
+        )
+        floor_specific_energy_m = (
+            self.energy_floor_altitude_m + min_speed ** 2 / (2.0 * g)
+        )
+
+        energy_span = max(ref_specific_energy_m - floor_specific_energy_m, 1.0)
+        speed_span = max(ref_speed - min_speed, 1.0)
+        energy_margin = (specific_energy_m - floor_specific_energy_m) / energy_span
+        speed_margin = (speed_mps - min_speed) / speed_span
+
+        energy_score = (
+            self.energy_altitude_weight * np.clip(energy_margin, -1.0, 1.0)
+            + self.energy_speed_weight * np.clip(speed_margin, -1.0, 1.0)
+        )
+        weight_sum = self.energy_altitude_weight + self.energy_speed_weight
+        if weight_sum > 1e-9:
+            energy_score /= weight_sum
+
+        return self.w_energy * float(np.clip(energy_score, -1.0, 1.0))
 
     def reset(self):
         """Reset internal state (e.g., previous command buffer)."""

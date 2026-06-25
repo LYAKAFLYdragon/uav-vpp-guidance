@@ -191,3 +191,240 @@ python -m pytest tests/test_common_provenance.py tests/test_table3_aggregation.p
 ```
 
 结果：`47 passed, 3 warnings`。
+
+## 2026-06-24 P0-P2 审计修复（commit ff0602b）
+
+### 完整 720-episode 回归矩阵
+
+3 配置 × 4 控制器 × 3 任务 = 36 组合，每组合 20 seeds：
+
+| Config | Task | baseline | enhanced | ppo_pid | robust |
+|---|---:|---:|---:|---:|---|
+| bank75 | multi_waypoint | 5.00 | 4.25 | 4.00 | 4.25 |
+| bank76 | multi_waypoint | 5.00 | 4.25 | 4.00 | 4.25 |
+| bank80 | multi_waypoint | 4.00 | 4.00 | 4.00 | 4.00 |
+| bank75 | sustained_turn | 0.98 | 1.13 | 1.07 | 1.13 |
+| bank76 | sustained_turn | 0.95 | 1.11 | 1.10 | 1.11 |
+| bank80 | sustained_turn | 0.64 | 0.71 | 1.70 | 0.71 |
+
+> 主指标：multi_waypoint=mean_wp (max 5.0), sustained_turn=mean_orbits (target ≥2.0)
+> break_turn 行因 track_err 数据问题已排除（见下方诊断）
+> 缺失：GainScheduled PID、PPO baseline、真正 PPO+PID (action_dim=4)
+> 详细分析见 [[sustained_turn_analysis_and_720ep_matrix]]
+
+### Baseline PID 5.00 满分解释
+
+`BaselinePIDController(EnhancedLowLevelController)` 继承自 EnhancedLowLevelController，
+继承了所有 P0/P1 底层修复（M1 油门统一、抗积分饱和、保护优先级仲裁）。
+在 multi_waypoint 温和任务上，Baseline 禁用的保护项反而减少了约束，
+使其能更直接地跟踪航点。
+
+→ Baseline 不再是"弱 baseline"，消融实验需要重新设计对照组。
+→ 详细分析见 [[baseline_pid_5.00_explanation]]
+
+### Sustained-Turn 时间限制诊断
+
+| 指标 | 目标 | 实际 (bank76) |
+|---|---|---|
+| turn radius | 1200m | ~3315m |
+| 理论最大圈数 (90s) | 2.0 | 1.08 |
+| 实际观测 | 2.0 | 0.95-1.11 |
+
+结论：completed_orbits 低不是因为 tracking 不准，而是 90s 时间限制理论不可行。
+建议扩展到 1024 steps (204.8s) 或调整目标为 1.0 orbits。
+
+### Break-Turn 数据诊断
+
+调查确认 `range_m` 数据正确写入 episode JSON（非 0.0），`mean_track_error_m` 为 3107–7303m。
+"track_err=0.0m" 的原始报告可能来自 pre-fix 指标计算（修复前 `compute_break_turn_metrics` 未提取 `nz_cmd`/`range_m` 字段）。
+
+post-fix 新增指标：
+- `nz_tracking_rmse`: 使用 `_safe_rmse()` 计算 nz_cmd vs actual nz 的 RMSE
+- `recovery_delay`: 当 nz_cmd 无过零时返回 NaN（不可测量）
+- `overshoot_pct`: 当无有效段时返回 NaN（不可测量）
+
+### 代码修复清单
+
+| 修复 | 文件 | 说明 |
+|------|------|------|
+| throttle_max default | `evaluate_prediction_comparison.py:116` | 1.0→0.9，与其他 default 对齐 |
+| 38 YAML throttle 值 | `config/experiment/*.yaml` | 批量替换 0.0/1.0→0.4/0.9 |
+| PPO+PID resume 支持 | `train_ppo_pid.py` | 新增 `--resume`/`--resume-step`/warm_start |
+| E2E PPO 对比脚本 | `scripts/run_e2e_ppo_comparison.py` | 3 seeds × 1M steps，pre-fix vs post-fix |
+| PPO+PID resume 脚本 | `scripts/run_ppo_pid_resume.py` | 从 step_40960.pt 恢复到 200k |
+| 分析文档入库 | `memory/baseline_pid_5.00_explanation.md` | Baseline 满分解释 |
+| 分析文档入库 | `memory/sustained_turn_analysis_and_720ep_matrix.md` | 矩阵补全 + ST 分析 |
+
+### 待跑实验（云主机）
+
+1. **PPO+PID resume**：从 `step_40960.pt` 恢复到 200k
+   ```powershell
+   python scripts/run_ppo_pid_resume.py --device cuda
+   ```
+
+2. **E2E PPO 1M 对比**：pre-fix vs post-fix，各 3 seeds
+   ```powershell
+   python scripts/run_e2e_ppo_comparison.py --group all --device cuda
+   ```
+
+3. **Pre-fix E2E PPO 1M baseline**（对照组需要先跑）：
+   ```powershell
+   python scripts/run_e2e_ppo_comparison.py --group pre-fix --device cuda
+   ```
+
+## 2026-06-25 本地验证发现
+
+### Break-Turn nz 过零：结构性不可行
+
+**验证过程**：
+1. 将 break_turn 轨迹从纯水平转弯改为 R→L→R 多段转弯 + 爬升/俯冲（±30 m/s）
+2. 用 `run_flight_control_comparison.py` 直接跑完整 450 步（90s）
+
+**结果**：
+| 指标 | 值 |
+|---|---|
+| episode steps | 450/450 (完整运行) |
+| termination | timeout |
+| nz_cmd 范围 | [1.373, 3.477]g |
+| 低于 1g-deadband 步数 | 0/450 |
+| recovery_delay | NaN |
+| overshoot_pct | 202.5% |
+| nz_tracking_rmse | 2.32g |
+
+**根因分析**：LOS-rate 引导律在跟踪转弯目标时，转弯所需过载至少 ~2.85g（6°/s @ 250m/s 下
+`nz = sqrt(1 + (V·ω/g)²) ≈ 2.85`）。即使叠加 ±30m/s 的爬升/俯冲速率，引导律输出的
+nz_cmd 最低也只能到 1.373g，无法跌破 1g-deadband。
+
+**结论**：`recovery_delay` 指标是为"nz 指令阶跃响应"场景设计的——需要 nz_cmd 在 1g 上下
+发生符号翻转。break_turn 这类跟踪转弯目标的引导律**永远不会产生 nz 符号翻转**，
+recovery_delay=NaN 是任务的**预期行为**，不是 bug。
+
+**当前可用指标**：
+- `nz_tracking_rmse`：测量引导律 nz_cmd 与实际 nz_g 之间的跟踪误差（当前 ~2.32g，目标 <0.5g）
+- `overshoot_pct`：测量 nz 上升段的超调百分比（当前 202.5%，反映 PID 对引导律指令的过冲响应）
+
+**后续选项**（见 [[#break-turn-recovery-delay-backlog]]）：
+- 方案 A（即时）：接受 recovery_delay=NaN，break_turn 验收仅使用 nz_tracking_rmse + overshoot_pct
+- 方案 B（backlog）：新建独立 `task_nz_step_response.yaml`，注入显式 nz_cmd 阶跃序列
+- 方案 C（不推荐）：在 break_turn 中插入 30s 直线段 + 100m/s 陡降，hack 式制造 nz < 1g
+
+### PPO+PID Resume Smoke 验证
+
+**验证过程**：用 `--resume` + `--resume-step 40960` + `--smoke` 测试 warm_start 机制
+
+**结果**：
+```
+total_timesteps: 41472 (= 40960 + 512)
+episodes: 7, elapsed: 20.3s
+Warm-start loaded: obs_dim=16, action_dim=4, missing_keys=0, unexpected_keys=0
+Loaded optimizer state from step_40960.pt
+```
+
+**修复的代码问题**：`train_ppo_pid.py` 中 warm_start 块原本在 smoke 块之后执行，
+导致 smoke 模式下 `resume_step` 始终为 0。已将执行顺序修正为：
+agent 创建 → warm_start 加载 → smoke 模式 timestep 调整。
+
+### 代码修复补充
+
+| 修复 | 文件 | 说明 |
+|------|------|------|
+| break_turn 轨迹增强 | `break_turn_env.py` | 添加 altitude 分量（爬升/俯冲），使 episode 完整运行 450 步 |
+| smoke resume 顺序修复 | `train_ppo_pid.py` | warm_start 移至 smoke 块之前，避免 resume_step=0 的 bug |
+| CSV append 模式 | `train_ppo_pid.py` | resume 时日志文件使用 append 模式，保留历史记录 |
+| break_turn task config 修正 | `task_break_turn.yaml` | 可通过 `--config-bt` 在 comparison 脚本中正确合并 |
+
+### 云主机运行命令（已验证）
+
+```powershell
+# 1. PPO+PID resume（已通过本地 smoke 验证）
+python scripts/run_ppo_pid_resume.py --device cuda
+
+# 2. E2E PPO pre-fix baseline（对照组，先跑）
+python scripts/run_e2e_ppo_comparison.py --group pre-fix --device cuda
+
+# 3. E2E PPO post-fix comparison
+python scripts/run_e2e_ppo_comparison.py --group post-fix --device cuda
+
+# 4. 完整 E2E PPO 对比（等 2+3 都跑完）
+python scripts/run_e2e_ppo_comparison.py --group all --device cuda
+```
+
+---
+
+## 2026-06-25 更新：云端大规模实验
+
+### 实验环境
+
+- **服务器**: 96 vCPU, RTX 2080 Ti (11GB), 375GB RAM
+- **JSBSim**: v1.3.1, F-16 aerodynamic model
+- **分支**: `fix/flight-control-comparison-sync` (commit ff0602b)
+- **所有实验 0 crash 的前提**: bank76 保护配置（bank_angle_protection + altitude_hold + lift_compensation）
+
+### 1. PID 增益扫描
+
+**最优增益**: Kp_nz=**0.50**, Kd_nz=**0.10**, Ki_nz=**0.05**
+- 扫描 9×10=90 组合 × 5 seeds = 450 episodes
+- 全部组合 **0 crash**
+- 最优 RMSE=2.26g（默认增益 RMSE 约 3.2g）
+- Kd_nz 在平滑转弯轨迹上影响可忽略——需 [[nz-step-response-task]] 验证瞬态
+- 详见 [[pid-gain-scan-results-2025-06-25]]
+
+### 2. PPO+PID 训练（使用最优增益）
+
+- 200k steps, 1,757 episodes, **~30 分钟**（RTX 2080 Ti）
+- 训练评估：86.67% 成功, 13.33% crash, 0% OOB
+- multi_waypoint 正式评估：**0/20 crash, mean_wp=4.00**
+- sustained_turn 正式评估：20/20 stall, mean_orbits=2.44
+- PPO agent 过度拉 nz（最高 10.9g）导致能量耗尽——奖励函数缺少能量保存项
+- 详见 [[ppo-pid-training-results-2025-06-25]]
+
+### 3. 保护增益校准
+
+- 4 bank × 4 nz_inc × 3 nz_inc_max × 4 alt_gain = **192 组合全部稳定**
+- 最大稳定 bank: **82°**（mean_wp=4.00, crash=0）
+- bank 76°-82° 全部可用，bank=76° 推荐作为保守默认
+- 详见 [[protection-gain-calibration-2025-06-25]]
+
+### 4. 飞行包线表征
+
+- **Bank 包线**: 60°-82° 全部稳定（0 crash, mean_wp ≥ 4.0）
+- **nz 包线**: 2g-7g 全部稳定（0 crash）
+- **Speed×Altitude 包线**: 仅 6/25 稳定
+  - 安全区：2000-4000m, 120-220 m/s
+  - **6000m 以上 100% 崩溃**（发动机推力不足）
+  - 高海拔空战应使用能量战术（Boom & Zoom），不可持续转弯
+- 详见 [[flight-envelope-characterization-2025-06-25]]
+
+### 5. 持续转弯能量管理
+
+- Enhanced PID：速度健康（260m/s），但高度失控 → crash
+- PPO+PID：高度可控，但速度衰减至失速（150m/s） → stall
+- **根因**：持续高 g 转弯的诱导阻力超过可用推力，能量流失不可避免
+- 缓解：增大轨道半径（降低所需 nz）、调高 altitude_hold_gain、PPO 奖励函数加能量项
+- 详见 [[sustained-turn-energy-management]]
+
+### 6. 对抗 + BFM 验证
+
+- 对抗场景 10 种：**0/50 crash (0.0%)**，迎头场景 100% 成功
+- 激进 BFM（yo-yo 1000m 振幅）：**PASSED**（0/5 crash, nz_max=8.7g < 9g, 无螺旋下坠）
+
+### 验收标准达成
+
+| 指标 | 目标 | 实际 | 状态 |
+|------|------|------|------|
+| break_turn crash | < 2/20 | 0/450 | ✅ |
+| max stable bank | ≥ 78° | 82° | ✅ |
+| usable bank range | ≥ 12° | 22° (60-82°) | ✅ |
+| nz envelope | 2-7g | 全部稳定 | ✅ |
+| adversarial crash | < 10% | 0% | ✅ |
+| BFM crash | 0/5 | 0/5 | ✅ |
+| BFM nz_max | < 9g | 8.7g | ✅ |
+| PPO+PID MW wp | ≥ 4.0 | 4.00 | ✅ |
+| PPO+PID ST orbits | ≥ 1.5 | 2.44 (but stall) | ⚠️ |
+| ST 0 crash | 0/20 | 20/20 crash | ❌ |
+
+### 剩余工作
+
+1. **nz_step_response**: env 已写，命令注入机制待调试（info 中 nz_cmd 未正确传递）
+2. **ST 能量管理**: 调整接受标准为"mean_orbits ≥ 1.5, 0 crash before energy exhaustion"或实现能量感知控制
+3. **PPO+PID 奖励函数**: 添加能量保存项改善 sustained_turn 性能

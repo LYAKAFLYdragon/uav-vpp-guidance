@@ -73,8 +73,8 @@ limits:
   nz_max: 7.0
   roll_rate_min: -1.5
   roll_rate_max: 1.5
-  throttle_min: 0.0
-  throttle_max: 1.0
+  throttle_min: 0.4
+  throttle_max: 0.9
 
 reward:
   w_range: 0.6

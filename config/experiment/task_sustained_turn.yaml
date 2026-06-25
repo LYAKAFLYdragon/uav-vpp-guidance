@@ -9,6 +9,34 @@ task:
     orbit_radius_m: 1200.0
     tangent_lead_deg: 90.0
     min_safe_speed_mps: 150.0
+    max_planned_altitude_m: 5000.0
+    supervisor:
+      enabled: true
+      speed_floor_mps: 175.0
+      caution_speed_mps: 195.0
+      recovery_speed_mps: 210.0
+      recovery_nz_min: 1.2
+      recovery_nz_target: 1.35
+      recovery_nz_max: 2.5
+      recovery_roll_rate_cmd: 1.2
+      caution_nz_max: 4.0
+      recovery_throttle_cmd: 0.95
+      caution_throttle_cmd: 0.8
+      recovery_roll_rate_scale: 0.5
+      caution_roll_rate_scale: 0.75
+      high_altitude_threshold_m: 5000.0
+      high_altitude_nz_cap: 3.0
+      high_altitude_roll_rate_scale: 0.7
+      high_altitude_throttle_cmd: 0.85
+      high_altitude_nz_attenuation: 0.5
 
 env:
-  max_high_level_steps: 450
+  max_high_level_steps: 1024
+
+limits:
+  throttle_max: 1.0
+  throttle_effective_max: 1.0
+
+low_level_controller:
+  throttle_max: 1.0
+  throttle_effective_max: 1.0

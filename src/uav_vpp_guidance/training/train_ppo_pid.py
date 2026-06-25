@@ -258,6 +258,7 @@ def train_ppo(config, output_dir, smoke=False):
     save_interval = int(config.get("checkpoint", {}).get("save_interval", 10000))
     save_best = bool(config.get("checkpoint", {}).get("save_best", True))
     save_last = bool(config.get("checkpoint", {}).get("save_last", True))
+    resume_step = 0  # updated by warm_start block below (must be BEFORE smoke block)
 
     dr_config = config.get("domain_randomization", {})
     dr_enabled = dr_config.get("enabled", False)
@@ -271,14 +272,6 @@ def train_ppo(config, output_dir, smoke=False):
     sc_curriculum = config.get("success_criterion_curriculum", None)
     if sc_curriculum:
         print(f"Success-criterion curriculum enabled with {len(sc_curriculum)} stages")
-
-    if smoke:
-        total_timesteps = 512
-        rollout_steps = 128
-        eval_interval = 256
-        save_interval = 256
-        print("[SMOKE] Running smoke mode with reduced settings:")
-        print(f"  total_timesteps={total_timesteps}, rollout_steps={rollout_steps}")
 
     # Environment
     env = CloseRangeTrackingEnv(config)
@@ -301,13 +294,50 @@ def train_ppo(config, output_dir, smoke=False):
     agent = PPOAgent(obs_dim=obs_dim, action_dim=action_dim, config=config, device=device)
     print(f"Network parameters: {agent.network.count_parameters()}")
 
+    # Warm-start / resume from checkpoint
+    resume_step = 0
+    warm_start_cfg = config.get("warm_start", {})
+    if warm_start_cfg.get("enabled", False):
+        import torch as _torch
+        checkpoint_path = warm_start_cfg.get("checkpoint") or warm_start_cfg.get("checkpoint_path")
+        if not checkpoint_path:
+            raise ValueError("warm_start.enabled=true requires warm_start.checkpoint")
+        ckpt = _torch.load(str(checkpoint_path), map_location=device)
+        missing, unexpected = agent.network.load_state_dict(
+            ckpt["network_state_dict"], strict=False,
+        )
+        if warm_start_cfg.get("load_optimizer", False) and "optimizer_state_dict" in ckpt:
+            try:
+                agent.optimizer.load_state_dict(ckpt["optimizer_state_dict"])
+                print(f"Loaded optimizer state from {checkpoint_path}")
+            except Exception as e:
+                print(f"Warning: Could not load optimizer state: {e}")
+        resume_step = int(warm_start_cfg.get("step", 0))
+        print(
+            f"Warm-start loaded from {checkpoint_path}: "
+            f"obs_dim={ckpt.get('obs_dim', '?')}, "
+            f"action_dim={ckpt.get('action_dim', '?')}, "
+            f"resume_step={resume_step}, "
+            f"missing_keys={len(missing)}, unexpected_keys={len(unexpected)}"
+        )
+
+    # Smoke mode timestep override (after warm-start: resume_step is correct)
+    if smoke:
+        total_timesteps = resume_step + 512 if resume_step > 0 else 512
+        rollout_steps = 128
+        eval_interval = 256
+        save_interval = 256
+        print("[SMOKE] Running smoke mode with reduced settings (resuming from step {})".format(resume_step))
+        print(f"  total_timesteps={total_timesteps}, rollout_steps={rollout_steps}")
+
     # Training state
-    global_step = 0
+    global_step = resume_step
     episode_count = 0
     best_eval_return = -float("inf")
     last_sc_stage = None
 
-    # CSV loggers
+    # CSV loggers (append mode when resuming)
+    csv_mode = "a" if resume_step > 0 else "w"
     episode_log_path = os.path.join(log_dir, "episode_train_log.csv")
     update_log_path = os.path.join(log_dir, "update_train_log.csv")
     eval_log_path = os.path.join(log_dir, "eval_log.csv")
@@ -329,17 +359,20 @@ def train_ppo(config, output_dir, smoke=False):
         "mean_aggressiveness", "std_aggressiveness",
     ]
 
-    with open(episode_log_path, "w", newline="", encoding="utf-8") as f_ep:
+    with open(episode_log_path, csv_mode, newline="", encoding="utf-8") as f_ep:
         ep_writer = csv.DictWriter(f_ep, fieldnames=episode_fieldnames)
-        ep_writer.writeheader()
+        if csv_mode == "w":
+            ep_writer.writeheader()
 
-        with open(update_log_path, "w", newline="", encoding="utf-8") as f_up:
+        with open(update_log_path, csv_mode, newline="", encoding="utf-8") as f_up:
             up_writer = csv.DictWriter(f_up, fieldnames=update_fieldnames)
-            up_writer.writeheader()
+            if csv_mode == "w":
+                up_writer.writeheader()
 
-            with open(eval_log_path, "w", newline="", encoding="utf-8") as f_eval:
+            with open(eval_log_path, csv_mode, newline="", encoding="utf-8") as f_eval:
                 eval_writer = csv.DictWriter(f_eval, fieldnames=eval_fieldnames)
-                eval_writer.writeheader()
+                if csv_mode == "w":
+                    eval_writer.writeheader()
 
                 # Main training loop
                 rng = np.random.default_rng(config.get("experiment", {}).get("seed", 0))
@@ -591,6 +624,9 @@ def main():
     parser.add_argument("--backend", type=str, default=None, choices=["simple", "jsbsim"], help="Override simulation backend")
     parser.add_argument("--use-jsbsim", action="store_true", help="Force use_jsbsim=True")
     parser.add_argument("--domain-rand-scale", type=float, default=None, help="Override domain randomization scale")
+    parser.add_argument("--resume", type=str, default=None, help="Resume from checkpoint .pt file")
+    parser.add_argument("--resume-step", type=int, default=0, help="Global step at which checkpoint was saved")
+    parser.add_argument("--resume-optimizer", action="store_true", help="Also load optimizer state when resuming")
     args = parser.parse_args()
 
     config = load_experiment_config(args.config)
@@ -740,6 +776,25 @@ def main():
             source="train_ppo_pid.py:--device",
         )
         print(f"Device override: {args.device}")
+
+    # Resume / warm-start
+    if args.resume is not None:
+        old_warm_start = config.get("warm_start")
+        config["warm_start"] = {
+            "enabled": True,
+            "checkpoint": args.resume,
+            "step": int(args.resume_step),
+            "load_optimizer": bool(args.resume_optimizer),
+            "strict_dims": True,
+        }
+        record_config_override_if_changed(
+            config,
+            "warm_start",
+            config["warm_start"],
+            old_value=old_warm_start,
+            source="train_ppo_pid.py:--resume",
+        )
+        print(f"Resume enabled: checkpoint={args.resume}, step={args.resume_step}")
 
     train_ppo(config, output_dir, smoke=args.smoke)
 

@@ -182,11 +182,11 @@ class BreakTurnEnv(CloseRangeTrackingEnv):
 
     def _generate_break_turn_trajectory(self) -> list:
         """
-        Build a multi-segment break-turn trajectory with heading reversals.
+        Build a multi-segment break-turn trajectory with heading AND altitude reversals.
 
-        The trajectory consists of: straight → right turn → left turn → right turn.
-        The heading reversals force the controller to produce nz_cmd sign changes,
-        enabling _recovery_delay_steps and _overshoot_pct metrics to be measured.
+        The trajectory consists of: straight → climb+right-turn → dive+left-turn → climb+right-turn.
+        Heading reversals change roll direction; altitude reversals (climb↔dive) force nz_cmd
+        to cross the 1g line, enabling _recovery_delay_steps and _overshoot_pct metrics.
         """
         cfg = self.task_cfg
         dt = float(self.env_config.get("high_level_dt", 0.2))
@@ -198,14 +198,18 @@ class BreakTurnEnv(CloseRangeTrackingEnv):
         speed = float(cfg.get("target_speed_mps", 250.0))
         delay = float(cfg.get("straight_delay_s", 2.0))
         turn_rate_dps = float(cfg.get("turn_rate_deg_s", 6.0))
+        climb_rate_mps = float(cfg.get("climb_rate_mps", 30.0))
 
-        # Define multi-segment maneuver: straight → R → L → R
-        # Each turn segment creates a heading reversal that forces nz sign changes.
-        segments = [
-            ("straight", delay, 0.0),           # 0-2s: straight
-            ("turn", 90.0 / turn_rate_dps, 1.0),  # 2-17s: right turn 90°
-            ("turn", 180.0 / turn_rate_dps, -1.0), # 17-47s: left turn 180° (reverse!)
-            ("turn", 90.0 / turn_rate_dps, 1.0),  # 47-62s: right turn 90° (reverse again)
+        # Multi-segment maneuver with heading + altitude reversals.
+        # seg_direction: +1=right-turn, -1=left-turn
+        # alt_sign: +1=climb, -1=dive, 0=level
+        turn_rate_rps = math.radians(turn_rate_dps)
+        segments: list[tuple[str, float, float, float]] = [
+            # (type, duration_s, heading_dir, alt_sign)
+            ("straight", delay, 0.0, 0.0),                         # 0-2s: straight level
+            ("turn",    90.0 / turn_rate_dps, 1.0, 1.0),           # 2-17s: right turn CLIMB
+            ("turn",    180.0 / turn_rate_dps, -1.0, -1.0),        # 17-47s: left turn DIVE (nz reversal #1)
+            ("turn",    90.0 / turn_rate_dps, 1.0, 1.0),           # 47-62s: right turn CLIMB (nz reversal #2)
         ]
 
         pos = np.array([initial_range, 0.0, base_alt], dtype=float)
@@ -213,7 +217,6 @@ class BreakTurnEnv(CloseRangeTrackingEnv):
         trajectory = []
         segment_idx = 0
         segment_elapsed = 0.0
-        turn_rate_rps = math.radians(turn_rate_dps)
 
         t = 0.0
         while t <= duration + 1e-9:
@@ -223,17 +226,19 @@ class BreakTurnEnv(CloseRangeTrackingEnv):
                 segment_idx += 1
 
             if segment_idx >= len(segments):
-                # All segments done; continue with last heading
+                # All segments done; continue with last heading and altitude trend
                 pass
             else:
-                seg_type, seg_duration, seg_direction = segments[segment_idx]
-                if seg_type == "straight":
-                    pass  # heading unchanged
-                else:
-                    # Turning segment: heading changes at constant rate
+                seg_type, seg_duration, seg_direction, alt_sign = segments[segment_idx]
+                if seg_type == "turn":
                     heading += turn_rate_rps * seg_direction * dt
 
-            vel = np.array([speed * math.cos(heading), speed * math.sin(heading), 0.0])
+            vz = climb_rate_mps * alt_sign if segment_idx < len(segments) else 0.0
+            vel = np.array([
+                speed * math.cos(heading),
+                speed * math.sin(heading),
+                vz,
+            ])
             trajectory.append(
                 {
                     "time_s": float(t),

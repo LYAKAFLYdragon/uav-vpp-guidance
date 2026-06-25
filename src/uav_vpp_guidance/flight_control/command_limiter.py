@@ -14,13 +14,16 @@ DEFAULT_THROTTLE_MAX = 0.9
 def effective_throttle_limits(limits):
     """Return throttle limits constrained to the F-16 effective command envelope."""
     limits = limits or {}
+    throttle_effective_max = float(
+        limits.get("throttle_effective_max", DEFAULT_THROTTLE_MAX)
+    )
     throttle_min = max(
         float(limits.get("throttle_min", DEFAULT_THROTTLE_MIN)),
         DEFAULT_THROTTLE_MIN,
     )
     throttle_max = min(
-        float(limits.get("throttle_max", DEFAULT_THROTTLE_MAX)),
-        DEFAULT_THROTTLE_MAX,
+        float(limits.get("throttle_max", throttle_effective_max)),
+        throttle_effective_max,
     )
     if throttle_min > throttle_max:
         throttle_min, throttle_max = DEFAULT_THROTTLE_MIN, DEFAULT_THROTTLE_MAX

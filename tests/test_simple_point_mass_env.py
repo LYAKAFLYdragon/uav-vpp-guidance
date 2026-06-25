@@ -32,6 +32,18 @@ class TestSimplePointMassEnv:
         assert "velocity_vector_mps" in own
         assert "altitude_m" in own
 
+    def test_nz_one_is_level_flight_trim(self):
+        env = SimplePointMassEnv({"decision_freq": 5, "target_mode": "constant_velocity"})
+        own0, _ = env.reset()
+        command = {"nz_cmd": 1.0, "roll_rate_cmd": 0.0, "throttle_cmd": 0.5}
+
+        own = own0
+        for _ in range(50):
+            own, _ = env.step(command)
+
+        assert abs(own["altitude_m"] - own0["altitude_m"]) < 1.0
+        assert abs(own["pitch_rad"]) < 1.0e-6
+
     def test_get_state(self, env):
         env.reset()
         own, target = env.get_state()

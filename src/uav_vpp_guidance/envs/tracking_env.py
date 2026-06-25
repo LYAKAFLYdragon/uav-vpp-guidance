@@ -235,6 +235,8 @@ class CloseRangeTrackingEnv:
             # Merge global limits so post-processor can read them
             processor_config = {
                 **guidance_config,
+                "env": config.get("env", {}),
+                "reward": config.get("reward", {}),
                 "limits": {
                     **config.get("limits", {}),
                     **guidance_config.get("limits", {}),
@@ -395,6 +397,18 @@ class CloseRangeTrackingEnv:
     def _task_pre_step(self, own_state, target_state):
         """Subclasses may update task state before guidance is computed."""
         return own_state, target_state
+
+    def _task_adjust_command(
+        self,
+        raw_command,
+        own_state,
+        target_state,
+        rel_state,
+        *,
+        use_command_override: bool = False,
+    ):
+        """Subclasses may post-process task commands before global safety logic."""
+        return dict(raw_command), {}
 
     def _task_post_step(
         self,
@@ -630,6 +644,10 @@ class CloseRangeTrackingEnv:
         self._opponent_stage = self.opponent_config.get("stage", "custom")
         if self.opponent_policy is not None:
             self.opponent_policy.reset()
+
+    def set_command_post_processor_safety_mode(self, enabled: bool) -> None:
+        if self.command_post_processor is not None:
+            self.command_post_processor.set_safety_mode(enabled)
 
     def _get_opponent_obs(
         self,
@@ -1106,6 +1124,15 @@ class CloseRangeTrackingEnv:
                 own_state, target_state, virtual_point, self.current_gains
             )
 
+        raw_command, task_command_info = self._task_adjust_command(
+            raw_command,
+            own_state,
+            target_state,
+            rel_state,
+            use_command_override=use_command_override,
+        )
+        raw_command = dict(raw_command)
+
         # Persist virtual point for observation features (e.g. VP tracking error)
         self._last_virtual_point = virtual_point
 
@@ -1134,7 +1161,10 @@ class CloseRangeTrackingEnv:
                 abs(raw_command.get("throttle_cmd", 0.5) - clipped_command["throttle_cmd"]) > eps
             ),
         }
-        filtered_command = self._apply_command_filter(clipped_command)
+        filtered_command = self._apply_command_filter(
+            clipped_command,
+            reset=bool(task_command_info.get("task_supervisor_recovery_active", False)),
+        )
 
         # 6b. 通信延迟：对滤波后的指令做一步滞后近似
         delayed_command = self._apply_communication_delay(filtered_command)
@@ -1187,6 +1217,11 @@ class CloseRangeTrackingEnv:
                 truncated = True
                 term_info["reason"] = "timeout"
                 term_info["is_timeout"] = True
+        raw_term_info = dict(term_info)
+        term_info["raw_termination_reason"] = raw_term_info.get("reason")
+        term_info["raw_is_crash"] = bool(raw_term_info.get("is_crash", False))
+        term_info["raw_is_out_of_bounds"] = bool(raw_term_info.get("is_out_of_bounds", False))
+        term_info["raw_is_timeout"] = bool(raw_term_info.get("is_timeout", False))
         combat_step_info = self.combat_hp.step(own_state_post, target_state_post)
         target_failed = self._aircraft_failed(target_state_post)
         ego_failed = bool(term_info.get("is_crash") or term_info.get("is_out_of_bounds"))
@@ -1229,10 +1264,16 @@ class CloseRangeTrackingEnv:
             "virtual_point": _serialize_vp(virtual_point),
             "guidance_command": filtered_command,
             "raw_command": raw_command,
+            "command_override_active": use_command_override,
             "opponent_info": opponent_info,
             "opponent_stage": self._opponent_stage,
             "opponent_command": opponent_info.get("opponent_command"),
             "opponent_action": opponent_info.get("opponent_action"),
+            "task_command_adjustment": task_command_info,
+            "task_supervisor_state": task_command_info.get("task_supervisor_state"),
+            "task_supervisor_active": bool(
+                task_command_info.get("task_supervisor_active", False)
+            ),
             "reward_terms": reward_terms,
             "termination_info": term_info,
             "relative_state": rel_state_post,
@@ -1423,8 +1464,11 @@ class CloseRangeTrackingEnv:
 
         return terminated, truncated, term_info
 
-    def _apply_command_filter(self, command: dict) -> dict:
+    def _apply_command_filter(self, command: dict, *, reset: bool = False) -> dict:
         """Apply independent first-order filters to each command channel."""
+        if reset:
+            self._command_filter.reset()
+            return {key: float(value) for key, value in command.items()}
         return self._command_filter.filter(command)
 
     def _sync_prediction_buffer_for_current_state(

@@ -58,6 +58,7 @@ class SimplePointMassEnv:
         # 动力学增益（简化）
         self._heading_rate_per_roll = 1.5  # roll=1rad 时的航向变化率增益
         self._pitch_rate_per_nz = 0.3      # nz=1g 时的俯仰变化率增益
+        self._nz_trim = float(config.get("nz_trim", 1.0))
         self._accel_per_throttle = 20.0    # throttle=1 时的加速度 m/s^2
 
         # 目标机运动模式
@@ -194,7 +195,7 @@ class SimplePointMassEnv:
         s["roll_rad"] = roll
 
         # 2. 更新俯仰（nz 近似引起俯仰变化）
-        pitch = s.get("pitch_rad", 0.0) + self._pitch_rate_per_nz * nz_cmd * dt
+        pitch = s.get("pitch_rad", 0.0) + self._pitch_rate_per_nz * (nz_cmd - self._nz_trim) * dt
         pitch = np.clip(pitch, -self.max_pitch, self.max_pitch)
         s["pitch_rad"] = pitch
 
@@ -246,15 +247,14 @@ class SimplePointMassEnv:
         # sinusoidal_weaving / bang_bang / barrel_roll 等）
         self._target_dynamics.update_state(s, dt, self.time)
 
-    @staticmethod
-    def _apply_point_mass_dynamics(state: dict, command: dict, dt: float):
+    def _apply_point_mass_dynamics(self, state: dict, command: dict, dt: float):
         """对 state 应用简化质点动力学更新。"""
         nz_cmd = float(command.get("nz_cmd", 1.0))
         roll_rate_cmd = float(command.get("roll_rate_cmd", 0.0))
         throttle_cmd = float(command.get("throttle_cmd", 0.5))
 
         roll = state.get("roll_rad", 0.0) + roll_rate_cmd * dt
-        pitch = state.get("pitch_rad", 0.0) + 0.3 * nz_cmd * dt
+        pitch = state.get("pitch_rad", 0.0) + self._pitch_rate_per_nz * (nz_cmd - self._nz_trim) * dt
         yaw = state.get("yaw_rad", 0.0) + 1.5 * roll * dt
 
         vel = state.get("velocity_vector_mps", np.zeros(3))

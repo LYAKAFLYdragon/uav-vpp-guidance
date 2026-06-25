@@ -37,6 +37,8 @@ class CommandPostProcessor:
         limits = config.get("limits", {})
         params = config.get("post_process", {})
         guidance_params = config.get("params", {})
+        env_params = config.get("env", {})
+        reward_params = config.get("reward", {})
 
         # Saturation limits
         self.nz_min = float(limits.get("nz_min", -2.0))
@@ -66,6 +68,69 @@ class CommandPostProcessor:
         self.terminal_roll_scale = float(params.get("terminal_roll_scale", 0.8))
         self.base_nz = float(guidance_params.get("base_nz", params.get("base_nz", 1.0)))
 
+        # High-altitude protection
+        self.enable_high_altitude_protection = bool(
+            params.get("enable_high_altitude_protection", False)
+        )
+        default_high_alt_limit = self._finite_or_default(
+            reward_params.get("boundary_alt_max_m"),
+            self._finite_or_default(env_params.get("max_altitude_m"), 12000.0),
+        )
+        default_high_alt_start = max(
+            0.0,
+            default_high_alt_limit - float(params.get("high_altitude_band_m", 1500.0)),
+        )
+        self.high_altitude_start_m = float(
+            params.get("high_altitude_start_m", default_high_alt_start)
+        )
+        self.high_altitude_limit_m = float(
+            params.get("high_altitude_limit_m", default_high_alt_limit)
+        )
+        self.high_altitude_nz_at_limit = float(
+            params.get("high_altitude_nz_at_limit", self.base_nz)
+        )
+        self.high_altitude_roll_scale = float(
+            params.get("high_altitude_roll_scale", 0.5)
+        )
+        self.high_altitude_pitch_ref_rad = math.radians(
+            float(
+                params.get(
+                    "high_altitude_pitch_ref_deg",
+                    params.get("high_altitude_pitch_reference_deg", 5.0),
+                )
+            )
+        )
+        self.high_altitude_pitch_gain = float(
+            params.get("high_altitude_pitch_gain", 2.0)
+        )
+        self.safety_high_altitude_start_m = float(
+            params.get("safety_high_altitude_start_m", self.high_altitude_start_m)
+        )
+        self.safety_high_altitude_limit_m = float(
+            params.get("safety_high_altitude_limit_m", self.high_altitude_limit_m)
+        )
+        self.safety_high_altitude_nz_at_limit = float(
+            params.get("safety_high_altitude_nz_at_limit", self.high_altitude_nz_at_limit)
+        )
+        self.safety_high_altitude_roll_scale = float(
+            params.get("safety_high_altitude_roll_scale", self.high_altitude_roll_scale)
+        )
+        self.safety_high_altitude_pitch_ref_rad = math.radians(
+            float(
+                params.get(
+                    "safety_high_altitude_pitch_ref_deg",
+                    params.get(
+                        "safety_high_altitude_pitch_reference_deg",
+                        math.degrees(self.high_altitude_pitch_ref_rad),
+                    ),
+                )
+            )
+        )
+        self.safety_high_altitude_pitch_gain = float(
+            params.get("safety_high_altitude_pitch_gain", self.high_altitude_pitch_gain)
+        )
+        self._safety_mode = bool(params.get("start_in_safety_mode", False))
+
         # Lift compensation for coordinated turns
         self.enable_lift_compensation = bool(
             params.get("enable_lift_compensation", False)
@@ -90,6 +155,9 @@ class CommandPostProcessor:
     # ------------------------------------------------------------------
     # Public API
     # ------------------------------------------------------------------
+
+    def set_safety_mode(self, enabled: bool) -> None:
+        self._safety_mode = bool(enabled)
 
     def process(
         self,
@@ -128,6 +196,10 @@ class CommandPostProcessor:
             range_m = relative_state.get("range_m")
             if range_m is not None and np.isfinite(range_m):
                 nz, roll = self._apply_terminal_protection(nz, roll, float(range_m))
+
+        # High-altitude protection
+        if self.enable_high_altitude_protection and own_state is not None:
+            nz, roll = self._apply_high_altitude_protection(nz, roll, own_state)
 
         # Load-roll coordination
         if self.enable_load_roll_coord:
@@ -186,6 +258,39 @@ class CommandPostProcessor:
         # Roll still scales toward zero
         roll_factor = scale + (1.0 - scale) * self.terminal_roll_scale
         return nz, roll * roll_factor
+
+    def _apply_high_altitude_protection(
+        self,
+        nz: float,
+        roll: float,
+        own_state: Dict[str, Any],
+    ) -> tuple:
+        altitude_m = self._finite_or_default(own_state.get("altitude_m"), np.nan)
+        if not np.isfinite(altitude_m):
+            return nz, roll
+
+        params = self._active_high_altitude_params()
+        start_m = params["start_m"]
+        limit_m = params["limit_m"]
+        if limit_m <= start_m or altitude_m <= start_m:
+            return nz, roll
+
+        ratio = np.clip((altitude_m - start_m) / max(limit_m - start_m, self.epsilon), 0.0, 1.0)
+        pitch_rad = self._finite_or_default(own_state.get("pitch_rad"), 0.0)
+        pitch_ref_rad = params["pitch_ref_rad"]
+        if pitch_rad > pitch_ref_rad:
+            pitch_excess = pitch_rad - pitch_ref_rad
+            ratio = min(1.0, ratio * (1.0 + params["pitch_gain"] * pitch_excess))
+
+        target_nz = self.base_nz + ratio * (params["nz_at_limit"] - self.base_nz)
+        if pitch_rad <= pitch_ref_rad and target_nz < self.base_nz:
+            target_nz = self.base_nz
+        nz = min(nz, target_nz)
+
+        roll_scale = float(np.clip(params["roll_scale"], 0.0, 1.0))
+        roll_factor = 1.0 - ratio * (1.0 - roll_scale)
+        roll = roll * max(0.0, roll_factor)
+        return nz, roll
 
     def _apply_lift_compensation(
         self,
@@ -253,3 +358,30 @@ class CommandPostProcessor:
         speed_deficit = max(0.0, 250.0 - speed)
         delta = self.energy_k_nz * nz_demand + self.energy_k_speed * speed_deficit
         return float(np.clip(throttle + delta, self.throttle_min, self.throttle_max))
+
+    def _active_high_altitude_params(self) -> Dict[str, float]:
+        if self._safety_mode:
+            return {
+                "start_m": self.safety_high_altitude_start_m,
+                "limit_m": self.safety_high_altitude_limit_m,
+                "nz_at_limit": self.safety_high_altitude_nz_at_limit,
+                "roll_scale": self.safety_high_altitude_roll_scale,
+                "pitch_ref_rad": self.safety_high_altitude_pitch_ref_rad,
+                "pitch_gain": self.safety_high_altitude_pitch_gain,
+            }
+        return {
+            "start_m": self.high_altitude_start_m,
+            "limit_m": self.high_altitude_limit_m,
+            "nz_at_limit": self.high_altitude_nz_at_limit,
+            "roll_scale": self.high_altitude_roll_scale,
+            "pitch_ref_rad": self.high_altitude_pitch_ref_rad,
+            "pitch_gain": self.high_altitude_pitch_gain,
+        }
+
+    @staticmethod
+    def _finite_or_default(value: Any, default: float) -> float:
+        try:
+            out = float(value)
+        except (TypeError, ValueError):
+            return float(default)
+        return out if np.isfinite(out) else float(default)

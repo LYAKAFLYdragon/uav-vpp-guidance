@@ -328,3 +328,55 @@ def test_combined_terminal_and_coordination():
     assert abs(result["roll_rate_cmd"]) <= post.roll_rate_max
     # Both terminal protection and load-roll coord should reduce roll
     assert abs(result["roll_rate_cmd"]) < abs(cmd["roll_rate_cmd"])
+
+
+def test_high_altitude_protection_reduces_nz_below_trim_when_climbing_near_ceiling():
+    post = CommandPostProcessor(
+        {
+            "reward": {"boundary_alt_max_m": 12000.0},
+            "post_process": {
+                "enable_high_altitude_protection": True,
+                "high_altitude_start_m": 10000.0,
+                "high_altitude_limit_m": 12000.0,
+                "high_altitude_nz_at_limit": 0.4,
+                "high_altitude_roll_scale": 0.3,
+                "high_altitude_pitch_ref_deg": 5.0,
+            },
+        }
+    )
+    cmd = {"nz_cmd": 1.0, "roll_rate_cmd": 1.0, "throttle_cmd": 0.5}
+    own = {"altitude_m": 12000.0, "pitch_rad": math.radians(20.0)}
+
+    result = post.process(cmd, own_state=own)
+
+    assert result["nz_cmd"] < 1.0
+    assert abs(result["roll_rate_cmd"]) < abs(cmd["roll_rate_cmd"])
+
+
+def test_safety_mode_uses_stronger_high_altitude_protection():
+    post = CommandPostProcessor(
+        {
+            "reward": {"boundary_alt_max_m": 12000.0},
+            "post_process": {
+                "enable_high_altitude_protection": True,
+                "high_altitude_start_m": 10500.0,
+                "high_altitude_limit_m": 12000.0,
+                "high_altitude_nz_at_limit": 0.9,
+                "high_altitude_roll_scale": 0.8,
+                "high_altitude_pitch_ref_deg": 5.0,
+                "safety_high_altitude_start_m": 9500.0,
+                "safety_high_altitude_nz_at_limit": 0.5,
+                "safety_high_altitude_roll_scale": 0.25,
+                "safety_high_altitude_pitch_ref_deg": 2.0,
+            },
+        }
+    )
+    cmd = {"nz_cmd": 1.4, "roll_rate_cmd": 1.0, "throttle_cmd": 0.5}
+    own = {"altitude_m": 11000.0, "pitch_rad": math.radians(15.0)}
+
+    normal = post.process(cmd, own_state=own)
+    post.set_safety_mode(True)
+    protected = post.process(cmd, own_state=own)
+
+    assert protected["nz_cmd"] < normal["nz_cmd"]
+    assert abs(protected["roll_rate_cmd"]) < abs(normal["roll_rate_cmd"])

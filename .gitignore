@@ -48,3 +48,11 @@ logs/
 
 # External JSBSim flight dynamics data (copied from legacy project)
 envs/JSBSim/
+
+# Temporary cloud fix/upload helpers containing server credentials.
+scripts/_fix_*.py
+scripts/_put.py
+scripts/_sftp_put.py
+scripts/_update_config.py
+scripts/_upload_final.py
+scripts/CLOUD_TRAINING_COMMANDS.sh

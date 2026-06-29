@@ -16,7 +16,7 @@ P4 scope: JSBSim high-fidelity bridge with unified backend interface.
 import inspect
 import logging
 import numpy as np
-from typing import Any, Optional, Tuple
+from typing import Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +27,7 @@ def _wrap_angle(angle: float) -> float:
 
 from .jsbsim_env import JSBSimEnv, neu2lla
 from .simple_point_mass_env import SimplePointMassEnv
-from .attack_zone import CombatHPManager
+from .attack_zone import CombatHPManager, evaluate_attack_zone
 from .observation import compute_relative_geometry, build_observation
 from .opponent_policy import OpponentPolicy
 from .reward import RewardCalculator
@@ -35,6 +35,7 @@ from .termination import TerminationChecker
 from ..common.provenance import get_config_overrides
 from ..virtual_point.generator import VirtualPointGenerator
 from ..virtual_point.no_vpp_guidance import NoVPPGuidance
+from ..virtual_point.coordinate_transform import offset_to_world, world_to_offset_frame
 from ..guidance.los_rate_guidance import LOSRateGuidance
 from ..guidance.proportional_navigation import ProportionalNavigationGuidance
 from ..guidance.hybrid_guidance import HybridGuidance
@@ -61,6 +62,16 @@ from ..trajectory_prediction import (
     create_state_buffer_from_config,
 )
 from ..trajectory_prediction.prediction_error_tracker import PredictionErrorTracker
+
+
+VALID_ANCHOR_MODES = {
+    "current_target",
+    "constant_velocity",
+    "oracle_future_position",
+    "rule_based_pursuit",
+    "predicted_target",
+    "offensive_position",
+}
 
 
 class CloseRangeTrackingEnv:
@@ -90,6 +101,10 @@ class CloseRangeTrackingEnv:
         """
         self.config = config
         self.env_config = config.get("env", {})
+        raw_task_name = config.get("task", {}).get("name")
+        self.task_name = (
+            str(raw_task_name) if raw_task_name not in (None, "") else None
+        )
         self.opponent_policy = opponent_policy
         self.opponent_config = (
             dict(opponent_config)
@@ -176,6 +191,12 @@ class CloseRangeTrackingEnv:
         self._include_saturation_in_observation = bool(
             self.obs_config.get("include_saturation", False)
         )
+        self._include_opponent_stage_in_observation = bool(
+            self.obs_config.get("include_opponent_stage", False)
+        )
+        self._include_task_type_in_observation = bool(
+            self.obs_config.get("include_task_type", False)
+        )
         # Last virtual point for guidance-state features (e.g. VP tracking error)
         self._last_virtual_point: Optional[dict] = None
         # Last command saturation flags for observation
@@ -184,6 +205,26 @@ class CloseRangeTrackingEnv:
             "roll_rate_saturated": 0.0,
             "throttle_saturated": 0.0,
         }
+        self._merge_min_range_so_far_m = float("inf")
+        self._merge_seen_close_range = False
+        self._close_range_anchor_ready = False
+        self._first_pass_complete = False
+        self._first_pass_completion_step = None
+        self._post_merge_anchor_mode_released = False
+        self._post_merge_anchor_mode_has_activated = False
+        self._post_merge_anchor_mode_ego_only_streak_steps = 0
+        self._post_merge_anchor_mode_lateral_world_offset_latched = None
+        self._post_merge_anchor_mode_lateral_world_offset_latch_activation_range_m = (
+            None
+        )
+        self._post_merge_predicted_target_blend_released = False
+        self._post_merge_offensive_anchor_blend_released = False
+        self._post_merge_offensive_anchor_blend_release_step = None
+        self._post_merge_offensive_anchor_blend_has_activated = False
+        self._post_merge_offensive_anchor_blend_ego_only_streak_steps = 0
+        self._post_merge_offensive_anchor_lateral_world_offset_latched = None
+        self._post_merge_predicted_target_forward_scale_released = False
+        self._post_merge_predicted_target_forward_scale_ego_only_streak_steps = 0
 
         # Submodules
         vp_config = config.get(
@@ -191,6 +232,954 @@ class CloseRangeTrackingEnv:
         )
         vp_enabled = vp_config.get("enabled", True)
         e2e_enabled = config.get("end_to_end", {}).get("enabled", False)
+        self._default_post_merge_anchor_mode = self._validate_anchor_mode_optional(
+            vp_config.get("post_merge_anchor_mode"),
+            "virtual_point.post_merge_anchor_mode",
+        )
+        self._post_merge_anchor_mode_by_task = (
+            self._normalize_optional_anchor_mode_by_task(
+                vp_config.get("post_merge_anchor_mode_by_task", {}),
+                "virtual_point.post_merge_anchor_mode_by_task",
+            )
+        )
+        self._default_post_merge_anchor_mode_requires_geometry_disadvantage = (
+            self._validate_bool(
+                vp_config.get(
+                    "post_merge_anchor_mode_requires_geometry_disadvantage",
+                    False,
+                ),
+                (
+                    "virtual_point."
+                    "post_merge_anchor_mode_requires_geometry_disadvantage"
+                ),
+            )
+        )
+        self._post_merge_anchor_mode_requires_geometry_disadvantage_by_task = (
+            self._normalize_bool_by_task(
+                vp_config.get(
+                    "post_merge_anchor_mode_requires_geometry_disadvantage_by_task",
+                    {},
+                ),
+                (
+                    "virtual_point."
+                    "post_merge_anchor_mode_requires_geometry_disadvantage_by_task"
+                ),
+            )
+        )
+        self._default_post_merge_anchor_mode_recovery_below_altitude_m = (
+            self._validate_nonnegative_float_optional(
+                vp_config.get("post_merge_anchor_mode_recovery_below_altitude_m"),
+                "virtual_point.post_merge_anchor_mode_recovery_below_altitude_m",
+            )
+        )
+        self._post_merge_anchor_mode_recovery_below_altitude_m_by_task = (
+            self._normalize_optional_nonnegative_float_by_task(
+                vp_config.get(
+                    "post_merge_anchor_mode_recovery_below_altitude_m_by_task",
+                    {},
+                ),
+                "virtual_point.post_merge_anchor_mode_recovery_below_altitude_m_by_task",
+            )
+        )
+        self._default_post_merge_anchor_mode_release_ego_only_streak_steps = (
+            self._validate_nonnegative_int_optional(
+                vp_config.get("post_merge_anchor_mode_release_ego_only_streak_steps"),
+                (
+                    "virtual_point."
+                    "post_merge_anchor_mode_release_ego_only_streak_steps"
+                ),
+            )
+        )
+        self._post_merge_anchor_mode_release_ego_only_streak_steps_by_task = (
+            self._normalize_optional_nonnegative_int_by_task(
+                vp_config.get(
+                    "post_merge_anchor_mode_release_ego_only_streak_steps_by_task",
+                    {},
+                ),
+                (
+                    "virtual_point."
+                    "post_merge_anchor_mode_release_ego_only_streak_steps_by_task"
+                ),
+            )
+        )
+        self._default_post_merge_anchor_mode_release_reset_on_streak_break = (
+            self._validate_bool(
+                vp_config.get(
+                    "post_merge_anchor_mode_release_reset_on_streak_break",
+                    False,
+                ),
+                (
+                    "virtual_point."
+                    "post_merge_anchor_mode_release_reset_on_streak_break"
+                ),
+            )
+        )
+        self._post_merge_anchor_mode_release_reset_on_streak_break_by_task = (
+            self._normalize_bool_by_task(
+                vp_config.get(
+                    "post_merge_anchor_mode_release_reset_on_streak_break_by_task",
+                    {},
+                ),
+                (
+                    "virtual_point."
+                    "post_merge_anchor_mode_release_reset_on_streak_break_by_task"
+                ),
+            )
+        )
+        self._default_post_merge_anchor_mode_longitudinal_scale = (
+            self._validate_nonnegative_float_optional(
+                vp_config.get("post_merge_anchor_mode_longitudinal_scale"),
+                "virtual_point.post_merge_anchor_mode_longitudinal_scale",
+            )
+        )
+        self._post_merge_anchor_mode_longitudinal_scale_by_task = (
+            self._normalize_optional_nonnegative_float_by_task(
+                vp_config.get(
+                    "post_merge_anchor_mode_longitudinal_scale_by_task",
+                    {},
+                ),
+                "virtual_point.post_merge_anchor_mode_longitudinal_scale_by_task",
+            )
+        )
+        self._default_post_merge_anchor_mode_lateral_scale = (
+            self._validate_nonnegative_float_optional(
+                vp_config.get("post_merge_anchor_mode_lateral_scale"),
+                "virtual_point.post_merge_anchor_mode_lateral_scale",
+            )
+        )
+        self._post_merge_anchor_mode_lateral_scale_by_task = (
+            self._normalize_optional_nonnegative_float_by_task(
+                vp_config.get(
+                    "post_merge_anchor_mode_lateral_scale_by_task",
+                    {},
+                ),
+                "virtual_point.post_merge_anchor_mode_lateral_scale_by_task",
+            )
+        )
+        self._default_post_merge_anchor_mode_offensive_anchor_blend = (
+            self._validate_unit_interval_optional(
+                vp_config.get("post_merge_anchor_mode_offensive_anchor_blend"),
+                "virtual_point.post_merge_anchor_mode_offensive_anchor_blend",
+            )
+        )
+        self._post_merge_anchor_mode_offensive_anchor_blend_by_task = (
+            self._normalize_optional_unit_interval_by_task(
+                vp_config.get(
+                    "post_merge_anchor_mode_offensive_anchor_blend_by_task",
+                    {},
+                ),
+                "virtual_point.post_merge_anchor_mode_offensive_anchor_blend_by_task",
+            )
+        )
+        self._default_post_merge_anchor_mode_offensive_anchor_longitudinal_blend = (
+            self._validate_unit_interval_optional(
+                vp_config.get(
+                    "post_merge_anchor_mode_offensive_anchor_longitudinal_blend"
+                ),
+                (
+                    "virtual_point."
+                    "post_merge_anchor_mode_offensive_anchor_longitudinal_blend"
+                ),
+            )
+        )
+        self._post_merge_anchor_mode_offensive_anchor_longitudinal_blend_by_task = (
+            self._normalize_optional_unit_interval_by_task(
+                vp_config.get(
+                    "post_merge_anchor_mode_offensive_anchor_longitudinal_blend_by_task",
+                    {},
+                ),
+                (
+                    "virtual_point."
+                    "post_merge_anchor_mode_offensive_anchor_longitudinal_blend_by_task"
+                ),
+            )
+        )
+        self._default_post_merge_anchor_mode_offensive_anchor_lateral_blend = (
+            self._validate_unit_interval_optional(
+                vp_config.get(
+                    "post_merge_anchor_mode_offensive_anchor_lateral_blend"
+                ),
+                (
+                    "virtual_point."
+                    "post_merge_anchor_mode_offensive_anchor_lateral_blend"
+                ),
+            )
+        )
+        self._post_merge_anchor_mode_offensive_anchor_lateral_blend_by_task = (
+            self._normalize_optional_unit_interval_by_task(
+                vp_config.get(
+                    "post_merge_anchor_mode_offensive_anchor_lateral_blend_by_task",
+                    {},
+                ),
+                (
+                    "virtual_point."
+                    "post_merge_anchor_mode_offensive_anchor_lateral_blend_by_task"
+                ),
+            )
+        )
+        self._default_post_merge_anchor_mode_lateral_world_offset_latch_on_activation = (
+            self._validate_bool(
+                vp_config.get(
+                    "post_merge_anchor_mode_lateral_world_offset_latch_on_activation",
+                    False,
+                ),
+                (
+                    "virtual_point."
+                    "post_merge_anchor_mode_lateral_world_offset_latch_on_activation"
+                ),
+            )
+        )
+        self._post_merge_anchor_mode_lateral_world_offset_latch_on_activation_by_task = (
+            self._normalize_bool_by_task(
+                vp_config.get(
+                    (
+                        "post_merge_anchor_mode_lateral_world_offset_latch_on_activation_by_task"
+                    ),
+                    {},
+                ),
+                (
+                    "virtual_point."
+                    "post_merge_anchor_mode_lateral_world_offset_latch_on_activation_by_task"
+                ),
+            )
+        )
+        self._default_post_merge_anchor_mode_lateral_world_offset_latch_activation_range_m_min = (
+            self._validate_nonnegative_float_optional(
+                vp_config.get(
+                    "post_merge_anchor_mode_lateral_world_offset_latch_activation_range_m_min"
+                ),
+                (
+                    "virtual_point."
+                    "post_merge_anchor_mode_lateral_world_offset_latch_activation_range_m_min"
+                ),
+            )
+        )
+        self._post_merge_anchor_mode_lateral_world_offset_latch_activation_range_m_min_by_task = (
+            self._normalize_optional_nonnegative_float_by_task(
+                vp_config.get(
+                    (
+                        "post_merge_anchor_mode_lateral_world_offset_latch_activation_range_m_min_by_task"
+                    ),
+                    {},
+                ),
+                (
+                    "virtual_point."
+                    "post_merge_anchor_mode_lateral_world_offset_latch_activation_range_m_min_by_task"
+                ),
+            )
+        )
+        self._default_close_range_anchor_mode = self._validate_anchor_mode_optional(
+            vp_config.get("close_range_anchor_mode"),
+            "virtual_point.close_range_anchor_mode",
+        )
+        self._close_range_anchor_mode_by_task = (
+            self._normalize_optional_anchor_mode_by_task(
+                vp_config.get("close_range_anchor_mode_by_task", {}),
+                "virtual_point.close_range_anchor_mode_by_task",
+            )
+        )
+        self._default_close_range_anchor_trigger_range_m = (
+            self._validate_nonnegative_float_optional(
+                vp_config.get("close_range_anchor_trigger_range_m"),
+                "virtual_point.close_range_anchor_trigger_range_m",
+            )
+        )
+        self._close_range_anchor_trigger_range_m_by_task = (
+            self._normalize_optional_nonnegative_float_by_task(
+                vp_config.get("close_range_anchor_trigger_range_m_by_task", {}),
+                "virtual_point.close_range_anchor_trigger_range_m_by_task",
+            )
+        )
+        self._default_close_range_anchor_alignment_angle_deg_max = (
+            self._validate_nonnegative_float_optional(
+                vp_config.get("close_range_anchor_alignment_angle_deg_max"),
+                "virtual_point.close_range_anchor_alignment_angle_deg_max",
+            )
+        )
+        self._close_range_anchor_alignment_angle_deg_max_by_task = (
+            self._normalize_optional_nonnegative_float_by_task(
+                vp_config.get(
+                    "close_range_anchor_alignment_angle_deg_max_by_task",
+                    {},
+                ),
+                "virtual_point.close_range_anchor_alignment_angle_deg_max_by_task",
+            )
+        )
+        self._default_close_range_anchor_release_on_post_merge = (
+            self._validate_bool(
+                vp_config.get("close_range_anchor_release_on_post_merge", False),
+                "virtual_point.close_range_anchor_release_on_post_merge",
+            )
+        )
+        self._close_range_anchor_release_on_post_merge_by_task = (
+            self._normalize_bool_by_task(
+                vp_config.get("close_range_anchor_release_on_post_merge_by_task", {}),
+                "virtual_point.close_range_anchor_release_on_post_merge_by_task",
+            )
+        )
+        self._default_close_range_anchor_requires_first_pass = self._validate_bool(
+            vp_config.get("close_range_anchor_requires_first_pass", False),
+            "virtual_point.close_range_anchor_requires_first_pass",
+        )
+        self._close_range_anchor_requires_first_pass_by_task = (
+            self._normalize_bool_by_task(
+                vp_config.get("close_range_anchor_requires_first_pass_by_task", {}),
+                "virtual_point.close_range_anchor_requires_first_pass_by_task",
+            )
+        )
+        self._default_close_range_anchor_offensive_anchor_blend = (
+            self._validate_unit_interval_optional(
+                vp_config.get("close_range_anchor_offensive_anchor_blend"),
+                "virtual_point.close_range_anchor_offensive_anchor_blend",
+            )
+        )
+        self._close_range_anchor_offensive_anchor_blend_by_task = (
+            self._normalize_optional_unit_interval_by_task(
+                vp_config.get(
+                    "close_range_anchor_offensive_anchor_blend_by_task",
+                    {},
+                ),
+                "virtual_point.close_range_anchor_offensive_anchor_blend_by_task",
+            )
+        )
+        self._default_close_range_anchor_release_alignment_angle_deg_max = (
+            self._validate_nonnegative_float_optional(
+                vp_config.get("close_range_anchor_release_alignment_angle_deg_max"),
+                "virtual_point.close_range_anchor_release_alignment_angle_deg_max",
+            )
+        )
+        self._close_range_anchor_release_alignment_angle_deg_max_by_task = (
+            self._normalize_optional_nonnegative_float_by_task(
+                vp_config.get(
+                    "close_range_anchor_release_alignment_angle_deg_max_by_task",
+                    {},
+                ),
+                "virtual_point.close_range_anchor_release_alignment_angle_deg_max_by_task",
+            )
+        )
+        self._default_post_merge_predicted_target_blend = (
+            self._validate_unit_interval_optional(
+                vp_config.get("post_merge_predicted_target_blend"),
+                "virtual_point.post_merge_predicted_target_blend",
+            )
+        )
+        self._post_merge_predicted_target_blend_by_task = (
+            self._normalize_optional_unit_interval_by_task(
+                vp_config.get("post_merge_predicted_target_blend_by_task", {}),
+                "virtual_point.post_merge_predicted_target_blend_by_task",
+            )
+        )
+        self._default_post_merge_offensive_anchor_blend = (
+            self._validate_unit_interval_optional(
+                vp_config.get("post_merge_offensive_anchor_blend"),
+                "virtual_point.post_merge_offensive_anchor_blend",
+            )
+        )
+        self._post_merge_offensive_anchor_blend_by_task = (
+            self._normalize_optional_unit_interval_by_task(
+                vp_config.get("post_merge_offensive_anchor_blend_by_task", {}),
+                "virtual_point.post_merge_offensive_anchor_blend_by_task",
+            )
+        )
+        self._default_post_merge_offensive_anchor_longitudinal_scale = (
+            self._validate_nonnegative_float_optional(
+                vp_config.get("post_merge_offensive_anchor_longitudinal_scale"),
+                "virtual_point.post_merge_offensive_anchor_longitudinal_scale",
+            )
+        )
+        self._post_merge_offensive_anchor_longitudinal_scale_by_task = (
+            self._normalize_optional_nonnegative_float_by_task(
+                vp_config.get(
+                    "post_merge_offensive_anchor_longitudinal_scale_by_task",
+                    {},
+                ),
+                (
+                    "virtual_point."
+                    "post_merge_offensive_anchor_longitudinal_scale_by_task"
+                ),
+            )
+        )
+        self._default_post_merge_offensive_anchor_lateral_scale = (
+            self._validate_nonnegative_float_optional(
+                vp_config.get("post_merge_offensive_anchor_lateral_scale"),
+                "virtual_point.post_merge_offensive_anchor_lateral_scale",
+            )
+        )
+        self._post_merge_offensive_anchor_lateral_scale_by_task = (
+            self._normalize_optional_nonnegative_float_by_task(
+                vp_config.get(
+                    "post_merge_offensive_anchor_lateral_scale_by_task",
+                    {},
+                ),
+                (
+                    "virtual_point."
+                    "post_merge_offensive_anchor_lateral_scale_by_task"
+                ),
+            )
+        )
+        self._default_post_merge_offensive_anchor_blend_requires_geometry_disadvantage = (
+            self._validate_bool(
+                vp_config.get(
+                    "post_merge_offensive_anchor_blend_requires_geometry_disadvantage",
+                    False,
+                ),
+                (
+                    "virtual_point."
+                    "post_merge_offensive_anchor_blend_requires_geometry_disadvantage"
+                ),
+            )
+        )
+        self._post_merge_offensive_anchor_blend_requires_geometry_disadvantage_by_task = (
+            self._normalize_bool_by_task(
+                vp_config.get(
+                    "post_merge_offensive_anchor_blend_requires_geometry_disadvantage_by_task",
+                    {},
+                ),
+                (
+                    "virtual_point."
+                    "post_merge_offensive_anchor_blend_requires_geometry_disadvantage_by_task"
+                ),
+            )
+        )
+        self._default_post_merge_offensive_anchor_geometry_disadvantage_aa_deg_min = (
+            self._validate_nonnegative_float_optional(
+                vp_config.get(
+                    "post_merge_offensive_anchor_geometry_disadvantage_aa_deg_min"
+                ),
+                (
+                    "virtual_point."
+                    "post_merge_offensive_anchor_geometry_disadvantage_aa_deg_min"
+                ),
+            )
+        )
+        self._post_merge_offensive_anchor_geometry_disadvantage_aa_deg_min_by_task = (
+            self._normalize_optional_nonnegative_float_by_task(
+                vp_config.get(
+                    "post_merge_offensive_anchor_geometry_disadvantage_aa_deg_min_by_task",
+                    {},
+                ),
+                (
+                    "virtual_point."
+                    "post_merge_offensive_anchor_geometry_disadvantage_aa_deg_min_by_task"
+                ),
+            )
+        )
+        self._default_post_merge_offensive_anchor_blend_release_blend = (
+            self._validate_unit_interval_optional(
+                vp_config.get("post_merge_offensive_anchor_blend_release_blend"),
+                "virtual_point.post_merge_offensive_anchor_blend_release_blend",
+            )
+        )
+        self._post_merge_offensive_anchor_blend_release_blend_by_task = (
+            self._normalize_optional_unit_interval_by_task(
+                vp_config.get(
+                    "post_merge_offensive_anchor_blend_release_blend_by_task", {}
+                ),
+                "virtual_point.post_merge_offensive_anchor_blend_release_blend_by_task",
+            )
+        )
+        self._default_post_merge_offensive_anchor_blend_release_ego_only_streak_steps = (
+            self._validate_nonnegative_int_optional(
+                vp_config.get(
+                    "post_merge_offensive_anchor_blend_release_ego_only_streak_steps"
+                ),
+                (
+                    "virtual_point."
+                    "post_merge_offensive_anchor_blend_release_ego_only_streak_steps"
+                ),
+            )
+        )
+        self._post_merge_offensive_anchor_blend_release_ego_only_streak_steps_by_task = (
+            self._normalize_optional_nonnegative_int_by_task(
+                vp_config.get(
+                    "post_merge_offensive_anchor_blend_release_ego_only_streak_steps_by_task",
+                    {},
+                ),
+                (
+                    "virtual_point."
+                    "post_merge_offensive_anchor_blend_release_ego_only_streak_steps_by_task"
+                ),
+            )
+        )
+        self._default_post_merge_offensive_anchor_blend_release_reset_on_streak_break = (
+            self._validate_bool(
+                vp_config.get(
+                    "post_merge_offensive_anchor_blend_release_reset_on_streak_break",
+                    False,
+                ),
+                (
+                    "virtual_point."
+                    "post_merge_offensive_anchor_blend_release_reset_on_streak_break"
+                ),
+            )
+        )
+        self._post_merge_offensive_anchor_blend_release_reset_on_streak_break_by_task = (
+            self._normalize_bool_by_task(
+                vp_config.get(
+                    "post_merge_offensive_anchor_blend_release_reset_on_streak_break_by_task",
+                    {},
+                ),
+                (
+                    "virtual_point."
+                    "post_merge_offensive_anchor_blend_release_reset_on_streak_break_by_task"
+                ),
+            )
+        )
+        self._default_post_merge_offensive_anchor_blend_release_direct_track_below_altitude_m = (
+            self._validate_nonnegative_float_optional(
+                vp_config.get(
+                    "post_merge_offensive_anchor_blend_release_direct_track_below_altitude_m"
+                ),
+                (
+                    "virtual_point."
+                    "post_merge_offensive_anchor_blend_release_direct_track_below_altitude_m"
+                ),
+            )
+        )
+        self._post_merge_offensive_anchor_blend_release_direct_track_below_altitude_m_by_task = (
+            self._normalize_optional_nonnegative_float_by_task(
+                vp_config.get(
+                    "post_merge_offensive_anchor_blend_release_direct_track_below_altitude_m_by_task",
+                    {},
+                ),
+                (
+                    "virtual_point."
+                    "post_merge_offensive_anchor_blend_release_direct_track_below_altitude_m_by_task"
+                ),
+            )
+        )
+        self._default_post_merge_offensive_anchor_blend_release_recovery_below_altitude_m = (
+            self._validate_nonnegative_float_optional(
+                vp_config.get(
+                    "post_merge_offensive_anchor_blend_release_recovery_below_altitude_m"
+                ),
+                (
+                    "virtual_point."
+                    "post_merge_offensive_anchor_blend_release_recovery_below_altitude_m"
+                ),
+            )
+        )
+        self._post_merge_offensive_anchor_blend_release_recovery_below_altitude_m_by_task = (
+            self._normalize_optional_nonnegative_float_by_task(
+                vp_config.get(
+                    "post_merge_offensive_anchor_blend_release_recovery_below_altitude_m_by_task",
+                    {},
+                ),
+                (
+                    "virtual_point."
+                    "post_merge_offensive_anchor_blend_release_recovery_below_altitude_m_by_task"
+                ),
+            )
+        )
+        self._default_post_merge_offensive_anchor_blend_release_recovery_longitudinal_blend = (
+            self._validate_unit_interval_optional(
+                vp_config.get(
+                    "post_merge_offensive_anchor_blend_release_recovery_longitudinal_blend"
+                ),
+                (
+                    "virtual_point."
+                    "post_merge_offensive_anchor_blend_release_recovery_longitudinal_blend"
+                ),
+            )
+        )
+        self._post_merge_offensive_anchor_blend_release_recovery_longitudinal_blend_by_task = (
+            self._normalize_optional_unit_interval_by_task(
+                vp_config.get(
+                    "post_merge_offensive_anchor_blend_release_recovery_longitudinal_blend_by_task",
+                    {},
+                ),
+                (
+                    "virtual_point."
+                    "post_merge_offensive_anchor_blend_release_recovery_longitudinal_blend_by_task"
+                ),
+            )
+        )
+        self._default_post_merge_offensive_anchor_blend_release_recovery_lateral_blend = (
+            self._validate_unit_interval_optional(
+                vp_config.get(
+                    "post_merge_offensive_anchor_blend_release_recovery_lateral_blend"
+                ),
+                (
+                    "virtual_point."
+                    "post_merge_offensive_anchor_blend_release_recovery_lateral_blend"
+                ),
+            )
+        )
+        self._post_merge_offensive_anchor_blend_release_recovery_lateral_blend_by_task = (
+            self._normalize_optional_unit_interval_by_task(
+                vp_config.get(
+                    "post_merge_offensive_anchor_blend_release_recovery_lateral_blend_by_task",
+                    {},
+                ),
+                (
+                    "virtual_point."
+                    "post_merge_offensive_anchor_blend_release_recovery_lateral_blend_by_task"
+                ),
+            )
+        )
+        self._default_post_merge_offensive_anchor_blend_release_recovery_forward_bias_m_max = (
+            self._validate_float_optional(
+                vp_config.get(
+                    "post_merge_offensive_anchor_blend_release_recovery_forward_bias_m_max"
+                ),
+                (
+                    "virtual_point."
+                    "post_merge_offensive_anchor_blend_release_recovery_forward_bias_m_max"
+                ),
+            )
+        )
+        self._post_merge_offensive_anchor_blend_release_recovery_forward_bias_m_max_by_task = (
+            self._normalize_optional_float_by_task(
+                vp_config.get(
+                    "post_merge_offensive_anchor_blend_release_recovery_forward_bias_m_max_by_task",
+                    {},
+                ),
+                (
+                    "virtual_point."
+                    "post_merge_offensive_anchor_blend_release_recovery_forward_bias_m_max_by_task"
+                ),
+            )
+        )
+        self._default_post_merge_offensive_anchor_blend_release_vp_forward_bias_m_min = (
+            self._validate_float_optional(
+                vp_config.get(
+                    "post_merge_offensive_anchor_blend_release_vp_forward_bias_m_min"
+                ),
+                (
+                    "virtual_point."
+                    "post_merge_offensive_anchor_blend_release_vp_forward_bias_m_min"
+                ),
+            )
+        )
+        self._post_merge_offensive_anchor_blend_release_vp_forward_bias_m_min_by_task = (
+            self._normalize_optional_float_by_task(
+                vp_config.get(
+                    "post_merge_offensive_anchor_blend_release_vp_forward_bias_m_min_by_task",
+                    {},
+                ),
+                (
+                    "virtual_point."
+                    "post_merge_offensive_anchor_blend_release_vp_forward_bias_m_min_by_task"
+                ),
+            )
+        )
+        self._default_post_merge_offensive_anchor_blend_release_vp_forward_bias_clamp_negative_lateral_below_altitude_m = (
+            self._validate_float_optional(
+                vp_config.get(
+                    "post_merge_offensive_anchor_blend_release_vp_forward_bias_clamp_negative_lateral_below_altitude_m"
+                ),
+                (
+                    "virtual_point."
+                    "post_merge_offensive_anchor_blend_release_"
+                    "vp_forward_bias_clamp_negative_lateral_below_altitude_m"
+                ),
+            )
+        )
+        self._post_merge_offensive_anchor_blend_release_vp_forward_bias_clamp_negative_lateral_below_altitude_m_by_task = (
+            self._normalize_optional_float_by_task(
+                vp_config.get(
+                    "post_merge_offensive_anchor_blend_release_vp_forward_bias_clamp_negative_lateral_below_altitude_m_by_task",
+                    {},
+                ),
+                (
+                    "virtual_point."
+                    "post_merge_offensive_anchor_blend_release_"
+                    "vp_forward_bias_clamp_negative_lateral_below_altitude_m_by_task"
+                ),
+            )
+        )
+        self._default_post_merge_offensive_anchor_lateral_world_offset_latch_on_activation = (
+            self._validate_bool(
+                vp_config.get(
+                    "post_merge_offensive_anchor_lateral_world_offset_latch_on_activation",
+                    False,
+                ),
+                (
+                    "virtual_point."
+                    "post_merge_offensive_anchor_lateral_world_offset_latch_on_activation"
+                ),
+            )
+        )
+        self._post_merge_offensive_anchor_lateral_world_offset_latch_on_activation_by_task = (
+            self._normalize_bool_by_task(
+                vp_config.get(
+                    "post_merge_offensive_anchor_lateral_world_offset_latch_on_activation_by_task",
+                    {},
+                ),
+                (
+                    "virtual_point."
+                    "post_merge_offensive_anchor_lateral_world_offset_latch_on_activation_by_task"
+                ),
+            )
+        )
+        self._default_post_merge_offensive_anchor_blend_release_lateral_only = (
+            self._validate_bool(
+                vp_config.get(
+                    "post_merge_offensive_anchor_blend_release_lateral_only",
+                    False,
+                ),
+                (
+                    "virtual_point."
+                    "post_merge_offensive_anchor_blend_release_lateral_only"
+                ),
+            )
+        )
+        self._post_merge_offensive_anchor_blend_release_lateral_only_by_task = (
+            self._normalize_bool_by_task(
+                vp_config.get(
+                    "post_merge_offensive_anchor_blend_release_lateral_only_by_task",
+                    {},
+                ),
+                (
+                    "virtual_point."
+                    "post_merge_offensive_anchor_blend_release_lateral_only_by_task"
+                ),
+            )
+        )
+        self._default_post_merge_offensive_anchor_blend_release_lateral_only_hold_steps = (
+            self._validate_nonnegative_int_optional(
+                vp_config.get(
+                    "post_merge_offensive_anchor_blend_release_lateral_only_hold_steps"
+                ),
+                (
+                    "virtual_point."
+                    "post_merge_offensive_anchor_blend_release_lateral_only_hold_steps"
+                ),
+            )
+        )
+        self._post_merge_offensive_anchor_blend_release_lateral_only_hold_steps_by_task = (
+            self._normalize_optional_nonnegative_int_by_task(
+                vp_config.get(
+                    "post_merge_offensive_anchor_blend_release_lateral_only_hold_steps_by_task",
+                    {},
+                ),
+                (
+                    "virtual_point."
+                    "post_merge_offensive_anchor_blend_release_lateral_only_hold_steps_by_task"
+                ),
+            )
+        )
+        self._default_post_merge_offensive_anchor_blend_release_direct_track_enabled = (
+            self._validate_bool(
+                vp_config.get(
+                    "post_merge_offensive_anchor_blend_release_direct_track_enabled",
+                    True,
+                ),
+                (
+                    "virtual_point."
+                    "post_merge_offensive_anchor_blend_release_direct_track_enabled"
+                ),
+            )
+        )
+        self._post_merge_offensive_anchor_blend_release_direct_track_enabled_by_task = (
+            self._normalize_bool_by_task(
+                vp_config.get(
+                    "post_merge_offensive_anchor_blend_release_direct_track_enabled_by_task",
+                    {},
+                ),
+                (
+                    "virtual_point."
+                    "post_merge_offensive_anchor_blend_release_direct_track_enabled_by_task"
+                ),
+            )
+        )
+        self._default_post_merge_predicted_target_forward_scale = (
+            self._validate_unit_interval_optional(
+                vp_config.get("post_merge_predicted_target_forward_scale"),
+                "virtual_point.post_merge_predicted_target_forward_scale",
+            )
+        )
+        self._post_merge_predicted_target_forward_scale_by_task = (
+            self._normalize_optional_unit_interval_by_task(
+                vp_config.get("post_merge_predicted_target_forward_scale_by_task", {}),
+                "virtual_point.post_merge_predicted_target_forward_scale_by_task",
+            )
+        )
+        self._default_post_merge_predicted_target_forward_scale_release_scale = (
+            self._validate_unit_interval_optional(
+                vp_config.get("post_merge_predicted_target_forward_scale_release_scale"),
+                (
+                    "virtual_point."
+                    "post_merge_predicted_target_forward_scale_release_scale"
+                ),
+            )
+        )
+        self._post_merge_predicted_target_forward_scale_release_scale_by_task = (
+            self._normalize_optional_unit_interval_by_task(
+                vp_config.get(
+                    "post_merge_predicted_target_forward_scale_release_scale_by_task",
+                    {},
+                ),
+                (
+                    "virtual_point."
+                    "post_merge_predicted_target_forward_scale_release_scale_by_task"
+                ),
+            )
+        )
+        self._default_post_merge_predicted_target_forward_scale_release_ego_only_streak_steps = (
+            self._validate_nonnegative_int_optional(
+                vp_config.get(
+                    "post_merge_predicted_target_forward_scale_release_ego_only_streak_steps"
+                ),
+                (
+                    "virtual_point."
+                    "post_merge_predicted_target_forward_scale_release_ego_only_streak_steps"
+                ),
+            )
+        )
+        self._post_merge_predicted_target_forward_scale_release_ego_only_streak_steps_by_task = (
+            self._normalize_optional_nonnegative_int_by_task(
+                vp_config.get(
+                    "post_merge_predicted_target_forward_scale_release_ego_only_streak_steps_by_task",
+                    {},
+                ),
+                (
+                    "virtual_point."
+                    "post_merge_predicted_target_forward_scale_release_ego_only_streak_steps_by_task"
+                ),
+            )
+        )
+        self._default_post_merge_predicted_target_forward_scale_release_reset_on_streak_break = (
+            self._validate_bool(
+                vp_config.get(
+                    "post_merge_predicted_target_forward_scale_release_reset_on_streak_break",
+                    False,
+                ),
+                (
+                    "virtual_point."
+                    "post_merge_predicted_target_forward_scale_release_reset_on_streak_break"
+                ),
+            )
+        )
+        self._post_merge_predicted_target_forward_scale_release_reset_on_streak_break_by_task = (
+            self._normalize_bool_by_task(
+                vp_config.get(
+                    "post_merge_predicted_target_forward_scale_release_reset_on_streak_break_by_task",
+                    {},
+                ),
+                (
+                    "virtual_point."
+                    "post_merge_predicted_target_forward_scale_release_reset_on_streak_break_by_task"
+                ),
+            )
+        )
+        self._default_post_merge_predicted_target_forward_scale_hold_steps = (
+            self._validate_nonnegative_int_optional(
+                vp_config.get("post_merge_predicted_target_forward_scale_hold_steps"),
+                "virtual_point.post_merge_predicted_target_forward_scale_hold_steps",
+            )
+        )
+        self._post_merge_predicted_target_forward_scale_hold_steps_by_task = (
+            self._normalize_optional_nonnegative_int_by_task(
+                vp_config.get(
+                    "post_merge_predicted_target_forward_scale_hold_steps_by_task",
+                    {},
+                ),
+                "virtual_point.post_merge_predicted_target_forward_scale_hold_steps_by_task",
+            )
+        )
+        self._default_post_merge_predicted_target_blend_release_on_attack_zone = (
+            self._validate_bool(
+                vp_config.get(
+                    "post_merge_predicted_target_blend_release_on_attack_zone",
+                    False,
+                ),
+                "virtual_point.post_merge_predicted_target_blend_release_on_attack_zone",
+            )
+        )
+        self._post_merge_predicted_target_blend_release_on_attack_zone_by_task = (
+            self._normalize_bool_by_task(
+                vp_config.get(
+                    "post_merge_predicted_target_blend_release_on_attack_zone_by_task",
+                    {},
+                ),
+                "virtual_point.post_merge_predicted_target_blend_release_on_attack_zone_by_task",
+            )
+        )
+        self._default_post_merge_predicted_target_blend_release_requires_target_attack_zone = (
+            self._validate_bool(
+                vp_config.get(
+                    "post_merge_predicted_target_blend_release_requires_target_attack_zone",
+                    False,
+                ),
+                (
+                    "virtual_point."
+                    "post_merge_predicted_target_blend_release_requires_target_attack_zone"
+                ),
+            )
+        )
+        self._post_merge_predicted_target_blend_release_requires_target_attack_zone_by_task = (
+            self._normalize_bool_by_task(
+                vp_config.get(
+                    "post_merge_predicted_target_blend_release_requires_target_attack_zone_by_task",
+                    {},
+                ),
+                (
+                    "virtual_point."
+                    "post_merge_predicted_target_blend_release_requires_target_attack_zone_by_task"
+                ),
+            )
+        )
+        self._default_post_merge_predicted_target_blend_release_below_altitude_m = (
+            self._validate_nonnegative_float_optional(
+                vp_config.get("post_merge_predicted_target_blend_release_below_altitude_m"),
+                (
+                    "virtual_point."
+                    "post_merge_predicted_target_blend_release_below_altitude_m"
+                ),
+            )
+        )
+        self._post_merge_predicted_target_blend_release_below_altitude_m_by_task = (
+            self._normalize_optional_nonnegative_float_by_task(
+                vp_config.get(
+                    "post_merge_predicted_target_blend_release_below_altitude_m_by_task",
+                    {},
+                ),
+                (
+                    "virtual_point."
+                    "post_merge_predicted_target_blend_release_below_altitude_m_by_task"
+                ),
+            )
+        )
+        self._default_post_merge_predicted_target_blend_hold_steps = (
+            self._validate_nonnegative_int_optional(
+                vp_config.get("post_merge_predicted_target_blend_hold_steps"),
+                "virtual_point.post_merge_predicted_target_blend_hold_steps",
+            )
+        )
+        self._post_merge_predicted_target_blend_hold_steps_by_task = (
+            self._normalize_optional_nonnegative_int_by_task(
+                vp_config.get("post_merge_predicted_target_blend_hold_steps_by_task", {}),
+                "virtual_point.post_merge_predicted_target_blend_hold_steps_by_task",
+            )
+        )
+        self._default_post_merge_predicted_target_blend_release_blend = (
+            self._validate_unit_interval_optional(
+                vp_config.get("post_merge_predicted_target_blend_release_blend"),
+                "virtual_point.post_merge_predicted_target_blend_release_blend",
+            )
+        )
+        self._post_merge_predicted_target_blend_release_blend_by_task = (
+            self._normalize_optional_unit_interval_by_task(
+                vp_config.get(
+                    "post_merge_predicted_target_blend_release_blend_by_task",
+                    {},
+                ),
+                "virtual_point.post_merge_predicted_target_blend_release_blend_by_task",
+            )
+        )
+        self._default_close_range_anchor_post_merge_hold_steps = (
+            self._validate_nonnegative_int(
+                vp_config.get("close_range_anchor_post_merge_hold_steps", 0),
+                "virtual_point.close_range_anchor_post_merge_hold_steps",
+            )
+        )
+        self._close_range_anchor_post_merge_hold_steps_by_task = (
+            self._normalize_nonnegative_int_by_task(
+                vp_config.get("close_range_anchor_post_merge_hold_steps_by_task", {}),
+                "virtual_point.close_range_anchor_post_merge_hold_steps_by_task",
+            )
+        )
 
         if not vp_enabled and e2e_enabled:
             # End-to-end mode: policy outputs direct control commands
@@ -206,7 +1195,10 @@ class CloseRangeTrackingEnv:
             else:
                 # Normal VPP mode
                 self._use_virtual_point = True
-                self.virtual_point_generator = VirtualPointGenerator(vp_config)
+                self.virtual_point_generator = VirtualPointGenerator(
+                    vp_config,
+                    task_name=self.task_name,
+                )
         else:
             # vp_enabled=False without e2e_enabled is an invalid configuration
             raise ValueError(
@@ -218,7 +1210,6 @@ class CloseRangeTrackingEnv:
 
         # Guidance law selection based on mode
         guidance_config = config.get("guidance", {})
-        guidance_mode = str(guidance_config.get("mode", "los_rate")).lower()
         self.guidance = self._build_guidance_law(guidance_config)
         self._target_guidance = self._build_guidance_law(guidance_config)
 
@@ -321,6 +1312,14 @@ class CloseRangeTrackingEnv:
             "roll_rate_saturated": 0.0,
             "throttle_saturated": 0.0,
         }
+        self._merge_min_range_so_far_m = float("inf")
+        self._merge_seen_close_range = False
+        self._close_range_anchor_ready = False
+        self._first_pass_complete = False
+        self._first_pass_completion_step = None
+        self._post_merge_predicted_target_blend_released = False
+        self._post_merge_predicted_target_forward_scale_released = False
+        self._post_merge_predicted_target_forward_scale_ego_only_streak_steps = 0
 
     # ------------------------------------------------------------------
     # Low-level controller factory
@@ -422,6 +1421,849 @@ class CloseRangeTrackingEnv:
         """Subclasses may override reward / done / info after the step."""
         return reward, terminated, truncated, info
 
+    @staticmethod
+    def _validate_anchor_mode_optional(value, field_name):
+        if value in (None, "", "none"):
+            return None
+        mode = str(value)
+        if mode not in VALID_ANCHOR_MODES:
+            raise ValueError(
+                f"Unknown {field_name}={mode!r}; expected one of "
+                f"{sorted(VALID_ANCHOR_MODES)} or None"
+            )
+        return mode
+
+    def _normalize_optional_anchor_mode_by_task(self, mapping, field_name):
+        if mapping in (None, {}):
+            return {}
+        if not isinstance(mapping, dict):
+            raise ValueError(
+                f"{field_name} must be a mapping of task_name -> anchor_mode"
+            )
+        normalized = {}
+        for key, value in mapping.items():
+            task_key = str(key)
+            normalized[task_key] = self._validate_anchor_mode_optional(
+                value,
+                f"{field_name}[{task_key!r}]",
+            )
+        return normalized
+
+    @staticmethod
+    def _validate_nonnegative_float_optional(value, field_name):
+        if value is None:
+            return None
+        numeric_value = float(value)
+        if not np.isfinite(numeric_value) or numeric_value < 0.0:
+            raise ValueError(
+                f"Invalid {field_name}={value!r}; expected a finite value >= 0"
+            )
+        return numeric_value
+
+    def _normalize_optional_nonnegative_float_by_task(self, mapping, field_name):
+        if mapping in (None, {}):
+            return {}
+        if not isinstance(mapping, dict):
+            raise ValueError(
+                f"{field_name} must be a mapping of task_name -> nonnegative float"
+            )
+        normalized = {}
+        for key, value in mapping.items():
+            task_key = str(key)
+            normalized[task_key] = self._validate_nonnegative_float_optional(
+                value,
+                f"{field_name}[{task_key!r}]",
+            )
+        return normalized
+
+    @staticmethod
+    def _validate_float_optional(value, field_name):
+        if value is None:
+            return None
+        numeric_value = float(value)
+        if not np.isfinite(numeric_value):
+            raise ValueError(
+                f"Invalid {field_name}={value!r}; expected a finite value"
+            )
+        return numeric_value
+
+    def _normalize_optional_float_by_task(self, mapping, field_name):
+        if mapping in (None, {}):
+            return {}
+        if not isinstance(mapping, dict):
+            raise ValueError(
+                f"{field_name} must be a mapping of task_name -> finite float"
+            )
+        normalized = {}
+        for key, value in mapping.items():
+            task_key = str(key)
+            normalized[task_key] = self._validate_float_optional(
+                value,
+                f"{field_name}[{task_key!r}]",
+            )
+        return normalized
+
+    @staticmethod
+    def _validate_unit_interval_optional(value, field_name):
+        if value is None:
+            return None
+        numeric_value = float(value)
+        if not np.isfinite(numeric_value) or numeric_value < 0.0 or numeric_value > 1.0:
+            raise ValueError(
+                f"Invalid {field_name}={value!r}; expected a finite value in [0, 1]"
+            )
+        return numeric_value
+
+    def _normalize_optional_unit_interval_by_task(self, mapping, field_name):
+        if mapping in (None, {}):
+            return {}
+        if not isinstance(mapping, dict):
+            raise ValueError(
+                f"{field_name} must be a mapping of task_name -> float in [0, 1]"
+            )
+        normalized = {}
+        for key, value in mapping.items():
+            task_key = str(key)
+            normalized[task_key] = self._validate_unit_interval_optional(
+                value,
+                f"{field_name}[{task_key!r}]",
+            )
+        return normalized
+
+    @staticmethod
+    def _validate_nonnegative_int(value, field_name):
+        numeric_value = int(value)
+        if float(value) != float(numeric_value) or numeric_value < 0:
+            raise ValueError(
+                f"Invalid {field_name}={value!r}; expected a nonnegative integer"
+            )
+        return numeric_value
+
+    @staticmethod
+    def _validate_nonnegative_int_optional(value, field_name):
+        if value is None:
+            return None
+        return CloseRangeTrackingEnv._validate_nonnegative_int(value, field_name)
+
+    def _normalize_optional_nonnegative_int_by_task(self, mapping, field_name):
+        if mapping in (None, {}):
+            return {}
+        if not isinstance(mapping, dict):
+            raise ValueError(
+                f"{field_name} must be a mapping of task_name -> nonnegative integer"
+            )
+        normalized = {}
+        for key, value in mapping.items():
+            task_key = str(key)
+            normalized[task_key] = self._validate_nonnegative_int_optional(
+                value,
+                f"{field_name}[{task_key!r}]",
+            )
+        return normalized
+
+    def _normalize_nonnegative_int_by_task(self, mapping, field_name):
+        if mapping in (None, {}):
+            return {}
+        if not isinstance(mapping, dict):
+            raise ValueError(
+                f"{field_name} must be a mapping of task_name -> nonnegative integer"
+            )
+        normalized = {}
+        for key, value in mapping.items():
+            task_key = str(key)
+            normalized[task_key] = self._validate_nonnegative_int(
+                value,
+                f"{field_name}[{task_key!r}]",
+            )
+        return normalized
+
+    @staticmethod
+    def _validate_bool(value, field_name):
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, str):
+            normalized = value.strip().lower()
+            if normalized in {"true", "1", "yes", "on"}:
+                return True
+            if normalized in {"false", "0", "no", "off"}:
+                return False
+        raise ValueError(f"Invalid {field_name}={value!r}; expected a boolean")
+
+    def _normalize_bool_by_task(self, mapping, field_name):
+        if mapping in (None, {}):
+            return {}
+        if not isinstance(mapping, dict):
+            raise ValueError(f"{field_name} must be a mapping of task_name -> bool")
+        normalized = {}
+        for key, value in mapping.items():
+            task_key = str(key)
+            normalized[task_key] = self._validate_bool(
+                value,
+                f"{field_name}[{task_key!r}]",
+            )
+        return normalized
+
+    def _resolve_post_merge_anchor_mode(self):
+        if self.task_name is None:
+            return self._default_post_merge_anchor_mode
+        return self._post_merge_anchor_mode_by_task.get(
+            self.task_name,
+            self._default_post_merge_anchor_mode,
+        )
+
+    def _resolve_post_merge_anchor_mode_requires_geometry_disadvantage(self):
+        if self.task_name is None:
+            return self._default_post_merge_anchor_mode_requires_geometry_disadvantage
+        return self._post_merge_anchor_mode_requires_geometry_disadvantage_by_task.get(
+            self.task_name,
+            self._default_post_merge_anchor_mode_requires_geometry_disadvantage,
+        )
+
+    def _resolve_post_merge_anchor_mode_release_ego_only_streak_steps(self):
+        if self.task_name is None:
+            return self._default_post_merge_anchor_mode_release_ego_only_streak_steps
+        return self._post_merge_anchor_mode_release_ego_only_streak_steps_by_task.get(
+            self.task_name,
+            self._default_post_merge_anchor_mode_release_ego_only_streak_steps,
+        )
+
+    def _resolve_post_merge_anchor_mode_recovery_below_altitude_m(self):
+        if self.task_name is None:
+            return self._default_post_merge_anchor_mode_recovery_below_altitude_m
+        return self._post_merge_anchor_mode_recovery_below_altitude_m_by_task.get(
+            self.task_name,
+            self._default_post_merge_anchor_mode_recovery_below_altitude_m,
+        )
+
+    def _resolve_post_merge_anchor_mode_release_reset_on_streak_break(self):
+        if self.task_name is None:
+            return self._default_post_merge_anchor_mode_release_reset_on_streak_break
+        return self._post_merge_anchor_mode_release_reset_on_streak_break_by_task.get(
+            self.task_name,
+            self._default_post_merge_anchor_mode_release_reset_on_streak_break,
+        )
+
+    def _resolve_post_merge_anchor_mode_longitudinal_scale(self):
+        if self.task_name is None:
+            return self._default_post_merge_anchor_mode_longitudinal_scale
+        return self._post_merge_anchor_mode_longitudinal_scale_by_task.get(
+            self.task_name,
+            self._default_post_merge_anchor_mode_longitudinal_scale,
+        )
+
+    def _resolve_post_merge_anchor_mode_lateral_scale(self):
+        if self.task_name is None:
+            return self._default_post_merge_anchor_mode_lateral_scale
+        return self._post_merge_anchor_mode_lateral_scale_by_task.get(
+            self.task_name,
+            self._default_post_merge_anchor_mode_lateral_scale,
+        )
+
+    def _resolve_post_merge_anchor_mode_offensive_anchor_blend(self):
+        if self.task_name is None:
+            return self._default_post_merge_anchor_mode_offensive_anchor_blend
+        return self._post_merge_anchor_mode_offensive_anchor_blend_by_task.get(
+            self.task_name,
+            self._default_post_merge_anchor_mode_offensive_anchor_blend,
+        )
+
+    def _resolve_post_merge_anchor_mode_offensive_anchor_longitudinal_blend(self):
+        if self.task_name is None:
+            return self._default_post_merge_anchor_mode_offensive_anchor_longitudinal_blend
+        return self._post_merge_anchor_mode_offensive_anchor_longitudinal_blend_by_task.get(
+            self.task_name,
+            self._default_post_merge_anchor_mode_offensive_anchor_longitudinal_blend,
+        )
+
+    def _resolve_post_merge_anchor_mode_offensive_anchor_lateral_blend(self):
+        if self.task_name is None:
+            return self._default_post_merge_anchor_mode_offensive_anchor_lateral_blend
+        return self._post_merge_anchor_mode_offensive_anchor_lateral_blend_by_task.get(
+            self.task_name,
+            self._default_post_merge_anchor_mode_offensive_anchor_lateral_blend,
+        )
+
+    def _resolve_post_merge_anchor_mode_lateral_world_offset_latch_on_activation(
+        self,
+    ):
+        if self.task_name is None:
+            return (
+                self._default_post_merge_anchor_mode_lateral_world_offset_latch_on_activation
+            )
+        return (
+            self._post_merge_anchor_mode_lateral_world_offset_latch_on_activation_by_task.get(
+                self.task_name,
+                self._default_post_merge_anchor_mode_lateral_world_offset_latch_on_activation,
+            )
+        )
+
+    def _resolve_post_merge_anchor_mode_lateral_world_offset_latch_activation_range_m_min(
+        self,
+    ):
+        if self.task_name is None:
+            return (
+                self._default_post_merge_anchor_mode_lateral_world_offset_latch_activation_range_m_min
+            )
+        return (
+            self._post_merge_anchor_mode_lateral_world_offset_latch_activation_range_m_min_by_task.get(
+                self.task_name,
+                self._default_post_merge_anchor_mode_lateral_world_offset_latch_activation_range_m_min,
+            )
+        )
+
+    def _resolve_close_range_anchor_mode(self):
+        if self.task_name is None:
+            return self._default_close_range_anchor_mode
+        return self._close_range_anchor_mode_by_task.get(
+            self.task_name,
+            self._default_close_range_anchor_mode,
+        )
+
+    def _resolve_close_range_anchor_trigger_range_m(self, default_range_m):
+        if self.task_name is None:
+            resolved_value = self._default_close_range_anchor_trigger_range_m
+        else:
+            resolved_value = self._close_range_anchor_trigger_range_m_by_task.get(
+                self.task_name,
+                self._default_close_range_anchor_trigger_range_m,
+            )
+        if resolved_value is None:
+            return float(default_range_m)
+        return float(resolved_value)
+
+    def _resolve_close_range_anchor_alignment_angle_deg_max(self):
+        if self.task_name is None:
+            return self._default_close_range_anchor_alignment_angle_deg_max
+        return self._close_range_anchor_alignment_angle_deg_max_by_task.get(
+            self.task_name,
+            self._default_close_range_anchor_alignment_angle_deg_max,
+        )
+
+    def _resolve_close_range_anchor_release_on_post_merge(self):
+        if self.task_name is None:
+            return self._default_close_range_anchor_release_on_post_merge
+        return self._close_range_anchor_release_on_post_merge_by_task.get(
+            self.task_name,
+            self._default_close_range_anchor_release_on_post_merge,
+        )
+
+    def _resolve_close_range_anchor_requires_first_pass(self):
+        if self.task_name is None:
+            return self._default_close_range_anchor_requires_first_pass
+        return self._close_range_anchor_requires_first_pass_by_task.get(
+            self.task_name,
+            self._default_close_range_anchor_requires_first_pass,
+        )
+
+    def _resolve_close_range_anchor_offensive_anchor_blend(self):
+        if self.task_name is None:
+            return self._default_close_range_anchor_offensive_anchor_blend
+        return self._close_range_anchor_offensive_anchor_blend_by_task.get(
+            self.task_name,
+            self._default_close_range_anchor_offensive_anchor_blend,
+        )
+
+    def _resolve_close_range_anchor_release_alignment_angle_deg_max(self):
+        if self.task_name is None:
+            return self._default_close_range_anchor_release_alignment_angle_deg_max
+        return self._close_range_anchor_release_alignment_angle_deg_max_by_task.get(
+            self.task_name,
+            self._default_close_range_anchor_release_alignment_angle_deg_max,
+        )
+
+    def _resolve_post_merge_predicted_target_blend(self):
+        if self.task_name is None:
+            return self._default_post_merge_predicted_target_blend
+        return self._post_merge_predicted_target_blend_by_task.get(
+            self.task_name,
+            self._default_post_merge_predicted_target_blend,
+        )
+
+    def _resolve_post_merge_offensive_anchor_blend(self):
+        if self.task_name is None:
+            return self._default_post_merge_offensive_anchor_blend
+        return self._post_merge_offensive_anchor_blend_by_task.get(
+            self.task_name,
+            self._default_post_merge_offensive_anchor_blend,
+        )
+
+    def _resolve_post_merge_offensive_anchor_longitudinal_scale(self):
+        if self.task_name is None:
+            return self._default_post_merge_offensive_anchor_longitudinal_scale
+        return self._post_merge_offensive_anchor_longitudinal_scale_by_task.get(
+            self.task_name,
+            self._default_post_merge_offensive_anchor_longitudinal_scale,
+        )
+
+    def _resolve_post_merge_offensive_anchor_lateral_scale(self):
+        if self.task_name is None:
+            return self._default_post_merge_offensive_anchor_lateral_scale
+        return self._post_merge_offensive_anchor_lateral_scale_by_task.get(
+            self.task_name,
+            self._default_post_merge_offensive_anchor_lateral_scale,
+        )
+
+    def _resolve_post_merge_offensive_anchor_blend_requires_geometry_disadvantage(
+        self,
+    ):
+        if self.task_name is None:
+            return (
+                self._default_post_merge_offensive_anchor_blend_requires_geometry_disadvantage
+            )
+        return self._post_merge_offensive_anchor_blend_requires_geometry_disadvantage_by_task.get(
+            self.task_name,
+            self._default_post_merge_offensive_anchor_blend_requires_geometry_disadvantage,
+        )
+
+    def _resolve_post_merge_offensive_anchor_geometry_disadvantage_aa_deg_min(
+        self,
+    ):
+        if self.task_name is None:
+            return (
+                self._default_post_merge_offensive_anchor_geometry_disadvantage_aa_deg_min
+            )
+        return self._post_merge_offensive_anchor_geometry_disadvantage_aa_deg_min_by_task.get(
+            self.task_name,
+            self._default_post_merge_offensive_anchor_geometry_disadvantage_aa_deg_min,
+        )
+
+    def _resolve_post_merge_offensive_anchor_blend_release_blend(self):
+        if self.task_name is None:
+            return self._default_post_merge_offensive_anchor_blend_release_blend
+        return self._post_merge_offensive_anchor_blend_release_blend_by_task.get(
+            self.task_name,
+            self._default_post_merge_offensive_anchor_blend_release_blend,
+        )
+
+    def _resolve_post_merge_offensive_anchor_blend_release_ego_only_streak_steps(
+        self,
+    ):
+        if self.task_name is None:
+            return (
+                self._default_post_merge_offensive_anchor_blend_release_ego_only_streak_steps
+            )
+        return self._post_merge_offensive_anchor_blend_release_ego_only_streak_steps_by_task.get(
+            self.task_name,
+            self._default_post_merge_offensive_anchor_blend_release_ego_only_streak_steps,
+        )
+
+    def _resolve_post_merge_offensive_anchor_blend_release_reset_on_streak_break(
+        self,
+    ):
+        if self.task_name is None:
+            return (
+                self._default_post_merge_offensive_anchor_blend_release_reset_on_streak_break
+            )
+        return self._post_merge_offensive_anchor_blend_release_reset_on_streak_break_by_task.get(
+            self.task_name,
+            self._default_post_merge_offensive_anchor_blend_release_reset_on_streak_break,
+        )
+
+    def _resolve_post_merge_offensive_anchor_blend_release_direct_track_below_altitude_m(
+        self,
+    ):
+        if self.task_name is None:
+            return (
+                self._default_post_merge_offensive_anchor_blend_release_direct_track_below_altitude_m
+            )
+        return self._post_merge_offensive_anchor_blend_release_direct_track_below_altitude_m_by_task.get(
+            self.task_name,
+            self._default_post_merge_offensive_anchor_blend_release_direct_track_below_altitude_m,
+        )
+
+    def _resolve_post_merge_offensive_anchor_blend_release_recovery_below_altitude_m(
+        self,
+    ):
+        if self.task_name is None:
+            return (
+                self._default_post_merge_offensive_anchor_blend_release_recovery_below_altitude_m
+            )
+        return self._post_merge_offensive_anchor_blend_release_recovery_below_altitude_m_by_task.get(
+            self.task_name,
+            self._default_post_merge_offensive_anchor_blend_release_recovery_below_altitude_m,
+        )
+
+    def _resolve_post_merge_offensive_anchor_blend_release_recovery_longitudinal_blend(
+        self,
+    ):
+        if self.task_name is None:
+            return (
+                self._default_post_merge_offensive_anchor_blend_release_recovery_longitudinal_blend
+            )
+        return self._post_merge_offensive_anchor_blend_release_recovery_longitudinal_blend_by_task.get(
+            self.task_name,
+            self._default_post_merge_offensive_anchor_blend_release_recovery_longitudinal_blend,
+        )
+
+    def _resolve_post_merge_offensive_anchor_blend_release_recovery_lateral_blend(
+        self,
+    ):
+        if self.task_name is None:
+            return (
+                self._default_post_merge_offensive_anchor_blend_release_recovery_lateral_blend
+            )
+        return self._post_merge_offensive_anchor_blend_release_recovery_lateral_blend_by_task.get(
+            self.task_name,
+            self._default_post_merge_offensive_anchor_blend_release_recovery_lateral_blend,
+        )
+
+    def _resolve_post_merge_offensive_anchor_blend_release_recovery_forward_bias_m_max(
+        self,
+    ):
+        if self.task_name is None:
+            return (
+                self._default_post_merge_offensive_anchor_blend_release_recovery_forward_bias_m_max
+            )
+        return self._post_merge_offensive_anchor_blend_release_recovery_forward_bias_m_max_by_task.get(
+            self.task_name,
+            self._default_post_merge_offensive_anchor_blend_release_recovery_forward_bias_m_max,
+        )
+
+    def _resolve_post_merge_offensive_anchor_blend_release_vp_forward_bias_m_min(
+        self,
+    ):
+        if self.task_name is None:
+            return (
+                self._default_post_merge_offensive_anchor_blend_release_vp_forward_bias_m_min
+            )
+        return self._post_merge_offensive_anchor_blend_release_vp_forward_bias_m_min_by_task.get(
+            self.task_name,
+            self._default_post_merge_offensive_anchor_blend_release_vp_forward_bias_m_min,
+        )
+
+    def _resolve_post_merge_offensive_anchor_blend_release_vp_forward_bias_clamp_negative_lateral_below_altitude_m(
+        self,
+    ):
+        if self.task_name is None:
+            return (
+                self._default_post_merge_offensive_anchor_blend_release_vp_forward_bias_clamp_negative_lateral_below_altitude_m
+            )
+        return self._post_merge_offensive_anchor_blend_release_vp_forward_bias_clamp_negative_lateral_below_altitude_m_by_task.get(
+            self.task_name,
+            self._default_post_merge_offensive_anchor_blend_release_vp_forward_bias_clamp_negative_lateral_below_altitude_m,
+        )
+
+    def _resolve_post_merge_offensive_anchor_lateral_world_offset_latch_on_activation(
+        self,
+    ):
+        if self.task_name is None:
+            return (
+                self._default_post_merge_offensive_anchor_lateral_world_offset_latch_on_activation
+            )
+        return (
+            self._post_merge_offensive_anchor_lateral_world_offset_latch_on_activation_by_task.get(
+                self.task_name,
+                self._default_post_merge_offensive_anchor_lateral_world_offset_latch_on_activation,
+            )
+        )
+
+    def _resolve_post_merge_offensive_anchor_blend_release_lateral_only(self):
+        if self.task_name is None:
+            return self._default_post_merge_offensive_anchor_blend_release_lateral_only
+        return self._post_merge_offensive_anchor_blend_release_lateral_only_by_task.get(
+            self.task_name,
+            self._default_post_merge_offensive_anchor_blend_release_lateral_only,
+        )
+
+    def _resolve_post_merge_offensive_anchor_blend_release_lateral_only_hold_steps(
+        self,
+    ):
+        if self.task_name is None:
+            return self._default_post_merge_offensive_anchor_blend_release_lateral_only_hold_steps
+        return self._post_merge_offensive_anchor_blend_release_lateral_only_hold_steps_by_task.get(
+            self.task_name,
+            self._default_post_merge_offensive_anchor_blend_release_lateral_only_hold_steps,
+        )
+
+    def _resolve_post_merge_offensive_anchor_blend_release_direct_track_enabled(self):
+        if self.task_name is None:
+            return self._default_post_merge_offensive_anchor_blend_release_direct_track_enabled
+        return self._post_merge_offensive_anchor_blend_release_direct_track_enabled_by_task.get(
+            self.task_name,
+            self._default_post_merge_offensive_anchor_blend_release_direct_track_enabled,
+        )
+
+    def _resolve_post_merge_predicted_target_forward_scale(self):
+        if self.task_name is None:
+            return self._default_post_merge_predicted_target_forward_scale
+        return self._post_merge_predicted_target_forward_scale_by_task.get(
+            self.task_name,
+            self._default_post_merge_predicted_target_forward_scale,
+        )
+
+    def _resolve_post_merge_predicted_target_forward_scale_release_scale(self):
+        if self.task_name is None:
+            return self._default_post_merge_predicted_target_forward_scale_release_scale
+        return self._post_merge_predicted_target_forward_scale_release_scale_by_task.get(
+            self.task_name,
+            self._default_post_merge_predicted_target_forward_scale_release_scale,
+        )
+
+    def _resolve_post_merge_predicted_target_forward_scale_release_ego_only_streak_steps(
+        self,
+    ):
+        if self.task_name is None:
+            return (
+                self._default_post_merge_predicted_target_forward_scale_release_ego_only_streak_steps
+            )
+        return self._post_merge_predicted_target_forward_scale_release_ego_only_streak_steps_by_task.get(
+            self.task_name,
+            self._default_post_merge_predicted_target_forward_scale_release_ego_only_streak_steps,
+        )
+
+    def _resolve_post_merge_predicted_target_forward_scale_hold_steps(self):
+        if self.task_name is None:
+            return self._default_post_merge_predicted_target_forward_scale_hold_steps
+        return self._post_merge_predicted_target_forward_scale_hold_steps_by_task.get(
+            self.task_name,
+            self._default_post_merge_predicted_target_forward_scale_hold_steps,
+        )
+
+    def _resolve_post_merge_predicted_target_forward_scale_release_reset_on_streak_break(
+        self,
+    ):
+        if self.task_name is None:
+            return (
+                self._default_post_merge_predicted_target_forward_scale_release_reset_on_streak_break
+            )
+        return self._post_merge_predicted_target_forward_scale_release_reset_on_streak_break_by_task.get(
+            self.task_name,
+            self._default_post_merge_predicted_target_forward_scale_release_reset_on_streak_break,
+        )
+
+    def _resolve_post_merge_predicted_target_blend_release_on_attack_zone(self):
+        if self.task_name is None:
+            return self._default_post_merge_predicted_target_blend_release_on_attack_zone
+        return self._post_merge_predicted_target_blend_release_on_attack_zone_by_task.get(
+            self.task_name,
+            self._default_post_merge_predicted_target_blend_release_on_attack_zone,
+        )
+
+    def _resolve_post_merge_predicted_target_blend_release_requires_target_attack_zone(
+        self,
+    ):
+        if self.task_name is None:
+            return (
+                self._default_post_merge_predicted_target_blend_release_requires_target_attack_zone
+            )
+        return self._post_merge_predicted_target_blend_release_requires_target_attack_zone_by_task.get(
+            self.task_name,
+            self._default_post_merge_predicted_target_blend_release_requires_target_attack_zone,
+        )
+
+    def _resolve_post_merge_predicted_target_blend_release_below_altitude_m(self):
+        if self.task_name is None:
+            return self._default_post_merge_predicted_target_blend_release_below_altitude_m
+        return self._post_merge_predicted_target_blend_release_below_altitude_m_by_task.get(
+            self.task_name,
+            self._default_post_merge_predicted_target_blend_release_below_altitude_m,
+        )
+
+    def _resolve_post_merge_predicted_target_blend_hold_steps(self):
+        if self.task_name is None:
+            return self._default_post_merge_predicted_target_blend_hold_steps
+        return self._post_merge_predicted_target_blend_hold_steps_by_task.get(
+            self.task_name,
+            self._default_post_merge_predicted_target_blend_hold_steps,
+        )
+
+    def _resolve_post_merge_predicted_target_blend_release_blend(self):
+        if self.task_name is None:
+            return self._default_post_merge_predicted_target_blend_release_blend
+        return self._post_merge_predicted_target_blend_release_blend_by_task.get(
+            self.task_name,
+            self._default_post_merge_predicted_target_blend_release_blend,
+        )
+
+    def _resolve_close_range_anchor_post_merge_hold_steps(self):
+        if self.task_name is None:
+            return self._default_close_range_anchor_post_merge_hold_steps
+        return self._close_range_anchor_post_merge_hold_steps_by_task.get(
+            self.task_name,
+            self._default_close_range_anchor_post_merge_hold_steps,
+        )
+
+    @staticmethod
+    def _extract_rel_alignment_angles_deg(rel_state: dict):
+        ata_deg = rel_state.get("ata_deg")
+        if ata_deg is None and rel_state.get("ata_rad") is not None:
+            ata_deg = np.rad2deg(float(rel_state.get("ata_rad")))
+        aa_deg = rel_state.get("aa_deg", rel_state.get("aspect_deg"))
+        if aa_deg is None and rel_state.get("aa_rad") is not None:
+            aa_deg = np.rad2deg(float(rel_state.get("aa_rad")))
+        ata_deg = abs(float(ata_deg if ata_deg is not None else np.nan))
+        aa_deg = abs(float(aa_deg if aa_deg is not None else np.nan))
+        return ata_deg, aa_deg
+
+    def _evaluate_alignment_gate(self, rel_state: dict, angle_deg_max):
+        if angle_deg_max is None:
+            return True, None
+        ata_deg, aa_deg = self._extract_rel_alignment_angles_deg(rel_state)
+        if not np.isfinite(ata_deg) or not np.isfinite(aa_deg):
+            return False, float(angle_deg_max)
+        return max(ata_deg, aa_deg) <= float(angle_deg_max), float(angle_deg_max)
+
+    def _evaluate_close_range_anchor_alignment(self, rel_state: dict):
+        return self._evaluate_alignment_gate(
+            rel_state,
+            self._resolve_close_range_anchor_alignment_angle_deg_max(),
+        )
+
+    def _evaluate_close_range_anchor_release_alignment(self, rel_state: dict):
+        return self._evaluate_alignment_gate(
+            rel_state,
+            self._resolve_close_range_anchor_release_alignment_angle_deg_max(),
+        )
+
+    def _evaluate_post_merge_offensive_anchor_geometry_disadvantage(
+        self,
+        own_state: dict,
+        target_state: dict,
+        rel_state: Optional[dict] = None,
+        *,
+        force_geometry_gate: bool = False,
+        gate_requires_geometry_disadvantage_override: Optional[bool] = None,
+    ) -> dict:
+        if gate_requires_geometry_disadvantage_override is None:
+            blend_gate_requires_geometry_disadvantage = (
+                self._resolve_post_merge_offensive_anchor_blend_requires_geometry_disadvantage()
+            )
+            gate_requires_geometry_disadvantage = bool(
+                force_geometry_gate or blend_gate_requires_geometry_disadvantage
+            )
+        else:
+            gate_requires_geometry_disadvantage = bool(
+                force_geometry_gate
+                or gate_requires_geometry_disadvantage_override
+            )
+        aa_deg_min = (
+            self._resolve_post_merge_offensive_anchor_geometry_disadvantage_aa_deg_min()
+        )
+        aa_deg = np.nan
+        range_rate_mps = np.nan
+        range_opening = False
+        alignment_disadvantage = False
+        if rel_state is not None:
+            _, aa_deg = self._extract_rel_alignment_angles_deg(rel_state)
+            range_rate_raw = rel_state.get("range_rate_mps")
+            if range_rate_raw is not None:
+                range_rate_mps = float(range_rate_raw)
+                range_opening = bool(
+                    np.isfinite(range_rate_mps) and range_rate_mps > 0.0
+                )
+        if aa_deg_min is not None and np.isfinite(aa_deg):
+            alignment_disadvantage = bool(
+                range_opening and aa_deg >= float(aa_deg_min)
+            )
+        base_result = {
+            "requires_geometry_disadvantage": bool(
+                gate_requires_geometry_disadvantage
+            ),
+            "condition_met": not bool(gate_requires_geometry_disadvantage),
+            "target_only_attack_zone_disadvantage": False,
+            "geometry_disadvantage": False,
+            "ego_attack_score": 0.0,
+            "target_attack_score": 0.0,
+            "ego_in_attack_zone": False,
+            "target_in_attack_zone": False,
+            "alignment_disadvantage": bool(alignment_disadvantage),
+            "aa_deg_min": (
+                float(aa_deg_min) if aa_deg_min is not None else np.nan
+            ),
+            "aa_deg": float(aa_deg),
+            "range_rate_mps": float(range_rate_mps),
+            "range_opening": bool(range_opening),
+        }
+        if not gate_requires_geometry_disadvantage or not self.combat_hp.enabled:
+            if gate_requires_geometry_disadvantage and not self.combat_hp.enabled:
+                base_result["condition_met"] = False
+            return base_result
+
+        ego_attack = evaluate_attack_zone(
+            own_state,
+            target_state,
+            config=self.combat_hp.attack_zone_config,
+        )
+        target_attack = evaluate_attack_zone(
+            target_state,
+            own_state,
+            config=self.combat_hp.attack_zone_config,
+        )
+        ego_attack_score = float(ego_attack["score"])
+        target_attack_score = float(target_attack["score"])
+        ego_in_attack_zone = bool(ego_attack["in_attack_zone"])
+        target_in_attack_zone = bool(target_attack["in_attack_zone"])
+        target_only_attack_zone_disadvantage = bool(
+            target_in_attack_zone and not ego_in_attack_zone
+        )
+        geometry_disadvantage = bool(target_attack_score > ego_attack_score)
+        condition_met = bool(
+            target_only_attack_zone_disadvantage
+            or geometry_disadvantage
+            or alignment_disadvantage
+        )
+        return {
+            "requires_geometry_disadvantage": True,
+            "condition_met": condition_met,
+            "target_only_attack_zone_disadvantage": target_only_attack_zone_disadvantage,
+            "geometry_disadvantage": geometry_disadvantage,
+            "ego_attack_score": ego_attack_score,
+            "target_attack_score": target_attack_score,
+            "ego_in_attack_zone": ego_in_attack_zone,
+            "target_in_attack_zone": target_in_attack_zone,
+            "alignment_disadvantage": bool(alignment_disadvantage),
+            "aa_deg_min": (
+                float(aa_deg_min) if aa_deg_min is not None else np.nan
+            ),
+            "aa_deg": float(aa_deg),
+            "range_rate_mps": float(range_rate_mps),
+            "range_opening": bool(range_opening),
+        }
+
+    def _evaluate_post_merge_anchor_mode_geometry_disadvantage(
+        self,
+        own_state: dict,
+        target_state: dict,
+        rel_state: Optional[dict] = None,
+    ) -> dict:
+        requires_geometry_disadvantage = (
+            self._resolve_post_merge_anchor_mode_requires_geometry_disadvantage()
+        )
+        gate = self._evaluate_post_merge_offensive_anchor_geometry_disadvantage(
+            own_state,
+            target_state,
+            rel_state=rel_state,
+            gate_requires_geometry_disadvantage_override=(
+                requires_geometry_disadvantage
+            ),
+        )
+        recovery_below_altitude_m = (
+            self._resolve_post_merge_anchor_mode_recovery_below_altitude_m()
+        )
+        recovery_active = False
+        if recovery_below_altitude_m is not None:
+            own_altitude_m = float(
+                own_state.get(
+                    "altitude_m",
+                    self._extract_position_neu(own_state)[2],
+                )
+            )
+            recovery_active = bool(
+                np.isfinite(own_altitude_m)
+                and own_altitude_m <= float(recovery_below_altitude_m)
+                and bool(gate["range_opening"])
+                and not bool(gate["ego_in_attack_zone"])
+                and not bool(gate["target_in_attack_zone"])
+            )
+            gate["condition_met"] = bool(gate["condition_met"] and recovery_active)
+        gate["recovery_below_altitude_m"] = (
+            float(recovery_below_altitude_m)
+            if recovery_below_altitude_m is not None
+            else np.nan
+        )
+        gate["recovery_active"] = bool(recovery_active)
+        return gate
+
     # ------------------------------------------------------------------
     # Gym-like interface
     # ------------------------------------------------------------------
@@ -469,6 +2311,25 @@ class CloseRangeTrackingEnv:
         if self.opponent_policy is not None:
             self.opponent_policy.reset()
         self.combat_hp.reset()
+        self._merge_min_range_so_far_m = float("inf")
+        self._merge_seen_close_range = False
+        self._close_range_anchor_ready = False
+        self._first_pass_complete = False
+        self._first_pass_completion_step = None
+        self._post_merge_anchor_mode_released = False
+        self._post_merge_anchor_mode_has_activated = False
+        self._post_merge_anchor_mode_ego_only_streak_steps = 0
+        self._post_merge_anchor_mode_lateral_world_offset_latched = None
+        self._post_merge_anchor_mode_lateral_world_offset_latch_activation_range_m = (
+            None
+        )
+        self._post_merge_predicted_target_blend_released = False
+        self._post_merge_offensive_anchor_blend_released = False
+        self._post_merge_offensive_anchor_blend_release_step = None
+        self._post_merge_offensive_anchor_blend_ego_only_streak_steps = 0
+        self._post_merge_offensive_anchor_lateral_world_offset_latched = None
+        self._post_merge_predicted_target_forward_scale_released = False
+        self._post_merge_predicted_target_forward_scale_ego_only_streak_steps = 0
 
         if self.trajectory_predictor_adapter is not None:
             self.trajectory_predictor_adapter.reset()
@@ -900,11 +2761,694 @@ class CloseRangeTrackingEnv:
                 own_state, target_state, rel_state, prediction_info
             )
 
+        target_pos = target_state.get("position_m")
+        if target_pos is None:
+            target_pos = target_state.get("position_neu")
+        target_for_vp = {"position_neu": np.asarray(target_pos, dtype=np.float64)}
+        target_vel = target_state.get("velocity_vector_mps")
+        if target_vel is not None:
+            target_for_vp["velocity_vector_mps"] = np.asarray(
+                target_vel,
+                dtype=np.float64,
+            )
+        target_vel_alt = target_state.get("velocity")
+        if target_vel_alt is not None:
+            target_for_vp["velocity"] = np.asarray(
+                target_vel_alt,
+                dtype=np.float64,
+            )
+
         # 4. 生成虚拟追踪点 (or use direct command override for diagnosis)
         anchor_mode = self.config.get("virtual_point", {}).get(
             "anchor_mode", "current_target"
         )
+        requested_anchor_mode = anchor_mode
+        close_range_anchor_mode = self._resolve_close_range_anchor_mode()
+        close_range_anchor_trigger_range_m = self._resolve_close_range_anchor_trigger_range_m(
+            self.config.get("combat_diagnostics", {}).get("merge_range_m", 1000.0)
+        )
+        close_range_anchor_release_on_post_merge = (
+            self._resolve_close_range_anchor_release_on_post_merge()
+        )
+        close_range_anchor_requires_first_pass = (
+            self._resolve_close_range_anchor_requires_first_pass()
+        )
+        close_range_anchor_offensive_anchor_blend = (
+            self._resolve_close_range_anchor_offensive_anchor_blend()
+        )
+        (
+            close_range_anchor_release_alignment_satisfied,
+            close_range_anchor_release_alignment_angle_deg_max,
+        ) = self._evaluate_close_range_anchor_release_alignment(rel_state)
+        close_range_anchor_post_merge_hold_steps = (
+            self._resolve_close_range_anchor_post_merge_hold_steps()
+        )
+        (
+            close_range_anchor_alignment_satisfied,
+            close_range_anchor_alignment_angle_deg_max,
+        ) = self._evaluate_close_range_anchor_alignment(rel_state)
+        close_range_anchor_mode_active = False
+        close_range_anchor_post_merge_steps_since_first_pass = np.nan
+        close_range_anchor_post_merge_hold_remaining_steps = np.nan
+        close_range_anchor_window_open = True
+        close_range_anchor_release_ready = False
+        close_range_anchor_offensive_anchor_blend_active = False
+        if close_range_anchor_release_on_post_merge and self._first_pass_complete:
+            if self._first_pass_completion_step is None:
+                close_range_anchor_window_open = False
+                close_range_anchor_post_merge_hold_remaining_steps = 0.0
+                close_range_anchor_release_ready = True
+            else:
+                close_range_anchor_post_merge_steps_since_first_pass = float(
+                    max(0, self.current_step - self._first_pass_completion_step)
+                )
+                close_range_anchor_post_merge_hold_remaining_steps = float(
+                    max(
+                        0,
+                        close_range_anchor_post_merge_hold_steps
+                        - int(close_range_anchor_post_merge_steps_since_first_pass)
+                        + 1,
+                    )
+                )
+                close_range_anchor_release_ready = bool(
+                    int(close_range_anchor_post_merge_steps_since_first_pass)
+                    > close_range_anchor_post_merge_hold_steps
+                    and close_range_anchor_release_alignment_satisfied
+                )
+                close_range_anchor_window_open = (
+                    not close_range_anchor_release_ready
+                )
+        if (
+            self._close_range_anchor_ready
+            and close_range_anchor_window_open
+            and close_range_anchor_mode is not None
+            and (
+                not close_range_anchor_requires_first_pass
+                or self._first_pass_complete
+            )
+        ):
+            close_range_anchor_mode_active = True
+            if (
+                close_range_anchor_mode == "offensive_position"
+                and close_range_anchor_offensive_anchor_blend is not None
+                and anchor_mode == "predicted_target"
+            ):
+                close_range_anchor_offensive_anchor_blend_active = True
+            else:
+                anchor_mode = close_range_anchor_mode
+        post_merge_offensive_anchor_gate = (
+            self._evaluate_post_merge_offensive_anchor_geometry_disadvantage(
+                own_state,
+                target_state,
+                rel_state=rel_state,
+            )
+        )
+        post_merge_anchor_mode = self._resolve_post_merge_anchor_mode()
+        post_merge_anchor_mode_release_ego_only_streak_steps = (
+            self._resolve_post_merge_anchor_mode_release_ego_only_streak_steps()
+        )
+        post_merge_anchor_mode_release_reset_on_streak_break = (
+            self._resolve_post_merge_anchor_mode_release_reset_on_streak_break()
+        )
+        post_merge_anchor_mode_longitudinal_scale = (
+            self._resolve_post_merge_anchor_mode_longitudinal_scale()
+        )
+        post_merge_anchor_mode_lateral_scale = (
+            self._resolve_post_merge_anchor_mode_lateral_scale()
+        )
+        post_merge_anchor_mode_offensive_anchor_blend = (
+            self._resolve_post_merge_anchor_mode_offensive_anchor_blend()
+        )
+        post_merge_anchor_mode_offensive_anchor_longitudinal_blend = (
+            self._resolve_post_merge_anchor_mode_offensive_anchor_longitudinal_blend()
+        )
+        post_merge_anchor_mode_offensive_anchor_lateral_blend = (
+            self._resolve_post_merge_anchor_mode_offensive_anchor_lateral_blend()
+        )
+        post_merge_anchor_mode_lateral_world_offset_latch_on_activation = (
+            self._resolve_post_merge_anchor_mode_lateral_world_offset_latch_on_activation()
+        )
+        post_merge_anchor_mode_lateral_world_offset_latch_activation_range_m_min = (
+            self._resolve_post_merge_anchor_mode_lateral_world_offset_latch_activation_range_m_min()
+        )
+        post_merge_anchor_mode_requires_geometry_disadvantage = False
+        post_merge_anchor_mode_condition_met = True
+        post_merge_anchor_mode_active = False
+        post_merge_anchor_mode_offensive_anchor_blend_active = False
+        post_merge_anchor_mode_offensive_anchor_component_blend_active = False
+        post_merge_anchor_mode_recovery_below_altitude_m = np.nan
+        post_merge_anchor_mode_recovery_active = False
+        post_merge_anchor_mode_release_triggered = False
+        post_merge_anchor_mode_release_reset_triggered = False
+        if post_merge_anchor_mode is not None:
+            post_merge_anchor_mode_gate = (
+                self._evaluate_post_merge_anchor_mode_geometry_disadvantage(
+                    own_state,
+                    target_state,
+                    rel_state=rel_state,
+                )
+            )
+            post_merge_anchor_mode_requires_geometry_disadvantage = bool(
+                post_merge_anchor_mode_gate["requires_geometry_disadvantage"]
+            )
+            post_merge_anchor_mode_recovery_below_altitude_m = float(
+                post_merge_anchor_mode_gate.get(
+                    "recovery_below_altitude_m",
+                    np.nan,
+                )
+            )
+            post_merge_anchor_mode_recovery_active = bool(
+                post_merge_anchor_mode_gate.get("recovery_active", False)
+            )
+            post_merge_anchor_mode_recovery_enabled = bool(
+                np.isfinite(post_merge_anchor_mode_recovery_below_altitude_m)
+            )
+            post_merge_anchor_mode_condition_met = bool(
+                post_merge_anchor_mode_gate["condition_met"]
+                if (
+                    post_merge_anchor_mode_requires_geometry_disadvantage
+                    or post_merge_anchor_mode_recovery_enabled
+                )
+                else True
+            )
+            if (
+                self._first_pass_complete
+                and self._post_merge_anchor_mode_has_activated
+                and post_merge_anchor_mode_release_ego_only_streak_steps is not None
+                and self._post_merge_anchor_mode_ego_only_streak_steps
+                >= post_merge_anchor_mode_release_ego_only_streak_steps
+            ):
+                self._post_merge_anchor_mode_released = True
+            if self._first_pass_complete and post_merge_anchor_mode_condition_met:
+                post_merge_anchor_mode_active = not self._post_merge_anchor_mode_released
+                if post_merge_anchor_mode_active:
+                    self._post_merge_anchor_mode_has_activated = True
+                    post_merge_anchor_mode_soft_blend_requested = bool(
+                        (
+                            post_merge_anchor_mode_offensive_anchor_blend is not None
+                            and float(post_merge_anchor_mode_offensive_anchor_blend) > 0.0
+                        )
+                        or (
+                            post_merge_anchor_mode_offensive_anchor_longitudinal_blend
+                            is not None
+                            and float(
+                                post_merge_anchor_mode_offensive_anchor_longitudinal_blend
+                            )
+                            > 0.0
+                        )
+                        or (
+                            post_merge_anchor_mode_offensive_anchor_lateral_blend
+                            is not None
+                            and float(
+                                post_merge_anchor_mode_offensive_anchor_lateral_blend
+                            )
+                            > 0.0
+                        )
+                    )
+                    if (
+                        post_merge_anchor_mode == "offensive_position"
+                        and post_merge_anchor_mode_soft_blend_requested
+                        and anchor_mode == "predicted_target"
+                    ):
+                        post_merge_anchor_mode_offensive_anchor_blend_active = True
+                        post_merge_anchor_mode_offensive_anchor_component_blend_active = (
+                            bool(
+                                (
+                                    post_merge_anchor_mode_offensive_anchor_longitudinal_blend
+                                    is not None
+                                )
+                                or (
+                                    post_merge_anchor_mode_offensive_anchor_lateral_blend
+                                    is not None
+                                )
+                            )
+                        )
+                    else:
+                        anchor_mode = post_merge_anchor_mode
+        longitudinal_scale_override = (
+            float(post_merge_anchor_mode_longitudinal_scale)
+            if (
+                post_merge_anchor_mode_active
+                and post_merge_anchor_mode_longitudinal_scale is not None
+            )
+            else None
+        )
+        lateral_scale_override = (
+            float(post_merge_anchor_mode_lateral_scale)
+            if (
+                post_merge_anchor_mode_active
+                and post_merge_anchor_mode_lateral_scale is not None
+            )
+            else None
+        )
+        post_merge_predicted_target_blend = self._resolve_post_merge_predicted_target_blend()
+        post_merge_offensive_anchor_blend = (
+            self._resolve_post_merge_offensive_anchor_blend()
+        )
+        post_merge_offensive_anchor_longitudinal_scale = (
+            self._resolve_post_merge_offensive_anchor_longitudinal_scale()
+        )
+        post_merge_offensive_anchor_lateral_scale = (
+            self._resolve_post_merge_offensive_anchor_lateral_scale()
+        )
+        post_merge_offensive_anchor_blend_release_blend = (
+            self._resolve_post_merge_offensive_anchor_blend_release_blend()
+        )
+        post_merge_offensive_anchor_blend_release_ego_only_streak_steps = (
+            self._resolve_post_merge_offensive_anchor_blend_release_ego_only_streak_steps()
+        )
+        post_merge_offensive_anchor_blend_release_reset_on_streak_break = (
+            self._resolve_post_merge_offensive_anchor_blend_release_reset_on_streak_break()
+        )
+        post_merge_offensive_anchor_blend_release_direct_track_enabled = (
+            self._resolve_post_merge_offensive_anchor_blend_release_direct_track_enabled()
+        )
+        post_merge_offensive_anchor_blend_release_direct_track_below_altitude_m = (
+            self._resolve_post_merge_offensive_anchor_blend_release_direct_track_below_altitude_m()
+        )
+        post_merge_offensive_anchor_blend_release_recovery_below_altitude_m = (
+            self._resolve_post_merge_offensive_anchor_blend_release_recovery_below_altitude_m()
+        )
+        post_merge_offensive_anchor_blend_release_recovery_longitudinal_blend = (
+            self._resolve_post_merge_offensive_anchor_blend_release_recovery_longitudinal_blend()
+        )
+        post_merge_offensive_anchor_blend_release_recovery_lateral_blend = (
+            self._resolve_post_merge_offensive_anchor_blend_release_recovery_lateral_blend()
+        )
+        post_merge_offensive_anchor_blend_release_recovery_forward_bias_m_max = (
+            self._resolve_post_merge_offensive_anchor_blend_release_recovery_forward_bias_m_max()
+        )
+        post_merge_offensive_anchor_blend_release_vp_forward_bias_m_min = (
+            self._resolve_post_merge_offensive_anchor_blend_release_vp_forward_bias_m_min()
+        )
+        post_merge_offensive_anchor_blend_release_vp_forward_bias_clamp_negative_lateral_below_altitude_m = (
+            self._resolve_post_merge_offensive_anchor_blend_release_vp_forward_bias_clamp_negative_lateral_below_altitude_m()
+        )
+        post_merge_offensive_anchor_lateral_world_offset_latch_on_activation = (
+            self._resolve_post_merge_offensive_anchor_lateral_world_offset_latch_on_activation()
+        )
+        post_merge_offensive_anchor_blend_release_lateral_only = (
+            self._resolve_post_merge_offensive_anchor_blend_release_lateral_only()
+        )
+        post_merge_offensive_anchor_blend_release_lateral_only_hold_steps = (
+            self._resolve_post_merge_offensive_anchor_blend_release_lateral_only_hold_steps()
+        )
+        post_merge_predicted_target_forward_scale = (
+            self._resolve_post_merge_predicted_target_forward_scale()
+        )
+        post_merge_predicted_target_forward_scale_release_scale = (
+            self._resolve_post_merge_predicted_target_forward_scale_release_scale()
+        )
+        post_merge_predicted_target_forward_scale_release_ego_only_streak_steps = (
+            self._resolve_post_merge_predicted_target_forward_scale_release_ego_only_streak_steps()
+        )
+        post_merge_predicted_target_forward_scale_release_reset_on_streak_break = (
+            self._resolve_post_merge_predicted_target_forward_scale_release_reset_on_streak_break()
+        )
+        post_merge_predicted_target_forward_scale_hold_steps = (
+            self._resolve_post_merge_predicted_target_forward_scale_hold_steps()
+        )
+        post_merge_predicted_target_blend_release_on_attack_zone = (
+            self._resolve_post_merge_predicted_target_blend_release_on_attack_zone()
+        )
+        post_merge_predicted_target_blend_release_requires_target_attack_zone = (
+            self._resolve_post_merge_predicted_target_blend_release_requires_target_attack_zone()
+        )
+        post_merge_predicted_target_blend_release_below_altitude_m = (
+            self._resolve_post_merge_predicted_target_blend_release_below_altitude_m()
+        )
+        post_merge_predicted_target_blend_hold_steps = (
+            self._resolve_post_merge_predicted_target_blend_hold_steps()
+        )
+        post_merge_predicted_target_blend_release_blend = (
+            self._resolve_post_merge_predicted_target_blend_release_blend()
+        )
         use_command_override = command_override is not None
+        post_merge_predicted_target_blend_steps_since_first_pass = np.nan
+        post_merge_predicted_target_blend_hold_remaining_steps = np.nan
+        post_merge_predicted_target_blend_hold_window_open = True
+        post_merge_predicted_target_blend_hold_expired = False
+        if self._first_pass_complete and post_merge_predicted_target_blend_hold_steps is not None:
+            if self._first_pass_completion_step is None:
+                post_merge_predicted_target_blend_hold_window_open = False
+                post_merge_predicted_target_blend_hold_remaining_steps = 0.0
+                post_merge_predicted_target_blend_hold_expired = True
+            else:
+                post_merge_predicted_target_blend_steps_since_first_pass = float(
+                    max(0, self.current_step - self._first_pass_completion_step)
+                )
+                post_merge_predicted_target_blend_hold_remaining_steps = float(
+                    max(
+                        0,
+                        post_merge_predicted_target_blend_hold_steps
+                        - int(post_merge_predicted_target_blend_steps_since_first_pass)
+                        + 1,
+                    )
+                )
+                post_merge_predicted_target_blend_hold_expired = bool(
+                    int(post_merge_predicted_target_blend_steps_since_first_pass)
+                    > post_merge_predicted_target_blend_hold_steps
+                )
+                post_merge_predicted_target_blend_hold_window_open = (
+                    not post_merge_predicted_target_blend_hold_expired
+                )
+        post_merge_predicted_target_blend_active = bool(
+            self._first_pass_complete
+            and anchor_mode == "predicted_target"
+            and post_merge_predicted_target_blend is not None
+            and not self._post_merge_predicted_target_blend_released
+            and post_merge_predicted_target_blend_hold_window_open
+        )
+        post_merge_predicted_target_blend_release_blend_active = bool(
+            self._first_pass_complete
+            and anchor_mode == "predicted_target"
+            and self._post_merge_predicted_target_blend_released
+            and post_merge_predicted_target_blend_release_blend is not None
+        )
+        predicted_target_blend_override = (
+            post_merge_predicted_target_blend
+            if post_merge_predicted_target_blend_active
+            else (
+                post_merge_predicted_target_blend_release_blend
+                if post_merge_predicted_target_blend_release_blend_active
+                else None
+            )
+        )
+        post_merge_offensive_anchor_blend_release_triggered = False
+        post_merge_offensive_anchor_blend_release_reset_triggered = False
+        post_merge_offensive_anchor_lateral_world_offset_latch_active = False
+        post_merge_offensive_anchor_blend_release_recovery_active = False
+        post_merge_offensive_anchor_blend_release_recovery_altitude_trigger_active = False
+        post_merge_offensive_anchor_blend_release_recovery_forward_bias_trigger_active = False
+        post_merge_offensive_anchor_blend_release_recovery_preview_vp_forward_bias_m = (
+            np.nan
+        )
+        post_merge_offensive_anchor_blend_release_lateral_only_active = False
+        post_merge_offensive_anchor_blend_release_lateral_only_steps_since_release = (
+            np.nan
+        )
+        post_merge_offensive_anchor_blend_release_lateral_only_hold_remaining_steps = (
+            np.nan
+        )
+        post_merge_offensive_anchor_blend_release_lateral_only_hold_window_open = True
+        post_merge_offensive_anchor_blend_enabled = (
+            post_merge_offensive_anchor_blend is not None
+            and float(post_merge_offensive_anchor_blend) > 0.0
+        )
+        post_merge_offensive_anchor_blend_release_blend_enabled = (
+            post_merge_offensive_anchor_blend_release_blend is not None
+            and float(post_merge_offensive_anchor_blend_release_blend) > 0.0
+        )
+        if (
+            self._first_pass_complete
+            and self._post_merge_offensive_anchor_blend_has_activated
+            and post_merge_offensive_anchor_blend_release_ego_only_streak_steps is not None
+            and self._post_merge_offensive_anchor_blend_ego_only_streak_steps
+            >= post_merge_offensive_anchor_blend_release_ego_only_streak_steps
+        ):
+            self._post_merge_offensive_anchor_blend_released = True
+            if self._post_merge_offensive_anchor_blend_release_step is None:
+                self._post_merge_offensive_anchor_blend_release_step = max(
+                    self.current_step - 1,
+                    0,
+                )
+        if (
+            self._post_merge_offensive_anchor_blend_released
+            and post_merge_offensive_anchor_blend_release_lateral_only_hold_steps
+            is not None
+        ):
+            if self._post_merge_offensive_anchor_blend_release_step is None:
+                post_merge_offensive_anchor_blend_release_lateral_only_hold_remaining_steps = float(
+                    post_merge_offensive_anchor_blend_release_lateral_only_hold_steps
+                )
+            else:
+                post_merge_offensive_anchor_blend_release_lateral_only_steps_since_release = (
+                    float(
+                        max(
+                            0,
+                            self.current_step
+                            - self._post_merge_offensive_anchor_blend_release_step,
+                        )
+                    )
+                )
+                post_merge_offensive_anchor_blend_release_lateral_only_hold_remaining_steps = float(
+                    max(
+                        0,
+                        post_merge_offensive_anchor_blend_release_lateral_only_hold_steps
+                        - int(
+                            post_merge_offensive_anchor_blend_release_lateral_only_steps_since_release
+                        )
+                        + 1,
+                    )
+                )
+                post_merge_offensive_anchor_blend_release_lateral_only_hold_window_open = bool(
+                    int(
+                        post_merge_offensive_anchor_blend_release_lateral_only_steps_since_release
+                    )
+                    <= post_merge_offensive_anchor_blend_release_lateral_only_hold_steps
+                )
+        post_merge_offensive_anchor_blend_active = bool(
+            self._first_pass_complete
+            and anchor_mode == "predicted_target"
+            and post_merge_offensive_anchor_blend_enabled
+            and post_merge_offensive_anchor_gate["condition_met"]
+            and not self._post_merge_offensive_anchor_blend_released
+        )
+        if post_merge_offensive_anchor_blend_active:
+            self._post_merge_offensive_anchor_blend_has_activated = True
+            if (
+                bool(post_merge_offensive_anchor_lateral_world_offset_latch_on_activation)
+                and self.virtual_point_generator is not None
+                and self._post_merge_offensive_anchor_lateral_world_offset_latched
+                is None
+            ):
+                (
+                    _latched_anchor_pos,
+                    _latched_anchor_offset,
+                    _latched_anchor_world_offset,
+                    _latched_anchor_lateral_local_offset,
+                    latched_lateral_world_offset,
+                    _latched_anchor_lateral_sign,
+                ) = self.virtual_point_generator.compute_offensive_anchor_components(
+                    target_for_vp,
+                    own_state=own_state,
+                )
+                self._post_merge_offensive_anchor_lateral_world_offset_latched = (
+                    np.asarray(
+                        latched_lateral_world_offset,
+                        dtype=np.float64,
+                    )
+                )
+        if self._post_merge_offensive_anchor_lateral_world_offset_latched is not None:
+            post_merge_offensive_anchor_lateral_world_offset_latch_active = True
+        post_merge_offensive_anchor_blend_release_blend_active = bool(
+            self._first_pass_complete
+            and anchor_mode == "predicted_target"
+            and self._post_merge_offensive_anchor_blend_released
+            and post_merge_offensive_anchor_blend_release_blend_enabled
+        )
+        offensive_anchor_blend_override = (
+            close_range_anchor_offensive_anchor_blend
+            if close_range_anchor_offensive_anchor_blend_active
+            else (
+                post_merge_anchor_mode_offensive_anchor_blend
+                if post_merge_anchor_mode_offensive_anchor_blend_active
+                else (
+                    post_merge_offensive_anchor_blend
+                    if post_merge_offensive_anchor_blend_active
+                    else (
+                        post_merge_offensive_anchor_blend_release_blend
+                        if post_merge_offensive_anchor_blend_release_blend_active
+                        else None
+                    )
+                )
+            )
+        )
+        if post_merge_offensive_anchor_blend_active:
+            if (
+                longitudinal_scale_override is None
+                and post_merge_offensive_anchor_longitudinal_scale is not None
+            ):
+                longitudinal_scale_override = float(
+                    post_merge_offensive_anchor_longitudinal_scale
+                )
+            if (
+                lateral_scale_override is None
+                and post_merge_offensive_anchor_lateral_scale is not None
+            ):
+                lateral_scale_override = float(
+                    post_merge_offensive_anchor_lateral_scale
+                )
+        offensive_anchor_longitudinal_blend_override = (
+            float(post_merge_anchor_mode_offensive_anchor_longitudinal_blend)
+            if (
+                post_merge_anchor_mode_offensive_anchor_blend_active
+                and post_merge_anchor_mode_offensive_anchor_longitudinal_blend
+                is not None
+            )
+            else None
+        )
+        offensive_anchor_lateral_blend_override = (
+            float(post_merge_anchor_mode_offensive_anchor_lateral_blend)
+            if (
+                post_merge_anchor_mode_offensive_anchor_blend_active
+                and post_merge_anchor_mode_offensive_anchor_lateral_blend is not None
+            )
+            else None
+        )
+        own_altitude_pre_m = float(
+            own_state.get(
+                "altitude_m",
+                self._extract_position_neu(own_state)[2],
+            )
+        )
+        post_merge_offensive_anchor_blend_release_recovery_components_configured = (
+            post_merge_offensive_anchor_blend_release_recovery_longitudinal_blend
+            is not None
+            or post_merge_offensive_anchor_blend_release_recovery_lateral_blend
+            is not None
+        )
+        pre_recovery_vp_result = None
+        recovery_gate_ready = bool(
+            self._first_pass_complete
+            and anchor_mode == "predicted_target"
+            and self._post_merge_offensive_anchor_blend_released
+            and post_merge_offensive_anchor_blend_release_recovery_components_configured
+            and bool(post_merge_offensive_anchor_gate["range_opening"])
+            and not bool(post_merge_offensive_anchor_gate["ego_in_attack_zone"])
+            and not bool(post_merge_offensive_anchor_gate["target_in_attack_zone"])
+        )
+        if recovery_gate_ready:
+            if (
+                post_merge_offensive_anchor_blend_release_recovery_below_altitude_m
+                is not None
+                and np.isfinite(own_altitude_pre_m)
+                and own_altitude_pre_m
+                <= float(
+                    post_merge_offensive_anchor_blend_release_recovery_below_altitude_m
+                )
+            ):
+                post_merge_offensive_anchor_blend_release_recovery_altitude_trigger_active = True
+        if (
+            recovery_gate_ready
+            and (
+                post_merge_offensive_anchor_blend_release_recovery_altitude_trigger_active
+                or post_merge_offensive_anchor_blend_release_recovery_forward_bias_trigger_active
+            )
+        ):
+            post_merge_offensive_anchor_blend_release_recovery_active = True
+            offensive_anchor_blend_override = 0.0
+            if (
+                post_merge_offensive_anchor_blend_release_recovery_longitudinal_blend
+                is not None
+            ):
+                offensive_anchor_longitudinal_blend_override = float(
+                    post_merge_offensive_anchor_blend_release_recovery_longitudinal_blend
+                )
+            if (
+                post_merge_offensive_anchor_blend_release_recovery_lateral_blend
+                is not None
+            ):
+                offensive_anchor_lateral_blend_override = float(
+                    post_merge_offensive_anchor_blend_release_recovery_lateral_blend
+                )
+            if (
+                self._post_merge_offensive_anchor_lateral_world_offset_latched
+                is None
+                and bool(
+                    post_merge_offensive_anchor_lateral_world_offset_latch_on_activation
+                )
+                and self.virtual_point_generator is not None
+            ):
+                (
+                    _latched_anchor_pos,
+                    _latched_anchor_offset,
+                    _latched_anchor_world_offset,
+                    _latched_anchor_lateral_local_offset,
+                    latched_lateral_world_offset,
+                    _latched_anchor_lateral_sign,
+                ) = self.virtual_point_generator.compute_offensive_anchor_components(
+                    target_for_vp,
+                    own_state=own_state,
+                )
+                self._post_merge_offensive_anchor_lateral_world_offset_latched = (
+                    np.asarray(
+                        latched_lateral_world_offset,
+                        dtype=np.float64,
+                    )
+                )
+            if self._post_merge_offensive_anchor_lateral_world_offset_latched is not None:
+                offensive_anchor_lateral_world_offset_override = (
+                    self._post_merge_offensive_anchor_lateral_world_offset_latched.copy()
+                )
+                post_merge_offensive_anchor_lateral_world_offset_latch_active = True
+        post_merge_predicted_target_forward_scale_steps_since_first_pass = np.nan
+        post_merge_predicted_target_forward_scale_hold_remaining_steps = np.nan
+        post_merge_predicted_target_forward_scale_hold_window_open = True
+        post_merge_predicted_target_forward_scale_hold_expired = False
+        post_merge_predicted_target_forward_scale_release_triggered = False
+        post_merge_predicted_target_forward_scale_release_reset_triggered = False
+        if (
+            self._first_pass_complete
+            and post_merge_predicted_target_forward_scale_release_ego_only_streak_steps
+            is not None
+            and self._post_merge_predicted_target_forward_scale_ego_only_streak_steps
+            >= post_merge_predicted_target_forward_scale_release_ego_only_streak_steps
+        ):
+            self._post_merge_predicted_target_forward_scale_released = True
+        if (
+            self._first_pass_complete
+            and post_merge_predicted_target_forward_scale_hold_steps is not None
+        ):
+            if self._first_pass_completion_step is None:
+                post_merge_predicted_target_forward_scale_hold_window_open = False
+                post_merge_predicted_target_forward_scale_hold_remaining_steps = 0.0
+                post_merge_predicted_target_forward_scale_hold_expired = True
+            else:
+                post_merge_predicted_target_forward_scale_steps_since_first_pass = float(
+                    max(0, self.current_step - self._first_pass_completion_step)
+                )
+                post_merge_predicted_target_forward_scale_hold_remaining_steps = float(
+                    max(
+                        0,
+                        post_merge_predicted_target_forward_scale_hold_steps
+                        - int(
+                            post_merge_predicted_target_forward_scale_steps_since_first_pass
+                        )
+                        + 1,
+                    )
+                )
+                post_merge_predicted_target_forward_scale_hold_expired = bool(
+                    int(
+                        post_merge_predicted_target_forward_scale_steps_since_first_pass
+                    )
+                    > post_merge_predicted_target_forward_scale_hold_steps
+                )
+                post_merge_predicted_target_forward_scale_hold_window_open = (
+                    not post_merge_predicted_target_forward_scale_hold_expired
+                )
+        post_merge_predicted_target_forward_scale_active = bool(
+            self._first_pass_complete
+            and anchor_mode == "predicted_target"
+            and post_merge_predicted_target_forward_scale is not None
+            and not self._post_merge_predicted_target_forward_scale_released
+            and post_merge_predicted_target_forward_scale_hold_window_open
+        )
+        post_merge_predicted_target_forward_scale_release_scale_active = bool(
+            self._first_pass_complete
+            and anchor_mode == "predicted_target"
+            and self._post_merge_predicted_target_forward_scale_released
+            and post_merge_predicted_target_forward_scale_release_scale is not None
+        )
+        predicted_target_forward_scale_override = (
+            post_merge_predicted_target_forward_scale
+            if post_merge_predicted_target_forward_scale_active
+            else (
+                post_merge_predicted_target_forward_scale_release_scale
+                if post_merge_predicted_target_forward_scale_release_scale_active
+                else None
+            )
+        )
         if action is None:
             action = np.zeros(3)
         action = np.asarray(action, dtype=np.float64)
@@ -941,19 +3485,6 @@ class CloseRangeTrackingEnv:
                 action = action[:3].copy()
             self._last_pid_gain_deltas = None
         self._last_aggressiveness = aggressiveness
-
-        # 构建 target_state 用于 VPP 生成（统一字段名）
-        target_pos = target_state.get("position_m")
-        if target_pos is None:
-            target_pos = target_state.get("position_neu")
-        target_for_vp = {"position_neu": np.asarray(target_pos)}
-        # 传递速度信息，供 constant_velocity / oracle / rule_based 模式使用
-        target_vel = target_state.get("velocity_vector_mps")
-        if target_vel is not None:
-            target_for_vp["velocity_vector_mps"] = np.asarray(target_vel, dtype=np.float64)
-        target_vel_alt = target_state.get("velocity")
-        if target_vel_alt is not None:
-            target_for_vp["velocity"] = np.asarray(target_vel_alt, dtype=np.float64)
 
         # 若 anchor_mode=predicted_target，获取预测位置
         predicted_target_pos = None
@@ -1019,8 +3550,237 @@ class CloseRangeTrackingEnv:
             prediction_info["prediction_fallback"] = True
             anchor_mode = "current_target"
 
+        if self._post_merge_anchor_mode_released:
+            self._post_merge_anchor_mode_lateral_world_offset_latched = None
+            self._post_merge_anchor_mode_lateral_world_offset_latch_activation_range_m = (
+                None
+            )
+        post_merge_anchor_mode_lateral_world_offset_latch_active = False
+        post_merge_anchor_mode_lateral_world_offset_latch_range_gate_satisfied = True
+        post_merge_anchor_mode_lateral_world_offset_latch_activation_range_m = np.nan
+        offensive_anchor_lateral_world_offset_override = None
+        if (
+            post_merge_anchor_mode_active
+            and post_merge_anchor_mode == "offensive_position"
+            and bool(post_merge_anchor_mode_lateral_world_offset_latch_on_activation)
+            and self.virtual_point_generator is not None
+        ):
+            current_range_m = float(rel_state.get("range_m", np.nan))
+            if self._post_merge_anchor_mode_lateral_world_offset_latched is None:
+                if (
+                    post_merge_anchor_mode_lateral_world_offset_latch_activation_range_m_min
+                    is not None
+                ):
+                    post_merge_anchor_mode_lateral_world_offset_latch_range_gate_satisfied = bool(
+                        np.isfinite(current_range_m)
+                        and current_range_m
+                        >= float(
+                            post_merge_anchor_mode_lateral_world_offset_latch_activation_range_m_min
+                        )
+                    )
+                if post_merge_anchor_mode_lateral_world_offset_latch_range_gate_satisfied:
+                    (
+                        _latched_anchor_pos,
+                        _latched_anchor_offset,
+                        _latched_anchor_world_offset,
+                        _latched_anchor_lateral_local_offset,
+                        latched_lateral_world_offset,
+                        _latched_anchor_lateral_sign,
+                    ) = self.virtual_point_generator.compute_offensive_anchor_components(
+                        target_for_vp,
+                        own_state=own_state,
+                    )
+                    self._post_merge_anchor_mode_lateral_world_offset_latched = (
+                        np.asarray(
+                            latched_lateral_world_offset,
+                            dtype=np.float64,
+                        )
+                    )
+                    self._post_merge_anchor_mode_lateral_world_offset_latch_activation_range_m = (
+                        current_range_m
+                    )
+            if self._post_merge_anchor_mode_lateral_world_offset_latched is not None:
+                offensive_anchor_lateral_world_offset_override = (
+                    self._post_merge_anchor_mode_lateral_world_offset_latched.copy()
+                )
+                post_merge_anchor_mode_lateral_world_offset_latch_active = True
+                if (
+                    self._post_merge_anchor_mode_lateral_world_offset_latch_activation_range_m
+                    is not None
+                ):
+                    post_merge_anchor_mode_lateral_world_offset_latch_activation_range_m = float(
+                        self._post_merge_anchor_mode_lateral_world_offset_latch_activation_range_m
+                    )
+            else:
+                post_merge_anchor_mode_lateral_world_offset_latch_activation_range_m = (
+                    current_range_m
+                )
+
+        if (
+            recovery_gate_ready
+            and not post_merge_offensive_anchor_blend_release_recovery_altitude_trigger_active
+            and not post_merge_offensive_anchor_blend_release_recovery_active
+            and post_merge_offensive_anchor_blend_release_recovery_forward_bias_m_max
+            is not None
+            and anchor_mode == "predicted_target"
+            and self._use_virtual_point
+            and self.virtual_point_generator is not None
+            and not use_command_override
+        ):
+            pre_recovery_vp_result = self.virtual_point_generator.action_to_virtual_point(
+                action,
+                own_state,
+                target_for_vp,
+                anchor_mode=anchor_mode,
+                trajectory_predictor_adapter=None,
+                predicted_target_position=predicted_target_pos,
+                predicted_target_blend_override=predicted_target_blend_override,
+                predicted_target_forward_scale_override=predicted_target_forward_scale_override,
+                offensive_anchor_blend_override=offensive_anchor_blend_override,
+                offensive_anchor_longitudinal_blend_override=(
+                    offensive_anchor_longitudinal_blend_override
+                ),
+                offensive_anchor_lateral_blend_override=(
+                    offensive_anchor_lateral_blend_override
+                ),
+                offensive_anchor_lateral_world_offset_override=(
+                    offensive_anchor_lateral_world_offset_override
+                ),
+                longitudinal_scale_override=longitudinal_scale_override,
+                lateral_scale_override=lateral_scale_override,
+                return_info=True,
+            )
+            preview_virtual_point, preview_vp_info = pre_recovery_vp_result
+            preview_geometry = self._build_vpp_geometry_diagnostics(
+                preview_virtual_point,
+                preview_vp_info,
+                own_state,
+                target_state,
+            )
+            post_merge_offensive_anchor_blend_release_recovery_preview_vp_forward_bias_m = float(
+                preview_geometry["vp_forward_bias_m"]
+            )
+            post_merge_offensive_anchor_blend_release_recovery_forward_bias_trigger_active = bool(
+                np.isfinite(
+                    post_merge_offensive_anchor_blend_release_recovery_preview_vp_forward_bias_m
+                )
+                and post_merge_offensive_anchor_blend_release_recovery_preview_vp_forward_bias_m
+                <= float(
+                    post_merge_offensive_anchor_blend_release_recovery_forward_bias_m_max
+                )
+            )
+            if post_merge_offensive_anchor_blend_release_recovery_forward_bias_trigger_active:
+                post_merge_offensive_anchor_blend_release_recovery_active = True
+                offensive_anchor_blend_override = 0.0
+                if (
+                    post_merge_offensive_anchor_blend_release_recovery_longitudinal_blend
+                    is not None
+                ):
+                    offensive_anchor_longitudinal_blend_override = float(
+                        post_merge_offensive_anchor_blend_release_recovery_longitudinal_blend
+                    )
+                if (
+                    post_merge_offensive_anchor_blend_release_recovery_lateral_blend
+                    is not None
+                ):
+                    offensive_anchor_lateral_blend_override = float(
+                        post_merge_offensive_anchor_blend_release_recovery_lateral_blend
+                    )
+                if (
+                    self._post_merge_offensive_anchor_lateral_world_offset_latched is None
+                    and bool(
+                        post_merge_offensive_anchor_lateral_world_offset_latch_on_activation
+                    )
+                    and self.virtual_point_generator is not None
+                ):
+                    (
+                        _latched_anchor_pos,
+                        _latched_anchor_offset,
+                        _latched_anchor_world_offset,
+                        _latched_anchor_lateral_local_offset,
+                        latched_lateral_world_offset,
+                        _latched_anchor_lateral_sign,
+                    ) = self.virtual_point_generator.compute_offensive_anchor_components(
+                        target_for_vp,
+                        own_state=own_state,
+                    )
+                    self._post_merge_offensive_anchor_lateral_world_offset_latched = (
+                        np.asarray(
+                            latched_lateral_world_offset,
+                            dtype=np.float64,
+                        )
+                    )
+        if (
+            post_merge_offensive_anchor_blend_release_recovery_active
+            and self._post_merge_offensive_anchor_lateral_world_offset_latched
+            is not None
+        ):
+            offensive_anchor_lateral_world_offset_override = (
+                self._post_merge_offensive_anchor_lateral_world_offset_latched.copy()
+            )
+            post_merge_offensive_anchor_lateral_world_offset_latch_active = True
+
         # Determine direct-track request from config (telemetry)
         direct_track_mode_requested = self.config.get("guidance", {}).get("direct_track_mode", False)
+        post_merge_offensive_anchor_blend_release_direct_track_active = bool(
+            post_merge_offensive_anchor_blend_release_direct_track_enabled
+            and self._first_pass_complete
+            and anchor_mode == "predicted_target"
+            and self._post_merge_offensive_anchor_blend_released
+            and not post_merge_offensive_anchor_blend_release_recovery_active
+            and post_merge_offensive_anchor_blend_release_direct_track_below_altitude_m
+            is not None
+            and own_altitude_pre_m
+            <= float(
+                post_merge_offensive_anchor_blend_release_direct_track_below_altitude_m
+            )
+            and bool(post_merge_offensive_anchor_gate["range_opening"])
+            and not bool(post_merge_offensive_anchor_gate["ego_in_attack_zone"])
+            and not bool(post_merge_offensive_anchor_gate["target_in_attack_zone"])
+        )
+        if post_merge_offensive_anchor_blend_release_direct_track_active:
+            direct_track_mode_requested = True
+            self._post_merge_offensive_anchor_lateral_world_offset_latched = None
+            post_merge_offensive_anchor_lateral_world_offset_latch_active = False
+        elif (
+            self._first_pass_complete
+            and anchor_mode == "predicted_target"
+            and self._post_merge_offensive_anchor_blend_released
+            and not post_merge_offensive_anchor_blend_release_recovery_active
+            and bool(post_merge_offensive_anchor_blend_release_lateral_only)
+            and post_merge_offensive_anchor_blend_release_lateral_only_hold_window_open
+            and not bool(direct_track_mode_requested)
+        ):
+            if (
+                self._post_merge_offensive_anchor_lateral_world_offset_latched is None
+                and self.virtual_point_generator is not None
+            ):
+                (
+                    _latched_anchor_pos,
+                    _latched_anchor_offset,
+                    _latched_anchor_world_offset,
+                    _latched_anchor_lateral_local_offset,
+                    latched_lateral_world_offset,
+                    _latched_anchor_lateral_sign,
+                ) = self.virtual_point_generator.compute_offensive_anchor_components(
+                    target_for_vp,
+                    own_state=own_state,
+                )
+                self._post_merge_offensive_anchor_lateral_world_offset_latched = (
+                    np.asarray(
+                        latched_lateral_world_offset,
+                        dtype=np.float64,
+                    )
+                )
+            if self._post_merge_offensive_anchor_lateral_world_offset_latched is not None:
+                offensive_anchor_lateral_world_offset_override = (
+                    self._post_merge_offensive_anchor_lateral_world_offset_latched.copy()
+                )
+                offensive_anchor_blend_override = 0.0
+                offensive_anchor_longitudinal_blend_override = 0.0
+                offensive_anchor_lateral_blend_override = 1.0
+                post_merge_offensive_anchor_lateral_world_offset_latch_active = True
+                post_merge_offensive_anchor_blend_release_lateral_only_active = True
 
         # Mode-switch gate evaluation (if enabled)
         mode_switch_requested = self._mode_switch_config.get("enabled", False)
@@ -1048,24 +3808,49 @@ class CloseRangeTrackingEnv:
         # Direct-track mode: bypass VPP offset, track anchor directly
         if direct_track_mode_requested:
             virtual_point = {"position_neu": np.asarray(target_for_vp["position_neu"], dtype=np.float64)}
+            zero_offset = np.zeros(3, dtype=np.float64)
             vp_info = {
                 "virtual_point": virtual_point["position_neu"],
                 "anchor_mode": anchor_mode,
+                "anchor_pos": np.asarray(target_for_vp["position_neu"], dtype=np.float64),
+                "offset": zero_offset,
+                "world_offset": zero_offset,
+                "offset_frame": "world_neu",
                 "direct_track_mode": True,
                 "action_applied": False,
             }
             direct_track_mode_effective = True
             virtual_point_source = "direct_track"
         elif self._use_virtual_point and self.virtual_point_generator is not None:
-            vp_result = self.virtual_point_generator.action_to_virtual_point(
-                action,
-                own_state,
-                target_for_vp,
-                anchor_mode=anchor_mode,
-                trajectory_predictor_adapter=None,  # generator 不直接调用 predictor
-                predicted_target_position=predicted_target_pos,
-                return_info=True,
-            )
+            if (
+                pre_recovery_vp_result is not None
+                and not post_merge_offensive_anchor_blend_release_recovery_active
+            ):
+                vp_result = pre_recovery_vp_result
+            else:
+                vp_result = self.virtual_point_generator.action_to_virtual_point(
+                    action,
+                    own_state,
+                    target_for_vp,
+                    anchor_mode=anchor_mode,
+                    trajectory_predictor_adapter=None,  # generator 不直接调用 predictor
+                    predicted_target_position=predicted_target_pos,
+                    predicted_target_blend_override=predicted_target_blend_override,
+                    predicted_target_forward_scale_override=predicted_target_forward_scale_override,
+                    offensive_anchor_blend_override=offensive_anchor_blend_override,
+                    offensive_anchor_longitudinal_blend_override=(
+                        offensive_anchor_longitudinal_blend_override
+                    ),
+                    offensive_anchor_lateral_blend_override=(
+                        offensive_anchor_lateral_blend_override
+                    ),
+                    offensive_anchor_lateral_world_offset_override=(
+                        offensive_anchor_lateral_world_offset_override
+                    ),
+                    longitudinal_scale_override=longitudinal_scale_override,
+                    lateral_scale_override=lateral_scale_override,
+                    return_info=True,
+                )
             virtual_point, vp_info = vp_result
             direct_track_mode_effective = False
             virtual_point_source = "vpp_policy"
@@ -1073,14 +3858,36 @@ class CloseRangeTrackingEnv:
             # End-to-end mode: virtual_point is not used for guidance,
             # but we still populate it for telemetry consistency.
             virtual_point = {"position_neu": np.asarray(target_for_vp["position_neu"], dtype=np.float64)}
+            zero_offset = np.zeros(3, dtype=np.float64)
             vp_info = {
                 "virtual_point": virtual_point["position_neu"],
                 "anchor_mode": anchor_mode,
+                "anchor_pos": np.asarray(target_for_vp["position_neu"], dtype=np.float64),
+                "offset": zero_offset,
+                "world_offset": zero_offset,
+                "offset_frame": "world_neu",
                 "end_to_end_mode": True,
                 "action_applied": True,
             }
             direct_track_mode_effective = False
             virtual_point_source = "end_to_end"
+
+        (
+            virtual_point,
+            vp_info,
+            post_merge_offensive_anchor_blend_release_vp_forward_bias_clamp_active,
+            post_merge_offensive_anchor_blend_release_preclamp_vp_forward_bias_m,
+        ) = self._apply_post_merge_offensive_anchor_release_forward_bias_clamp(
+            virtual_point,
+            vp_info,
+            own_state,
+            target_state,
+            anchor_mode=anchor_mode,
+            recovery_active=post_merge_offensive_anchor_blend_release_recovery_active,
+            direct_track_mode_effective=direct_track_mode_effective,
+            use_command_override=use_command_override,
+            post_merge_offensive_anchor_gate=post_merge_offensive_anchor_gate,
+        )
 
         # 5. Guidance command generation
         if not self._use_virtual_point:
@@ -1098,9 +3905,14 @@ class CloseRangeTrackingEnv:
                 "throttle_cmd": float(action[2]) * (th_max - th_min) / 2.0 + (th_max + th_min) / 2.0,
             }
             virtual_point = {"position_neu": np.asarray(target_for_vp["position_neu"], dtype=np.float64)}
+            zero_offset = np.zeros(3, dtype=np.float64)
             vp_info = {
                 "virtual_point": virtual_point["position_neu"],
                 "anchor_mode": anchor_mode,
+                "anchor_pos": np.asarray(target_for_vp["position_neu"], dtype=np.float64),
+                "offset": zero_offset,
+                "world_offset": zero_offset,
+                "offset_frame": "world_neu",
                 "direct_command_mode": True,
                 "action_applied": True,
             }
@@ -1110,9 +3922,14 @@ class CloseRangeTrackingEnv:
         elif use_command_override:
             raw_command = dict(command_override)
             virtual_point = {"position_neu": target_for_vp["position_neu"]}
+            zero_offset = np.zeros(3, dtype=np.float64)
             vp_info = {
                 "virtual_point": virtual_point["position_neu"],
                 "anchor_mode": anchor_mode,
+                "anchor_pos": np.asarray(target_for_vp["position_neu"], dtype=np.float64),
+                "offset": zero_offset,
+                "world_offset": zero_offset,
+                "offset_frame": "world_neu",
                 "command_override": True,
                 "action_applied": False,
             }
@@ -1132,6 +3949,7 @@ class CloseRangeTrackingEnv:
             use_command_override=use_command_override,
         )
         raw_command = dict(raw_command)
+        vp_info = self._ensure_vpp_semantic_defaults(vp_info)
 
         # Persist virtual point for observation features (e.g. VP tracking error)
         self._last_virtual_point = virtual_point
@@ -1163,7 +3981,10 @@ class CloseRangeTrackingEnv:
         }
         filtered_command = self._apply_command_filter(
             clipped_command,
-            reset=bool(task_command_info.get("task_supervisor_recovery_active", False)),
+            reset=bool(
+                task_command_info.get("task_supervisor_recovery_active", False)
+                or task_command_info.get("reset_command_filter", False)
+            ),
         )
 
         # 6b. 通信延迟：对滤波后的指令做一步滞后近似
@@ -1223,6 +4044,35 @@ class CloseRangeTrackingEnv:
         term_info["raw_is_out_of_bounds"] = bool(raw_term_info.get("is_out_of_bounds", False))
         term_info["raw_is_timeout"] = bool(raw_term_info.get("is_timeout", False))
         combat_step_info = self.combat_hp.step(own_state_post, target_state_post)
+        release_on_attack_zone_triggered = bool(
+            combat_step_info.get("target_in_attack_zone", False)
+            if post_merge_predicted_target_blend_release_requires_target_attack_zone
+            else (
+                combat_step_info.get("ego_in_attack_zone", False)
+                or combat_step_info.get("target_in_attack_zone", False)
+            )
+        )
+        release_below_altitude_triggered = bool(
+            post_merge_predicted_target_blend_release_below_altitude_m is not None
+            and float(own_state_post["altitude_m"])
+            <= float(post_merge_predicted_target_blend_release_below_altitude_m)
+        )
+        if (
+            self._first_pass_complete
+            and post_merge_predicted_target_blend is not None
+            and not self._post_merge_predicted_target_blend_released
+            and (
+                post_merge_predicted_target_blend_hold_expired
+                or (
+                (
+                    post_merge_predicted_target_blend_release_on_attack_zone
+                    and release_on_attack_zone_triggered
+                )
+                or release_below_altitude_triggered
+                )
+            )
+        ):
+            self._post_merge_predicted_target_blend_released = True
         target_failed = self._aircraft_failed(target_state_post)
         ego_failed = bool(term_info.get("is_crash") or term_info.get("is_out_of_bounds"))
         combat_terminated, combat_truncated, combat_info = self.combat_hp.resolve_terminal(
@@ -1259,9 +4109,617 @@ class CloseRangeTrackingEnv:
                 return vp.tolist()
             return vp
 
+        vpp_geometry_info = self._build_vpp_geometry_diagnostics(
+            virtual_point,
+            vp_info,
+            own_state_post,
+            target_state_post,
+        )
+        merge_info = self._update_merge_diagnostics(rel_state_post)
+        attack_zone_info = self._build_attack_zone_diagnostics(term_info)
+        if merge_info.get("post_merge", False):
+            ego_only_attack_zone = bool(
+                attack_zone_info.get("ego_in_attack_zone", False)
+                and not attack_zone_info.get("target_in_attack_zone", False)
+            )
+            if ego_only_attack_zone:
+                self._post_merge_anchor_mode_ego_only_streak_steps += 1
+            else:
+                self._post_merge_anchor_mode_ego_only_streak_steps = 0
+            if ego_only_attack_zone:
+                self._post_merge_offensive_anchor_blend_ego_only_streak_steps += 1
+            else:
+                self._post_merge_offensive_anchor_blend_ego_only_streak_steps = 0
+            if ego_only_attack_zone:
+                self._post_merge_predicted_target_forward_scale_ego_only_streak_steps += 1
+            else:
+                self._post_merge_predicted_target_forward_scale_ego_only_streak_steps = 0
+        else:
+            self._post_merge_anchor_mode_ego_only_streak_steps = 0
+            self._post_merge_offensive_anchor_blend_ego_only_streak_steps = 0
+            self._post_merge_predicted_target_forward_scale_ego_only_streak_steps = 0
+        if (
+            merge_info.get("post_merge", False)
+            and not self._post_merge_anchor_mode_released
+            and self._post_merge_anchor_mode_has_activated
+            and post_merge_anchor_mode_release_ego_only_streak_steps is not None
+            and self._post_merge_anchor_mode_ego_only_streak_steps
+            >= post_merge_anchor_mode_release_ego_only_streak_steps
+        ):
+            self._post_merge_anchor_mode_released = True
+            post_merge_anchor_mode_release_triggered = True
+            self._post_merge_anchor_mode_lateral_world_offset_latched = None
+            self._post_merge_anchor_mode_lateral_world_offset_latch_activation_range_m = (
+                None
+            )
+        if (
+            merge_info.get("post_merge", False)
+            and self._post_merge_anchor_mode_released
+            and post_merge_anchor_mode_release_reset_on_streak_break
+            and not ego_only_attack_zone
+        ):
+            self._post_merge_anchor_mode_released = False
+            post_merge_anchor_mode_release_reset_triggered = True
+            self._post_merge_anchor_mode_lateral_world_offset_latched = None
+            self._post_merge_anchor_mode_lateral_world_offset_latch_activation_range_m = (
+                None
+            )
+        if (
+            merge_info.get("post_merge", False)
+            and self._post_merge_offensive_anchor_blend_has_activated
+            and not self._post_merge_offensive_anchor_blend_released
+            and post_merge_offensive_anchor_blend_release_ego_only_streak_steps
+            is not None
+            and self._post_merge_offensive_anchor_blend_ego_only_streak_steps
+            >= post_merge_offensive_anchor_blend_release_ego_only_streak_steps
+        ):
+            self._post_merge_offensive_anchor_blend_released = True
+            self._post_merge_offensive_anchor_blend_release_step = self.current_step
+            post_merge_offensive_anchor_blend_release_triggered = True
+        if (
+            merge_info.get("post_merge", False)
+            and self._post_merge_offensive_anchor_blend_released
+            and post_merge_offensive_anchor_blend_release_reset_on_streak_break
+            and not ego_only_attack_zone
+        ):
+            self._post_merge_offensive_anchor_blend_released = False
+            self._post_merge_offensive_anchor_blend_release_step = None
+            post_merge_offensive_anchor_blend_release_reset_triggered = True
+            self._post_merge_offensive_anchor_lateral_world_offset_latched = None
+        if (
+            merge_info.get("post_merge", False)
+            and not self._post_merge_predicted_target_forward_scale_released
+            and post_merge_predicted_target_forward_scale_release_ego_only_streak_steps
+            is not None
+            and self._post_merge_predicted_target_forward_scale_ego_only_streak_steps
+            >= post_merge_predicted_target_forward_scale_release_ego_only_streak_steps
+        ):
+            self._post_merge_predicted_target_forward_scale_released = True
+            post_merge_predicted_target_forward_scale_release_triggered = True
+        if (
+            merge_info.get("post_merge", False)
+            and self._post_merge_predicted_target_forward_scale_released
+            and post_merge_predicted_target_forward_scale_release_reset_on_streak_break
+            and not ego_only_attack_zone
+        ):
+            self._post_merge_predicted_target_forward_scale_released = False
+            post_merge_predicted_target_forward_scale_release_reset_triggered = True
+
         # 组装 info
+        configured_offset_frame = "world_neu"
+        if self.virtual_point_generator is not None:
+            configured_offset_frame = str(
+                getattr(self.virtual_point_generator, "offset_frame", "world_neu")
+            )
         info = {
             "virtual_point": _serialize_vp(virtual_point),
+            "anchor_pos": vpp_geometry_info["anchor_pos"].tolist(),
+            "vp_position_neu": vpp_geometry_info["vp_position_neu"].tolist(),
+            "vp_offset": vpp_geometry_info["offset"].tolist(),
+            "vp_world_offset": vpp_geometry_info["world_offset"].tolist(),
+            "offset_frame": vpp_geometry_info["offset_frame"],
+            "configured_offset_frame": configured_offset_frame,
+            "action_semantics": str(
+                vp_info.get("action_semantics", "cartesian_offset")
+            ),
+            "configured_action_semantics": str(
+                vp_info.get("configured_action_semantics", "cartesian_offset")
+            ),
+            "tactical_basis_enabled": bool(
+                vp_info.get("tactical_basis_enabled", False)
+            ),
+            "tactical_basis_action_ll": float(
+                vp_info.get("tactical_basis_action_ll", np.nan)
+            ),
+            "tactical_basis_action_io": float(
+                vp_info.get("tactical_basis_action_io", np.nan)
+            ),
+            "tactical_basis_action_cd": float(
+                vp_info.get("tactical_basis_action_cd", np.nan)
+            ),
+            "tactical_basis_lead_lag_extent_m": float(
+                vp_info.get("tactical_basis_lead_lag_extent_m", np.nan)
+            ),
+            "tactical_basis_inside_outside_extent_m": float(
+                vp_info.get("tactical_basis_inside_outside_extent_m", np.nan)
+            ),
+            "tactical_basis_climb_descent_extent_m": float(
+                vp_info.get("tactical_basis_climb_descent_extent_m", np.nan)
+            ),
+            "tactical_basis_longitudinal_frame": str(
+                vp_info.get("tactical_basis_longitudinal_frame", "target_velocity")
+            ),
+            "tactical_basis_lateral_frame": str(
+                vp_info.get("tactical_basis_lateral_frame", "encounter_stable")
+            ),
+            "tactical_basis_vertical_frame": str(
+                vp_info.get("tactical_basis_vertical_frame", "world_neu")
+            ),
+            "tactical_basis_lateral_sign_mode": str(
+                vp_info.get("tactical_basis_lateral_sign_mode", "same_side")
+            ),
+            "tactical_basis_lateral_sign": float(
+                vp_info.get("tactical_basis_lateral_sign", np.nan)
+            ),
+            "tactical_basis_ll_world": np.asarray(
+                vp_info.get("tactical_basis_ll_world", np.full(3, np.nan)),
+                dtype=np.float64,
+            ).tolist(),
+            "tactical_basis_io_world": np.asarray(
+                vp_info.get("tactical_basis_io_world", np.full(3, np.nan)),
+                dtype=np.float64,
+            ).tolist(),
+            "tactical_basis_cd_world": np.asarray(
+                vp_info.get("tactical_basis_cd_world", np.full(3, np.nan)),
+                dtype=np.float64,
+            ).tolist(),
+            "tactical_basis_world_offset": np.asarray(
+                vp_info.get("tactical_basis_world_offset", np.full(3, np.nan)),
+                dtype=np.float64,
+            ).tolist(),
+            "anchor_mode_requested": requested_anchor_mode,
+            "predicted_target_blend": float(vp_info.get("predicted_target_blend", 1.0)),
+            "predicted_target_forward_scale": float(
+                vp_info.get("predicted_target_forward_scale", 1.0)
+            ),
+            "offensive_anchor_blend": float(
+                vp_info.get("offensive_anchor_blend", 0.0)
+            ),
+            "post_merge_predicted_target_blend": (
+                float(post_merge_predicted_target_blend)
+                if post_merge_predicted_target_blend is not None
+                else np.nan
+            ),
+            "post_merge_predicted_target_forward_scale": (
+                float(post_merge_predicted_target_forward_scale)
+                if post_merge_predicted_target_forward_scale is not None
+                else np.nan
+            ),
+            "post_merge_predicted_target_forward_scale_release_scale": (
+                float(post_merge_predicted_target_forward_scale_release_scale)
+                if post_merge_predicted_target_forward_scale_release_scale is not None
+                else np.nan
+            ),
+            "post_merge_predicted_target_forward_scale_release_ego_only_streak_steps": (
+                float(
+                    post_merge_predicted_target_forward_scale_release_ego_only_streak_steps
+                )
+                if post_merge_predicted_target_forward_scale_release_ego_only_streak_steps
+                is not None
+                else np.nan
+            ),
+            "post_merge_predicted_target_forward_scale_release_reset_on_streak_break": bool(
+                post_merge_predicted_target_forward_scale_release_reset_on_streak_break
+            ),
+            "post_merge_predicted_target_forward_scale_hold_steps": (
+                float(post_merge_predicted_target_forward_scale_hold_steps)
+                if post_merge_predicted_target_forward_scale_hold_steps is not None
+                else np.nan
+            ),
+            "post_merge_anchor_mode_release_ego_only_streak_steps": (
+                float(post_merge_anchor_mode_release_ego_only_streak_steps)
+                if post_merge_anchor_mode_release_ego_only_streak_steps is not None
+                else np.nan
+            ),
+            "post_merge_anchor_mode_recovery_below_altitude_m": (
+                float(post_merge_anchor_mode_recovery_below_altitude_m)
+                if np.isfinite(post_merge_anchor_mode_recovery_below_altitude_m)
+                else np.nan
+            ),
+            "post_merge_anchor_mode_release_reset_on_streak_break": bool(
+                post_merge_anchor_mode_release_reset_on_streak_break
+            ),
+            "post_merge_anchor_mode_offensive_anchor_blend": (
+                float(post_merge_anchor_mode_offensive_anchor_blend)
+                if post_merge_anchor_mode_offensive_anchor_blend is not None
+                else np.nan
+            ),
+            "post_merge_anchor_mode_offensive_anchor_longitudinal_blend": (
+                float(post_merge_anchor_mode_offensive_anchor_longitudinal_blend)
+                if post_merge_anchor_mode_offensive_anchor_longitudinal_blend
+                is not None
+                else np.nan
+            ),
+            "post_merge_anchor_mode_offensive_anchor_lateral_blend": (
+                float(post_merge_anchor_mode_offensive_anchor_lateral_blend)
+                if post_merge_anchor_mode_offensive_anchor_lateral_blend is not None
+                else np.nan
+            ),
+            "post_merge_anchor_mode_offensive_anchor_blend_active": bool(
+                post_merge_anchor_mode_offensive_anchor_blend_active
+            ),
+            "post_merge_anchor_mode_offensive_anchor_component_blend_active": bool(
+                post_merge_anchor_mode_offensive_anchor_component_blend_active
+            ),
+            "post_merge_anchor_mode_lateral_world_offset_latch_on_activation": bool(
+                post_merge_anchor_mode_lateral_world_offset_latch_on_activation
+            ),
+            "post_merge_anchor_mode_lateral_world_offset_latch_activation_range_m_min": (
+                float(
+                    post_merge_anchor_mode_lateral_world_offset_latch_activation_range_m_min
+                )
+                if post_merge_anchor_mode_lateral_world_offset_latch_activation_range_m_min
+                is not None
+                else np.nan
+            ),
+            "post_merge_anchor_mode_lateral_world_offset_latch_range_gate_satisfied": bool(
+                post_merge_anchor_mode_lateral_world_offset_latch_range_gate_satisfied
+            ),
+            "post_merge_anchor_mode_lateral_world_offset_latch_activation_range_m": (
+                float(post_merge_anchor_mode_lateral_world_offset_latch_activation_range_m)
+                if np.isfinite(
+                    post_merge_anchor_mode_lateral_world_offset_latch_activation_range_m
+                )
+                else np.nan
+            ),
+            "post_merge_anchor_mode_lateral_world_offset_latch_active": bool(
+                post_merge_anchor_mode_lateral_world_offset_latch_active
+            ),
+            "post_merge_offensive_anchor_blend": (
+                float(post_merge_offensive_anchor_blend)
+                if post_merge_offensive_anchor_blend is not None
+                else np.nan
+            ),
+            "post_merge_offensive_anchor_longitudinal_scale": (
+                float(post_merge_offensive_anchor_longitudinal_scale)
+                if post_merge_offensive_anchor_longitudinal_scale is not None
+                else np.nan
+            ),
+            "post_merge_offensive_anchor_lateral_scale": (
+                float(post_merge_offensive_anchor_lateral_scale)
+                if post_merge_offensive_anchor_lateral_scale is not None
+                else np.nan
+            ),
+            "post_merge_offensive_anchor_blend_release_blend": (
+                float(post_merge_offensive_anchor_blend_release_blend)
+                if post_merge_offensive_anchor_blend_release_blend is not None
+                else np.nan
+            ),
+            "post_merge_offensive_anchor_blend_release_ego_only_streak_steps": (
+                float(post_merge_offensive_anchor_blend_release_ego_only_streak_steps)
+                if post_merge_offensive_anchor_blend_release_ego_only_streak_steps
+                is not None
+                else np.nan
+            ),
+            "post_merge_offensive_anchor_blend_release_reset_on_streak_break": bool(
+                post_merge_offensive_anchor_blend_release_reset_on_streak_break
+            ),
+            "post_merge_offensive_anchor_blend_release_direct_track_enabled": bool(
+                post_merge_offensive_anchor_blend_release_direct_track_enabled
+            ),
+            "post_merge_offensive_anchor_blend_release_direct_track_below_altitude_m": (
+                float(
+                    post_merge_offensive_anchor_blend_release_direct_track_below_altitude_m
+                )
+                if post_merge_offensive_anchor_blend_release_direct_track_below_altitude_m
+                is not None
+                else np.nan
+            ),
+            "post_merge_offensive_anchor_blend_release_recovery_below_altitude_m": (
+                float(
+                    post_merge_offensive_anchor_blend_release_recovery_below_altitude_m
+                )
+                if post_merge_offensive_anchor_blend_release_recovery_below_altitude_m
+                is not None
+                else np.nan
+            ),
+            "post_merge_offensive_anchor_blend_release_recovery_longitudinal_blend": (
+                float(
+                    post_merge_offensive_anchor_blend_release_recovery_longitudinal_blend
+                )
+                if post_merge_offensive_anchor_blend_release_recovery_longitudinal_blend
+                is not None
+                else np.nan
+            ),
+            "post_merge_offensive_anchor_blend_release_recovery_lateral_blend": (
+                float(
+                    post_merge_offensive_anchor_blend_release_recovery_lateral_blend
+                )
+                if post_merge_offensive_anchor_blend_release_recovery_lateral_blend
+                is not None
+                else np.nan
+            ),
+            "post_merge_offensive_anchor_blend_release_recovery_forward_bias_m_max": (
+                float(
+                    post_merge_offensive_anchor_blend_release_recovery_forward_bias_m_max
+                )
+                if post_merge_offensive_anchor_blend_release_recovery_forward_bias_m_max
+                is not None
+                else np.nan
+            ),
+            "post_merge_offensive_anchor_blend_release_vp_forward_bias_m_min": (
+                float(post_merge_offensive_anchor_blend_release_vp_forward_bias_m_min)
+                if post_merge_offensive_anchor_blend_release_vp_forward_bias_m_min
+                is not None
+                else np.nan
+            ),
+            "post_merge_offensive_anchor_blend_release_vp_forward_bias_clamp_negative_lateral_below_altitude_m": (
+                float(
+                    post_merge_offensive_anchor_blend_release_vp_forward_bias_clamp_negative_lateral_below_altitude_m
+                )
+                if (
+                    post_merge_offensive_anchor_blend_release_vp_forward_bias_clamp_negative_lateral_below_altitude_m
+                    is not None
+                )
+                else np.nan
+            ),
+            "post_merge_offensive_anchor_lateral_world_offset_latch_on_activation": bool(
+                post_merge_offensive_anchor_lateral_world_offset_latch_on_activation
+            ),
+            "post_merge_offensive_anchor_lateral_world_offset_latch_active": bool(
+                post_merge_offensive_anchor_lateral_world_offset_latch_active
+            ),
+            "post_merge_offensive_anchor_blend_release_lateral_only": bool(
+                post_merge_offensive_anchor_blend_release_lateral_only
+            ),
+            "post_merge_offensive_anchor_blend_release_lateral_only_hold_steps": (
+                float(post_merge_offensive_anchor_blend_release_lateral_only_hold_steps)
+                if post_merge_offensive_anchor_blend_release_lateral_only_hold_steps
+                is not None
+                else np.nan
+            ),
+            "post_merge_offensive_anchor_blend_requires_geometry_disadvantage": bool(
+                post_merge_offensive_anchor_gate[
+                    "requires_geometry_disadvantage"
+                ]
+            ),
+            "post_merge_offensive_anchor_condition_met": bool(
+                post_merge_offensive_anchor_gate["condition_met"]
+            ),
+            "post_merge_offensive_anchor_target_only_attack_zone_disadvantage": bool(
+                post_merge_offensive_anchor_gate[
+                    "target_only_attack_zone_disadvantage"
+                ]
+            ),
+            "post_merge_offensive_anchor_geometry_disadvantage": bool(
+                post_merge_offensive_anchor_gate["geometry_disadvantage"]
+            ),
+            "post_merge_offensive_anchor_alignment_disadvantage": bool(
+                post_merge_offensive_anchor_gate["alignment_disadvantage"]
+            ),
+            "post_merge_offensive_anchor_gate_ego_attack_score": float(
+                post_merge_offensive_anchor_gate["ego_attack_score"]
+            ),
+            "post_merge_offensive_anchor_gate_target_attack_score": float(
+                post_merge_offensive_anchor_gate["target_attack_score"]
+            ),
+            "post_merge_offensive_anchor_gate_ego_in_attack_zone": bool(
+                post_merge_offensive_anchor_gate["ego_in_attack_zone"]
+            ),
+            "post_merge_offensive_anchor_gate_target_in_attack_zone": bool(
+                post_merge_offensive_anchor_gate["target_in_attack_zone"]
+            ),
+            "post_merge_offensive_anchor_gate_aa_deg_min": float(
+                post_merge_offensive_anchor_gate["aa_deg_min"]
+            ),
+            "post_merge_offensive_anchor_gate_aa_deg": float(
+                post_merge_offensive_anchor_gate["aa_deg"]
+            ),
+            "post_merge_offensive_anchor_gate_range_rate_mps": float(
+                post_merge_offensive_anchor_gate["range_rate_mps"]
+            ),
+            "post_merge_offensive_anchor_gate_range_opening": bool(
+                post_merge_offensive_anchor_gate["range_opening"]
+            ),
+            "post_merge_predicted_target_blend_release_on_attack_zone": bool(
+                post_merge_predicted_target_blend_release_on_attack_zone
+            ),
+            "post_merge_predicted_target_blend_release_requires_target_attack_zone": bool(
+                post_merge_predicted_target_blend_release_requires_target_attack_zone
+            ),
+            "post_merge_predicted_target_blend_release_below_altitude_m": (
+                float(post_merge_predicted_target_blend_release_below_altitude_m)
+                if post_merge_predicted_target_blend_release_below_altitude_m is not None
+                else np.nan
+            ),
+            "post_merge_predicted_target_blend_hold_steps": (
+                float(post_merge_predicted_target_blend_hold_steps)
+                if post_merge_predicted_target_blend_hold_steps is not None
+                else np.nan
+            ),
+            "post_merge_predicted_target_blend_release_blend": (
+                float(post_merge_predicted_target_blend_release_blend)
+                if post_merge_predicted_target_blend_release_blend is not None
+                else np.nan
+            ),
+            "post_merge_predicted_target_blend_steps_since_first_pass": float(
+                post_merge_predicted_target_blend_steps_since_first_pass
+            ),
+            "post_merge_predicted_target_blend_hold_remaining_steps": float(
+                post_merge_predicted_target_blend_hold_remaining_steps
+            ),
+            "post_merge_predicted_target_blend_hold_window_open": bool(
+                post_merge_predicted_target_blend_hold_window_open
+            ),
+            "post_merge_predicted_target_forward_scale_steps_since_first_pass": float(
+                post_merge_predicted_target_forward_scale_steps_since_first_pass
+            ),
+            "post_merge_predicted_target_forward_scale_hold_remaining_steps": float(
+                post_merge_predicted_target_forward_scale_hold_remaining_steps
+            ),
+            "post_merge_predicted_target_forward_scale_hold_window_open": bool(
+                post_merge_predicted_target_forward_scale_hold_window_open
+            ),
+            "post_merge_predicted_target_forward_scale_ego_only_streak_steps": float(
+                self._post_merge_predicted_target_forward_scale_ego_only_streak_steps
+            ),
+            "post_merge_predicted_target_blend_active": bool(
+                post_merge_predicted_target_blend_active
+            ),
+            "post_merge_predicted_target_forward_scale_active": bool(
+                post_merge_predicted_target_forward_scale_active
+            ),
+            "post_merge_predicted_target_forward_scale_release_scale_active": bool(
+                post_merge_predicted_target_forward_scale_release_scale_active
+            ),
+            "post_merge_predicted_target_forward_scale_hold_expired": bool(
+                post_merge_predicted_target_forward_scale_hold_expired
+            ),
+            "post_merge_predicted_target_forward_scale_release_triggered": bool(
+                post_merge_predicted_target_forward_scale_release_triggered
+            ),
+            "post_merge_predicted_target_forward_scale_release_reset_triggered": bool(
+                post_merge_predicted_target_forward_scale_release_reset_triggered
+            ),
+            "post_merge_predicted_target_forward_scale_released": bool(
+                self._post_merge_predicted_target_forward_scale_released
+            ),
+            "post_merge_offensive_anchor_blend_active": bool(
+                post_merge_offensive_anchor_blend_active
+            ),
+            "post_merge_offensive_anchor_blend_release_blend_active": bool(
+                post_merge_offensive_anchor_blend_release_blend_active
+            ),
+            "post_merge_offensive_anchor_blend_ego_only_streak_steps": float(
+                self._post_merge_offensive_anchor_blend_ego_only_streak_steps
+            ),
+            "post_merge_offensive_anchor_blend_release_triggered": bool(
+                post_merge_offensive_anchor_blend_release_triggered
+            ),
+            "post_merge_offensive_anchor_blend_release_reset_triggered": bool(
+                post_merge_offensive_anchor_blend_release_reset_triggered
+            ),
+            "post_merge_offensive_anchor_blend_released": bool(
+                self._post_merge_offensive_anchor_blend_released
+            ),
+            "post_merge_offensive_anchor_blend_release_recovery_active": bool(
+                post_merge_offensive_anchor_blend_release_recovery_active
+            ),
+            "post_merge_offensive_anchor_blend_release_recovery_altitude_trigger_active": bool(
+                post_merge_offensive_anchor_blend_release_recovery_altitude_trigger_active
+            ),
+            "post_merge_offensive_anchor_blend_release_recovery_forward_bias_trigger_active": bool(
+                post_merge_offensive_anchor_blend_release_recovery_forward_bias_trigger_active
+            ),
+            "post_merge_offensive_anchor_blend_release_recovery_preview_vp_forward_bias_m": float(
+                post_merge_offensive_anchor_blend_release_recovery_preview_vp_forward_bias_m
+            ),
+            "post_merge_offensive_anchor_blend_release_vp_forward_bias_clamp_active": bool(
+                post_merge_offensive_anchor_blend_release_vp_forward_bias_clamp_active
+            ),
+            "post_merge_offensive_anchor_blend_release_preclamp_vp_forward_bias_m": float(
+                post_merge_offensive_anchor_blend_release_preclamp_vp_forward_bias_m
+            ),
+            "post_merge_offensive_anchor_blend_release_direct_track_active": bool(
+                post_merge_offensive_anchor_blend_release_direct_track_active
+            ),
+            "post_merge_offensive_anchor_blend_release_lateral_only_active": bool(
+                post_merge_offensive_anchor_blend_release_lateral_only_active
+            ),
+            "post_merge_offensive_anchor_blend_release_lateral_only_steps_since_release": float(
+                post_merge_offensive_anchor_blend_release_lateral_only_steps_since_release
+            ),
+            "post_merge_offensive_anchor_blend_release_lateral_only_hold_remaining_steps": float(
+                post_merge_offensive_anchor_blend_release_lateral_only_hold_remaining_steps
+            ),
+            "post_merge_offensive_anchor_blend_release_lateral_only_hold_window_open": bool(
+                post_merge_offensive_anchor_blend_release_lateral_only_hold_window_open
+            ),
+            "post_merge_predicted_target_blend_release_blend_active": bool(
+                post_merge_predicted_target_blend_release_blend_active
+            ),
+            "post_merge_predicted_target_blend_released": bool(
+                self._post_merge_predicted_target_blend_released
+            ),
+            "longitudinal_scale": float(vp_info.get("longitudinal_scale", 1.0)),
+            "lateral_scale": float(vp_info.get("lateral_scale", 1.0)),
+            "close_range_anchor_mode": close_range_anchor_mode,
+            "close_range_anchor_trigger_range_m": float(
+                close_range_anchor_trigger_range_m
+            ),
+            "close_range_anchor_release_on_post_merge": bool(
+                close_range_anchor_release_on_post_merge
+            ),
+            "close_range_anchor_requires_first_pass": bool(
+                close_range_anchor_requires_first_pass
+            ),
+            "close_range_anchor_offensive_anchor_blend": (
+                float(close_range_anchor_offensive_anchor_blend)
+                if close_range_anchor_offensive_anchor_blend is not None
+                else np.nan
+            ),
+            "close_range_anchor_offensive_anchor_blend_active": bool(
+                close_range_anchor_offensive_anchor_blend_active
+            ),
+            "close_range_anchor_release_alignment_angle_deg_max": (
+                float(close_range_anchor_release_alignment_angle_deg_max)
+                if close_range_anchor_release_alignment_angle_deg_max is not None
+                else np.nan
+            ),
+            "close_range_anchor_release_alignment_satisfied": bool(
+                close_range_anchor_release_alignment_satisfied
+            ),
+            "close_range_anchor_release_ready": bool(close_range_anchor_release_ready),
+            "close_range_anchor_post_merge_hold_steps": int(
+                close_range_anchor_post_merge_hold_steps
+            ),
+            "close_range_anchor_post_merge_steps_since_first_pass": float(
+                close_range_anchor_post_merge_steps_since_first_pass
+            ),
+            "close_range_anchor_post_merge_hold_remaining_steps": float(
+                close_range_anchor_post_merge_hold_remaining_steps
+            ),
+            "close_range_anchor_window_open": bool(close_range_anchor_window_open),
+            "close_range_anchor_alignment_angle_deg_max": (
+                float(close_range_anchor_alignment_angle_deg_max)
+                if close_range_anchor_alignment_angle_deg_max is not None
+                else np.nan
+            ),
+            "close_range_anchor_alignment_satisfied": bool(
+                close_range_anchor_alignment_satisfied
+            ),
+            "close_range_anchor_mode_active": bool(close_range_anchor_mode_active),
+            "post_merge_anchor_mode": post_merge_anchor_mode,
+            "post_merge_anchor_mode_requires_geometry_disadvantage": bool(
+                post_merge_anchor_mode_requires_geometry_disadvantage
+            ),
+            "post_merge_anchor_mode_condition_met": bool(
+                post_merge_anchor_mode_condition_met
+            ),
+            "post_merge_anchor_mode_active": bool(post_merge_anchor_mode_active),
+            "post_merge_anchor_mode_recovery_active": bool(
+                post_merge_anchor_mode_recovery_active
+            ),
+            "post_merge_anchor_mode_ego_only_streak_steps": float(
+                self._post_merge_anchor_mode_ego_only_streak_steps
+            ),
+            "post_merge_anchor_mode_release_triggered": bool(
+                post_merge_anchor_mode_release_triggered
+            ),
+            "post_merge_anchor_mode_release_reset_triggered": bool(
+                post_merge_anchor_mode_release_reset_triggered
+            ),
+            "post_merge_anchor_mode_released": bool(
+                self._post_merge_anchor_mode_released
+            ),
+            "post_merge_anchor_mode_lateral_world_offset_latch_on_activation": bool(
+                post_merge_anchor_mode_lateral_world_offset_latch_on_activation
+            ),
+            "post_merge_anchor_mode_lateral_world_offset_latch_active": bool(
+                post_merge_anchor_mode_lateral_world_offset_latch_active
+            ),
+            "vp_forward_bias_m": vpp_geometry_info["vp_forward_bias_m"],
+            "vp_lateral_bias_m": vpp_geometry_info["vp_lateral_bias_m"],
             "guidance_command": filtered_command,
             "raw_command": raw_command,
             "command_override_active": use_command_override,
@@ -1289,12 +4747,18 @@ class CloseRangeTrackingEnv:
                 self._last_observation_schema if hasattr(self, "_last_observation_schema") else {}
             ),
             "range_m": rel_state_post.get("range_m", np.nan),
+            "range_rate_mps": rel_state_post.get("range_rate_mps", np.nan),
             "ata_deg": float(np.rad2deg(rel_state_post.get("ata_rad", np.nan))),
+            "aa_deg": float(np.rad2deg(rel_state_post.get("aa_rad", np.nan))),
             "aspect_deg": float(np.rad2deg(rel_state_post.get("aa_rad", np.nan))),
             "los_rate": rel_state_post.get("range_rate_mps", np.nan),
             "nz_cmd": filtered_command.get("nz_cmd", np.nan),
             "roll_rate_cmd": filtered_command.get("roll_rate_cmd", np.nan),
             "throttle_cmd": filtered_command.get("throttle_cmd", np.nan),
+            "nz_saturated": self._last_command_saturation["nz_saturated"],
+            "roll_rate_saturated": self._last_command_saturation["roll_rate_saturated"],
+            "throttle_saturated": self._last_command_saturation["throttle_saturated"],
+            "lookahead_time_s": lookahead_time_s,
             "prediction_enabled": prediction_info["prediction_enabled"],
             "predictor_init_failed": prediction_info["predictor_init_failed"],
             "predictor_type": prediction_info["predictor_type"],
@@ -1322,6 +4786,88 @@ class CloseRangeTrackingEnv:
             "aggressiveness": self._last_aggressiveness,
             "pid_gain_deltas": self._last_pid_gain_deltas,
         }
+        info.update(merge_info)
+        info.update(attack_zone_info)
+        if "offensive_anchor_longitudinal_m" in vp_info:
+            info["offensive_anchor_longitudinal_m"] = float(
+                vp_info["offensive_anchor_longitudinal_m"]
+            )
+            info["offensive_anchor_frame"] = str(
+                vp_info.get("offensive_anchor_frame", "target_velocity")
+            )
+            info["offensive_anchor_lateral_frame"] = str(
+                vp_info.get(
+                    "offensive_anchor_lateral_frame",
+                    vp_info.get("offensive_anchor_frame", "target_velocity"),
+                )
+            )
+            info["offensive_anchor_encounter_stable_max_heading_delta_deg"] = float(
+                vp_info.get(
+                    "offensive_anchor_encounter_stable_max_heading_delta_deg",
+                    np.nan,
+                )
+            )
+            info["offensive_anchor_lateral_m"] = float(
+                vp_info.get("offensive_anchor_lateral_m", np.nan)
+            )
+            info["offensive_anchor_vertical_m"] = float(
+                vp_info.get("offensive_anchor_vertical_m", np.nan)
+            )
+        if "offensive_anchor_longitudinal_blend" in vp_info:
+            info["offensive_anchor_longitudinal_blend"] = float(
+                vp_info.get("offensive_anchor_longitudinal_blend", np.nan)
+            )
+        if "offensive_anchor_lateral_blend" in vp_info:
+            info["offensive_anchor_lateral_blend"] = float(
+                vp_info.get("offensive_anchor_lateral_blend", np.nan)
+            )
+        if "offensive_anchor_lateral_sign_mode" in vp_info:
+            info["offensive_anchor_lateral_sign_mode"] = str(
+                vp_info.get("offensive_anchor_lateral_sign_mode", "same_side")
+            )
+        if "offensive_anchor_lateral_sign" in vp_info:
+            info["offensive_anchor_lateral_sign"] = float(
+                vp_info.get("offensive_anchor_lateral_sign", np.nan)
+            )
+        if "offensive_anchor_pos" in vp_info:
+            info["offensive_anchor_pos"] = np.asarray(
+                vp_info["offensive_anchor_pos"], dtype=np.float64
+            ).tolist()
+        if "offensive_anchor_offset" in vp_info:
+            info["offensive_anchor_offset"] = np.asarray(
+                vp_info["offensive_anchor_offset"], dtype=np.float64
+            ).tolist()
+        if "offensive_anchor_world_offset" in vp_info:
+            info["offensive_anchor_world_offset"] = np.asarray(
+                vp_info["offensive_anchor_world_offset"], dtype=np.float64
+            ).tolist()
+        if "offensive_anchor_lateral_world_offset" in vp_info:
+            info["offensive_anchor_lateral_world_offset"] = np.asarray(
+                vp_info["offensive_anchor_lateral_world_offset"],
+                dtype=np.float64,
+            ).tolist()
+        if "offensive_anchor_lateral_local_offset" in vp_info:
+            info["offensive_anchor_lateral_local_offset"] = np.asarray(
+                vp_info["offensive_anchor_lateral_local_offset"],
+                dtype=np.float64,
+            ).tolist()
+        if "pre_offensive_blend_anchor_pos" in vp_info:
+            info["pre_offensive_blend_anchor_pos"] = np.asarray(
+                vp_info["pre_offensive_blend_anchor_pos"], dtype=np.float64
+            ).tolist()
+        if "pre_offensive_blend_anchor_local" in vp_info:
+            info["pre_offensive_blend_anchor_local"] = np.asarray(
+                vp_info["pre_offensive_blend_anchor_local"], dtype=np.float64
+            ).tolist()
+        if "post_offensive_blend_anchor_local" in vp_info:
+            info["post_offensive_blend_anchor_local"] = np.asarray(
+                vp_info["post_offensive_blend_anchor_local"], dtype=np.float64
+            ).tolist()
+        if "pre_predicted_target_forward_scale_anchor_pos" in vp_info:
+            info["pre_predicted_target_forward_scale_anchor_pos"] = np.asarray(
+                vp_info["pre_predicted_target_forward_scale_anchor_pos"],
+                dtype=np.float64,
+            ).tolist()
         info.update(actuator_info)
         info.update(term_info)
 
@@ -1334,6 +4880,303 @@ class CloseRangeTrackingEnv:
         obs = self._get_observation()
 
         return obs, reward, terminated, truncated, info
+
+    @staticmethod
+    def _as_neu_vector(value, default=None):
+        if value is None:
+            return default
+        try:
+            arr = np.asarray(value, dtype=np.float64).reshape(-1)
+        except (TypeError, ValueError):
+            return default
+        if arr.shape[0] < 3 or not np.isfinite(arr[:3]).all():
+            return default
+        return arr[:3]
+
+    def _position_from_state(self, state: dict):
+        for key in ("position_m", "position_neu", "position"):
+            value = self._as_neu_vector(state.get(key))
+            if value is not None:
+                return value
+        return np.full(3, np.nan, dtype=np.float64)
+
+    def _ensure_vpp_semantic_defaults(self, vp_info: Optional[dict]) -> dict:
+        info = dict(vp_info or {})
+        generator = self.virtual_point_generator
+        configured_action_semantics = str(
+            getattr(
+                generator,
+                "configured_action_semantics",
+                getattr(generator, "action_semantics", "cartesian_offset"),
+            )
+        )
+        if info.get("action_semantics") in (None, ""):
+            info["action_semantics"] = configured_action_semantics
+        if info.get("configured_action_semantics") in (None, ""):
+            info["configured_action_semantics"] = configured_action_semantics
+        info.setdefault("tactical_basis_enabled", False)
+        info.setdefault("tactical_basis_action_ll", np.nan)
+        info.setdefault("tactical_basis_action_io", np.nan)
+        info.setdefault("tactical_basis_action_cd", np.nan)
+        info.setdefault(
+            "tactical_basis_lead_lag_extent_m",
+            float(getattr(generator, "tactical_basis_lead_lag_extent_m", np.nan)),
+        )
+        info.setdefault(
+            "tactical_basis_inside_outside_extent_m",
+            float(
+                getattr(
+                    generator,
+                    "tactical_basis_inside_outside_extent_m",
+                    np.nan,
+                )
+            ),
+        )
+        info.setdefault(
+            "tactical_basis_climb_descent_extent_m",
+            float(
+                getattr(
+                    generator,
+                    "tactical_basis_climb_descent_extent_m",
+                    np.nan,
+                )
+            ),
+        )
+        info.setdefault(
+            "tactical_basis_longitudinal_frame",
+            str(getattr(generator, "tactical_basis_longitudinal_frame", "target_velocity")),
+        )
+        info.setdefault(
+            "tactical_basis_lateral_frame",
+            str(getattr(generator, "tactical_basis_lateral_frame", "encounter_stable")),
+        )
+        info.setdefault(
+            "tactical_basis_vertical_frame",
+            str(getattr(generator, "tactical_basis_vertical_frame", "world_neu")),
+        )
+        info.setdefault(
+            "tactical_basis_lateral_sign_mode",
+            str(getattr(generator, "tactical_basis_lateral_sign_mode", "same_side")),
+        )
+        info.setdefault("tactical_basis_lateral_sign", np.nan)
+        nan_vec = np.full(3, np.nan, dtype=np.float64)
+        for key in (
+            "tactical_basis_ll_world",
+            "tactical_basis_io_world",
+            "tactical_basis_cd_world",
+            "tactical_basis_world_offset",
+        ):
+            value = self._as_neu_vector(info.get(key), default=nan_vec.copy())
+            info[key] = value.copy() if value is not None else nan_vec.copy()
+        return info
+
+    def _update_merge_diagnostics(self, rel_state: dict) -> dict:
+        range_m = float(rel_state.get("range_m", np.nan))
+        range_rate_mps = float(rel_state.get("range_rate_mps", np.nan))
+        cfg = self.config.get("combat_diagnostics", {})
+        merge_range_m = float(cfg.get("merge_range_m", 1000.0))
+        close_range_anchor_trigger_range_m = (
+            self._resolve_close_range_anchor_trigger_range_m(merge_range_m)
+        )
+        (
+            close_range_anchor_alignment_satisfied,
+            _,
+        ) = self._evaluate_close_range_anchor_alignment(rel_state)
+        post_merge_hysteresis_m = float(cfg.get("post_merge_hysteresis_m", 50.0))
+
+        if np.isfinite(range_m):
+            self._merge_min_range_so_far_m = min(
+                self._merge_min_range_so_far_m,
+                range_m,
+            )
+            if range_m <= merge_range_m:
+                self._merge_seen_close_range = True
+            if (
+                range_m <= close_range_anchor_trigger_range_m
+                and close_range_anchor_alignment_satisfied
+            ):
+                self._close_range_anchor_ready = True
+            if (
+                self._merge_seen_close_range
+                and not self._first_pass_complete
+                and range_m > self._merge_min_range_so_far_m + post_merge_hysteresis_m
+                and range_rate_mps > 0.0
+            ):
+                self._first_pass_complete = True
+                if self._first_pass_completion_step is None:
+                    self._first_pass_completion_step = int(self.current_step)
+
+        min_range = (
+            self._merge_min_range_so_far_m
+            if np.isfinite(self._merge_min_range_so_far_m)
+            else np.nan
+        )
+        return {
+            "pre_merge": not self._first_pass_complete,
+            "post_merge": bool(self._first_pass_complete),
+            "min_range_so_far_m": float(min_range),
+            "first_pass_complete": bool(self._first_pass_complete),
+        }
+
+    def _build_vpp_geometry_diagnostics(
+        self,
+        virtual_point: dict,
+        vp_info: dict,
+        own_state: dict,
+        target_state: dict,
+    ) -> dict:
+        target_pos = self._position_from_state(target_state)
+        vp_pos = self._as_neu_vector(
+            virtual_point.get("position_neu", virtual_point.get("position")),
+            default=target_pos,
+        )
+        anchor_pos = self._as_neu_vector(vp_info.get("anchor_pos"), default=target_pos)
+        offset = self._as_neu_vector(vp_info.get("offset"), default=np.zeros(3))
+        world_offset = self._as_neu_vector(
+            vp_info.get("world_offset"),
+            default=vp_pos - anchor_pos,
+        )
+        offset_frame = str(
+            vp_info.get(
+                "offset_frame",
+                virtual_point.get("offset_frame", "world_neu"),
+            )
+        )
+        target_relative_vp = world_to_offset_frame(
+            vp_pos - target_pos,
+            "target_velocity",
+            own_state=own_state,
+            target_state=target_state,
+        )
+        return {
+            "vp_position_neu": vp_pos,
+            "anchor_pos": anchor_pos,
+            "offset": offset,
+            "world_offset": world_offset,
+            "offset_frame": offset_frame,
+            "vp_forward_bias_m": float(target_relative_vp[0]),
+            "vp_lateral_bias_m": float(target_relative_vp[1]),
+        }
+
+    def _apply_post_merge_offensive_anchor_release_forward_bias_clamp(
+        self,
+        virtual_point: dict,
+        vp_info: dict,
+        own_state: dict,
+        target_state: dict,
+        *,
+        anchor_mode: str,
+        recovery_active: bool,
+        direct_track_mode_effective: bool,
+        use_command_override: bool,
+        post_merge_offensive_anchor_gate: dict,
+    ) -> Tuple[dict, dict, bool, float]:
+        clamp_min_m = (
+            self._resolve_post_merge_offensive_anchor_blend_release_vp_forward_bias_m_min()
+        )
+        negative_lateral_below_altitude_m = (
+            self._resolve_post_merge_offensive_anchor_blend_release_vp_forward_bias_clamp_negative_lateral_below_altitude_m()
+        )
+        clamp_active = False
+        preclamp_vp_forward_bias_m = float("nan")
+        if (
+            clamp_min_m is None
+            or not self._first_pass_complete
+            or anchor_mode != "predicted_target"
+            or direct_track_mode_effective
+            or not self._use_virtual_point
+            or self.virtual_point_generator is None
+            or use_command_override
+            or recovery_active
+            or not self._post_merge_offensive_anchor_blend_released
+            or not bool(post_merge_offensive_anchor_gate["range_opening"])
+            or bool(post_merge_offensive_anchor_gate["ego_in_attack_zone"])
+            or bool(post_merge_offensive_anchor_gate["target_in_attack_zone"])
+        ):
+            return virtual_point, vp_info, clamp_active, preclamp_vp_forward_bias_m
+
+        target_pos = self._position_from_state(target_state)
+        vp_pos = self._as_neu_vector(
+            virtual_point.get("position_neu", virtual_point.get("position")),
+            default=target_pos,
+        )
+        target_relative_vp = world_to_offset_frame(
+            vp_pos - target_pos,
+            "target_velocity",
+            own_state=own_state,
+            target_state=target_state,
+        )
+        preclamp_vp_forward_bias_m = float(target_relative_vp[0])
+        if (
+            not np.isfinite(preclamp_vp_forward_bias_m)
+            or preclamp_vp_forward_bias_m >= float(clamp_min_m)
+        ):
+            return virtual_point, vp_info, clamp_active, preclamp_vp_forward_bias_m
+
+        preclamp_vp_lateral_bias_m = float(target_relative_vp[1])
+        own_altitude_m = float(own_state.get("altitude_m", np.nan))
+        if (
+            negative_lateral_below_altitude_m is not None
+            and np.isfinite(preclamp_vp_lateral_bias_m)
+            and preclamp_vp_lateral_bias_m < 0.0
+            and np.isfinite(own_altitude_m)
+            and own_altitude_m
+            > float(negative_lateral_below_altitude_m)
+        ):
+            return virtual_point, vp_info, clamp_active, preclamp_vp_forward_bias_m
+
+        target_relative_vp[0] = float(clamp_min_m)
+        clamped_world_offset = offset_to_world(
+            target_relative_vp,
+            "target_velocity",
+            own_state=own_state,
+            target_state=target_state,
+        )
+        clamped_vp_pos = target_pos + clamped_world_offset
+
+        updated_virtual_point = dict(virtual_point)
+        updated_virtual_point["position_neu"] = clamped_vp_pos.copy()
+        updated_virtual_point["position"] = clamped_vp_pos.copy()
+
+        updated_vp_info = dict(vp_info)
+        anchor_pos = self._as_neu_vector(updated_vp_info.get("anchor_pos"), default=target_pos)
+        actual_world_offset = clamped_vp_pos - anchor_pos
+        updated_vp_info["world_offset"] = actual_world_offset.copy()
+        offset_frame = str(
+            updated_vp_info.get(
+                "offset_frame",
+                updated_virtual_point.get("offset_frame", "world_neu"),
+            )
+        )
+        updated_vp_info["offset"] = world_to_offset_frame(
+            actual_world_offset,
+            offset_frame,
+            own_state=own_state,
+            target_state=target_state,
+        )
+
+        clamp_active = True
+        return (
+            updated_virtual_point,
+            updated_vp_info,
+            clamp_active,
+            preclamp_vp_forward_bias_m,
+        )
+
+    @staticmethod
+    def _build_attack_zone_diagnostics(term_info: dict) -> dict:
+        ego_attack = term_info.get("ego_attack") or {}
+        target_attack = term_info.get("target_attack") or {}
+        return {
+            "ego_attack_aoa_deg": float(ego_attack.get("aoa_deg", np.nan)),
+            "target_attack_aoa_deg": float(target_attack.get("aoa_deg", np.nan)),
+            "ego_attack_range_m": float(ego_attack.get("range_m", np.nan)),
+            "target_attack_range_m": float(target_attack.get("range_m", np.nan)),
+            "ego_attack_score": float(term_info.get("ego_attack_score", 0.0)),
+            "target_attack_score": float(term_info.get("target_attack_score", 0.0)),
+            "ego_in_attack_zone": bool(term_info.get("ego_in_attack_zone", False)),
+            "target_in_attack_zone": bool(term_info.get("target_in_attack_zone", False)),
+        }
 
     def _compute_reward(self, own_state, target_state, rel_state, command, term_info):
         """
@@ -1829,6 +5672,7 @@ class CloseRangeTrackingEnv:
             structured provenance.
         """
         own_state, target_state = self._get_current_states(noisy=True)
+        target_state = self._task_get_target_state(target_state, own_state)
         rel_state = compute_relative_geometry(own_state, target_state)
 
         obs_dict = {
@@ -1854,6 +5698,16 @@ class CloseRangeTrackingEnv:
             if self._include_saturation_in_observation
             else None
         )
+        opponent_stage = (
+            self._opponent_stage
+            if self._include_opponent_stage_in_observation
+            else None
+        )
+        task_type = (
+            self.task_name
+            if self._include_task_type_in_observation
+            else None
+        )
 
         # 同时返回展平向量（供策略网络使用）
         obs_vec, feature_names = build_observation(
@@ -1863,6 +5717,8 @@ class CloseRangeTrackingEnv:
             gains=gains,
             prediction_features=prediction_features,
             saturation_features=saturation_features,
+            opponent_stage=opponent_stage,
+            task_type=task_type,
             return_feature_names=True,
         )
         obs_dict["observation_vector"] = obs_vec
@@ -1871,6 +5727,8 @@ class CloseRangeTrackingEnv:
             "include_guidance_state": self._include_guidance_state_in_observation,
             "include_prediction_features": prediction_features is not None,
             "include_saturation": self._include_saturation_in_observation,
+            "include_opponent_stage": self._include_opponent_stage_in_observation,
+            "include_task_type": self._include_task_type_in_observation,
             "dim": int(obs_vec.shape[0]),
             "feature_names": feature_names,
         }

@@ -97,6 +97,8 @@ def build_observation(
     gains=None,
     prediction_features=None,
     saturation_features=None,
+    opponent_stage=None,
+    task_type=None,
     return_feature_names=False,
 ):
     """
@@ -115,6 +117,8 @@ def build_observation(
       - guidance_state (+3): VP tracking error [x, y, z]
       - prediction_features (+14): prediction-aware relative/displacement/velocity/variance/valid/fallback
       - saturation_features (+3): per-channel command saturation flags [nz, roll_rate, throttle]
+      - opponent_stage (+2): one-hot [is_expert, is_end_to_end] when provided
+      - task_type (+1): binary [is_crossing] when provided
 
     Args:
         own_state (dict): Own aircraft state.
@@ -123,6 +127,8 @@ def build_observation(
         gains (GuidanceGains, optional): Current guidance gains.
         prediction_features (dict, optional): Normalized prediction-aware features.
         saturation_features (dict, optional): Per-channel command saturation indicators.
+        opponent_stage (str, optional): Current opponent stage (e.g. "expert", "end_to_end").
+        task_type (str, optional): Current task type (e.g. "head_on", "crossing_feasible").
         return_feature_names (bool): If True, also return the ordered list of feature names.
 
     Returns:
@@ -197,6 +203,15 @@ def build_observation(
     if saturation_features is not None:
         for key in ("nz_saturated", "roll_rate_saturated", "throttle_saturated"):
             obs_dict[key] = float(saturation_features.get(key, 0.0))
+
+    # 可选：对手阶段 one-hot 编码
+    if opponent_stage is not None:
+        obs_dict["opponent_is_expert"] = 1.0 if opponent_stage == "expert" else 0.0
+        obs_dict["opponent_is_end_to_end"] = 1.0 if opponent_stage == "end_to_end" else 0.0
+
+    # 可选：任务类型 binary 编码
+    if task_type is not None:
+        obs_dict["is_crossing"] = 1.0 if task_type in ("crossing_feasible", "crossing") else 0.0
 
     # 展平为向量，并对极端值 / NaN / Inf 做保护，避免 float32 溢出或策略输入异常
     safe_values = []

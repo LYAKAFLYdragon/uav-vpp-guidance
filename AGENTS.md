@@ -17,6 +17,8 @@ in a fixed order:
 | Guidance state | `vp_error_x/y/z` | +3 | `observation.include_guidance_state` |
 | Saturation | `nz_saturated`, `roll_rate_saturated`, `throttle_saturated` | +3 | `observation.include_saturation` |
 | Prediction | `pred_rel_x/y/z`, `pred_disp_x/y/z`, `pred_vel_x/y/z`, `pred_var_x/y/z`, `pred_valid`, `pred_fallback` | +14 | `trajectory_prediction` integration flags |
+| Opponent stage | `opponent_is_expert`, `opponent_is_end_to_end` | +2 | `observation.include_opponent_stage` |
+| Task type | `is_crossing` | +1 | `observation.include_task_type` |
 
 `CloseRangeTrackingEnv._get_observation` returns an `observation_schema` dict
 with boolean flags, `dim`, and `feature_names`. The schema is also embedded in
@@ -86,6 +88,8 @@ When adding a new observation extension:
 3. Update `observation_schema` with the flag and `feature_names`.
 4. Add a test asserting `dim` change and flag semantics.
 5. Document it here and in `README.md`.
+
+Opponent stage (`observation.include_opponent_stage`): +2 dims `opponent_is_expert`, `opponent_is_end_to_end`. One-hot encoded from `self._opponent_stage`. Unknown stages map to `[0, 0]`. Added to enable opponent-aware policy training.
 
 When adding a new CLI flag that writes to config:
 1. Record the override via `record_config_override`.

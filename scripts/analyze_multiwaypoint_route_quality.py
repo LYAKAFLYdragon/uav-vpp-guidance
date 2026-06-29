@@ -26,23 +26,90 @@ def _safe_int(value: Any, default: int = 0) -> int:
         return int(default)
 
 
+def _safe_bool(value: Any) -> bool:
+    if isinstance(value, bool):
+        return value
+    if value is None:
+        return False
+    return str(value).strip().lower() in {"1", "true", "yes", "y"}
+
+
 def load_step_rows(csv_path: Path) -> List[Dict[str, Any]]:
     rows: List[Dict[str, Any]] = []
     with open(csv_path, "r", encoding="utf-8") as f:
         for row in csv.DictReader(f):
+            active_idx = _safe_int(row.get("active_waypoint_index"))
+            segment_idx = _safe_int(row.get("segment_waypoint_index"), active_idx)
             rows.append(
                 {
                     "seed": _safe_int(row.get("seed")),
                     "step": _safe_int(row.get("step")),
                     "time_s": _safe_float(row.get("time_s")),
+                    "range_m": _safe_float(row.get("range_m")),
+                    "waypoint_range_m": _safe_float(row.get("waypoint_range_m")),
+                    "segment_min_waypoint_range_m": _safe_float(
+                        row.get("segment_min_waypoint_range_m")
+                    ),
+                    "segment_min_waypoint_range_step": _safe_int(
+                        row.get("segment_min_waypoint_range_step"), -1
+                    ),
+                    "segment_range_receded_m": _safe_float(
+                        row.get("segment_range_receded_m")
+                    ),
+                    "synthetic_target_range_m": _safe_float(
+                        row.get("synthetic_target_range_m")
+                    ),
+                    "backend_range_m": _safe_float(row.get("backend_range_m")),
+                    "capture_radius_m": _safe_float(row.get("capture_radius_m")),
+                    "capture_reason": row.get("capture_reason") or "",
+                    "near_miss_capture_active": _safe_bool(
+                        row.get("near_miss_capture_active")
+                    ),
+                    "near_miss_capture_radius_m": _safe_float(
+                        row.get("near_miss_capture_radius_m")
+                    ),
+                    "segment_elapsed_s": _safe_float(row.get("segment_elapsed_s")),
+                    "heading_error_to_waypoint_deg": _safe_float(
+                        row.get("heading_error_to_waypoint_deg")
+                    ),
+                    "multi_waypoint_roll_moderation_active": _safe_bool(
+                        row.get("multi_waypoint_roll_moderation_active")
+                    ),
+                    "multi_waypoint_roll_recovery_active": _safe_bool(
+                        row.get("multi_waypoint_roll_recovery_active")
+                    ),
+                    "multi_waypoint_same_bank_guard_active": _safe_bool(
+                        row.get("multi_waypoint_same_bank_guard_active")
+                    ),
+                    "multi_waypoint_same_bank_guard_soft_cap_active": _safe_bool(
+                        row.get("multi_waypoint_same_bank_guard_soft_cap_active")
+                    ),
+                    "multi_waypoint_roll_rate_scale": _safe_float(
+                        row.get("multi_waypoint_roll_rate_scale")
+                    ),
+                    "multi_waypoint_static_waypoint_blend": _safe_float(
+                        row.get("multi_waypoint_static_waypoint_blend")
+                    ),
                     "altitude_m": _safe_float(row.get("altitude_m")),
                     "roll_deg": _safe_float(row.get("roll_deg")),
-                    "active_waypoint_index": _safe_int(row.get("active_waypoint_index")),
+                    "segment_waypoint_index": segment_idx,
+                    "active_waypoint_index": active_idx,
                     "completed_waypoints": _safe_int(row.get("completed_waypoints")),
                 }
             )
     rows.sort(key=lambda item: (item["seed"], item["step"]))
     return rows
+
+
+def _finalize_segment(segment: Dict[str, Any]) -> Dict[str, Any]:
+    end_range = segment.get("range_at_segment_end_m", float("nan"))
+    min_range = segment.get("min_waypoint_range_m", float("nan"))
+    segment["range_receded_from_closest_m"] = (
+        end_range - min_range
+        if math.isfinite(end_range) and math.isfinite(min_range)
+        else float("nan")
+    )
+    return segment
 
 
 def _extract_segments(rows: Iterable[Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -53,13 +120,18 @@ def _extract_segments(rows: Iterable[Dict[str, Any]]) -> List[Dict[str, Any]]:
 
     for row in rows:
         seed = row["seed"]
-        idx = row["active_waypoint_index"]
+        idx = row.get("segment_waypoint_index", row["active_waypoint_index"])
+        waypoint_range = row["waypoint_range_m"]
+        heading_error = row["heading_error_to_waypoint_deg"]
+        abs_heading_error = abs(heading_error) if math.isfinite(heading_error) else float("nan")
+        capture_reason = row.get("capture_reason") or ""
         if current is None or seed != prev_seed or idx != prev_idx:
             if current is not None:
-                segments.append(current)
+                segments.append(_finalize_segment(current))
             current = {
                 "seed": seed,
                 "active_waypoint_index": idx,
+                "segment_waypoint_index": idx,
                 "start_step": row["step"],
                 "end_step": row["step"],
                 "steps": 1,
@@ -67,11 +139,47 @@ def _extract_segments(rows: Iterable[Dict[str, Any]]) -> List[Dict[str, Any]]:
                 "end_completed_waypoints": row["completed_waypoints"],
                 "min_altitude_m": row["altitude_m"],
                 "max_abs_roll_deg": abs(row["roll_deg"]) if math.isfinite(row["roll_deg"]) else float("nan"),
+                "range_at_segment_start_m": waypoint_range,
+                "range_at_segment_end_m": waypoint_range,
+                "min_waypoint_range_m": waypoint_range,
+                "closest_approach_step": row["step"] if math.isfinite(waypoint_range) else None,
+                "min_recorded_segment_waypoint_range_m": row[
+                    "segment_min_waypoint_range_m"
+                ],
+                "segment_elapsed_at_end_s": row["segment_elapsed_s"],
+                "heading_error_at_segment_end_deg": heading_error,
+                "max_abs_heading_error_to_waypoint_deg": abs_heading_error,
+                "roll_moderation_active_steps": int(
+                    row["multi_waypoint_roll_moderation_active"]
+                ),
+                "roll_recovery_active_steps": int(
+                    row["multi_waypoint_roll_recovery_active"]
+                ),
+                "same_bank_guard_active_steps": int(
+                    row["multi_waypoint_same_bank_guard_active"]
+                ),
+                "same_bank_guard_soft_cap_steps": int(
+                    row["multi_waypoint_same_bank_guard_soft_cap_active"]
+                ),
+                "same_bank_guard_zero_steps": int(
+                    row["multi_waypoint_same_bank_guard_active"]
+                    and not row["multi_waypoint_same_bank_guard_soft_cap_active"]
+                ),
+                "max_static_waypoint_blend": row[
+                    "multi_waypoint_static_waypoint_blend"
+                ],
+                "near_miss_capture_active_steps": int(
+                    row["near_miss_capture_active"]
+                ),
+                "capture_reasons": [capture_reason] if capture_reason else [],
             }
         else:
             current["end_step"] = row["step"]
             current["steps"] += 1
             current["end_completed_waypoints"] = row["completed_waypoints"]
+            current["range_at_segment_end_m"] = waypoint_range
+            current["segment_elapsed_at_end_s"] = row["segment_elapsed_s"]
+            current["heading_error_at_segment_end_deg"] = heading_error
             if math.isfinite(row["altitude_m"]):
                 if not math.isfinite(current["min_altitude_m"]):
                     current["min_altitude_m"] = row["altitude_m"]
@@ -83,11 +191,62 @@ def _extract_segments(rows: Iterable[Dict[str, Any]]) -> List[Dict[str, Any]]:
                     current["max_abs_roll_deg"] = abs_roll
                 else:
                     current["max_abs_roll_deg"] = max(current["max_abs_roll_deg"], abs_roll)
+            if math.isfinite(waypoint_range):
+                if not math.isfinite(current["min_waypoint_range_m"]) or waypoint_range < current["min_waypoint_range_m"]:
+                    current["min_waypoint_range_m"] = waypoint_range
+                    current["closest_approach_step"] = row["step"]
+            recorded_min = row["segment_min_waypoint_range_m"]
+            if math.isfinite(recorded_min):
+                if not math.isfinite(current["min_recorded_segment_waypoint_range_m"]):
+                    current["min_recorded_segment_waypoint_range_m"] = recorded_min
+                else:
+                    current["min_recorded_segment_waypoint_range_m"] = min(
+                        current["min_recorded_segment_waypoint_range_m"],
+                        recorded_min,
+                    )
+            if math.isfinite(abs_heading_error):
+                if not math.isfinite(current["max_abs_heading_error_to_waypoint_deg"]):
+                    current["max_abs_heading_error_to_waypoint_deg"] = abs_heading_error
+                else:
+                    current["max_abs_heading_error_to_waypoint_deg"] = max(
+                        current["max_abs_heading_error_to_waypoint_deg"],
+                        abs_heading_error,
+                    )
+            current["roll_moderation_active_steps"] += int(
+                row["multi_waypoint_roll_moderation_active"]
+            )
+            current["roll_recovery_active_steps"] += int(
+                row["multi_waypoint_roll_recovery_active"]
+            )
+            current["same_bank_guard_active_steps"] += int(
+                row["multi_waypoint_same_bank_guard_active"]
+            )
+            current["same_bank_guard_soft_cap_steps"] += int(
+                row["multi_waypoint_same_bank_guard_soft_cap_active"]
+            )
+            current["same_bank_guard_zero_steps"] += int(
+                row["multi_waypoint_same_bank_guard_active"]
+                and not row["multi_waypoint_same_bank_guard_soft_cap_active"]
+            )
+            static_blend = row["multi_waypoint_static_waypoint_blend"]
+            if math.isfinite(static_blend):
+                if not math.isfinite(current["max_static_waypoint_blend"]):
+                    current["max_static_waypoint_blend"] = static_blend
+                else:
+                    current["max_static_waypoint_blend"] = max(
+                        current["max_static_waypoint_blend"],
+                        static_blend,
+                    )
+            current["near_miss_capture_active_steps"] += int(
+                row["near_miss_capture_active"]
+            )
+            if capture_reason and capture_reason not in current["capture_reasons"]:
+                current["capture_reasons"].append(capture_reason)
         prev_seed = seed
         prev_idx = idx
 
     if current is not None:
-        segments.append(current)
+        segments.append(_finalize_segment(current))
     return segments
 
 
@@ -139,6 +298,11 @@ def analyze_route_quality(
             for seg in meaningful_segments
             if math.isfinite(seg["max_abs_roll_deg"]) and seg["max_abs_roll_deg"] >= severe_roll_deg
         ]
+        near_miss_capture_segments = [
+            seg["active_waypoint_index"]
+            for seg in meaningful_segments
+            if "near_miss_passed_waypoint" in seg.get("capture_reasons", [])
+        ]
 
         issues = []
         if ep.get("crashed"):
@@ -167,6 +331,7 @@ def analyze_route_quality(
             "timeout_like_segments": timeout_like_segments,
             "high_roll_segments": high_roll_segments,
             "severe_roll_segments": severe_roll_segments,
+            "near_miss_capture_segments": near_miss_capture_segments,
             "issues": issues,
             "segments": segs,
         }
@@ -206,14 +371,15 @@ def render_markdown(report: Dict[str, Any], summary_path: Path, csv_path: Path) 
         "",
         "## Seeds",
         "",
-        "| seed | completed_wp | termination | max_roll | timeout_segments | high_roll_segments | severe_roll_segments | issues |",
-        "|---:|---:|---|---:|---|---|---|---|",
+        "| seed | completed_wp | termination | max_roll | timeout_segments | high_roll_segments | severe_roll_segments | near_miss_segments | issues |",
+        "|---:|---:|---|---:|---|---|---|---|---|",
     ]
     for seed_key, item in report["seeds"].items():
         issues_text = ",".join(item["issues"]) if item["issues"] else "-"
         lines.append(
             "| {seed} | {completed_waypoints} | {termination_reason} | {max_abs_roll_deg:.3g} | "
-            "{timeout_like_segments} | {high_roll_segments} | {severe_roll_segments} | {issues} |".format(
+            "{timeout_like_segments} | {high_roll_segments} | {severe_roll_segments} | "
+            "{near_miss_capture_segments} | {issues} |".format(
                 seed=item["seed"],
                 completed_waypoints=item["completed_waypoints"],
                 termination_reason=item["termination_reason"],
@@ -221,6 +387,7 @@ def render_markdown(report: Dict[str, Any], summary_path: Path, csv_path: Path) 
                 timeout_like_segments=item["timeout_like_segments"],
                 high_roll_segments=item["high_roll_segments"],
                 severe_roll_segments=item["severe_roll_segments"],
+                near_miss_capture_segments=item.get("near_miss_capture_segments", []),
                 issues=issues_text,
             )
         )

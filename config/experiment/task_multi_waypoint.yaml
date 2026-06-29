@@ -11,7 +11,32 @@ task:
     heading_delta_limit_deg: 30.0
     target_altitude_m: 5000.0
     reach_radius_m: 600.0
+    capture_radius_m: 750.0
     segment_timeout_s: 20.0
+    near_miss_capture:
+      enabled: true
+      radius_scale: 1.2
+      min_recede_m: 75.0
+      min_elapsed_s: 1.0
+    approach_guidance:
+      enabled: true
+      blend_start_range_m: 2800.0
+      static_range_m: 1500.0
+    command_shaping:
+      enabled: true
+      near_waypoint_roll_moderation_enabled: true
+      roll_moderation_range_m: 1200.0
+      roll_moderation_min_scale: 0.45
+      same_bank_guard_enabled: true
+      same_bank_guard_range_m: 2500.0
+      same_bank_guard_start_deg: 75.0
+      same_bank_guard_soft_cap_enabled: false
+      same_bank_guard_soft_cap_rate_cmd: 0.1
+      same_bank_guard_soft_cap_heading_error_deg: 120.0
+      same_bank_guard_soft_cap_max_recede_m: 100.0
+      overbank_recovery_enabled: true
+      roll_recovery_start_deg: 80.0
+      roll_recovery_rate_cmd: 1.5
 
 env:
   max_high_level_steps: 1500

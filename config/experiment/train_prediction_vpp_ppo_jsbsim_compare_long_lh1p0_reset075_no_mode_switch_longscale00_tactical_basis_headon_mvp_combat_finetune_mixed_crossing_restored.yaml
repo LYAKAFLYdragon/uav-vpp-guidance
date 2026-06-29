@@ -1,0 +1,29 @@
+includes:
+  - ./train_prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp_combat_finetune_narrow_extents.yaml
+
+experiment:
+  name: prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp_combat_finetune_mixed_crossing_restored
+
+combat_finetune:
+  selection_metric:
+    mode: lane_gated
+    objective: overall.win_rate
+    fallback_metric: overall.mean_return
+    gates:
+      - task: head_on
+        opponent_stage: expert
+        metric: win_rate
+        min_value: 0.5
+      - task: head_on
+        opponent_stage: end_to_end
+        metric: crash_rate
+        max_value: 0.5
+
+warm_start:
+  checkpoint: outputs/experiments/prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp_combat_finetune_narrow_extents/checkpoints/step_12288.pt
+
+virtual_point:
+  tactical_basis_lead_lag_extent_m_by_task:
+    crossing_feasible: 800.0
+  tactical_basis_climb_descent_extent_m_by_task:
+    crossing_feasible: 300.0

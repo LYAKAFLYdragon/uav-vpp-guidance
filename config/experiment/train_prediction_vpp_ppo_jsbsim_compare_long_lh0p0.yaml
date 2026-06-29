@@ -1,0 +1,28 @@
+includes:
+  - ./train_prediction_vpp_ppo_jsbsim_compare.yaml
+
+experiment:
+  name: prediction_vpp_ppo_jsbsim_compare_long_lh0p0
+
+trajectory_prediction:
+  prediction:
+    lookahead_time_s: 0.0
+
+warm_start:
+  enabled: true
+  checkpoint: outputs/experiments/vpp_ppo_lstm_frozen/checkpoints/best.pt
+  strict_dims: true
+  load_optimizer: false
+
+ppo:
+  total_timesteps: 65536
+
+evaluation:
+  eval_interval: 8192
+  eval_episodes: 6
+  save_trajectories: false
+
+checkpoint:
+  save_interval: 8192
+  save_best: true
+  save_last: true

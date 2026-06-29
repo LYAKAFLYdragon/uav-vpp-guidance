@@ -1,0 +1,286 @@
+{
+  "sources": [
+    "/root/uav-vpp-guidance/outputs/formal_combat_scale_20260626_runner_main_960seed_combined_v1/combined_inputs/combined_method_task_summary.json"
+  ],
+  "rows": [
+    {
+      "group": "crossing_feasible::no_prediction_vpp::end_to_end::d0.5::r3.0::a60.0",
+      "method": "no_prediction_vpp",
+      "task": "crossing_feasible",
+      "run_status": "formal",
+      "mode": "formal",
+      "opponent_stage": "end_to_end",
+      "attack_zone_enabled": true,
+      "combat_initial_hp": 100.0,
+      "damage_per_step": 0.5,
+      "close_range_max_km": 3.0,
+      "close_range_max_aoa_deg": 60.0,
+      "episodes": 960,
+      "backend_fallbacks": 0,
+      "ego_crashes": 0,
+      "target_crash_or_oob": 524,
+      "crashes": 524,
+      "timeouts": 436,
+      "success_rate": 0.8208333333333333,
+      "combat_success_rate": 0.8208333333333333,
+      "win_rate": 0.8208333333333333,
+      "survival_rate": 1.0,
+      "hp_advantage": 3.24746192893401,
+      "mean_time_to_kill": NaN,
+      "damage_exchange_rate": 1.0,
+      "effective_engagement_rate": 1.0,
+      "damaging_win_rate": 0.8208333333333333,
+      "mean_damage_dealt": 18.560416666666665,
+      "mean_damage_taken": 17.091666666666665,
+      "mean_total_reward": -344.80924742797004,
+      "mean_final_range_m": 6216.141855335459,
+      "mean_min_range_m": 601.0227460790605,
+      "mean_episode_mean_range_m": 4925.477911370577,
+      "mean_abs_ata_deg": 96.80857855518528,
+      "mean_time_in_envelope_s": 0.0,
+      "mean_envelope_fraction": 0.0,
+      "mean_saturation_fraction": 0.0,
+      "mean_completed_orbits": NaN,
+      "mean_prediction_valid_rate": 0.0,
+      "mean_prediction_fallback_rate": 0.0,
+      "source_summaries": [
+        "/root/uav-vpp-guidance/outputs/formal_combat_scale_20260626_runner_main_480seed_v2/no_prediction_vpp__crossing_feasible__end_to_end/aggregate/method_task_summary.json",
+        "/root/uav-vpp-guidance/outputs/formal_combat_scale_20260626_runner_followup_480to959_v1/no_prediction_vpp__crossing_feasible__end_to_end/aggregate/method_task_summary.json"
+      ],
+      "source_summary": "/root/uav-vpp-guidance/outputs/formal_combat_scale_20260626_runner_main_960seed_combined_v1/combined_inputs/combined_method_task_summary.json"
+    },
+    {
+      "group": "crossing_feasible::no_prediction_vpp::expert::d0.5::r3.0::a60.0",
+      "method": "no_prediction_vpp",
+      "task": "crossing_feasible",
+      "run_status": "formal",
+      "mode": "formal",
+      "opponent_stage": "expert",
+      "attack_zone_enabled": true,
+      "combat_initial_hp": 100.0,
+      "damage_per_step": 0.5,
+      "close_range_max_km": 3.0,
+      "close_range_max_aoa_deg": 60.0,
+      "episodes": 960,
+      "backend_fallbacks": 0,
+      "ego_crashes": 2,
+      "target_crash_or_oob": 48,
+      "crashes": 50,
+      "timeouts": 910,
+      "success_rate": 0.9229166666666667,
+      "combat_success_rate": 0.9465811965811965,
+      "win_rate": 0.9465811965811965,
+      "survival_rate": 0.9979166666666667,
+      "hp_advantage": 18.26297968397291,
+      "mean_time_to_kill": NaN,
+      "damage_exchange_rate": 1.0,
+      "effective_engagement_rate": 1.0,
+      "damaging_win_rate": 0.9229166666666667,
+      "mean_damage_dealt": 44.96458333333333,
+      "mean_damage_taken": 28.4625,
+      "mean_total_reward": -430.377947468916,
+      "mean_final_range_m": 5233.981181851431,
+      "mean_min_range_m": 549.6876319745882,
+      "mean_episode_mean_range_m": 4808.7647879297165,
+      "mean_abs_ata_deg": 99.25881350178203,
+      "mean_time_in_envelope_s": 0.4000000000000001,
+      "mean_envelope_fraction": 0.003910785996967003,
+      "mean_saturation_fraction": 0.0,
+      "mean_completed_orbits": NaN,
+      "mean_prediction_valid_rate": 0.0,
+      "mean_prediction_fallback_rate": 0.0,
+      "source_summaries": [
+        "/root/uav-vpp-guidance/outputs/formal_combat_scale_20260626_runner_main_480seed_v2/no_prediction_vpp__crossing_feasible__expert/aggregate/method_task_summary.json",
+        "/root/uav-vpp-guidance/outputs/formal_combat_scale_20260626_runner_followup_480to959_v1/no_prediction_vpp__crossing_feasible__expert/aggregate/method_task_summary.json"
+      ],
+      "source_summary": "/root/uav-vpp-guidance/outputs/formal_combat_scale_20260626_runner_main_960seed_combined_v1/combined_inputs/combined_method_task_summary.json"
+    },
+    {
+      "group": "head_on::no_prediction_vpp::end_to_end::d0.5::r3.0::a40.0",
+      "method": "no_prediction_vpp",
+      "task": "head_on",
+      "run_status": "formal",
+      "mode": "formal",
+      "opponent_stage": "end_to_end",
+      "attack_zone_enabled": true,
+      "combat_initial_hp": 100.0,
+      "damage_per_step": 0.5,
+      "close_range_max_km": 3.0,
+      "close_range_max_aoa_deg": 40.0,
+      "episodes": 960,
+      "backend_fallbacks": 0,
+      "ego_crashes": 4,
+      "target_crash_or_oob": 10,
+      "crashes": 14,
+      "timeouts": 946,
+      "success_rate": 0.9666666666666667,
+      "combat_success_rate": 0.9686847599164927,
+      "win_rate": 0.9686847599164927,
+      "survival_rate": 0.9958333333333333,
+      "hp_advantage": 8.599137931034482,
+      "mean_time_to_kill": NaN,
+      "damage_exchange_rate": 1.0,
+      "effective_engagement_rate": 1.0,
+      "damaging_win_rate": 0.9666666666666667,
+      "mean_damage_dealt": 26.220833333333335,
+      "mean_damage_taken": 18.10625,
+      "mean_total_reward": -423.3219409080928,
+      "mean_final_range_m": 4794.755380033058,
+      "mean_min_range_m": 84.66537239704247,
+      "mean_episode_mean_range_m": 3384.864177084831,
+      "mean_abs_ata_deg": 90.9578306576841,
+      "mean_time_in_envelope_s": 1.2954166666666667,
+      "mean_envelope_fraction": 0.012789427490181296,
+      "mean_saturation_fraction": 0.0,
+      "mean_completed_orbits": NaN,
+      "mean_prediction_valid_rate": 0.0,
+      "mean_prediction_fallback_rate": 0.0,
+      "source_summaries": [
+        "/root/uav-vpp-guidance/outputs/formal_combat_scale_20260626_runner_main_480seed_v2/no_prediction_vpp__head_on__end_to_end/aggregate/method_task_summary.json",
+        "/root/uav-vpp-guidance/outputs/formal_combat_scale_20260626_runner_followup_480to959_v1/no_prediction_vpp__head_on__end_to_end/aggregate/method_task_summary.json"
+      ],
+      "source_summary": "/root/uav-vpp-guidance/outputs/formal_combat_scale_20260626_runner_main_960seed_combined_v1/combined_inputs/combined_method_task_summary.json"
+    },
+    {
+      "group": "head_on::no_prediction_vpp::expert::d0.5::r3.0::a40.0",
+      "method": "no_prediction_vpp",
+      "task": "head_on",
+      "run_status": "formal",
+      "mode": "formal",
+      "opponent_stage": "expert",
+      "attack_zone_enabled": true,
+      "combat_initial_hp": 100.0,
+      "damage_per_step": 0.5,
+      "close_range_max_km": 3.0,
+      "close_range_max_aoa_deg": 40.0,
+      "episodes": 960,
+      "backend_fallbacks": 0,
+      "ego_crashes": 0,
+      "target_crash_or_oob": 2,
+      "crashes": 2,
+      "timeouts": 958,
+      "success_rate": 1.0,
+      "combat_success_rate": 1.0,
+      "win_rate": 1.0,
+      "survival_rate": 1.0,
+      "hp_advantage": 26.842708333333334,
+      "mean_time_to_kill": NaN,
+      "damage_exchange_rate": 1.0,
+      "effective_engagement_rate": 1.0,
+      "damaging_win_rate": 1.0,
+      "mean_damage_dealt": 56.30520833333333,
+      "mean_damage_taken": 29.4625,
+      "mean_total_reward": -385.83097936014644,
+      "mean_final_range_m": 3605.7801442967234,
+      "mean_min_range_m": 27.676121363775312,
+      "mean_episode_mean_range_m": 3594.539968838625,
+      "mean_abs_ata_deg": 114.24092164705053,
+      "mean_time_in_envelope_s": 2.0,
+      "mean_envelope_fraction": 0.019531814021245875,
+      "mean_saturation_fraction": 0.0,
+      "mean_completed_orbits": NaN,
+      "mean_prediction_valid_rate": 0.0,
+      "mean_prediction_fallback_rate": 0.0,
+      "source_summaries": [
+        "/root/uav-vpp-guidance/outputs/formal_combat_scale_20260626_runner_main_480seed_v2/no_prediction_vpp__head_on__expert/aggregate/method_task_summary.json",
+        "/root/uav-vpp-guidance/outputs/formal_combat_scale_20260626_runner_followup_480to959_v1/no_prediction_vpp__head_on__expert/aggregate/method_task_summary.json"
+      ],
+      "source_summary": "/root/uav-vpp-guidance/outputs/formal_combat_scale_20260626_runner_main_960seed_combined_v1/combined_inputs/combined_method_task_summary.json"
+    }
+  ],
+  "filters": {
+    "include_methods": [
+      "no_prediction_vpp"
+    ]
+  },
+  "executive_summary": {
+    "tasks": {
+      "crossing_feasible": {
+        "task": "crossing_feasible",
+        "ready_for_scale": true,
+        "best_config": {
+          "group": "crossing_feasible::no_prediction_vpp::end_to_end::d0.5::r3.0::a60.0",
+          "method": "no_prediction_vpp",
+          "mode": "formal",
+          "run_status": "formal",
+          "opponent_stage": "end_to_end",
+          "damage_per_step": 0.5,
+          "close_range_max_km": 3.0,
+          "close_range_max_aoa_deg": 60.0,
+          "source_summary": "/root/uav-vpp-guidance/outputs/formal_combat_scale_20260626_runner_main_960seed_combined_v1/combined_inputs/combined_method_task_summary.json"
+        },
+        "best_metrics": {
+          "episodes": 960,
+          "win_rate": 0.8208333333333333,
+          "effective_engagement_rate": 1.0,
+          "damaging_win_rate": 0.8208333333333333,
+          "mean_damage_dealt": 18.560416666666665,
+          "mean_damage_taken": 17.091666666666665,
+          "ego_crashes": 0,
+          "target_crash_or_oob": 524,
+          "timeouts": 436,
+          "backend_fallbacks": 0
+        },
+        "candidate_count": 2,
+        "ready_groups": [
+          "crossing_feasible::no_prediction_vpp::end_to_end::d0.5::r3.0::a60.0",
+          "crossing_feasible::no_prediction_vpp::expert::d0.5::r3.0::a60.0"
+        ],
+        "next_action": "formal_expand_with_explicit_aoa60"
+      },
+      "head_on": {
+        "task": "head_on",
+        "ready_for_scale": true,
+        "best_config": {
+          "group": "head_on::no_prediction_vpp::end_to_end::d0.5::r3.0::a40.0",
+          "method": "no_prediction_vpp",
+          "mode": "formal",
+          "run_status": "formal",
+          "opponent_stage": "end_to_end",
+          "damage_per_step": 0.5,
+          "close_range_max_km": 3.0,
+          "close_range_max_aoa_deg": 40.0,
+          "source_summary": "/root/uav-vpp-guidance/outputs/formal_combat_scale_20260626_runner_main_960seed_combined_v1/combined_inputs/combined_method_task_summary.json"
+        },
+        "best_metrics": {
+          "episodes": 960,
+          "win_rate": 0.9686847599164927,
+          "effective_engagement_rate": 1.0,
+          "damaging_win_rate": 0.9666666666666667,
+          "mean_damage_dealt": 26.220833333333335,
+          "mean_damage_taken": 18.10625,
+          "ego_crashes": 4,
+          "target_crash_or_oob": 10,
+          "timeouts": 946,
+          "backend_fallbacks": 0
+        },
+        "candidate_count": 2,
+        "ready_groups": [
+          "head_on::no_prediction_vpp::end_to_end::d0.5::r3.0::a40.0",
+          "head_on::no_prediction_vpp::expert::d0.5::r3.0::a40.0"
+        ],
+        "next_action": "formal_expand"
+      }
+    },
+    "overall": {
+      "required_combat_tasks": [
+        "head_on",
+        "crossing_feasible"
+      ],
+      "missing_required_tasks": [],
+      "not_ready_required_tasks": [],
+      "can_run_large_scale_air_combat_experiments": true,
+      "scope": "combat_only_head_on_crossing",
+      "recommended_action": "proceed_large_scale_combat_experiment",
+      "notes": [
+        "Assessment is limited to the combat tasks present in the merged formal summaries.",
+        "Non-combat or route-tracking tasks such as sustained_turn or multi_waypoint are outside this large-scale air-combat readiness scope."
+      ],
+      "filters": {
+        "include_methods": [
+          "no_prediction_vpp"
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,14 @@
+
+
+     JSBSim Flight Dynamics Model v1.1.6 [GitHub build 320/commit b477f6312bee2fd3af4c4e5ba1a3e732ed2b99d4] Apr 30 2021 12:00:59
+            [JSBSim-ML v2.0]
+
+JSBSim startup beginning ...
+
+============================================================
+JSBSim HRL comparison workflow complete
+Output dir: E:\uav-vpp-guidance\outputs\jsbsim_hrl_comparison\tactical_basis_headon_mvp_combat_finetune_mixed_quality_gated_conservative_headon_best_release5_end_to_end_10seed_20260629
+Status: completed
+Paper-safe: False
+Artifact contract valid: True
+============================================================

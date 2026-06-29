@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0.0",
+  "required_files": [
+    "resolved_config.yaml",
+    "dry_run_checks.json",
+    "design_notes.json",
+    "artifact_contract.json",
+    "run_manifest.json"
+  ],
+  "required_directories": [
+    "manifests"
+  ],
+  "optional_files": []
+}

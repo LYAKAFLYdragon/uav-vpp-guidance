@@ -1,0 +1,28 @@
+includes:
+  - ./train_prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00.yaml
+
+experiment:
+  name: prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp
+
+virtual_point:
+  action_semantics: tactical_basis_v1
+  tactical_basis_longitudinal_frame: target_velocity
+  tactical_basis_lateral_frame: encounter_stable
+  tactical_basis_vertical_frame: world_neu
+  tactical_basis_lead_lag_extent_m: 1200.0
+  tactical_basis_lead_lag_extent_m_by_task:
+    head_on: 1200.0
+    crossing_feasible: 800.0
+  tactical_basis_inside_outside_extent_m: 0.0
+  tactical_basis_inside_outside_extent_m_by_task:
+    head_on: 1600.0
+    crossing_feasible: 300.0
+  tactical_basis_climb_descent_extent_m: 600.0
+  tactical_basis_climb_descent_extent_m_by_task:
+    head_on: 600.0
+    crossing_feasible: 300.0
+  tactical_basis_lateral_sign_mode: same_side
+  tactical_basis_encounter_stable_max_heading_delta_deg: 45.0
+  longitudinal_scale_by_task:
+    head_on: 1.0
+    crossing_feasible: 1.0

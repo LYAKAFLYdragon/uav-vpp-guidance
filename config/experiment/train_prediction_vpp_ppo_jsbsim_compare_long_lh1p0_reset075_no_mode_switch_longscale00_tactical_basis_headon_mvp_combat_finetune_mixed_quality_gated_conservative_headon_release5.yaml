@@ -1,0 +1,9 @@
+includes:
+  - ./train_prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp_combat_finetune_mixed_quality_gated_conservative_headon.yaml
+
+experiment:
+  name: prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp_combat_finetune_mixed_quality_gated_conservative_headon_release5
+
+virtual_point:
+  post_merge_predicted_target_forward_scale_release_ego_only_streak_steps_by_task:
+    head_on: 5

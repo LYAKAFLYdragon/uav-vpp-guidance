@@ -1,0 +1,23 @@
+includes:
+  - ./jsbsim_hrl_combat_only_pilot.yaml
+
+experiment:
+  name: jsbsim_hrl_reset075_smoke_pilot
+  description: "Combat-only smoke pilot for the formalized reset075 prediction VPP config."
+
+run_defaults:
+  main_methods:
+    - no_prediction_vpp
+    - prediction_vpp_jsbsim_compare_long_lh1p0_reset075_smoke
+  tasks:
+    - head_on
+    - crossing_feasible
+  formal_small_seeds: [0, 1, 2]
+
+methods:
+  prediction_vpp_jsbsim_compare_long_lh1p0_reset075_smoke:
+    label: "Prediction VPP + HRL (JSBSim compare, lh1p0, reset075, smoke)"
+    agent_type: ppo
+    checkpoint: outputs/experiments/prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_smoke_check_v2/checkpoints/last.pt
+    config_path: config/experiment/train_prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075.yaml
+    prediction_variant: learned

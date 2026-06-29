@@ -1,0 +1,90 @@
+{
+  "tasks": {
+    "crossing_feasible": {
+      "task": "crossing_feasible",
+      "ready_for_scale": true,
+      "best_config": {
+        "group": "crossing_feasible::no_prediction_vpp::end_to_end::d0.5::r3.0::a60.0",
+        "method": "no_prediction_vpp",
+        "mode": "formal",
+        "run_status": "formal",
+        "opponent_stage": "end_to_end",
+        "damage_per_step": 0.5,
+        "close_range_max_km": 3.0,
+        "close_range_max_aoa_deg": 60.0,
+        "source_summary": "/root/uav-vpp-guidance/outputs/formal_combat_scale_20260626_runner_main_480seed_v2/no_prediction_vpp__crossing_feasible__end_to_end/aggregate/method_task_summary.json"
+      },
+      "best_metrics": {
+        "episodes": 480,
+        "win_rate": 0.8208333333333333,
+        "effective_engagement_rate": 1.0,
+        "damaging_win_rate": 0.8208333333333333,
+        "mean_damage_dealt": 18.560416666666665,
+        "mean_damage_taken": 17.091666666666665,
+        "ego_crashes": 0,
+        "target_crash_or_oob": 262,
+        "timeouts": 218,
+        "backend_fallbacks": 0
+      },
+      "candidate_count": 2,
+      "ready_groups": [
+        "crossing_feasible::no_prediction_vpp::end_to_end::d0.5::r3.0::a60.0",
+        "crossing_feasible::no_prediction_vpp::expert::d0.5::r3.0::a60.0"
+      ],
+      "next_action": "formal_expand_with_explicit_aoa60"
+    },
+    "head_on": {
+      "task": "head_on",
+      "ready_for_scale": true,
+      "best_config": {
+        "group": "head_on::no_prediction_vpp::end_to_end::d0.5::r3.0::a40.0",
+        "method": "no_prediction_vpp",
+        "mode": "formal",
+        "run_status": "formal",
+        "opponent_stage": "end_to_end",
+        "damage_per_step": 0.5,
+        "close_range_max_km": 3.0,
+        "close_range_max_aoa_deg": 40.0,
+        "source_summary": "/root/uav-vpp-guidance/outputs/formal_combat_scale_20260626_runner_main_480seed_v2/no_prediction_vpp__head_on__end_to_end/aggregate/method_task_summary.json"
+      },
+      "best_metrics": {
+        "episodes": 480,
+        "win_rate": 0.9686847599164927,
+        "effective_engagement_rate": 1.0,
+        "damaging_win_rate": 0.9666666666666667,
+        "mean_damage_dealt": 26.220833333333335,
+        "mean_damage_taken": 18.10625,
+        "ego_crashes": 2,
+        "target_crash_or_oob": 5,
+        "timeouts": 473,
+        "backend_fallbacks": 0
+      },
+      "candidate_count": 2,
+      "ready_groups": [
+        "head_on::no_prediction_vpp::end_to_end::d0.5::r3.0::a40.0",
+        "head_on::no_prediction_vpp::expert::d0.5::r3.0::a40.0"
+      ],
+      "next_action": "formal_expand"
+    }
+  },
+  "overall": {
+    "required_combat_tasks": [
+      "head_on",
+      "crossing_feasible"
+    ],
+    "missing_required_tasks": [],
+    "not_ready_required_tasks": [],
+    "can_run_large_scale_air_combat_experiments": true,
+    "scope": "combat_only_head_on_crossing",
+    "recommended_action": "proceed_large_scale_combat_experiment",
+    "notes": [
+      "Assessment is limited to the combat tasks present in the merged formal summaries.",
+      "Non-combat or route-tracking tasks such as sustained_turn or multi_waypoint are outside this large-scale air-combat readiness scope."
+    ],
+    "filters": {
+      "include_methods": [
+        "no_prediction_vpp"
+      ]
+    }
+  }
+}

@@ -1,0 +1,10 @@
+includes:
+  - ./jsbsim_hrl_comparison.yaml
+
+methods:
+  multihead_task_type:
+    label: "Multi-head Task-type VPP + HRL"
+    agent_type: ppo
+    checkpoint: outputs/experiments/prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp_combat_finetune_mixed_opponent_aware_32k_task_type_multihead/checkpoints/best.pt
+    config_path: config/experiment/train_prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp_combat_finetune_mixed_opponent_aware_32k_task_type_multihead.yaml
+    prediction_variant: learned

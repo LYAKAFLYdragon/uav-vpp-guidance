@@ -1,0 +1,14 @@
+# Formalized reset075 no-mode-switch training config with head_on longitudinal
+# VPP offset suppressed to remove the harmful pre-merge forward push seen in
+# true-VPP expert/head_on diagnostics.
+
+includes:
+  - ./train_prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch.yaml
+
+experiment:
+  name: prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00
+
+virtual_point:
+  longitudinal_scale_by_task:
+    head_on: 0.0
+    crossing_feasible: 1.0

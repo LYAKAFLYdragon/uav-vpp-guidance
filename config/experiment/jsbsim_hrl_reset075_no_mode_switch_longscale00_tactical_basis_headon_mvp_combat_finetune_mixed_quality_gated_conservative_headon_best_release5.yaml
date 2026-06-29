@@ -1,0 +1,32 @@
+includes:
+  - ./jsbsim_hrl_combat_only_pilot.yaml
+
+experiment:
+  name: jsbsim_hrl_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp_combat_finetune_mixed_quality_gated_conservative_headon_best_release5
+  description: "Inference ablation: conservative head_on best checkpoint with release streak reduced from 19 to 5 steps."
+
+run_defaults:
+  main_methods:
+    - prediction_vpp_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00
+    - prediction_vpp_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp_combat_finetune_mixed_quality_gated_conservative_headon_best_release5
+  tasks:
+    - head_on
+    - crossing_feasible
+
+methods:
+  prediction_vpp_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00:
+    label: "Prediction VPP + HRL (JSBSim compare, lh1p0, reset075, no mode switch, longscale00)"
+    agent_type: ppo
+    checkpoint: outputs/experiments/prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00/checkpoints/last.pt
+    config_path: config/experiment/train_prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00.yaml
+    prediction_variant: learned
+
+  prediction_vpp_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp_combat_finetune_mixed_quality_gated_conservative_headon_best_release5:
+    label: "Prediction VPP + HRL (tactical basis combat finetune mixed quality-gated conservative head_on best release5, reset075 no mode switch longscale00)"
+    agent_type: ppo
+    checkpoint: outputs/experiments/prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp_combat_finetune_mixed_quality_gated_conservative_headon/checkpoints/best.pt
+    config_path: config/experiment/train_prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp_combat_finetune_mixed_quality_gated_conservative_headon_release5.yaml
+    prediction_variant: learned
+    config_overrides:
+      virtual_point.post_merge_predicted_target_forward_scale_release_ego_only_streak_steps_by_task:
+        head_on: 5

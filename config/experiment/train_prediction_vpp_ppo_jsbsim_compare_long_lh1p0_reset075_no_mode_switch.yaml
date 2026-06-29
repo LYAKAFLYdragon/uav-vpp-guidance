@@ -1,0 +1,13 @@
+# Formalized reset075 no-mode-switch training config.
+# This lane keeps the validated reset075 task-conditioned VPP settings but
+# disables guidance.mode_switch so head_on evidence reflects actual VPP use.
+
+includes:
+  - ./train_prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075.yaml
+
+experiment:
+  name: prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch
+
+guidance:
+  mode_switch:
+    enabled: false

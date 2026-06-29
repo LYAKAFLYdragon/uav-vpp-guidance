@@ -167,7 +167,18 @@ training:
     seeds: [0, 1, 2]
     description: "Hybrid mode switch for crossing breakthrough"
 
-  # --- Control group for domain randomization ---
+  # --- Combat finetune variants (narrow extents and mixed crossing) ---
+  combat_finetune_narrow_extents:
+    output_dir: outputs/experiments/prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp_combat_finetune_narrow_extents
+    checkpoint: outputs/experiments/prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp_combat_finetune_narrow_extents/checkpoints/step_12288.pt
+    seeds: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+    description: "Combat finetune with narrow tactical basis extents (head-on and crossing)"
+
+  combat_finetune_mixed_crossing:
+    output_dir: outputs/experiments/prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp_combat_finetune_mixed_crossing_restored
+    checkpoint: outputs/experiments/prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp_combat_finetune_mixed_crossing_restored/checkpoints/best.pt
+    seeds: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+    description: "Combat finetune with mixed crossing restored (broader crossing extents)"
   no_prediction_vpp_ppo_control:
     output_dir: outputs/experiments/no_prediction_vpp_ppo_control_s{seed}
     checkpoint: outputs/experiments/no_prediction_vpp_ppo_control_s{seed}/checkpoints/best.pt
@@ -231,6 +242,13 @@ evaluation_methods:
     gru_frozen:
       checkpoint: outputs/experiments/vpp_ppo_gru_frozen/checkpoints/best.pt
       source_training: vpp_ppo_gru_frozen
+    # Combat finetune variants for paper benchmark
+    combat_finetune_narrow_extents:
+      checkpoint: outputs/experiments/prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp_combat_finetune_narrow_extents/checkpoints/step_12288.pt
+      source_training: combat_finetune_narrow_extents
+    combat_finetune_mixed_crossing:
+      checkpoint: outputs/experiments/prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp_combat_finetune_mixed_crossing_restored/checkpoints/best.pt
+      source_training: combat_finetune_mixed_crossing
 
   # P0-A evaluation
   p0a:

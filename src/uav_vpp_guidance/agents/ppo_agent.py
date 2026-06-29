@@ -62,6 +62,7 @@ class PPOAgent:
         activation = policy_cfg.get("activation", "tanh")
         action_low = policy_cfg.get("action_low", [-1.0] * action_dim)
         action_high = policy_cfg.get("action_high", [1.0] * action_dim)
+        num_tasks = policy_cfg.get("num_tasks", 1)
 
         # Build network
         self.network = MLPActorCritic(
@@ -71,6 +72,7 @@ class PPOAgent:
             activation=activation,
             action_low=action_low,
             action_high=action_high,
+            num_tasks=num_tasks,
         ).to(self.device)
 
         # Optimizer

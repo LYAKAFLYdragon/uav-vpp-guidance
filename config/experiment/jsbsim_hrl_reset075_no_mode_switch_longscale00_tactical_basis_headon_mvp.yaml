@@ -1,0 +1,29 @@
+includes:
+  - ./jsbsim_hrl_combat_only_pilot.yaml
+
+experiment:
+  name: jsbsim_hrl_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp
+  description: "Combat-only pilot entry for the tactical-basis VPP MVP against the current reset075 no-mode-switch baseline."
+
+run_defaults:
+  main_methods:
+    - prediction_vpp_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00
+    - prediction_vpp_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp
+  tasks:
+    - head_on
+    - crossing_feasible
+
+methods:
+  prediction_vpp_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00:
+    label: "Prediction VPP + HRL (JSBSim compare, lh1p0, reset075, no mode switch, longscale00)"
+    agent_type: ppo
+    checkpoint: outputs/experiments/prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00/checkpoints/last.pt
+    config_path: config/experiment/train_prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00.yaml
+    prediction_variant: learned
+
+  prediction_vpp_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp:
+    label: "Prediction VPP + HRL (tactical basis MVP, reset075 no mode switch baseline)"
+    agent_type: ppo
+    checkpoint: outputs/experiments/prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp/checkpoints/last.pt
+    config_path: config/experiment/train_prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp.yaml
+    prediction_variant: learned

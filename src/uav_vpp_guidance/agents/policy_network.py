@@ -35,6 +35,9 @@ class MLPActorCritic(nn.Module):
     """
     MLP Actor-Critic network for continuous action spaces.
 
+    Supports task-conditioned multi-head actor when num_tasks > 1.
+    The task type is extracted from the last observation dimension.
+
     Args:
         obs_dim (int): Observation dimension.
         action_dim (int): Action dimension.
@@ -43,6 +46,7 @@ class MLPActorCritic(nn.Module):
         action_low (np.ndarray or list): Lower bound of action space.
         action_high (np.ndarray or list): Upper bound of action space.
         init_log_std (float): Initial log standard deviation.
+        num_tasks (int): Number of task-conditioned actor heads. Default 1 (single head).
     """
 
     def __init__(
@@ -54,15 +58,19 @@ class MLPActorCritic(nn.Module):
         action_low=None,
         action_high=None,
         init_log_std=0.0,
+        num_tasks=1,
     ):
         super().__init__()
         self.obs_dim = int(obs_dim)
         self.action_dim = int(action_dim)
+        self.num_tasks = int(num_tasks)
 
         if self.obs_dim <= 0:
             raise ValueError(f"obs_dim must be positive, got {obs_dim}")
         if self.action_dim <= 0:
             raise ValueError(f"action_dim must be positive, got {action_dim}")
+        if self.num_tasks < 1:
+            raise ValueError(f"num_tasks must be >= 1, got {num_tasks}")
 
         # Action bounds for scaling
         if action_low is None:
@@ -86,13 +94,21 @@ class MLPActorCritic(nn.Module):
         shared_sizes = [self.obs_dim] + list(hidden_sizes)
         self.shared_net = build_mlp(shared_sizes, activation=activation)
 
-        # Actor head: mean
-        self.actor_mean = nn.Linear(shared_sizes[-1], self.action_dim)
+        if self.num_tasks == 1:
+            # Single actor head (backward compatible)
+            self.actor_mean = nn.Linear(shared_sizes[-1], self.action_dim)
+            # Learnable log standard deviation (independent per action dim)
+            self.actor_log_std = nn.Parameter(torch.ones(self.action_dim) * init_log_std)
+        else:
+            # Multiple task-conditioned actor heads
+            self.actor_means = nn.ModuleList([
+                nn.Linear(shared_sizes[-1], self.action_dim) for _ in range(self.num_tasks)
+            ])
+            self.actor_log_stds = nn.ParameterList([
+                nn.Parameter(torch.ones(self.action_dim) * init_log_std) for _ in range(self.num_tasks)
+            ])
 
-        # Learnable log standard deviation (independent per action dim)
-        self.actor_log_std = nn.Parameter(torch.ones(self.action_dim) * init_log_std)
-
-        # Critic head: value
+        # Critic head: shared across all tasks
         self.critic = nn.Linear(shared_sizes[-1], 1)
 
         # Initialize weights
@@ -105,11 +121,40 @@ class MLPActorCritic(nn.Module):
                 nn.init.orthogonal_(m.weight, gain=np.sqrt(2))
                 nn.init.constant_(m.bias, 0.0)
         # Actor mean: smaller final layer gain
-        nn.init.orthogonal_(self.actor_mean.weight, gain=0.01)
-        nn.init.constant_(self.actor_mean.bias, 0.0)
+        if self.num_tasks == 1:
+            nn.init.orthogonal_(self.actor_mean.weight, gain=0.01)
+            nn.init.constant_(self.actor_mean.bias, 0.0)
+        else:
+            for actor_mean in self.actor_means:
+                nn.init.orthogonal_(actor_mean.weight, gain=0.01)
+                nn.init.constant_(actor_mean.bias, 0.0)
         # Critic: standard gain
         nn.init.orthogonal_(self.critic.weight, gain=1.0)
         nn.init.constant_(self.critic.bias, 0.0)
+
+    def _extract_task_id(self, obs):
+        """Extract task_id from the last observation dimension (is_crossing)."""
+        if self.num_tasks == 1:
+            return None
+        task_id = (obs[..., -1] > 0.5).long().clamp(0, self.num_tasks - 1)
+        return task_id
+
+    def _get_actor_params(self, features, task_id):
+        """Get mean and log_std for the given task_id."""
+        if self.num_tasks == 1:
+            mean = self.actor_mean(features)
+            log_std = self.actor_log_std.expand_as(mean)
+            return mean, log_std
+
+        batch_size = features.shape[0]
+        mean = torch.zeros(batch_size, self.action_dim, device=features.device, dtype=features.dtype)
+        log_std = torch.zeros(batch_size, self.action_dim, device=features.device, dtype=features.dtype)
+        for t in range(self.num_tasks):
+            mask = (task_id == t)
+            if mask.any():
+                mean[mask] = self.actor_means[t](features[mask])
+                log_std[mask] = self.actor_log_stds[t].expand_as(mean[mask])
+        return mean, log_std
 
     def forward(self, obs):
         """
@@ -129,7 +174,8 @@ class MLPActorCritic(nn.Module):
             )
 
         features = self.shared_net(obs)
-        mean = self.actor_mean(features)
+        task_id = self._extract_task_id(obs)
+        mean, _ = self._get_actor_params(features, task_id)
         value = self.critic(features).squeeze(-1)
         return mean, value
 
@@ -159,8 +205,17 @@ class MLPActorCritic(nn.Module):
             tuple: (action, log_prob, entropy, value)
                 If action is provided, returns (log_prob, entropy, value).
         """
-        mean, value = self.forward(obs)
-        log_std = self.actor_log_std.expand_as(mean)
+        if obs.dim() == 1:
+            obs = obs.unsqueeze(0)
+        if obs.shape[-1] != self.obs_dim:
+            raise ValueError(
+                f"Expected obs shape [..., {self.obs_dim}], got {obs.shape}"
+            )
+
+        features = self.shared_net(obs)
+        task_id = self._extract_task_id(obs)
+        mean, log_std = self._get_actor_params(features, task_id)
+        value = self.critic(features).squeeze(-1)
         std = torch.exp(log_std)
 
         dist = Normal(mean, std)

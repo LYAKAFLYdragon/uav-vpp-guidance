@@ -1,0 +1,426 @@
+Aerospace Science and Technology 129 (2022) 107857
+Contents lists available at ScienceDirect
+Aerospace Science and Technology
+www.elsevier.com/locate/aescte
+Autonomous decision-making for dogfights based on a tactical pursuit point approach
+Jiwen Xu, Jing Zhang, Lingyu Yang ∗, Chang Liu
+School of Automation Science and Electrical Engineering, Beihang University, Beijing, 100191, China
+article info abstract
+Article history:
+Received 12 March 2022 Received in revised form 4 July 2022 Accepted 29 August 2022 Available online 1 September 2022 Communicated by Tsourdos Antonios
+Keywords: Dogfight Maneuver Turn Autonomous decision-making Reinforcement learning Expert knowledge
+Although unmanned aerial vehicles (UAVs) have become increasingly indispensable in modern warfare, technology for UAV autonomous decision-making in within-visual-range aerial combat is still a tricky problem because of the complexity of air combat scenarios and rapid situation changes. This paper proposes a novel tactical pursuit point (TPP)-based autonomous decision-making framework to improve UAV decision-making abilities in dogfight scenarios, in which the decision-making problem is decomposed into two procedures: parameterized decision space generation and autonomous decision-making based on the decision space. First, a tactical pursuit space approach is presented to define the parameterized decision space as a convex hull of six tactical pursuit bases with distinct tactical purposes. In this way, a broad set of alternative TPPs can be formed by one decision-making vector. Then, an adaptable approach for both reinforcement learning methods and expert-knowledge-based methods is proposed to easily generate this decision-making vector. Finally, the effectiveness of the proposed method is validated by numerical simulations. It is verified that the TPP-based framework enriches a fighter’s decision space while enabling better turning performance and that appropriate maneuvers can be performed on the basis of this framework. The overall win rate is also demonstrated to be dominant. © 2022 Elsevier Masson SAS. All rights reserved.
+1. Introduction
+Although modern air combat has changed dramatically over the past few decades [1], the dogfight, as a representative form of close-range engagement, is still an inevitable type of air-to-air engagement that features the most rapid dynamic changes, the highest fatality risk and the greatest workload for pilot decisionmaking [2–4]. Providing an unmanned aircraft system (UAS) with sufficient autonomous decision-making (ADM) capabilities to replace pilots in close air combat is a potential way to reduce the risk to pilots and improve combat effectiveness and thus has long been a focus of challenging research in the aviation field. In intelligent fighter assistance, the task-based guidance of multiple unmanned aerial vehicles (UAVs) from a manned aircraft enhances mission performance and reduces the potential risk [5,6]. A UAS with an ADM module can also support combat capabilities in swarm air combat [7]. However, no complete solutions for this purpose seem to have emerged thus far because of the highly dynamic and complex nature of autonomous air combat [8,9].
+* Corresponding author. E-mail address: yanglingyu@buaa.edu.cn (L. Yang).
+Various studies on autonomous aerial combat have been conducted in the past 70 years. In this paper, we divide the associated developments into three groups, i.e., continuous-space-based algorithms, maneuver-library-based approaches and virtual pursuit point (VPP)-based schemes. In continuous-space-based algorithms, such as those based on differential game theory and some optimal-theory-based methods, the ADM problem is modeled and solved as a pursuit–evasion game in continuous space. The basic idea was first defined by Isaacs in [10]. [11] and [12] further developed this approach and described the pursuit–evasion aspect of the two-aircraft combat problem as a fixed-time, zero-sum differential game with perfect information. Due to the high nonlinearity and complexity of this problem, a complete analytical solution is difficult to obtain; thus, recent research has focused mainly on how to efficiently find solutions. [13] presented a hierarchical decision-making structure and performed scoring function matrix calculations based on differential game theory, and [14] proposed switching strategies based on differential game theory. For the scenario in which target information is not available to the interceptor, an interacting multiple model approach was proposed to estimate the unknown target information. To reduce the computational complexity of the differential game, an approximate dynamic programming approach has been presented to achieve near-optimal decision-making, and
+https://doi.org/10.1016/j.ast.2022.107857 1270-9638/© 2022 Elsevier Masson SAS. All rights reserved.
+
+
+J. Xu, J. Zhang, L. Yang et al. Aerospace Science and Technology 129 (2022) 107857
+Nomenclature
+χ Heading angle . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . rad χL Heading angle of the line-of-sight vector . . . . . . . . . . rad η Aspect angle . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . rad γ Path angle . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . rad μ Angle-off . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . rad μw Maximum effective angle of the weapon envelope rad ρw Effective range of the weapon envelope . . . . . . . . . . . . m aw Acceleration relative to the wind reference frame pi Position relative to the inertial reference frame pC D Climb–descent tactical pursuit basis . . . . . . . . . . . . . . . . m pI O Inside–outside tactical pursuit basis . . . . . . . . . . . . . . . . m pLL Lead–lag tactical pursuit basis . . . . . . . . . . . . . . . . . . . . . . . m pT P P Tactical pursuit point of the attacker . . . . . . . . . . . . . . . m Q Center of the turn circle in flight . . . . . . . . . . . . . . . . . . . m V Velocity vector . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . m/s ρ A Line-of-sight vector from the attacker to the opponent . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . m α = [α1, α2, α3] Decision-making vector of the autonomous decision-making system
+g Acceleration due to gravity . . . . . . . . . . . . . . . . . . . . . . . . m/s H E Energy height . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . m J Winning condition function nzwmax Maximum overload for axis Ozw R Reward function rg Guiding reward function rw Final reward function Rmin Minimum turning radius . . . . . . . . . . . . . . . . . . . . . . . . . . . . m S Situation evaluation function V c Velocity command . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . m/s V d Defensive velocity . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . m/s Vn Corner velocity . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . m/s V o Offensive velocity . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . m/s ADM Autonomous decision-making LOS Line of sight TPB Tactical pursuit basis TPP Tactical pursuit point TPS Tactical pursuit space
+simulation results showed that the proposed approach achieved an improvement of 18.7% over the minimax policy in a simplified aircombat game [15]. A similar approach was adopted in [3], and a three-dimensional approximate dynamic programming method was proposed to implement autonomous intelligent aerial combat engagements. However, the subsequent application of continuousspace-based methods to air combat has remained limited due to the high computational complexity and the need for fast computation during aerial combat. Maneuver-library-based methods, in which the ADM results are restricted to a finite set of candidate maneuvers, are another practical way to solve the decision-making problem for one-onone aerial combat. In [16], a library of ten elemental maneuvers, such as Low Yo-Yo and High Yo-Yo, was introduced to represent zero-sum two-player games, and the decision problem was transformed into a problem of maneuver selection corresponding to the max–min score. In [17], a parameterized maneuver library was further proposed, and 10 tactical maneuvers with descriptive parameters were given. In [18], the number of elemental maneuvers was extended to 11 to increase the maneuvering capabilities of unmanned combat aerial vehicles (UCAVs). [19] proposed a novel autonomous aerial combat algorithm based on basic fighter maneuvers (BFMs) for gun-based engagement within visual range. In [20], Bayesian inference and moving horizon optimization were used to construct a maneuver decision system with five elementary maneuvers. However, problems can arise in such a discrete decision-making process. Because the fighter is in open-loop flight (i.e., the flight trajectory of the fighter does not respond to the status of the opponent) in each decision-making cycle, such algorithms must establish a compromise between computational accuracy and complexity. As an alternative to the above approaches, a novel VPP concept was investigated in [21]. The VPP approach follows a similar idea as maneuver-library-based methods but at a higher level. Specifically, the decision results of a maneuver-library-based method can be regarded as control stick commands for a fighter, whereas the output of a VPP method corresponds to commands for the fighter’s guidance system. In [21,22], VPPs were introduced to perform BFMs, including lag, pure and lead pursuit courses, and a probabilistic function based on the vehicle’s state was given for generating a single point using the specified VPPs. [23] studied the utility of the VPP approach in dogfighting engagements and verified that
+the use of a continuous guidance law based on lead/pure/lag pursuit and climb/dive maneuvers is a natural and effective solution. [24] integrated a VPP scheme into a missile terminal guidance law, greatly enhancing the flexibility of trajectory design. The key feature of the VPP approach is that in each decision-making cycle, the attacker pursues the opponent in a closed-loop manner, meaning that the frequency of decision-making can be reduced compared with that in the maneuver-library-based approach. Nevertheless, as a novel proposal, the VPP approach still faces some issues that require further improvement. The first problem is to expand the pursuit types that can be represented. In the original study [21,22], only three types of pursuit were addressed, covering only a limited number of BFMs, and their tactical purposes in head-on or defensive cases were not clear. Another challenge is how to efficiently obtain the optimal decision result. [22] presented an expert-experience-based prototype, in which the capabilities of the system were completely dependent on the designer’s experience. In [23], the continuous guidance law was discretized into 14 different options to apply a game-theoretic max–min search, leading the designer to seek a tradeoff between resolution and computational load. In cases with abundant expertise or sufficient combat data, traditional intelligent decision-making methods such as fuzzy logic [25], neural network approximation [26], and expert systems can be used to effectively solve the decision problem. However, when the available expertise and data are insufficient, machinelearning-based methods have proven to be an effective tool for obtaining decision rules [27–30]. Recently, deep reinforcement learning (RL), referring to the ability of an agent to learn how to map situations to actions so as to maximize a numerical reward signal [31], has received tremendous attention in the machine learning community [32–34]. Therefore, it is expected that if machine learning can be combined with the VPP approach, the above problems can be effectively solved. In summary, the application of continuous-space-based methods to air combat has remained limited due to computational complexity, while maneuver-library-based methods are based on an open-loop decision-making process. As an alternative possibility, combining the VPP concept with RL techniques seems to be a potential way to overcome the deficiencies of these approaches. Therefore, the main objective of this research is to develop an ADM technique for close-range one-on-one aerial combat, i.e., dogfight
+2
+
+
+J. Xu, J. Zhang, L. Yang et al. Aerospace Science and Technology 129 (2022) 107857
+ing. A novel tactical pursuit point (TPP) framework is proposed, in which a tactical pursuit space (TPS) and tactical pursuit bases (TPBs) are constructed to form a parameterized continuous decision space, making the decision-making problem easy to solve by means of various mathematical optimization methods, including deep RL. The main contributions of this work are as follows. 1) A TPP-based ADM framework is proposed for dogfighting engagements, in which the autonomous air combat problem is decomposed into two processes, i.e., the design of the TPS and ADM based on the designed TPS. 2) The concepts of the TPS and TPBs are introduced to form a parameterized continuous decision space, which reduces the decision variables to a decision-making vector. 3) Three types of TPBs, i.e., the lead–lag pursuit basis, the inside–outside pursuit basis and the climb–descent pursuit basis, are presented, which can be combined to express a variety of tactical actions. 4) The proposed decision-making framework is applicable to methods relying on both the knowledge-based approach and the RL-based reward-learning mechanism. The remainder of this paper is organized as follows. In section 2, detailed mathematical descriptions of the problem are formulated. The TPP-based method is proposed in section 3, followed by comparisons of numerical simulations conducted under different initial situations in section 4. Finally, conclusions and future plans are described.
+2. Problem formulation
+Although the number and performance of participating fighters vary widely in modern air combat, one-on-one engagement is still an essential and fundamental part of air combat. In this research, the ADM problem for one-on-one air combat is studied, where one-on-one air combat is considered here as a two-player (two identical fighters), zero-sum game of sequential interaction with limited maneuverability and limited information. The goal of this game is to achieve a positional advantage and either employ a weapon or deny an opponent a shot opportunity. In this section, mathematical descriptions of the above problem are given.
+2.1. Aircraft model
+For the direct description of maneuvering trajectories, aircraft models are defined in two reference frames: the inertial reference frame O xi yizi and the wind reference frame O xw ywzw. These reference frames are defined as shown in Fig. 1, where χ and γ represent the heading angle and flight path angle, respectively. For simplicity, in this paper, a given proper vector is written in boldface font as v , with length v, and vs is used to represent the coordinate vector in a specific coordinate system s, such as vi or vw.
+The aircraft kinematic model is formulated in terms of the following variables:
+x ̇A = V AcosγAcosχA, (1)
+y ̇A = V A sinγA, (2)
+z ̇A = V AcosγAsinχA, (3)
+where A represents fighter A; x, y, and z refer to the position coordinates in the inertial reference frame; and V A is the magnitude of the velocity vector V A . The maneuverability of a fighter, defined as its ability to change its flight speed and direction, can be expressed as
+V ̇A = aw
+Ax, (4)
+γ ̇A = aw
+Ay
+VA
+, (5)
+χ ̇A = aw
+Az
+V A cosγA
+, (6)
+where [aw
+Ax, aw
+Ay, aw
+Az] denotes the acceleration vector in the wind reference frame. As a physical system, a fighter jet is limited in its acceleration by its aerodynamic characteristics, structural strength, and propulsion performance as well as the physical limits of the pilot and other factors [35]. For a particular aircraft, these constraints can be expressed as
+0 ≤ aw
+Ax ≤ T max/m,
+aw
+Ay
+2 + aw
+Az
+2 ≤ G2
+max g2, (7)
+where Tmax is the maximum thrust of the engine and Gmax denotes the maximum normal G-load factor of the fighter.
+2.2. Geometry of air combat
+In aerial combat, two fighters equipped with only guns aim to enter each other’s tail area to fire. Geometrically, the attacker’s goal is to occupy the opponent’s rear area for at least one gun-aiming period. The geometric relationship between the two fighters, as shown in Fig. 2, can be formulated in terms of the following variables:
+μA = cos−1 ρA· V A
+|ρA||V A| , (8)
+ηA = cos−1 ρA· V B
+|ρA||V B| , (9) ρ A = pB − p A, (10)
+where ρ A is the line-of-sight (LOS) vector from fighter A to fighter B, p A and pB are the positions of each fighter, and μ ∈ [0, π ] and η ∈ [0, π ] are the angle-off (AO) and aspect angle (AA), respectively, which are the angles between the velocity vector of each fighter and ρ A , as shown in Fig. 2. From the perspective of fighter B, the following relationships hold:
+⎧⎪⎨
+⎪⎩
+ρ B = −ρ A,
+μB = π − ηA,
+ηB = π − μB.
+(11)
+2.3. Available information
+In practice, modern fighters (e.g., the F-15 and F-16) provide target data such as their position, velocity and acceleration vectors at a rate of 50 Hz [36,22]. Therefore, we assume that pB , V B , and aB are available and that all other information, such as attitude angles, the angle of attack, and the sideslip angle, cannot be obtained.
+Vi
+B = [vBx, vBy, vBz] ,
+pi
+B = [xB , yB , zB ] ,
+ai
+B = [aBx , aB y , aBz ] .
+(12)
+Currently, most reports concern methods of giving maneuvering instructions based on a maneuvering action library, whose output is a series of maneuvering rules. In contrast, to ensure the continuity of the instructions, this study proposes the use of a continuous guidance vector to guide the attacker. This vector is utilized to generate outputs such as the desired normal acceleration ac and the desired flight speed V c .
+3
+
+
+J. Xu, J. Zhang, L. Yang et al. Aerospace Science and Technology 129 (2022) 107857
+Fig. 1. Inertial reference frame and wind reference frame.
+Fig. 2. Combat geometry and parameters.
+2.4. Situational evaluation
+To evaluate the attacker’s situation in aerial combat, it is first necessary to classify the possible aerial combat situations. The analysis of the attacker’s advantages and disadvantages encompasses a series of complex factors, including distance, angle, and speed, which can be used to evaluate the efficiency of the following TPP algorithm and the ADM system. Furthermore, the analysis must capture the dynamic changes that occur in an aerial combat situation, as shown in Fig. 3, in a quantitative way. Saturated exponential functions are proposed to evaluate the angle advantage and distance advantage:
+satexp1(μ, μw ) =
+{ e−(μ−μw )/kμ μ − μw ≥ 0
+1 other wise , (13)
+satexp2(ρ, ρw ) =
+{ e−(ρ−ρw )/kρ ρ − ρw ≥ 0
+1 other wise , (14)
+where satexp1(μ, μw ), satexp2(ρ, ρw ) ∈ [0, 1], as shown in Fig. 4 and Fig. 5. The closer the values of these functions are to 1, the greater the advantage of our aircraft. Here, μw and ρw are determined by the weapon characteristics. satexp1(μ, μw ) is used to evaluate the impact of the angle. When the target falls within the weapon envelope, this function takes a value of 1. satexp2(ρ, ρw ) is used to evaluate the impact of the distance. When the target falls within the attack range, this function takes a value of 1. The farther from the attack range the target is, the smaller the function value, as shown in Fig. 5. For high-performance guided weapons,
+μw and ρw can have larger values. kμ and kρ are positive integers; the larger these integers are, the more sharply the function value changes. The combat situation at time t is comprehensively determined by the distance evaluation and angle evaluation as shown in Eq. (15):
+S A (t)
+= (satexp1(μA, μw ) + satexp1(μB , μw )) satexp2(|ρ A|, ρw ). (15)
+To evaluate the performance in maintaining the attack position, winning conditions are further introduced as follows:
+J A(t) = 1
+τ
+∫t
+t−τ
+S A (t)dt, (16)
+J A(k) = 1
+l+1
+k ∑
+i=k−l
+S A (i). (17)
+If J A > 0, this indicates that the aircraft maintains a positional advantage over the opponent; in particular, we conclude that fighter A has won this game when J A = 1, whereas the winner when J A = −1 is fighter B. Accordingly, a scalar in the range of [−1, 1] is used to evaluate the attacker’s current advantages in accordance with the above definitions.
+4
+
+
+J. Xu, J. Zhang, L. Yang et al. Aerospace Science and Technology 129 (2022) 107857
+Fig. 3. Weapon envelope.
+Fig. 4. Saturated exponential function to evaluate angle advantage.
+Fig. 5. Saturated exponential function to evaluate distance advantage.
+The goal in this paper is to study the one-on-one air combat problem for two fighters of the same type and to provide a decision-making approach that can guide aircraft to achieve a suppressive advantage or victory under conditions of limited information.
+3. Autonomous decision-making framework
+3.1. Framework overview
+In this section, the proposed TPP-based ADM approach for dogfighting engagements is presented, and the decision problem is decomposed into two processes, as shown in Fig. 6: TPS generation and ADM based on the generated TPS. The TPS specifies the feasible region for ADM. In this paper, we form the TPS as the convex hull of a finite set of TPBs pi , as shown in Eq. (18):
+S = conv( P ) =
+{ l ∑
+i=1
+αi pi |1 ≥ αi ≥ −1
+}
+, (18)
+where each pi ∈ R3 refers to a typical pursuit point, which can guide the fighter in performing a maneuver to realize a typical tactical purpose. Accordingly, through linear combination of the TPBs, a continuous decision space with multiple tactical purposes can be specified for ADM. In this way, the decision variables are reduced to several normalized weight coefficients, which greatly reduces the ADM complexity. The following ADM module is responsible for determining the values of the decision-making vector α, and this vector is utilized to construct the above linear combination. The module’s input is the geometric relationship between two fighters, and the output is α. In this way, the attacker’s guidance strategy can be adjusted continuously and dynamically through the values of α during the whole process. When designing the ADM module, expert knowledge can be utilized as empirical support. If the available expertise is unsatisfactory, RL can be applied to design the decision functions by means of a reward-learning mechanism.
+3.2. Tactical pursuit space generation
+The key role of the TPS is the generation of TPPs to guide fighters to gain advantages by performing corresponding maneuvers. In most existing studies, three basic types of pursuit, namely, lead pursuit, lag pursuit and pure pursuit, have been widely considered to guide fighters or missiles [36–38], as shown in Fig. 7. The tactical purpose of the attacker is controlled by the generated pursuit point. Lead pursuit points ahead of the opponent’s velocity vector are generally used to speed up the closure rate for the employment of a weapon or to move inside an opponent’s bubble; pure pursuit occurs when the nose or lift vector is placed on or at the opponent; and lag pursuit occurs when the attacker’s nose or lift vector is pointing behind the opponent, resulting in a reduction in the closure rate and preservation of turning room [36,38]. Therefore, the attacker can achieve diverse maneuvers through the combination of these three pursuit modes. The following conclusions can be drawn: 1) Lead and lag pursuit do not require the fighter’s guidance vector to continuously point at the opponent, and by shifting the pursuit point along the opponent’s velocity vector, a variety of tactical purposes can be obtained. 2) Nevertheless, only limited types of maneuvers can be achieved by placing pursuit points on the opponent’s velocity vector, and some out-of-plane maneuvers, such as parallel approach and high yo-yo, are difficult to achieve solely on the basis of the above pursuit modes.
+5
+
+
+J. Xu, J. Zhang, L. Yang et al. Aerospace Science and Technology 129 (2022) 107857
+Fig. 6. Schematic of the TPP-based ADM approach.
+Fig. 7. Lead, pure and lag pursuit courses.
+3) Lead, pure and lag pursuit courses generally apply only in offensive cases; their tactical purposes are not clear in head-on or defensive cases. In particular, only the one-circle fight configuration [36,38] can be obtained in the head-on case. 4) It can be inferred that expanding the feasible set of pursuit points would help expand the possible types of fighter maneuvers and enhance their efficiency, making the fighter more likely to gain an advantage in more situations. Based on the above analysis, the key concern is to expand the available set of pursuit points. Considering that the three basic pursuit modes mentioned above all involve the velocity vector, a practical approach is to place the pursuit point on an axis orthogonal to this vector. In this paper, two new types of tactical pursuit, inside pursuit and outside pursuit, are introduced. In outside pursuit, the nose is pointed toward the outside of the turning circle of the opponent, while in inside pursuit, the nose is pointed toward the inside of this circle. Fig. 8 shows the attacker’s trajectories for lead, lag, inside and outside pursuit in an offensive situation. The following differences can be found among the four pursuit trajectories: lead and lag pursuit do not guarantee that the attacker always remains on either the inside or outside of the opponent’s turning circle (OTC) while ultimately converging to the OTC, whereas inside and outside pursuit always maintain a certain distance from the OTC.
+Fig. 8. Trajectories for lead, lag, inside and outside pursuit in an offensive situation. (For interpretation of the colors in the figure(s), the reader is referred to the web version of this article.)
+Fig. 9 further illustrates the features of the four pursuit types under typical neutral conditions, i.e., the mutual head-on case. In this scenario, the following significant difference can be found: lead, lag and inside pursuit trajectories turn in the same direction as the opponent and can achieve only a one-circle fight, whereas outside pursuit achieves a two-circle fight. Fig. 10 conceptually illustrates how outside pursuit achieves a two-circle fight. Distinct from lead or lag pursuit, outside pursuit is driven by placing the pursuit point on the outside of the OTC, as shown by points p1, p2 and p3 in Fig. 10 (specific definitions are given in the next section), which leads the attacker to turn in the opposite direction to the opponent in advance. By gaining the initiative in turning time, the attacker obtains an angle advantage in a typical two-circle fight after the first meeting and subsequently remains within the rear hemisphere of the opponent. Fig. 11 depicts inside pursuit from the forward hemisphere. The attacker always points toward the inside of the OTC, which reduces μA in multiple turns of the scissors fight, allowing the attacker to accumulate an angle advantage and remain within the rear hemisphere of the opponent. Geometrically speaking, lead and lag pursuit trajectories point in the positive and negative directions of the opponent’s velocity
+6
+
+
+J. Xu, J. Zhang, L. Yang et al. Aerospace Science and Technology 129 (2022) 107857
+Fig. 9. Trajectories for lead, lag, inside and outside pursuit in a head-on situation.
+Fig. 10. Outside pursuit.
+Fig. 11. Inside pursuit.
+vector, respectively, and are used to adjust the rate of closure to the opponent, whereas inside and outside pursuit trajectories generally maintain flight-path separation. Overall, the combination of these pursuit modes integrates distance prediction and angle prediction, which can expand the feasible range of decision-making and help the attacker gain a tactical advantage. Note that the above four pursuit types all occur within the fighter’s maneuvering plane. However, a fighter should also have the ability to perform out-of-plane maneuvers. A straightforward idea is to introduce a set of vertical pursuit types to achieve these maneuvers. Specifically, we define the positive type as climb pursuit and the negative type as descent pursuit. These two pursuit types drive the fighter to leave the maneuvering plane and alter its speed. In summary, the TPS is formed through the combination of four in-plane TPBs, i.e., lead pursuit, lag pursuit, inside pursuit and outside pursuit, and two out-of-plane TPBs, i.e., climb pursuit and descent pursuit, as shown in Fig. 12. Considering that the lead and lag pursuit vectors, the inside and outside pursuit vectors, and the climb and descent pursuit vectors are geometrically collinear, we can further simplify the TPBs as follows:
+S = p B + α1 pLL + α2 pI O + pC D , (19)
+where pLL , pI O and pC D denote the lead–lag TPB, the insideoutside TPB and the climb–descent TPB, respectively. In addition, −1 ≤ αi ≤ 1 is the decision variable corresponding to the i-th TPB in the maneuvering plane, where a positive αi represents lead or outside pursuit and a negative αi represents lag or inside pursuit.
+3.2.1. In-plane tactical pursuit space
+The in-plane TPBs consist of the lead–lag pursuit basis pLL and the inside–outside pursuit basis pI O . Specifically, pLL defines a pursuit point in the positive direction of the opponent’s velocity vector, as follows:
+pLL = mLL ix, (20)
+where ix is a unit vector on the O xw axis of the fighter and is given by
+ix = V B
+VB
+, (21)
+while mLL is the magnitude of pLL and consists of two terms:
+mLL = p B pre + kLL V B . (22)
+Here, p pre is the opponent’s predicted position, which is determined from the opponent’s velocity and acceleration,
+pBpre = V B t + 1
+2 aB V B t2, (23)
+where t is the interval between two adjacent decision moments. In addition, kLL ≥ 0 in Eq. (22) is a tuning scalar. Generally, when the agility of the aircraft is higher, a larger kLL is needed. Similarly, pI O defines a pursuit point on the O zw axis of the opponent. Its amplitude is determined by the centers of the turning circles of the two fighters and can be derived as follows. Let izA and izB be unit vectors on the O zw axes of fighter A (attacker) and fighter B (opponent), respectively:
+ii
+zA = C y(χA )iw
+zA , ii
+zB = C y(χB )iw
+zB ,
+(24)
+where χ is the heading angle and C y(χ ) is a matrix representing the clockwise rotation around the y axis, expressed as follows:
+7
+
+
+J. Xu, J. Zhang, L. Yang et al. Aerospace Science and Technology 129 (2022) 107857
+Fig. 12. TPS and TPBs.
+C y(χ ) =
+⎡
+⎣
+cosχ 0 sinχ 0 10 −sinχ 0 cosχ
+⎤
+⎦ . (25)
+The centers of the turning circles of the two fighters in the horizontal plane are given as
+Q A = pA + λR Aii
+zA ,
+Q B = pB + λRBii
+zB .
+(26)
+Here, λ, which denotes the direction of the center of the turning circle, can be estimated as
+λ = sign(aw
+Bz ). (27)
+R A can be obtained directly from the attacker’s status:
+RA =
+v2
+Ax + v2
+Ay + v2
+Az
+√
+a2
+Ax + a2
+A y + a2
+Az
+. (28)
+Considering the opponent’s information acquisition bias, R B is constrained as follows:
+R B = min
+⎛
+⎜⎝ R min ,
+v2
+Bx + v2
+By + v2
+Bz
+√
+a2
+Bx + a2
+B y + a2
+Bz
+⎞
+⎟⎠ , (29)
+where Rmin is the minimum turning radius of fighter B. The Rmin values for the aircraft considered in this article are shown in Table 1. The error vector between the centers of the two circles is introduced to dynamically adjust the amplitude of pI O [21,22], as follows:
+Q B A = Q B − Q A . (30)
+The projection of Q B A onto ii
+zB can be further expressed as
+p B A = −|izB · Q B A |izB , (31)
+and the inside–outside TPB can be given as
+pI O = kI O p B A , (32)
+where kI O ≥ 0 is the tuning scalar for inside–outside pursuit. Generally, when the maneuverability of the aircraft is higher, a larger kI O is needed. Finally, the in-plane maneuvers in the TPS can be expressed as combinations of pLL and pI O in the form
+pI = pB + α1 pLL + α2 pI O , (33)
+and various types of in-plane tactical maneuvers can be obtained by adjusting α1 and α2.
+3.2.2. Out-of-plane tactical pursuit space
+The pursuit point defined by the climb–descent TPB lies on the coordinate axis O yi of the opponent. We use i y to denote a unit vector on the O yi axis, and pC D is given as
+pC D = hi y, (34)
+where h is the vertical offset, as the climb–descent TPB is usually used to change the altitude of the aircraft. Since the altitude of an aircraft directly affects its total energy, there have been many studies on energy management in air combat [38,36,37,8]. Therefore, compared with uncertain machine learning methods, expert-knowledge-based approaches could be more reliable for decision-making regarding the climb–descent TPB. The design process is based on the concept of the energy height:
+HE = 1
+2g V 2 + h, (35)
+where h, V and g denote the altitude, speed and, acceleration due to gravity, respectively. Based on the above energy transfer relationship, h in Eq. (34) can be expressed as
+h= V2
+A − V c2
+2g . (36)
+Through the above derivation, the functional relationship between h and V c is obtained. Next, the decision model for V c is given. The desired flight speed V c is formulated as
+⎧⎪⎪⎪⎪⎪⎨
+⎪⎪⎪⎪⎪⎩
+V c = ξ1 V o + ξ2 V d + ξ3 Vn
+0 ≤ ξi ≤ 1
+3 ∑
+i=1
+ξi = 1
+, (37)
+where V o, V d and Vn represent the desired flight speeds in offensive conditions, defensive conditions and neutral conditions, respectively, and the ξi denote the corresponding membership functions. The offensive speed V o and defensive speed V d are used to control the distance to the opponent and are given as
+V o = V B + kpo (ρA − ρw ) + kdo ρ ̇A ,
+V d = V B − kpd (ρA − 2ρw ) − kdd ρ ̇A . (38)
+In the neutral scenario, the goal of the attacker is to turn toward the opponent aircraft as quickly as possible to gain an advantage. Consequently, the corner velocity Vn that maximizes the turning performance is the best choice under neutral conditions. Vn is determined by the aerodynamic performance of the fighter and can be obtained through aerodynamic coefficient calculation or flight testing [39,40]. Generally, Vn can be expressed as a function of altitude, as shown in Table 1. In this paper, the following membership functions are proposed:
+⎧⎪⎪⎪⎪⎪⎪⎪⎪⎨
+⎪⎪⎪⎪⎪⎪⎪⎪⎩
+ξ1(ηA, μA ) = 1
+(
+1+e
+ηA −θ1 k
+)(
+1+e
+μA −θ2 k
+)
+ξ2(ηA, μA ) = 1
+(
+1+e
+−ηA +θ3 k
+)(
+1 + e− μA −θ4
+k
+)
+ξ3(ηA, μA ) = 1 − ξ1(ηA, μA) − ξ2(ηA, μA )
+, (39)
+8
+
+
+J. Xu, J. Zhang, L. Yang et al. Aerospace Science and Technology 129 (2022) 107857
+Table 1
+Fighter performance.
+H (km) 10.0 10.2 10.4 10.6 10.8 11 11.2 11.4 11.6 11.8 12.0 Vn (m/s) 179.5 181.2 183.0 184.7 187.0 188.8 191.0 193.3 196.1 198.4 201.2 Rmin (km) 1.56 1.59 1.63 1.67 1.71 1.75 1.80 1.86 1.92 1.98 2.04
+Fig. 13. Membership functions.
+where ξi is a function of ηA and μA , as shown in Fig. 13. θ1 and θ3 represent the boundaries between the offensive, neutral, and defensive scenarios for ηA , and θ2 and θ4 represent the same for μA . k determines the steepness of the transitions between the different scenarios. To illustrate the impacts of the ξi on V c , the case
+of V o = 250 m/s, V d = 280 m/s, Vn = 200 m/s, k = 5, θ1 = π
+3 rad,
+θ2 = π
+2 rad, θ3 = 5π
+6 rad, and θ4 = π
+2 rad is used as an example,
+and the variation of V c with ηA and μA is shown in Fig. 13d.
+3.3. Autonomous decision-making algorithm
+Based on the above analysis, the attacker’s maneuvering is described through the linear combination of TPBs. Thus, the ADM problem becomes equivalent to determining the decision-making vector α based on the current situation. Although each TPB corresponds to a specific tactical purpose, it is still a challenge for designers without actual combat experience to make appropriate decisions. In this paper, the twin-delayed deep deterministic pol
+icy gradient (TD3) algorithm is adopted to solve the ADM problem, i.e., to provide suitable αi values. The TD3 algorithm is an advanced RL algorithm that is often utilized to solve decision problems in a continuous action space [41]. This algorithm combines three powerful RL techniques, namely, the double deep Q-learning, policy gradient, and actorcritic techniques [42,32]. The structure of TD3 is shown in Fig. 14, where the environment is the geometric model of the two fighters. The TD3 agent acquires the states of the two fighters from the environment and outputs the decision-making vector α. The actor is responsible for collecting observations and returning the corresponding actions that will maximize the long-term reward. Two critic models are applied to prevent overestimation by learning two value functions and using their minimum values for policy updates. Corresponding target networks are used to improve the stability of the optimization process.
+9
+
+
+J. Xu, J. Zhang, L. Yang et al. Aerospace Science and Technology 129 (2022) 107857
+Fig. 14. TD3 framework.
+Fig. 15. ADM procedure.
+The offline learning process of the TD3-based decision-making algorithm is shown in Fig. 15. The key aspects of the TD3 algorithm for conducting accurate decision-making are appropriate decision
+Table 2
+Offline training conditions.
+Altitude 11000 m V A and V B 200 m/s γA and γB 0 rad ρA 2000 m χB [ 5
+6 π , π ] rad
+χL [− 1
+6π, 1
+6 π ] rad
+variable selection, neural network structure determination, and reward shaping. In the proposed TPP-based decision-making framework, the inputs to the ADM system are treated as the observations for the TD3 algorithm. The observations are carefully selected as μA , μ ̇A , ηA , η ̇A , ρA , and ρ ̇A . Among these, μA , ηA , and ρA are closely related to the attacker’s distance and angle advantages, and their derivatives can be predictive signals of these advantages. The reward function is characterized by a larger final winning reward and a smaller guiding reward:
+R = ω1rg + ω2rw . (40)
+The larger winning reward is described by a binary function rw , as follows:
+rw =
+⎧⎨
+⎩
+1 if JA = 1 −1 i f J A = −1 0 other wise
+. (41)
+In contrast, rg , the reward collected from each step in the simulation process, is expressed as a continuous function. In addition, ω1 and ω2 are parameters to be designed. To prevent the algorithm from wasting time attempting to gain a greater reward, ω2 is generally designed to be larger than ω1. Furthermore, rg is generally designed as a function that takes values between -1 and 1. With such a design, the attacker receives a positive reward in an advantageous situation and a negative reward in a disadvantageous situation. Thus, rg is defined as
+rg = μB − μA
+πe
+−|ρ−ρw |
+kg π , (42)
+where ρw is the attack range and kg determines how fast the value of rg decays with increasing relative distance.
+4. Simulation
+In this section, the proposed TPP-based algorithm is tested through computer simulations. The offline training settings of the TD3-based ADM system are specified in section 4.1, and a combat case study and test results are presented in section 4.2.
+4.1. Offline training settings
+Offline training of the ADM system is carried out for two identical aircraft starting under neutral initial conditions, i.e., a head-on engagement. The initial condition settings are shown in Table 2, where both fighters start under level flight conditions with an altitude of 11000 m, a velocity of 200 m/s and a relative distance of 2000 m. In addition, χL and χB are randomly generated within a given range to ensure that the ADM network is applicable to a variety of initial conditions, where χL is defined as the LOS heading angle, as shown in Fig. 16. The parameters of the TD3-based ADM system are given in Table 3. Considering the complexity and dynamically changing nature of air combat, the actor and critic networks of the TD3-based ADM system are constructed as two-layer fully connected neural networks, with the numbers of nodes of the two hidden layers set
+10
+
+
+J. Xu, J. Zhang, L. Yang et al. Aerospace Science and Technology 129 (2022) 107857
+Fig. 16. Initial conditions for offline training. The black aircraft is the attacker, and the gray aircraft is the opponent.
+Table 3
+Parameters of the TD3-based ADM system.
+Observations μA , μ ̇ A , ηA , η ̇ A , ρA , ρ ̇A Actor learning rate 1e−3 Critic learning rate 1e−3 Actor layer size [70,50] Critic layer size [70,50] Actor activation layer ReLU Critic activation layer ReLU Actor output layer tanh Critic output layer ReLU
+Fig. 17. Initial conditions of the case set.
+to 70 and 50 [43]. The maximum number of simulation steps in one episode, kmax, is set to 6600 to prevent the two fighters from falling into a “biting-the-tail” equilibrium. The maximum number of training episodes is 5000.
+4.2. Simulation results
+4.2.1. Case study simulations
+To illustrate the overall effectiveness of the proposed TPP decision-making method, a set of cases is designed for verification. The values of the opponent’s heading angle are taken at 30◦ intervals around a half-circle to avoid duplication due to symmetry. Accordingly, 56 cases are generated (Fig. 17), which are observed to favor neither side. Generally, the TPP decision-making method is based on the TPS generated from pLL , pI O , and pC D . A variety of maneuvers can be realized through the combination of these three TPBs. To verify the
+rationality of the TPS design and the ADM system, the TPP-based approach and the original knowledge-based VPP approach are each applied to the attacker for comparison [21]. In the comparison, the pure-pursuit-based method is used for the opponent. The improvements in the win rate and winning time are shown in Tables 4 and 5, where the numbers in these tables represent the winning time of the attacker, numbers marked with “*” indicate the opponent’s victory, and the symbol “/” indicates that neither side achieved the winning conditions within the given time. As shown in Table 4, the TPP-based approach achieves 15 wins out of 16 advantageous situations, 6 losses out of 16 disadvantageous situations, and 15 wins out of 24 neutral situations, and the overall failure rate is approximately 10.7%. By comparison, as shown in Table 5, the original VPP-based method achieves 12 wins out of 16 advantageous situations, 14 losses out of 16 disadvantageous situations, and 0 wins out of 24 neutral situations, and the overall failure rate exceeds 40%. As seen by comparing Table 4 and Table 5, the superiority of the TPP approach is mainly evident under neutral and disadvantageous initial conditions. Through the online combination of the three proposed TPBs, the win rate in neutral cases is significantly increased from 0% to 62.5%, and the failure rate in disadvantageous cases is reduced from 87.5% to 37.5%. Under advantageous conditions, both decision-making methods allow the attacker to avoid being targeted by the opponent, but the TPP-based approach increases the win rate from 75% to 93.75%. In general, the proposed method achieves a significant improvement on the test set. To illustrate the decision-making process of the proposed method, four typical combat scenarios are selected to present detailed analyses, including one offensive situation, one defensive situation and two neutral situations, i.e., head-on and back-to-back engagements, as shown in Fig. 18 and Table 6.
+4.2.2. Case A: Offensive situation
+The first case is a typical offensive situation for the attacker, which is used to test whether the RL system produces appropriate decisions to maintain the advantage and achieve the winning conditions. The flight trajectories of the two fighters are shown in Fig. 19. The attacker makes a proper right turn and successfully cuts into the opponent’s circle, enlarging the initial advantage and winning. Fig. 20 further illustrates that a small μA near zero is maintained when approaching the opponent, while μB is larger
+than 50◦ during the engagement. The curve of J A shows that the attacker achieves firing conditions in 4.1 s and maintains this state for 1.7 s, thus achieving the winning conditions in 5.8 s. The decision results of the TPP approach are illustrated in Fig. 21. α1 and α2 represent the combination of the in-plane TPBs, and h represents the decision on the out-of-plane TPB. According to α1 and α2, lead–outside pursuit is performed by the attacker in the first 1.5 s to maintain the angle advantage, and the attacker then switches to lead–inside pursuit to increase the turning rate for shooting; ultimately, the opponent is locked in the weapon envelope at 4.1 s. h represents an out-of-plane maneuver in which the attacker performs climb pursuit in the first 3 s to achieve the corner velocity and then holds altitude, which helps the attacker achieve better turning performance than the opponent. According to the states of the two fighters in 22, V A and V B show that the attacker adopts a higher velocity for approaching the opponent during the engagement, and nzA indicates that the attacker also maintains maximum overload for the right turn maneuver to achieve the firing conditions.
+4.2.3. Case B: Head-on situation
+In case B, the two fighters start under neutral head-on conditions with an incidence angle of π /12. The simulation flow is
+11
+
+
+J. Xu, J. Zhang, L. Yang et al. Aerospace Science and Technology 129 (2022) 107857
+Table 4
+Winning times with the TPP approach (numbers marked with “*” indicate the opponent’s victory, and the symbol “/” indicates that neither side achieved the winning conditions within the given time).
+χB
+χL -180◦ -135◦ -90◦ -45◦ 0◦ 45◦ 90◦ 135◦
+0◦ / / 6.5 s 7.8 s 25.6 s 7.8 s 6.2 s 20.7 s* 30◦ / / 5.6 s* 6.2 s 9 s 9.6 s 7.7 s 7.7 s* 60◦ / / 5.4 s* 5.0 s 7.1 s / 9.5 s 21.4 s 90◦ 10.4 s* / 5.3 s* 50.2 s 5.7 s 10.1 s 11.5 s 55.4 s 120◦ 57 s / / / 4.5 s 28.5 s 13.6 s 57 s 150◦ 27 s / / 70.9 s / 27.4 s / 18.4 s 180◦ 65 s 60.5 s / 49 s 15.8 s 49 s / 60.5 s
+Table 5
+Winning times with the VPP approach.
+χB
+χL -180◦ -135◦ -90◦ -45◦ 0◦ 45◦ 90◦ 135◦
+0◦ 4.8 s* 4.7 s* 23.9 s* 7.6 s 9.7 s 7.6 s / 4.6 s* 30◦ 5 s* 4.5 s* / 6.7 s 9 s 9.7 s / 5 s* 60◦ 5.3 s* 4.6 s* / 5.1 s 7.5 s 11.4 s / 28.4 s* 90◦ 7.3 s* 5 s* 5 s* 17.7 s 5.8 s / / 25.7 s* 120◦ 21.2 s* 5.4 s* 3.8 s* / / 5.3 s* / 26.7 s* 150◦ 24.2 s* / 5 s* / / / / / 180◦ / / 30.6 s* / / / 30.6 s* /
+Fig. 18. Four combat scenarios in offensive, head-on, back-to-back, and defensive situations. The black aircraft is the attacker, and the gray aircraft is the opponent.
+Table 6
+Initial conditions of the four scenarios.
+pi
+A (m) χL (rad) pi
+B (m) χB (rad)
+Case A [0, 11000, 0] 0 [2000, 11000, 0] π /2 Case B [0, 11000, 0] 0 [1932, 11000, −518] π /12 Case C [0, 11000, 0] 0 [−1732, 11000, 1000] π Case D [0, 11000, 0] 0 [−2000, 11000, 0] 0
+shown in Fig. 23. The two fighters achieve a scissor fight that lasts for approximately 27 s, with two crossings at 5 s and 17 s. For convenience, in the following discussion, we divide the whole combat process into two stages separated by the second crossing. According to the curves of μA and J A in Fig. 24, the attacker gains an advantage at the end of each of the two fight stages. The attacker starts to gain an advantage at 14.5 s and enhances this advantage in the subsequent 1.5 s to achieve a firing opportunity, ending stage 1. According to the decisions on the in-plane TPBs in Fig. 25, there are three decisive strategies that lead to the attacker’s victory in stage 1. As seen from μA and μB in Fig. 24, from 0 to 5 s in stage 1, the opponent has a subtle angle advantage against the attacker. As seen from α1 and α2 (0–5 s) in Fig. 25, to reverse the situation, the attacker adopts inside pursuit to turn the velocity vector toward the opponent. Meanwhile, the attacker adjusts the
+lead/lag mode in accordance with the geometric relationship with respect to the opponent before the crossing. From 5 to 10 s, the two fighters are in a back-to-back situation, and both sides exploit the maximum overload capacity to point toward each other. From 13.5 to 17 s, the attacker changes the turning direction in advance by switching from lag–outside pursuit to lead–inside pursuit and wins in stage 1. In stage 2, the switch from lag–outside pursuit to lead–inside pursuit is highlighted to demonstrate its superiority in gaining an angle advantage (at 27 s). nzA and nzB in Fig. 26 show that the attacker changes the turning direction in advance through this strategy (at 15 s and 26 s) and gains the advantage. The decision results for the out-of-plane TPB are illustrated by h in Fig. 25. To maximize turning performance, the attacker takes advantage of climb pursuit to cut excessive speed and then maintains the corner velocity, verifying the benefit of considering h.
+12
+
+
+J. Xu, J. Zhang, L. Yang et al. Aerospace Science and Technology 129 (2022) 107857
+Fig. 19. 3D trajectories (case A: offensive situation).
+Fig. 20. Combat situation parameters for case A: ρA is the LOS vector, μA and μB are the angles between the velocity vector of each fighter and ρA , and J A is the evaluation function; fighter A has won this game when J A = 1, whereas the winner is fighter B for J A = −1.
+Fig. 21. Decision variables for the TPBs in case A: positive α1, α2, and h values represent lead, outside, and climb pursuit, and negative α1, α2, and h values represent lag, inside, and descent pursuit.
+Fig. 22. States of the two fighters in case A.
+Fig. 23. 3D trajectories (case B: head-on situation).
+Fig. 24. Combat situation parameters for case B: ρA is the LOS vector, μA and μB are the angles between the velocity vector of each fighter and ρA , and J A is the evaluation function; fighter A has won this game when J A = 1, whereas the winner is fighter B for J A = −1.
+In conclusion, the TPP-based selection of α and h is shown to be reasonable and effective in this detailed case. To further illustrate the roles of the different TPBs, the insideoutside TPB is removed from the TPS for comparison, i.e., the fighter can perform only lead–lag and climb–descent pursuit. And
+13
+
+
+J. Xu, J. Zhang, L. Yang et al. Aerospace Science and Technology 129 (2022) 107857
+Fig. 25. Decision variables for the TPBs in case B: positive α1, α2, and h values represent lead, outside, and climb pursuit, and negative α1, α2, and h values represent lag, inside, and descent pursuit.
+Fig. 26. States of the two fighters in case B.
+case B is chosen as a representative for the sake of brevity and clearness. The corresponding restricted-TPP analysis is discussed in the following. The restricted-TPP simulation results are shown in Figs. 27 to 30. As shown in Fig. 27, the restricted-TPP approach leads to a two-circle turning fight, in which both fighters need to execute a full circle to obtain an attack opportunity. In contrast, with the proposed TPP approach, as shown in Fig. 23, the attacker performs a one-circle scissor fight and obtains an angle advantage and an attack opportunity within only half a turn. As seen from Fig. 29, α2 remains zero throughout the whole engagement under the restricted-TPP approach, which limits the pursuit options of the fighter. As a result, μA in Fig. 28 remains above π /6 throughout the maneuvering process in the restricted-TPP result and does not converge to the weapon envelope at any time in the entire 40-s simulation. J A also indicates that the attacker fails to convert the neutral scenario into the offensive scenario during the combat process. A comparison of nzA and nzB in Fig. 26 and Fig. 30 reveals that the inside–outside TPB provides the lead-turn ability for the fighter. Under the TPP approach, nzA is changed in advance at 15 s and 26 s before the two crossings (at 17.5 s and 27 s) by switch
+Fig. 27. 3D trajectories (case B: head-on situation with the restricted-TPP approach.
+Fig. 28. Combat situation parameters for case B with the restricted-TPP approach: ρA is the LOS vector, μA and μB are the angles between the velocity vector of each fighter and ρA , and J A is the evaluation function; fighter A has won this game when J A = 1, whereas the winner is fighter B for J A = −1.
+Fig. 29. Decision variables for the TPBs in case B with the restricted-TPP approach: positive α1, α2, and h values represent lead, outside, and climb pursuit, and negative α1, α2, and h values represent lag, inside, and descent pursuit.
+14
+
+
+J. Xu, J. Zhang, L. Yang et al. Aerospace Science and Technology 129 (2022) 107857
+Fig. 30. States of the two fighters in case B with the restricted-TPP approach.
+Fig. 31. 3D trajectories (case C: back-to-back situation).
+ing from lag–outside pursuit to lead–inside pursuit, and this is one of the key factors in obtaining the angle advantage.
+4.2.4. Case C: Back-to-back situation
+Case C is another typical neutral situation, i.e., a back-to-back case with lateral distance. Figs. 31 to 34 illustrate the 41-s-long combat process. The flight trajectories in Fig. 31 show that the attacker changes altitude, gaining an angle advantage by performing a half-loop maneuver from 28 to 37 s, and wins the combat engagement at 40 s, as seen from J A in Fig. 32. As seen from μA and μB in Fig. 32, the attacker gradually gains an angle advantage during the combat process. In the first 27 s, the attacker has a faster turning rate because of the lower velocity due to h. At 28 s, μA is smaller than 90◦, which creates an offensive situation. From 28 to 37 s, the attacker performs a half-loop maneuver driven by h, as shown in Fig. 33, to lock the opponent into the weapon envelope. Meanwhile, nzA in Fig. 34 shows the essential altitude change required for the out-of-plane maneuver. Overall, in this case, the TPP-based approach is proven to be capable of generating typical out-of-plane and in-plane maneuvers during the combat process.
+4.2.5. Case D: Defensive situation
+Case D is selected to validate the decision-making process in an adverse situation, as shown in Fig. 35. Fig. 36 shows that the
+Fig. 32. Combat situation parameters for case C: ρA is the LOS vector, μA and μB are the angles between the velocity vector of each fighter and ρA , and J A is the evaluation function; fighter A has won this game when J A =1, whereas the winner is fighter B for J A = −1.
+Fig. 33. Decision variables for the TPBs in case C: positive α1, α2, and h values represent lead, outside, and climb pursuit, and negative α1, α2, and h values represent lag, inside, and descent pursuit.
+Fig. 34. States of the two fighters in case C.
+15
+
+
+J. Xu, J. Zhang, L. Yang et al. Aerospace Science and Technology 129 (2022) 107857
+Fig. 35. 3D trajectories (case D: defensive situation).
+Fig. 36. Combat situation parameters for case D: ρA is the LOS vector, μA and μB are the angles between the velocity vector of each fighter and ρA , and J A is the evaluation function; fighter A has won this game when J A =1, whereas the winner is fighter B for J A = −1.
+attacker reduces the angle advantage of the opponent within 40 s and maintains a relative distance beyond the opponent’s weapon envelope. As seen from J A in this figure, the attacker successfully turns the defensive situation into a neutral situation at 40 s. h and V c in Fig. 37 show that the attacker holds the corner velocity during this process to achieve a smaller turning radius and a faster turning rate. Throughout the whole combat process, the attacker applies the maximum overload (nzA in Fig. 38) to alleviate the angle disadvantage. This is achieved by means of h, and this approach is proven to be effective according to J A in Fig. 36.
+5. Conclusion
+In this paper, a novel TPP-based ADM framework for UAVs is proposed to improve UAV decision-making abilities in one-on-one air combat scenarios. The TPS is constructed on the basis of an easy-to-design convex cell mathematical form, and the ADM system is not only suitable for traditional expert-experience-based design approaches but can also be easily integrated with RL tools. Simulation cases prove that the proposed method can generate
+Fig. 37. Decision variables for the TPBs in case D: positive α1 , α2, and h values represent lead, outside, and climb pursuit, and negative α1, α2, and h values represent lag, inside, and descent pursuit.
+Fig. 38. States of the two fighters in case D.
+variable and appropriate maneuvers and achieve a dominant win rate. Although dogfight cases are taken as examples in this paper, the presented research ideas are also applicable to swarm air combat, cooperation between manned and unmanned aerial vehicles and other modes of air combat. In future work, it will be possible to consider extending the TPBs and improving the decision-making system for more complex combat conditions, such as unequal air combat or coordinated manned–unmanned air combat.
+Declaration of competing interest
+The authors declare that they have no known competing financial interests or personal relationships that could have appeared to influence the work reported in this paper.
+Data availability
+No data was used for the research described in the article.
+16
+
+
+J. Xu, J. Zhang, L. Yang et al. Aerospace Science and Technology 129 (2022) 107857
+References
+[1] J.B. Crumpacker, M.J. Robbins, P.R. Jenkins, An approximate dynamic programming approach for solving an air combat maneuvering problem, Expert Syst. Appl. 203 (2022) 117448, https://doi.org/10.1016/j.eswa.2022.117448. [2] W. Ruan, H. Duan, Y. Deng, Autonomous maneuver decisions via transfer learning pigeon-inspired optimization for ucavs in dogfight engagements, IEEE/CAA J. Autom. Sin. 9 (2022) 1–19. [3] M. Wang, L. Wang, T. Yue, H. Liu, Influence of unmanned combat aerial vehicle agility on short-range aerial combat effectiveness, Aerosp. Sci. Technol. 96 (2020) 105534, https://doi.org/10.1016/j.ast.2019.105534. [4] A.O. Dourado, C. Martin, New concept of dynamic flight simulator, part i, Aerosp. Sci. Technol. 30 (1) (2013) 79–82, https://doi.org/10.1016/j.ast.2013.07. 005. [5] V. Patil, V. Potphode, U. Potdukhe, V. Badgujar, K. Upadhyaya, Smart uav framework for multi-assistance, in: ICT with Intelligent Applications, Springer, 2022, pp. 241–249. [6] F. Heilemann, A. Schulte, Experimental evaluation of an adaptive planning assistance system in manned unmanned teaming missions, in: International Conference on Human-Computer Interaction, Springer, 2020, pp. 371–382. [7] L. Wang, J. Hu, Z. Xu, C. Zhao, Autonomous maneuver strategy of swarm air combat based on ddpg, Intell. Auton. Syst. 1 (1) (2021) 1–12, https://doi.org/ 10.1007/s43684-021-00013-z. [8] Y. Dong, J. Ai, J. Liu, Guidance and control for own aircraft in the autonomous air combat: a historical review and future prospects, Proc. Inst. Mech. Eng., G J. Aerosp. Eng. 233 (16) (2019) 5943–5991, https://doi.org/10. 1177/0954410019889447. [9] I.E. Weintraub, M. Pachter, E. Garcia, An introduction to pursuit-evasion differential games, in: 2020 American Control Conference (ACC), IEEE, 2020, pp. 1049–1066. [10] R. Isaacs, Differential Games, John Wiley and Sons, Inc., New JorkLondon–Sydney, 1965. [11] A.W. Merz, The homicidal chauffeur–a differential game, Ph.D. thesis, Stanford University, 1971. [12] W.L. Othling Jr, Application of differential game theory to pursuit-evasion problems of two aircraft, Tech. Rep., Air Force Inst of Tech Wright-Patterson AFB OH School of Engineering, 1970. [13] H. Park, B.-Y. Lee, M.-J. Tahk, D.-W. Yoo, Differential game based air combat maneuver generation using scoring function matrix, Int. J. Aeronaut. Space Sci. 17 (2) (2016) 204–213, https://doi.org/10.5139/ijass.2016.17.2.204. [14] X. Tang, D. Ye, L. Huang, Z. Sun, J. Sun, Pursuit-evasion game switching strategies for spacecraft with incomplete-information, Aerosp. Sci. Technol. 119 (2021) 107112, https://doi.org/10.1016/j.ast.2021.107112. [15] J.S. McGrew, J.P. How, B. Williams, N. Roy, Air-combat strategy using approximate dynamic programming, J. Guid. Control Dyn. 33 (5) (2010) 1641–1654, https://doi.org/10.2514/1.46815. [16] B. Bas ̧ pınar, E. Koyuncu, Evaluation of two-vs-one air combats using hybrid maneuver-based framework and security strategy approach, J. Aeronaut. Space Technol. 12 (1) (2019) 95–107. [17] T. Han, X. Wang, Y. Liang, S. Ku, Study on ucav robust maneuvering decision in automatic air combat based on target accessible domain, J. Phys. Conf. Ser. 1213 (2019) 052004, https://doi.org/10.1088/1742-6596/1213/5/052004, IOP Publishing. [18] Y. Wang, C. Huang, C. Tang, Research on unmanned combat aerial vehicle robust maneuvering decision under incomplete target information, Adv. Mech. Eng. 8 (10) (2016) 1687814016674384, https://doi.org/10.1177/ 1687814016674384. [19] H. Shin, J. Lee, H. Kim, D.H. Shim, An autonomous aerial combat framework for two-on-two engagements based on basic fighter maneuvers, Aerosp. Sci. Technol. 72 (2018) 305–315, https://doi.org/10.1016/j.ast.2017.11.014. [20] H. Changqiang, D. Kangsheng, H. Hanqiao, T. Shangqin, Z. Zhuoran, Autonomous air combat maneuver decision using bayesian inference and moving horizon optimization, J. Syst. Eng. Electron. 29 (1) (2018) 86–97, https://doi.org/10. 21629/JSEE.2018.01.09. [21] D.-I. You, H. Shim, Design of an autonomous air combat guidance law using a virtual pursuit point for ucav, J. Korean Soc. Aeronaut. Space Sci. 42 (3) (2014) 199–212, https://doi.org/10.5139/JKSAS.2014.42.3.199.
+[22] D.-I. You, D.H. Shim, Design of an aerial combat guidance law using virtual pursuit point concept, Proc. Inst. Mech. Eng., G J. Aerosp. Eng. 229 (5) (2015) 792–813, https://doi.org/10.1177/0954410014539654. [23] N. Ramírez López, R.  ̇Zbikowski, Effectiveness of autonomous decision making for unmanned combat aerial vehicles in dogfight engagements, J. Guid. Control Dyn. 41 (4) (2018) 1021–1024, https://doi.org/10.2514/1.G002937. [24] Q. Chen, X. Wang, J. Yang, Z. Wang, Trajectory-following guidance based on a virtual target and an angle constraint, Aerosp. Sci. Technol. 87 (2019) 448–458, https://doi.org/10.1016/j.ast.2019.02.034. [25] N. Ernest, D. Carroll, C. Schumacher, M. Clark, K. Cohen, G. Lee, Genetic fuzzy based artificial intelligence for unmanned combat aerial vehicle control in simulated air combat missions, J. Def. Manag. (ISSN 2167-0374) 6 (1) (2016), https://doi.org/10.4172/2167-0374.1000144. [26] S.-J. Park, S.-S. Park, H.-L. Choi, K.-S. An, Y.-G. Kim, An expert data-driven air combat maneuver model learning approach, in: AIAA Scitech 2021 Forum, 2021, p. 0526. [27] J. Kober, J.A. Bagnell, J. Peters, Reinforcement learning in robotics: a survey, Int. J. Robot. Res. 32 (11) (2013) 1238–1274, https://doi.org/10.1007/978-3-64227645-3_18. [28] K. Arulkumaran, M.P. Deisenroth, M. Brundage, A.A. Bharath, Deep reinforcement learning: a brief survey, IEEE Signal Process. Mag. 34 (6) (2017) 26–38, https://doi.org/10.1109/MSP.2017.2743240. [29] T. Zhou, M. Chen, J. Zou, Reinforcement learning based data fusion method for multi-sensors, IEEE/CAA J. Autom. Sin. 7 (6) (2020) 1489–1497, https://doi.org/ 10.1109/JAS.2020.1003180. [30] S. Wei, F. Yang-He, C. Guang-Quan, H. Hong-Lan, H. Jin-Cai, L. Zhong, H. Wei, Research on multi-aircraft cooperative air combat method based on deep reinforcement learning, Acta Autom. Sin. 47 (7) (2021) 1610–1623, https:// doi.org/10.16383/j.aas.c201059. [31] R.S. Sutton, A.G. Barto, Reinforcement Learning: An Introduction, MIT Press, 2018. [32] S. Dankwa, W. Zheng, Twin-delayed ddpg: a deep reinforcement learning technique to model a continuous movement of an intelligent robot agent, in: Proceedings of the 3rd International Conference on Vision, Image and Signal Processing, 2019, pp. 1–5. [33] L. He, N. Aouf, B. Song, Explainable deep reinforcement learning for uav autonomous path planning, Aerosp. Sci. Technol. 118 (2021) 107052, https:// doi.org/10.1016/j.ast.2021.107052. [34] X. Li, J. Zhang, J. Han, Trajectory planning of load transportation with multiquadrotors based on reinforcement learning algorithm, Aerosp. Sci. Technol. 116 (2021) 106887, https://doi.org/10.1016/j.ast.2021.106887. [35] P. Stojakovic, B. Rasuo, Minimal safe speed of the asymmetrically loaded combat airplane, Aircr. Eng. Aerosp. Technol. 88 (1) (2016) 42–52, https:// doi.org/10.2514/6.2013-5082. [36] U.S.A. Force, F-16 combat aircraft fundamentals, [Internet], https://man.fas.org/ dod-101/sys/ac/docs/16v5.pdf, 1996. (Accessed 7 September 2021). [37] R.L. Shaw, Fighter Combat Tactics and Maneuvering, 5th edition, Naval Institute Press, Annapolis, MD, USA, 1985. [38] P. Bonanni, The Art of the Kill, Spectrum HoloByte, 1993. [39] P. Stojakovic, B. Rasuo, Single propeller airplane minimal flight speed based upon the lateral maneuver condition, Aerosp. Sci. Technol. 49 (2016) 239–249, https://doi.org/10.1016/j.ast.2015.12.012. [40] B. Rasuo, Some analytical and numerical solutions for the safe turn manoeuvres of agricultural aircraft–an overview, Aeronaut. J. 111 (1123) (2007) 593–599, https://doi.org/10.1017/s000192400000186x. [41] S. Fujimoto, H. Hoof, D. Meger, Addressing function approximation error in actor-critic methods, in: International Conference on Machine Learning, PMLR, 2018, pp. 1587–1596. [42] Z. Zhang, X. Li, J. An, W. Man, G. Zhang, Model-free attitude control of spacecraft based on pid-guide td3 algorithm, Int. J. Aerosp. Eng. 2020 (2020), https:// doi.org/10.1155/2020/8874619. [43] W. Kong, D. Zhou, Z. Yang, Y. Zhao, K. Zhang, Uav autonomous aerial combat maneuver strategy generation with observation error based on stateadversarial deep deterministic policy gradient and inverse reinforcement learning, Electronics 9 (7) (2020) 1121, https://doi.org/10.3390/electronics9071121.
+17

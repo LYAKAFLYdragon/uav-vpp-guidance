@@ -1,0 +1,28 @@
+includes:
+  - ./train_prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp_combat_finetune_mixed_opponent_aware_32k.yaml
+
+experiment:
+  name: prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp_combat_finetune_mixed_opponent_aware_32k_lane_gated
+
+combat_finetune:
+  selection_metric:
+    mode: lane_gated
+    objective: overall.win_rate
+    fallback_metric: overall.mean_return
+    gates:
+      - task: head_on
+        opponent_stage: expert
+        metric: win_rate
+        min_value: 0.5
+      - task: head_on
+        opponent_stage: end_to_end
+        metric: win_rate
+        min_value: 0.5
+      - task: crossing_feasible
+        opponent_stage: expert
+        metric: win_rate
+        min_value: 0.5
+      - task: crossing_feasible
+        opponent_stage: end_to_end
+        metric: win_rate
+        min_value: 0.5

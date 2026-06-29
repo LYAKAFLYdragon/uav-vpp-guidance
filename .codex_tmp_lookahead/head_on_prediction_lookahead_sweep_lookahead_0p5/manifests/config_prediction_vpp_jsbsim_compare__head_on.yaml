@@ -1,0 +1,540 @@
+env:
+  sim_freq: 60
+  decision_freq: 5
+  max_high_level_steps: 20
+  use_jsbsim: false
+  aircraft_model: f16
+  legacy_project_root: ''
+  backend: simple
+  strict_backend: false
+  origin:
+  - 120.0
+  - 60.0
+  - 0.0
+  high_level_dt: 0.2
+  low_level_dt: 0.0166667
+  action_repeat: 12
+  target_mode: constant_velocity
+  min_altitude_m: 500.0
+  max_altitude_m: 15000.0
+  max_range_m: 12000.0
+scenario:
+  randomize_init: true
+  types:
+  - favorable
+  - neutral
+  - disadvantage
+  - challenging
+termination:
+  success_range_m: 900.0
+  success_ata_deg: 25.0
+  success_hold_time_s: 0.2
+  hysteresis_range_m: 950.0
+  hysteresis_ata_deg: 30.0
+  min_altitude_m: 500.0
+  max_altitude_m: 15000.0
+  max_range_m: 12000.0
+ppo:
+  learning_rate: 0.0003
+  gamma: 0.99
+  gae_lambda: 0.95
+  clip_coef: 0.2
+  entropy_coef: 0.01
+  rollout_steps: 2048
+  minibatch_size: 256
+  update_epochs: 10
+  value_coef: 0.5
+  max_grad_norm: 0.5
+  normalize_advantage: true
+  device: cpu
+  seed: 0
+  total_timesteps: 200000
+policy:
+  hidden_sizes:
+  - 128
+  - 128
+  activation: tanh
+  type: mlp
+  action_dim: 3
+  action_low:
+  - -1.0
+  - -1.0
+  - -1.0
+  action_high:
+  - 1.0
+  - 1.0
+  - 1.0
+virtual_point:
+  action_dim: 3
+  d_long_range:
+  - -1500.0
+  - 1500.0
+  d_lat_range:
+  - -800.0
+  - 800.0
+  d_vert_range:
+  - -500.0
+  - 500.0
+  tau_pred_range:
+  - 0.0
+  - 3.0
+  speed_bias_range:
+  - -80.0
+  - 80.0
+  smoothing_alpha: 0.3
+  anchor_mode: predicted_target
+  return_info: true
+  dynamics_aware: true
+  max_heading_rate: 0.3
+  lookahead_steps: 5
+  enabled: true
+  mode: normal
+guidance:
+  mode: los_rate
+  gains:
+    k_los: 1.0
+    k_pos: 0.5
+    k_damp: 0.2
+    k_roll: 1.0
+    k_speed: 0.2
+    k_energy: 0.1
+    alpha_filter: 0.3
+  params:
+    distance_scale_m: 2000.0
+    target_speed_mps: 250.0
+    speed_error_scale_mps: 100.0
+    base_throttle: 0.7
+    epsilon: 1.0e-09
+    base_nz: 1.0
+    capture_radius_m: 50.0
+    enable_internal_clip: true
+    enable_internal_filter: false
+    navigation_constant: 3.0
+    los_rate_filter_alpha: 0.3
+    max_accel_mps2: 100.0
+    hybrid_mode: range
+    range_threshold_m: 3000.0
+    blend_transition_m: 1000.0
+    energy_speed_threshold_mps: 220.0
+    hysteresis_m: 500.0
+    energy_speed_hysteresis_mps: 20.0
+    min_dwell_steps: 3
+    altitude_hold:
+      enabled: false
+      k_alt: 0.002
+      altitude_reference_m: 5000.0
+      min_altitude_m: 500.0
+    roll_angle_protection:
+      enabled: true
+      max_roll_rad: 1.3963
+      attenuation_power: 2.0
+    use_distance_aware_speed: true
+  mode_switch:
+    enabled: true
+    aspect_threshold_deg: 25.0
+    range_threshold_m: 3000.0
+    closing_speed_threshold_mps: 50.0
+  post_process:
+    enabled: true
+    enable_energy_compensation: false
+    energy_k_nz: 0.05
+    energy_k_speed: 0.01
+    enable_load_roll_coordination: false
+    coord_nz_threshold: 0.8
+    coord_roll_scale: 0.5
+    enable_terminal_protection: true
+    terminal_range_m: 500.0
+    terminal_nz_scale: 0.7
+    terminal_roll_scale: 0.8
+    enable_lift_compensation: true
+    lift_compensation_factor: 1.0
+    lift_compensation_source: actual_roll
+    lift_compensation_filter_alpha: 0.3
+    lift_compensation_min_cos: 0.5
+  limits:
+    nz_min: -2.0
+    nz_max: 7.0
+    roll_rate_min: -1.5
+    roll_rate_max: 1.5
+    throttle_min: 0.4
+    throttle_max: 0.9
+  use_gain_adapter: false
+limits:
+  nz_min: -2.0
+  nz_max: 7.0
+  roll_rate_min: -1.5
+  roll_rate_max: 1.5
+  throttle_min: 0.4
+  throttle_max: 0.9
+reward:
+  w_geometry: 1.0
+  w_range: 0.6
+  w_angle: 0.9
+  w_energy: 0.0
+  w_safety: 3.0
+  w_saturation: 0.5
+  w_smooth: 0.2
+  w_turn_rate: 0.5
+  w_closing: 0.1
+  w_alive: 0.02
+  w_overshoot: 1.0
+  w_boundary: 0.3
+  boundary_range_m: 6000.0
+  boundary_alt_min_m: 1000.0
+  boundary_alt_max_m: 9000.0
+  ideal_range_min: 700.0
+  ideal_range_max: 1100.0
+  max_heading_rate: 0.3
+  terminal_success: 400.0
+  terminal_failure: -300.0
+  terminal_crash: -600.0
+  min_altitude_m: 500.0
+success_criterion_curriculum:
+- until_progress: 0.2
+  success_range_m: 900.0
+  success_ata_deg: 25.0
+  success_hold_time_s: 0.2
+  hysteresis_range_m: 950.0
+  hysteresis_ata_deg: 30.0
+- until_progress: 0.45
+  success_range_m: 800.0
+  success_ata_deg: 22.0
+  success_hold_time_s: 0.5
+  hysteresis_range_m: 850.0
+  hysteresis_ata_deg: 27.0
+- until_progress: 0.7
+  success_range_m: 750.0
+  success_ata_deg: 20.0
+  success_hold_time_s: 1.0
+  hysteresis_range_m: 800.0
+  hysteresis_ata_deg: 25.0
+- until_progress: 1.0
+  success_range_m: 700.0
+  success_ata_deg: 18.0
+  success_hold_time_s: 1.0
+  hysteresis_range_m: 750.0
+  hysteresis_ata_deg: 22.0
+experiment:
+  name: prediction_vpp_ppo_jsbsim_compare
+  seed: 0
+  mode: train
+  output_root: outputs
+  flight_control_profile:
+    name: bank76_alt_hold_lift_smooth
+    config_path: config/experiment/ablation_mw_bank76_alt_hold_lift_smooth.yaml
+    validated_run_id: _codex_bank76_20seed
+    note: Shared low-level profile for JSBSim VPP air-combat experiments.
+backend: simple
+trajectory_prediction:
+  enabled: true
+  predictor_type: lstm
+  checkpoint_path: outputs/trajectory_prediction/best_model.pt
+  strict_predictor_init: true
+  device: cpu
+  allow_device_fallback: true
+  checkpoint_strict: true
+  freeze_predictor_during_rl: true
+  model:
+    type: lstm
+    input_dim: 16
+    hidden_dim: 128
+    num_layers: 2
+    dropout: 0.1
+    predict_variance: false
+  history:
+    history_len: 10
+    sample_rate_hz: 5
+    padding_mode: repeat_first
+  prediction:
+    lookahead_time_s: 0.5
+    output_mode: relative_displacement
+    fallback_mode: constant_velocity
+  integration:
+    anchor_mode: predicted_target
+    add_prediction_to_observation: false
+    add_uncertainty_to_observation: false
+    prediction_noise_std_m: 0.0
+  normalization:
+    position_scale_m: 1000.0
+    velocity_scale_mps: 300.0
+    angle_mode: sin_cos
+    overload_scale: 9.0
+observation:
+  temporal:
+    enabled: false
+    history_length: 2
+    dt: 0.2
+  include_gains: false
+  include_vp_error: false
+  include_scenario: false
+  include_guidance_state: false
+  include_saturation: false
+low_level_controller:
+  type: enhanced
+  enable_bank_angle_protection: true
+  max_bank_rad: 1.3264502315156905
+  bank_violation_threshold: 25
+  bank_protection_nz_increment: 0.5
+  altitude_hold_gain: 0.01
+evaluation:
+  eval_interval: 10000
+  eval_episodes: 10
+  seeds:
+  - 0
+  - 1
+  - 2
+  save_trajectories: true
+checkpoint:
+  save_interval: 10000
+  save_best: true
+  save_last: true
+scenarios:
+  favorable:
+    name: favorable
+    description: Ego starts behind target at close range with strong speed advantage.
+    own_init:
+      position_m:
+      - 0.0
+      - 0.0
+      - 5000.0
+      velocity_mps: 280.0
+      heading_deg: 0.0
+    target_init:
+      position_m:
+      - 800.0
+      - 0.0
+      - 5000.0
+      velocity_mps: 180.0
+      heading_deg: 0.0
+  neutral:
+    name: neutral
+    description: Ego and target start head-on at similar speed and altitude.
+    own_init:
+      position_m:
+      - 0.0
+      - 0.0
+      - 5000.0
+      velocity_mps: 200.0
+      heading_deg: 0.0
+    target_init:
+      position_m:
+      - 2000.0
+      - 0.0
+      - 5000.0
+      velocity_mps: 200.0
+      heading_deg: 180.0
+  disadvantage:
+    name: disadvantage
+    description: Target starts offset behind ego; ego must perform lead turn.
+    own_init:
+      position_m:
+      - 0.0
+      - 0.0
+      - 5000.0
+      velocity_mps: 200.0
+      heading_deg: 0.0
+    target_init:
+      position_m:
+      - -600.0
+      - 400.0
+      - 5000.0
+      velocity_mps: 220.0
+      heading_deg: 30.0
+  challenging:
+    name: challenging
+    description: Target starts at high lateral offset with crossing trajectory.
+    own_init:
+      position_m:
+      - 0.0
+      - 0.0
+      - 5000.0
+      velocity_mps: 200.0
+      heading_deg: 45.0
+    target_init:
+      position_m:
+      - 1500.0
+      - 1500.0
+      - 5200.0
+      velocity_mps: 210.0
+      heading_deg: 225.0
+provenance:
+  config_overrides:
+  - source: run_jsbsim_hrl_comparison.py:head_on_eval_config
+    key: env
+    new_value:
+      sim_freq: 60
+      decision_freq: 5
+      max_high_level_steps: 512
+      use_jsbsim: true
+      aircraft_model: f16
+      legacy_project_root: ''
+      backend: jsbsim
+      strict_backend: true
+      origin:
+      - 120.0
+      - 60.0
+      - 0.0
+      high_level_dt: 0.2
+      low_level_dt: 0.0166667
+      action_repeat: 12
+      target_mode: constant_velocity
+      min_altitude_m: 500.0
+      max_altitude_m: 15000.0
+      max_range_m: 12000.0
+    old_value:
+      sim_freq: 60
+      decision_freq: 5
+      max_high_level_steps: 512
+      use_jsbsim: true
+      aircraft_model: f16
+      legacy_project_root: ''
+      backend: jsbsim
+      strict_backend: true
+      origin:
+      - 120.0
+      - 60.0
+      - 0.0
+      high_level_dt: 0.2
+      low_level_dt: 0.0166667
+      action_repeat: 12
+      target_mode: constant_velocity
+  - source: run_jsbsim_hrl_comparison.py:head_on_eval_config
+    key: observation
+    new_value:
+      temporal:
+        enabled: false
+        history_length: 2
+        dt: 0.2
+      include_gains: false
+      include_vp_error: false
+      include_scenario: false
+      include_guidance_state: false
+      include_saturation: false
+    old_value:
+      temporal:
+        enabled: false
+        history_length: 2
+        dt: 0.2
+      include_gains: false
+      include_vp_error: false
+      include_scenario: false
+  - source: run_jsbsim_hrl_comparison.py:head_on_eval_config
+    key: attack_zone
+    new_value:
+      enabled: false
+      initial_hp: 100.0
+      damage_per_step: 0.5
+      legacy_range_enabled: true
+      close_range_enabled: true
+      close_range_min_km: 0.3
+      close_range_full_score_km: 1.0
+      close_range_max_km: 3.0
+      close_range_max_aoa_deg: 40.0
+      close_range_score_scale: 1.0
+  - source: run_jsbsim_hrl_comparison.py:head_on_eval_config
+    key: task
+    new_value:
+      name: head_on
+      env_class: CloseRangeTrackingEnv
+      scenarios:
+      - name: head_on_minimal
+        own_init:
+          position_m:
+          - 0.0
+          - 0.0
+          - 5000.0
+          velocity_mps: 200.0
+          heading_deg: 0.0
+        target_init:
+          position_m:
+          - 2000.0
+          - 0.0
+          - 5000.0
+          velocity_mps: 200.0
+          heading_deg: 180.0
+        metadata:
+          scenario_type: head_on
+          frozen_set: jsbsim_hrl_minimal
+  - source: run_jsbsim_hrl_comparison.py:head_on_eval_config
+    key: env.max_high_level_steps
+    new_value: 20
+    old_value: 512
+  - source: run_jsbsim_hrl_comparison.py:head_on_eval_config
+    key: backend
+    new_value: simple
+    old_value: jsbsim
+  - source: run_jsbsim_hrl_comparison.py:head_on_eval_config
+    key: env.backend
+    new_value: simple
+    old_value: jsbsim
+  - source: run_jsbsim_hrl_comparison.py:head_on_eval_config
+    key: env.use_jsbsim
+    new_value: false
+    old_value: true
+  - source: run_jsbsim_hrl_comparison.py:head_on_eval_config
+    key: env.strict_backend
+    new_value: false
+    old_value: true
+  - source: run_jsbsim_hrl_comparison.py:prediction_vpp_jsbsim_compare_learned
+    key: end_to_end.enabled
+    new_value: false
+  - source: run_jsbsim_hrl_comparison.py:prediction_vpp_jsbsim_compare_learned
+    key: virtual_point.enabled
+    new_value: true
+  - source: run_jsbsim_hrl_comparison.py:prediction_vpp_jsbsim_compare_learned
+    key: virtual_point.mode
+    new_value: normal
+  - source: run_jsbsim_hrl_comparison.py:prediction_vpp_jsbsim_compare_learned
+    key: trajectory_prediction.integration.prediction_noise_std_m
+    new_value: 0.0
+  - source: run_jsbsim_hrl_comparison.py:prediction_cli
+    key: trajectory_prediction.prediction.lookahead_time_s
+    new_value: 0.5
+    old_value: 1.0
+  - source: run_jsbsim_hrl_comparison.py:opponent_stage
+    key: opponent_stage
+    new_value: none
+  - source: run_jsbsim_hrl_comparison.py:opponent_stage
+    key: opponent
+    new_value:
+      stage: none
+      type: none
+attack_zone:
+  enabled: false
+  initial_hp: 100.0
+  damage_per_step: 0.5
+  legacy_range_enabled: true
+  close_range_enabled: true
+  close_range_min_km: 0.3
+  close_range_full_score_km: 1.0
+  close_range_max_km: 3.0
+  close_range_max_aoa_deg: 40.0
+  close_range_score_scale: 1.0
+task:
+  name: head_on
+  env_class: CloseRangeTrackingEnv
+  scenarios:
+  - name: head_on_minimal
+    own_init:
+      position_m:
+      - 0.0
+      - 0.0
+      - 5000.0
+      velocity_mps: 200.0
+      heading_deg: 0.0
+    target_init:
+      position_m:
+      - 2000.0
+      - 0.0
+      - 5000.0
+      velocity_mps: 200.0
+      heading_deg: 180.0
+    metadata:
+      scenario_type: head_on
+      frozen_set: jsbsim_hrl_minimal
+end_to_end:
+  enabled: false
+opponent_stage: none
+opponent:
+  stage: none
+  type: none

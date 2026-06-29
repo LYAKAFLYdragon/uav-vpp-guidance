@@ -1,0 +1,54 @@
+includes:
+  - ./train_prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00.yaml
+
+experiment:
+  name: prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_combat_finetune
+
+attack_zone:
+  enabled: true
+  initial_hp: 100.0
+  damage_per_step: 0.5
+  legacy_range_enabled: true
+  close_range_enabled: true
+  close_range_min_km: 0.3
+  close_range_full_score_km: 1.0
+  close_range_max_km: 3.0
+  close_range_max_aoa_deg: 60.0
+  close_range_score_scale: 1.0
+
+combat_finetune:
+  comparison_config_path: config/experiment/jsbsim_hrl_comparison.yaml
+  tasks:
+    - head_on
+    - crossing_feasible
+  opponent_stages:
+    - expert
+    - end_to_end
+  task_weights:
+    head_on: 1.0
+    crossing_feasible: 1.0
+  opponent_stage_weights:
+    expert: 1.0
+    end_to_end: 1.0
+  selection_metric: win_rate
+
+warm_start:
+  enabled: true
+  checkpoint: outputs/experiments/prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00/checkpoints/last.pt
+  step: 0
+  load_optimizer: false
+  strict_dims: true
+
+ppo:
+  total_timesteps: 16384
+
+evaluation:
+  eval_interval: 4096
+  eval_episodes: 1
+  seeds: [480, 481, 482]
+  save_trajectories: false
+
+checkpoint:
+  save_interval: 4096
+  save_best: true
+  save_last: true

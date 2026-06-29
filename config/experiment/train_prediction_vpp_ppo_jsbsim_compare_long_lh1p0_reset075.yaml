@@ -1,0 +1,40 @@
+# Formalized reset075 training config cloned from the validated long-lh1p0
+# prediction VPP baseline and augmented only with the task-conditioned VPP
+# settings that improved head_on without harming crossing_feasible in pilot runs.
+
+includes:
+  - ./train_prediction_vpp_ppo_jsbsim_compare_long_lh1p0.yaml
+
+experiment:
+  name: prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075
+
+virtual_point:
+  offset_frame_by_task:
+    head_on: target_velocity
+    crossing_feasible: world_neu
+  post_merge_predicted_target_blend_by_task:
+    head_on: 0.5
+    crossing_feasible: 1.0
+  post_merge_predicted_target_forward_scale_by_task:
+    head_on: 0.0
+    crossing_feasible: 1.0
+  post_merge_predicted_target_forward_scale_release_scale_by_task:
+    head_on: 0.75
+    crossing_feasible: 1.0
+  post_merge_predicted_target_forward_scale_release_ego_only_streak_steps_by_task:
+    head_on: 19
+  post_merge_predicted_target_forward_scale_release_reset_on_streak_break_by_task:
+    head_on: true
+    crossing_feasible: false
+  close_range_anchor_mode_by_task:
+    head_on: current_target
+    crossing_feasible: predicted_target
+  close_range_anchor_trigger_range_m_by_task:
+    head_on: 1000.0
+    crossing_feasible: 1000.0
+  close_range_anchor_alignment_angle_deg_max_by_task:
+    head_on: 10.0
+    crossing_feasible: 180.0
+  close_range_anchor_release_on_post_merge_by_task:
+    head_on: true
+    crossing_feasible: false

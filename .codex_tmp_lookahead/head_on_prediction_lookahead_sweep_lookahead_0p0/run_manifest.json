@@ -1,0 +1,598 @@
+{
+  "schema_version": "1.0.0",
+  "stage_name": "jsbsim_hrl_comparison",
+  "stage_version": "0.1.0",
+  "start_time": "2026-06-26T04:13:51.164645+00:00",
+  "end_time": "2026-06-26T04:13:51.358587+00:00",
+  "status": "completed",
+  "command_line": [
+    "E:\\uav-vpp-guidance\\scripts\\run_jsbsim_hrl_comparison.py",
+    "--config",
+    "config/experiment/jsbsim_hrl_comparison.yaml",
+    "--run-id",
+    "head_on_prediction_lookahead_sweep_lookahead_0p0",
+    "--output-root",
+    "E:\\uav-vpp-guidance\\.codex_tmp_lookahead",
+    "--preset",
+    "main",
+    "--methods",
+    "prediction_vpp_jsbsim_compare",
+    "--tasks",
+    "head_on",
+    "--backend",
+    "simple",
+    "--opponent-stage",
+    "none",
+    "--run-status",
+    "smoke",
+    "--device",
+    "cpu",
+    "--prediction-lookahead-time-s",
+    "0.0",
+    "--seeds",
+    "0",
+    "--n-episodes",
+    "1",
+    "--allow-missing-checkpoints",
+    "--dry-run"
+  ],
+  "working_directory": "E:\\uav-vpp-guidance",
+  "output_dir": "E:\\uav-vpp-guidance\\.codex_tmp_lookahead\\head_on_prediction_lookahead_sweep_lookahead_0p0",
+  "config_path": "E:\\uav-vpp-guidance\\config\\experiment\\jsbsim_hrl_comparison.yaml",
+  "config_hash": "551ec19bf9024a2c",
+  "git_info": {
+    "commit": "ac078752837988a08e2a45d26aec1047633fefbb",
+    "short_commit": "ac0787528379",
+    "branch": "fix/flight-control-comparison-sync",
+    "dirty": true,
+    "description": "fix/flight-control-comparison-sync@ac0787528379-dirty"
+  },
+  "python_version": "3.9.13 (main, Aug 25 2022, 23:51:50) [MSC v.1916 64 bit (AMD64)]",
+  "platform": "Windows-10-10.0.22631-SP0",
+  "inputs": {
+    "comparison_config": {
+      "path": "E:\\uav-vpp-guidance\\config\\experiment\\jsbsim_hrl_comparison.yaml",
+      "exists": true,
+      "size_bytes": 7460,
+      "sha256": "204b51724f67c0400bbe1cecca188933176470ab0f9e13271b8340a7c260491b",
+      "mtime": 1782447154.493621
+    }
+  },
+  "outputs": {
+    "resolved_config.yaml": {
+      "path": "E:\\uav-vpp-guidance\\.codex_tmp_lookahead\\head_on_prediction_lookahead_sweep_lookahead_0p0\\resolved_config.yaml",
+      "exists": true,
+      "size_bytes": 7473,
+      "sha256": "a52484e1cb4a5903677f534290ea1fd26596fa8829d8918509543e0dff022bdb",
+      "mtime": 1782447230.8156855
+    },
+    "design_notes.json": {
+      "path": "E:\\uav-vpp-guidance\\.codex_tmp_lookahead\\head_on_prediction_lookahead_sweep_lookahead_0p0\\design_notes.json",
+      "exists": true,
+      "size_bytes": 2973,
+      "sha256": "6d4d1f7326dfbdfa5c5b190a94fef4ae38a23a4b912fb795c40f7f4934ad9d41",
+      "mtime": 1782447230.899393
+    },
+    "artifact_contract.json": {
+      "path": "E:\\uav-vpp-guidance\\.codex_tmp_lookahead\\head_on_prediction_lookahead_sweep_lookahead_0p0\\artifact_contract.json",
+      "exists": true,
+      "size_bytes": 278,
+      "sha256": "69fb625b87874c813451df91cc43bb3ba0beed3e4bbb0689fa8fa3db333c7f39",
+      "mtime": 1782447231.188159
+    },
+    "dry_run_checks.json": {
+      "path": "E:\\uav-vpp-guidance\\.codex_tmp_lookahead\\head_on_prediction_lookahead_sweep_lookahead_0p0\\dry_run_checks.json",
+      "exists": true,
+      "size_bytes": 7028,
+      "sha256": "83efd05ecfc5484f1ddb3813655bd4349e251b219d1cb8740b7b9e8d066cd239",
+      "mtime": 1782447231.3364582
+    }
+  },
+  "artifacts_present": {
+    "resolved_config.yaml": true,
+    "design_notes.json": true,
+    "artifact_contract.json": true,
+    "dry_run_checks.json": true,
+    "manifests": true,
+    "run_manifest.json": true
+  },
+  "config_overrides": [
+    {
+      "source": "run_jsbsim_hrl_comparison.py:head_on_eval_config",
+      "key": "env",
+      "new_value": {
+        "sim_freq": 60,
+        "decision_freq": 5,
+        "max_high_level_steps": 512,
+        "use_jsbsim": true,
+        "aircraft_model": "f16",
+        "legacy_project_root": "",
+        "backend": "jsbsim",
+        "strict_backend": true,
+        "origin": [
+          120.0,
+          60.0,
+          0.0
+        ],
+        "high_level_dt": 0.2,
+        "low_level_dt": 0.0166667,
+        "action_repeat": 12,
+        "target_mode": "constant_velocity",
+        "min_altitude_m": 500.0,
+        "max_altitude_m": 15000.0,
+        "max_range_m": 12000.0
+      },
+      "old_value": {
+        "sim_freq": 60,
+        "decision_freq": 5,
+        "max_high_level_steps": 512,
+        "use_jsbsim": true,
+        "aircraft_model": "f16",
+        "legacy_project_root": "",
+        "backend": "jsbsim",
+        "strict_backend": true,
+        "origin": [
+          120.0,
+          60.0,
+          0.0
+        ],
+        "high_level_dt": 0.2,
+        "low_level_dt": 0.0166667,
+        "action_repeat": 12,
+        "target_mode": "constant_velocity"
+      }
+    },
+    {
+      "source": "run_jsbsim_hrl_comparison.py:head_on_eval_config",
+      "key": "observation",
+      "new_value": {
+        "temporal": {
+          "enabled": false,
+          "history_length": 2,
+          "dt": 0.2
+        },
+        "include_gains": false,
+        "include_vp_error": false,
+        "include_scenario": false,
+        "include_guidance_state": false,
+        "include_saturation": false
+      },
+      "old_value": {
+        "temporal": {
+          "enabled": false,
+          "history_length": 2,
+          "dt": 0.2
+        },
+        "include_gains": false,
+        "include_vp_error": false,
+        "include_scenario": false
+      }
+    },
+    {
+      "source": "run_jsbsim_hrl_comparison.py:head_on_eval_config",
+      "key": "attack_zone",
+      "new_value": {
+        "enabled": false,
+        "initial_hp": 100.0,
+        "damage_per_step": 0.5,
+        "legacy_range_enabled": true,
+        "close_range_enabled": true,
+        "close_range_min_km": 0.3,
+        "close_range_full_score_km": 1.0,
+        "close_range_max_km": 3.0,
+        "close_range_max_aoa_deg": 40.0,
+        "close_range_score_scale": 1.0
+      }
+    },
+    {
+      "source": "run_jsbsim_hrl_comparison.py:head_on_eval_config",
+      "key": "task",
+      "new_value": {
+        "name": "head_on",
+        "env_class": "CloseRangeTrackingEnv",
+        "scenarios": [
+          {
+            "name": "head_on_minimal",
+            "own_init": {
+              "position_m": [
+                0.0,
+                0.0,
+                5000.0
+              ],
+              "velocity_mps": 200.0,
+              "heading_deg": 0.0
+            },
+            "target_init": {
+              "position_m": [
+                2000.0,
+                0.0,
+                5000.0
+              ],
+              "velocity_mps": 200.0,
+              "heading_deg": 180.0
+            },
+            "metadata": {
+              "scenario_type": "head_on",
+              "frozen_set": "jsbsim_hrl_minimal"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "source": "run_jsbsim_hrl_comparison.py:head_on_eval_config",
+      "key": "env.max_high_level_steps",
+      "new_value": 20,
+      "old_value": 512
+    },
+    {
+      "source": "run_jsbsim_hrl_comparison.py:head_on_eval_config",
+      "key": "backend",
+      "new_value": "simple",
+      "old_value": "jsbsim"
+    },
+    {
+      "source": "run_jsbsim_hrl_comparison.py:head_on_eval_config",
+      "key": "env.backend",
+      "new_value": "simple",
+      "old_value": "jsbsim"
+    },
+    {
+      "source": "run_jsbsim_hrl_comparison.py:head_on_eval_config",
+      "key": "env.use_jsbsim",
+      "new_value": false,
+      "old_value": true
+    },
+    {
+      "source": "run_jsbsim_hrl_comparison.py:head_on_eval_config",
+      "key": "env.strict_backend",
+      "new_value": false,
+      "old_value": true
+    },
+    {
+      "source": "run_jsbsim_hrl_comparison.py:prediction_vpp_jsbsim_compare_learned",
+      "key": "end_to_end.enabled",
+      "new_value": false
+    },
+    {
+      "source": "run_jsbsim_hrl_comparison.py:prediction_vpp_jsbsim_compare_learned",
+      "key": "virtual_point.enabled",
+      "new_value": true
+    },
+    {
+      "source": "run_jsbsim_hrl_comparison.py:prediction_vpp_jsbsim_compare_learned",
+      "key": "virtual_point.mode",
+      "new_value": "normal"
+    },
+    {
+      "source": "run_jsbsim_hrl_comparison.py:prediction_vpp_jsbsim_compare_learned",
+      "key": "trajectory_prediction.integration.prediction_noise_std_m",
+      "new_value": 0.0
+    },
+    {
+      "source": "run_jsbsim_hrl_comparison.py:prediction_cli",
+      "key": "trajectory_prediction.prediction.lookahead_time_s",
+      "new_value": 0.0,
+      "old_value": 1.0
+    },
+    {
+      "source": "run_jsbsim_hrl_comparison.py:opponent_stage",
+      "key": "opponent_stage",
+      "new_value": "none"
+    },
+    {
+      "source": "run_jsbsim_hrl_comparison.py:opponent_stage",
+      "key": "opponent",
+      "new_value": {
+        "stage": "none",
+        "type": "none"
+      }
+    }
+  ],
+  "paper_safe": false,
+  "invalid_for_paper_reasons": [
+    "run_status=smoke is not final paper evidence",
+    "backend is not jsbsim",
+    "dry-run does not execute simulations"
+  ],
+  "notes": [],
+  "extra": {
+    "run_id": "head_on_prediction_lookahead_sweep_lookahead_0p0",
+    "run_status": "smoke",
+    "preset": "main",
+    "backend": "simple",
+    "opponent_stage": "none",
+    "jsbsim_root": null,
+    "attack_zone_overrides": {},
+    "prediction_overrides": {
+      "lookahead_time_s": 0.0
+    },
+    "methods": [
+      "prediction_vpp_jsbsim_compare"
+    ],
+    "tasks": [
+      "head_on"
+    ],
+    "seeds": [
+      0
+    ],
+    "n_episodes": 1,
+    "design_notes": {
+      "main_claim_scope": "Prediction assists VPP anchor placement. Current main preset does not add prediction features to the high-level policy observation.",
+      "prediction_features_in_observation": false,
+      "task_metric_policy": {
+        "head_on": {
+          "primary_success_metric": "success_rate",
+          "success_semantics": "Default proximity success from CloseRangeTrackingEnv.",
+          "tracking_metrics": [
+            "final_range_m",
+            "mean_range_m",
+            "time_in_envelope_s"
+          ]
+        },
+        "crossing_feasible": {
+          "primary_success_metric": "success_rate",
+          "success_semantics": "Default proximity success from CloseRangeTrackingEnv.",
+          "tracking_metrics": [
+            "final_range_m",
+            "mean_range_m",
+            "time_in_envelope_s"
+          ]
+        },
+        "break_turn": {
+          "primary_success_metric": null,
+          "success_semantics": "BreakTurnEnv disables proximity success; success_rate is not a valid primary metric.",
+          "tracking_metrics": [
+            "final_range_m",
+            "mean_range_m",
+            "min_range_m",
+            "time_in_envelope_s"
+          ]
+        },
+        "sustained_turn": {
+          "primary_success_metric": null,
+          "success_semantics": "SustainedTurnEnv disables proximity success; success_rate is not a valid primary metric.",
+          "tracking_metrics": [
+            "completed_orbits",
+            "mean_range_m",
+            "time_in_envelope_s",
+            "mean_abs_ata_deg"
+          ]
+        }
+      },
+      "prediction_variant_semantics": {
+        "none": "No trajectory prediction; VPP anchors on the current target state.",
+        "learned": "Frozen learned predictor supplies the predicted target anchor for VPP; prediction features are not added to policy observation by default.",
+        "noisy": "Learned prediction anchor with seeded Gaussian position noise injected before VPP generation.",
+        "perfect": "Constant-velocity kinematic oracle using the current true target velocity; this is not a true future-trajectory oracle for maneuvering targets."
+      },
+      "formal_policy": "formal-small runs are pilot evidence; paper-safe formal evidence requires a separately chosen full budget after pilot analysis.",
+      "curriculum_opponent_eval_policy": "When --opponent-stage=curriculum, this runner evaluates a single resolved opponent. The YAML active_stage selects it; if omitted, the final listed stage is used.",
+      "survival_rate_semantics": "survival_rate means the ego aircraft was not physically destroyed, shot down, crashed, or out-of-bounds; HP-timeout losses can still count as survived.",
+      "attack_zone_angle_policy": "close_range_max_aoa_deg is the preferred explicit close-range attack-zone angle knob; close_range_max_aoa_rad remains supported for legacy configs.",
+      "selected_methods": [
+        "prediction_vpp_jsbsim_compare"
+      ],
+      "selected_tasks": [
+        "head_on"
+      ],
+      "selected_backend": "simple",
+      "selected_opponent_stage": "none",
+      "resolved_jsbsim_root": null
+    },
+    "config_snapshots": {
+      "prediction_vpp_jsbsim_compare/head_on": {
+        "path": "E:\\uav-vpp-guidance\\.codex_tmp_lookahead\\head_on_prediction_lookahead_sweep_lookahead_0p0\\manifests\\config_prediction_vpp_jsbsim_compare__head_on.yaml",
+        "sha256": "465e28f988e2bb8f",
+        "config_overrides": [
+          {
+            "source": "run_jsbsim_hrl_comparison.py:head_on_eval_config",
+            "key": "env",
+            "new_value": {
+              "sim_freq": 60,
+              "decision_freq": 5,
+              "max_high_level_steps": 512,
+              "use_jsbsim": true,
+              "aircraft_model": "f16",
+              "legacy_project_root": "",
+              "backend": "jsbsim",
+              "strict_backend": true,
+              "origin": [
+                120.0,
+                60.0,
+                0.0
+              ],
+              "high_level_dt": 0.2,
+              "low_level_dt": 0.0166667,
+              "action_repeat": 12,
+              "target_mode": "constant_velocity",
+              "min_altitude_m": 500.0,
+              "max_altitude_m": 15000.0,
+              "max_range_m": 12000.0
+            },
+            "old_value": {
+              "sim_freq": 60,
+              "decision_freq": 5,
+              "max_high_level_steps": 512,
+              "use_jsbsim": true,
+              "aircraft_model": "f16",
+              "legacy_project_root": "",
+              "backend": "jsbsim",
+              "strict_backend": true,
+              "origin": [
+                120.0,
+                60.0,
+                0.0
+              ],
+              "high_level_dt": 0.2,
+              "low_level_dt": 0.0166667,
+              "action_repeat": 12,
+              "target_mode": "constant_velocity"
+            }
+          },
+          {
+            "source": "run_jsbsim_hrl_comparison.py:head_on_eval_config",
+            "key": "observation",
+            "new_value": {
+              "temporal": {
+                "enabled": false,
+                "history_length": 2,
+                "dt": 0.2
+              },
+              "include_gains": false,
+              "include_vp_error": false,
+              "include_scenario": false,
+              "include_guidance_state": false,
+              "include_saturation": false
+            },
+            "old_value": {
+              "temporal": {
+                "enabled": false,
+                "history_length": 2,
+                "dt": 0.2
+              },
+              "include_gains": false,
+              "include_vp_error": false,
+              "include_scenario": false
+            }
+          },
+          {
+            "source": "run_jsbsim_hrl_comparison.py:head_on_eval_config",
+            "key": "attack_zone",
+            "new_value": {
+              "enabled": false,
+              "initial_hp": 100.0,
+              "damage_per_step": 0.5,
+              "legacy_range_enabled": true,
+              "close_range_enabled": true,
+              "close_range_min_km": 0.3,
+              "close_range_full_score_km": 1.0,
+              "close_range_max_km": 3.0,
+              "close_range_max_aoa_deg": 40.0,
+              "close_range_score_scale": 1.0
+            }
+          },
+          {
+            "source": "run_jsbsim_hrl_comparison.py:head_on_eval_config",
+            "key": "task",
+            "new_value": {
+              "name": "head_on",
+              "env_class": "CloseRangeTrackingEnv",
+              "scenarios": [
+                {
+                  "name": "head_on_minimal",
+                  "own_init": {
+                    "position_m": [
+                      0.0,
+                      0.0,
+                      5000.0
+                    ],
+                    "velocity_mps": 200.0,
+                    "heading_deg": 0.0
+                  },
+                  "target_init": {
+                    "position_m": [
+                      2000.0,
+                      0.0,
+                      5000.0
+                    ],
+                    "velocity_mps": 200.0,
+                    "heading_deg": 180.0
+                  },
+                  "metadata": {
+                    "scenario_type": "head_on",
+                    "frozen_set": "jsbsim_hrl_minimal"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "source": "run_jsbsim_hrl_comparison.py:head_on_eval_config",
+            "key": "env.max_high_level_steps",
+            "new_value": 20,
+            "old_value": 512
+          },
+          {
+            "source": "run_jsbsim_hrl_comparison.py:head_on_eval_config",
+            "key": "backend",
+            "new_value": "simple",
+            "old_value": "jsbsim"
+          },
+          {
+            "source": "run_jsbsim_hrl_comparison.py:head_on_eval_config",
+            "key": "env.backend",
+            "new_value": "simple",
+            "old_value": "jsbsim"
+          },
+          {
+            "source": "run_jsbsim_hrl_comparison.py:head_on_eval_config",
+            "key": "env.use_jsbsim",
+            "new_value": false,
+            "old_value": true
+          },
+          {
+            "source": "run_jsbsim_hrl_comparison.py:head_on_eval_config",
+            "key": "env.strict_backend",
+            "new_value": false,
+            "old_value": true
+          },
+          {
+            "source": "run_jsbsim_hrl_comparison.py:prediction_vpp_jsbsim_compare_learned",
+            "key": "end_to_end.enabled",
+            "new_value": false
+          },
+          {
+            "source": "run_jsbsim_hrl_comparison.py:prediction_vpp_jsbsim_compare_learned",
+            "key": "virtual_point.enabled",
+            "new_value": true
+          },
+          {
+            "source": "run_jsbsim_hrl_comparison.py:prediction_vpp_jsbsim_compare_learned",
+            "key": "virtual_point.mode",
+            "new_value": "normal"
+          },
+          {
+            "source": "run_jsbsim_hrl_comparison.py:prediction_vpp_jsbsim_compare_learned",
+            "key": "trajectory_prediction.integration.prediction_noise_std_m",
+            "new_value": 0.0
+          },
+          {
+            "source": "run_jsbsim_hrl_comparison.py:prediction_cli",
+            "key": "trajectory_prediction.prediction.lookahead_time_s",
+            "new_value": 0.0,
+            "old_value": 1.0
+          },
+          {
+            "source": "run_jsbsim_hrl_comparison.py:opponent_stage",
+            "key": "opponent_stage",
+            "new_value": "none"
+          },
+          {
+            "source": "run_jsbsim_hrl_comparison.py:opponent_stage",
+            "key": "opponent",
+            "new_value": {
+              "stage": "none",
+              "type": "none"
+            }
+          }
+        ]
+      }
+    },
+    "artifact_validation": {
+      "valid": true,
+      "missing": [],
+      "present": [
+        "resolved_config.yaml",
+        "dry_run_checks.json",
+        "design_notes.json",
+        "artifact_contract.json",
+        "run_manifest.json",
+        "manifests"
+      ],
+      "optional_present": [],
+      "manifest_consistent": true,
+      "manifest_missing": []
+    }
+  }
+}

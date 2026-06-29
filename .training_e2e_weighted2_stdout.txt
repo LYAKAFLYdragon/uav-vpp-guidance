@@ -1,0 +1,32 @@
+
+
+     JSBSim Flight Dynamics Model v1.1.6 [GitHub build 320/commit b477f6312bee2fd3af4c4e5ba1a3e732ed2b99d4] Apr 30 2021 12:00:59
+Experiment: prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp_combat_finetune_mixed_quality_gated_conservative_headon_e2e_weighted2
+Output dir: outputs\experiments\prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp_combat_finetune_mixed_quality_gated_conservative_headon_e2e_weighted2
+Seed: 0
+Combat finetune lanes: tasks=['head_on', 'crossing_feasible'] | opponents=['expert', 'end_to_end']
+Observation dim: 16, Action dim: 3
+Network parameters: 19207
+Warm-start loaded from outputs\experiments\prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp_combat_finetune_mixed_quality_gated_conservative_headon\checkpoints\best.pt: obs_dim=16, action_dim=3, resume_step=0, optimizer_loaded=False
+
+--- Combat evaluation at step 4096 ---
+Eval win_rate=0.333 | survival=0.750 | crash=0.250 | selection=lane_gated:overall.win_rate score=332.667
+  -> Saved best checkpoint (lane_gated:overall.win_rate=332.6667)
+
+--- Combat evaluation at step 8192 ---
+Eval win_rate=0.333 | survival=0.583 | crash=0.333 | selection=lane_gated:overall.win_rate score=332.667
+
+--- Combat evaluation at step 12288 ---
+Eval win_rate=0.417 | survival=0.667 | crash=0.333 | selection=lane_gated:overall.win_rate score=-0.833
+
+--- Combat evaluation at step 16384 ---
+Eval win_rate=0.500 | survival=0.750 | crash=0.250 | selection=lane_gated:overall.win_rate score=666.167
+  -> Saved best checkpoint (lane_gated:overall.win_rate=666.1667)
+
+Saved last checkpoint to outputs\experiments\prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp_combat_finetune_mixed_quality_gated_conservative_headon_e2e_weighted2\checkpoints\last.pt
+
+Combat finetune complete! Total steps: 16384, Episodes: 45, Time: 442.9s
+            [JSBSim-ML v2.0]
+
+JSBSim startup beginning ...
+

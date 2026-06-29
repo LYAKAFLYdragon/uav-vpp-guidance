@@ -1,0 +1,23 @@
+includes:
+  - ./jsbsim_hrl_comparison.yaml
+
+experiment:
+  name: jsbsim_hrl_combat_only_pilot
+  description: "Small combat-only pilot for VPP air-combat geometry diagnostics."
+
+run_defaults:
+  tasks:
+    - head_on
+    - crossing_feasible
+  main_methods:
+    - no_prediction_vpp
+    - prediction_vpp_jsbsim_compare_long_lh1p0
+  formal_small_seeds: [0, 1, 2]
+
+methods:
+  prediction_vpp_jsbsim_compare_long_lh1p0:
+    label: "Prediction VPP + HRL (JSBSim compare, lh1p0)"
+    agent_type: ppo
+    checkpoint: outputs/experiments/prediction_vpp_ppo_jsbsim_compare_long_lh1p0/checkpoints/last.pt
+    config_path: config/experiment/train_prediction_vpp_ppo_jsbsim_compare_long_lh1p0.yaml
+    prediction_variant: learned

@@ -1,0 +1,20 @@
+includes:
+  - ./train_prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp_combat_finetune.yaml
+
+experiment:
+  name: prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp_combat_finetune_mixed_opponent_aware_32k
+
+observation:
+  include_opponent_stage: true
+
+ppo:
+  total_timesteps: 32768
+
+evaluation:
+  eval_interval: 8192
+
+checkpoint:
+  save_interval: 8192
+
+warm_start:
+  enabled: false

@@ -1,0 +1,63 @@
+{
+  "main_claim_scope": "Prediction assists VPP anchor placement. Current main preset does not add prediction features to the high-level policy observation.",
+  "prediction_features_in_observation": false,
+  "task_metric_policy": {
+    "head_on": {
+      "primary_success_metric": "success_rate",
+      "success_semantics": "Default proximity success from CloseRangeTrackingEnv.",
+      "tracking_metrics": [
+        "final_range_m",
+        "mean_range_m",
+        "time_in_envelope_s"
+      ]
+    },
+    "crossing_feasible": {
+      "primary_success_metric": "success_rate",
+      "success_semantics": "Default proximity success from CloseRangeTrackingEnv.",
+      "tracking_metrics": [
+        "final_range_m",
+        "mean_range_m",
+        "time_in_envelope_s"
+      ]
+    },
+    "break_turn": {
+      "primary_success_metric": null,
+      "success_semantics": "BreakTurnEnv disables proximity success; success_rate is not a valid primary metric.",
+      "tracking_metrics": [
+        "final_range_m",
+        "mean_range_m",
+        "min_range_m",
+        "time_in_envelope_s"
+      ]
+    },
+    "sustained_turn": {
+      "primary_success_metric": null,
+      "success_semantics": "SustainedTurnEnv disables proximity success; success_rate is not a valid primary metric.",
+      "tracking_metrics": [
+        "completed_orbits",
+        "mean_range_m",
+        "time_in_envelope_s",
+        "mean_abs_ata_deg"
+      ]
+    }
+  },
+  "prediction_variant_semantics": {
+    "none": "No trajectory prediction; VPP anchors on the current target state.",
+    "learned": "Frozen learned predictor supplies the predicted target anchor for VPP; prediction features are not added to policy observation by default.",
+    "noisy": "Learned prediction anchor with seeded Gaussian position noise injected before VPP generation.",
+    "perfect": "Constant-velocity kinematic oracle using the current true target velocity; this is not a true future-trajectory oracle for maneuvering targets."
+  },
+  "formal_policy": "formal-small runs are pilot evidence; paper-safe formal evidence requires a separately chosen full budget after pilot analysis.",
+  "curriculum_opponent_eval_policy": "When --opponent-stage=curriculum, this runner evaluates a single resolved opponent. The YAML active_stage selects it; if omitted, the final listed stage is used.",
+  "survival_rate_semantics": "survival_rate means the ego aircraft was not physically destroyed, shot down, crashed, or out-of-bounds; HP-timeout losses can still count as survived.",
+  "attack_zone_angle_policy": "close_range_max_aoa_deg is the preferred explicit close-range attack-zone angle knob; close_range_max_aoa_rad remains supported for legacy configs.",
+  "selected_methods": [
+    "prediction_vpp_jsbsim_compare"
+  ],
+  "selected_tasks": [
+    "head_on"
+  ],
+  "selected_backend": "simple",
+  "selected_opponent_stage": "none",
+  "resolved_jsbsim_root": null
+}

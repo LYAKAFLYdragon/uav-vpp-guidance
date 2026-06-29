@@ -90,26 +90,29 @@ class MLPActorCritic(nn.Module):
             "action_bias", (self.action_high + self.action_low) / 2.0
         )
 
-        # Shared body
-        shared_sizes = [self.obs_dim] + list(hidden_sizes)
-        self.shared_net = build_mlp(shared_sizes, activation=activation)
-
         if self.num_tasks == 1:
-            # Single actor head (backward compatible)
+            # Single encoder + single actor head (backward compatible)
+            shared_sizes = [self.obs_dim] + list(hidden_sizes)
+            self.shared_net = build_mlp(shared_sizes, activation=activation)
             self.actor_mean = nn.Linear(shared_sizes[-1], self.action_dim)
-            # Learnable log standard deviation (independent per action dim)
             self.actor_log_std = nn.Parameter(torch.ones(self.action_dim) * init_log_std)
+            critic_input_dim = shared_sizes[-1]
         else:
-            # Multiple task-conditioned actor heads
+            # Multiple task-conditioned encoders + actor heads
+            self.encoders = nn.ModuleList([
+                build_mlp([self.obs_dim] + list(hidden_sizes), activation=activation)
+                for _ in range(self.num_tasks)
+            ])
             self.actor_means = nn.ModuleList([
-                nn.Linear(shared_sizes[-1], self.action_dim) for _ in range(self.num_tasks)
+                nn.Linear(hidden_sizes[-1], self.action_dim) for _ in range(self.num_tasks)
             ])
             self.actor_log_stds = nn.ParameterList([
                 nn.Parameter(torch.ones(self.action_dim) * init_log_std) for _ in range(self.num_tasks)
             ])
+            critic_input_dim = hidden_sizes[-1]
 
         # Critic head: shared across all tasks
-        self.critic = nn.Linear(shared_sizes[-1], 1)
+        self.critic = nn.Linear(critic_input_dim, 1)
 
         # Initialize weights
         self._init_weights()
@@ -156,6 +159,21 @@ class MLPActorCritic(nn.Module):
                 log_std[mask] = self.actor_log_stds[t].expand_as(mean[mask])
         return mean, log_std
 
+    def _encode(self, obs, task_id):
+        """Encode observation using task-conditioned encoder."""
+        if self.num_tasks == 1:
+            return self.shared_net(obs)
+        
+        batch_size = obs.shape[0]
+        # Infer feature dimension from first encoder's first layer output
+        feature_dim = self.encoders[0][-1].out_features
+        features = torch.zeros(batch_size, feature_dim, device=obs.device, dtype=obs.dtype)
+        for t in range(self.num_tasks):
+            mask = (task_id == t)
+            if mask.any():
+                features[mask] = self.encoders[t](obs[mask])
+        return features
+
     def forward(self, obs):
         """
         Forward pass through shared network.
@@ -173,8 +191,8 @@ class MLPActorCritic(nn.Module):
                 f"Expected obs shape [..., {self.obs_dim}], got {obs.shape}"
             )
 
-        features = self.shared_net(obs)
         task_id = self._extract_task_id(obs)
+        features = self._encode(obs, task_id)
         mean, _ = self._get_actor_params(features, task_id)
         value = self.critic(features).squeeze(-1)
         return mean, value
@@ -212,8 +230,8 @@ class MLPActorCritic(nn.Module):
                 f"Expected obs shape [..., {self.obs_dim}], got {obs.shape}"
             )
 
-        features = self.shared_net(obs)
         task_id = self._extract_task_id(obs)
+        features = self._encode(obs, task_id)
         mean, log_std = self._get_actor_params(features, task_id)
         value = self.critic(features).squeeze(-1)
         std = torch.exp(log_std)

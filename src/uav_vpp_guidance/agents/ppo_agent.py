@@ -298,9 +298,20 @@ class PPOAgent:
             raise FileNotFoundError(f"Checkpoint not found: {path}")
         checkpoint = torch.load(path, map_location=self.device)
         self.network.load_state_dict(checkpoint["network_state_dict"], strict=False)
-        self.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+        optimizer_loaded = False
+        try:
+            self.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+            optimizer_loaded = True
+        except ValueError as e:
+            if "parameter group" in str(e):
+                # Optimizer architecture mismatch (e.g., num_tasks changed).
+                # Skip optimizer reload and re-initialize from scratch.
+                print(f"WARNING: Optimizer state load skipped due to architecture mismatch: {e}")
+            else:
+                raise
         self.total_updates = checkpoint.get("total_updates", 0)
         self.total_timesteps = checkpoint.get("total_timesteps", 0)
+        checkpoint["optimizer_loaded"] = optimizer_loaded
         return checkpoint
 
     def get_deterministic_action(self, obs):

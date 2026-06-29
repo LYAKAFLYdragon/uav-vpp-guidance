@@ -10,7 +10,7 @@ from __future__ import annotations
 import copy
 import json
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 import numpy as np
 
@@ -27,6 +27,18 @@ def _tolist(arr):
     if hasattr(arr, "tolist"):
         return arr.tolist()
     return list(arr)
+
+
+def _vec3(value):
+    if value is None:
+        return [np.nan, np.nan, np.nan]
+    try:
+        arr = np.asarray(value, dtype=float).reshape(-1)
+    except (TypeError, ValueError):
+        return [np.nan, np.nan, np.nan]
+    if arr.shape[0] < 3:
+        return [np.nan, np.nan, np.nan]
+    return [float(arr[0]), float(arr[1]), float(arr[2])]
 
 
 class EpisodeRecorder:
@@ -83,17 +95,689 @@ class EpisodeRecorder:
         current_active_idx = info.get("active_waypoint_index", self._prev_active_idx)
         switch_event = current_active_idx != self._prev_active_idx
         self._prev_active_idx = current_active_idx
+        own_pos = _vec3(own_state.get("position_m", own_state.get("position_neu")))
+        target_pos = _vec3(
+            target_state.get("position_m", target_state.get("position_neu"))
+        )
+        virtual_point = info.get("virtual_point") or {}
+        vp_source = info.get("vp_position_neu")
+        if vp_source is None:
+            vp_source = virtual_point.get("position_neu")
+        if vp_source is None:
+            vp_source = virtual_point.get("position")
+        vp_pos = _vec3(vp_source)
+        anchor_pos = _vec3(info.get("anchor_pos"))
+        offset = _vec3(info.get("vp_offset"))
+        world_offset = _vec3(info.get("vp_world_offset"))
+        tactical_basis_ll_world = _vec3(info.get("tactical_basis_ll_world"))
+        tactical_basis_io_world = _vec3(info.get("tactical_basis_io_world"))
+        tactical_basis_cd_world = _vec3(info.get("tactical_basis_cd_world"))
+        tactical_basis_world_offset = _vec3(info.get("tactical_basis_world_offset"))
+        offensive_anchor_lateral_world_offset = _vec3(
+            info.get("offensive_anchor_lateral_world_offset")
+        )
 
         point = {
             "step": step,
             "time_s": float(time_s),
-            "own_pos_m": _tolist(
-                own_state.get("position_m", own_state.get("position_neu"))
+            "task": self.task,
+            "opponent_stage": info.get("opponent_stage"),
+            "method": self.controller,
+            "controller": self.controller,
+            "seed": self.seed,
+            "episode": self.episode,
+            "own_pos_m": own_pos,
+            "target_pos_m": target_pos,
+            "ego_pos_x": own_pos[0],
+            "ego_pos_y": own_pos[1],
+            "ego_pos_z": own_pos[2],
+            "target_pos_x": target_pos[0],
+            "target_pos_y": target_pos[1],
+            "target_pos_z": target_pos[2],
+            "vp_pos_x": vp_pos[0],
+            "vp_pos_y": vp_pos[1],
+            "vp_pos_z": vp_pos[2],
+            "anchor_pos_x": anchor_pos[0],
+            "anchor_pos_y": anchor_pos[1],
+            "anchor_pos_z": anchor_pos[2],
+            "anchor_mode": info.get("anchor_mode"),
+            "anchor_mode_requested": info.get("anchor_mode_requested"),
+            "close_range_anchor_mode": info.get("close_range_anchor_mode"),
+            "close_range_anchor_trigger_range_m": float(
+                info.get("close_range_anchor_trigger_range_m", np.nan)
             ),
-            "target_pos_m": _tolist(
-                target_state.get("position_m", target_state.get("position_neu"))
+            "close_range_anchor_release_on_post_merge": bool(
+                info.get("close_range_anchor_release_on_post_merge", False)
             ),
+            "close_range_anchor_requires_first_pass": bool(
+                info.get("close_range_anchor_requires_first_pass", False)
+            ),
+            "close_range_anchor_offensive_anchor_blend": float(
+                info.get("close_range_anchor_offensive_anchor_blend", np.nan)
+            ),
+            "close_range_anchor_offensive_anchor_blend_active": bool(
+                info.get("close_range_anchor_offensive_anchor_blend_active", False)
+            ),
+            "close_range_anchor_release_alignment_angle_deg_max": float(
+                info.get("close_range_anchor_release_alignment_angle_deg_max", np.nan)
+            ),
+            "close_range_anchor_release_alignment_satisfied": bool(
+                info.get("close_range_anchor_release_alignment_satisfied", True)
+            ),
+            "close_range_anchor_release_ready": bool(
+                info.get("close_range_anchor_release_ready", False)
+            ),
+            "close_range_anchor_post_merge_hold_steps": float(
+                info.get("close_range_anchor_post_merge_hold_steps", np.nan)
+            ),
+            "close_range_anchor_post_merge_steps_since_first_pass": float(
+                info.get(
+                    "close_range_anchor_post_merge_steps_since_first_pass",
+                    np.nan,
+                )
+            ),
+            "close_range_anchor_post_merge_hold_remaining_steps": float(
+                info.get(
+                    "close_range_anchor_post_merge_hold_remaining_steps",
+                    np.nan,
+                )
+            ),
+            "close_range_anchor_window_open": bool(
+                info.get("close_range_anchor_window_open", True)
+            ),
+            "close_range_anchor_alignment_angle_deg_max": float(
+                info.get("close_range_anchor_alignment_angle_deg_max", np.nan)
+            ),
+            "close_range_anchor_alignment_satisfied": bool(
+                info.get("close_range_anchor_alignment_satisfied", False)
+            ),
+            "close_range_anchor_mode_active": bool(
+                info.get("close_range_anchor_mode_active", False)
+            ),
+            "post_merge_anchor_mode": info.get("post_merge_anchor_mode"),
+            "post_merge_anchor_mode_requires_geometry_disadvantage": bool(
+                info.get(
+                    "post_merge_anchor_mode_requires_geometry_disadvantage",
+                    False,
+                )
+            ),
+            "post_merge_anchor_mode_condition_met": bool(
+                info.get("post_merge_anchor_mode_condition_met", False)
+            ),
+            "post_merge_anchor_mode_active": bool(
+                info.get("post_merge_anchor_mode_active", False)
+            ),
+            "post_merge_anchor_mode_recovery_active": bool(
+                info.get("post_merge_anchor_mode_recovery_active", False)
+            ),
+            "post_merge_anchor_mode_release_ego_only_streak_steps": float(
+                info.get("post_merge_anchor_mode_release_ego_only_streak_steps", np.nan)
+            ),
+            "post_merge_anchor_mode_recovery_below_altitude_m": float(
+                info.get("post_merge_anchor_mode_recovery_below_altitude_m", np.nan)
+            ),
+            "post_merge_anchor_mode_release_reset_on_streak_break": bool(
+                info.get("post_merge_anchor_mode_release_reset_on_streak_break", False)
+            ),
+            "post_merge_anchor_mode_offensive_anchor_blend": float(
+                info.get("post_merge_anchor_mode_offensive_anchor_blend", np.nan)
+            ),
+            "post_merge_anchor_mode_offensive_anchor_longitudinal_blend": float(
+                info.get(
+                    "post_merge_anchor_mode_offensive_anchor_longitudinal_blend",
+                    np.nan,
+                )
+            ),
+            "post_merge_anchor_mode_offensive_anchor_lateral_blend": float(
+                info.get(
+                    "post_merge_anchor_mode_offensive_anchor_lateral_blend",
+                    np.nan,
+                )
+            ),
+            "post_merge_anchor_mode_offensive_anchor_blend_active": bool(
+                info.get("post_merge_anchor_mode_offensive_anchor_blend_active", False)
+            ),
+            "post_merge_anchor_mode_offensive_anchor_component_blend_active": bool(
+                info.get(
+                    "post_merge_anchor_mode_offensive_anchor_component_blend_active",
+                    False,
+                )
+            ),
+            "post_merge_anchor_mode_lateral_world_offset_latch_on_activation": bool(
+                info.get(
+                    "post_merge_anchor_mode_lateral_world_offset_latch_on_activation",
+                    False,
+                )
+            ),
+            "post_merge_anchor_mode_lateral_world_offset_latch_active": bool(
+                info.get(
+                    "post_merge_anchor_mode_lateral_world_offset_latch_active",
+                    False,
+                )
+            ),
+            "offset_frame": info.get("offset_frame", "world_neu"),
+            "configured_offset_frame": info.get(
+                "configured_offset_frame",
+                info.get("offset_frame", "world_neu"),
+            ),
+            "action_semantics": info.get("action_semantics", "cartesian_offset"),
+            "configured_action_semantics": info.get(
+                "configured_action_semantics",
+                info.get("action_semantics", "cartesian_offset"),
+            ),
+            "tactical_basis_enabled": bool(
+                info.get("tactical_basis_enabled", False)
+            ),
+            "tactical_basis_action_ll": float(
+                info.get("tactical_basis_action_ll", np.nan)
+            ),
+            "tactical_basis_action_io": float(
+                info.get("tactical_basis_action_io", np.nan)
+            ),
+            "tactical_basis_action_cd": float(
+                info.get("tactical_basis_action_cd", np.nan)
+            ),
+            "tactical_basis_lead_lag_extent_m": float(
+                info.get("tactical_basis_lead_lag_extent_m", np.nan)
+            ),
+            "tactical_basis_inside_outside_extent_m": float(
+                info.get("tactical_basis_inside_outside_extent_m", np.nan)
+            ),
+            "tactical_basis_climb_descent_extent_m": float(
+                info.get("tactical_basis_climb_descent_extent_m", np.nan)
+            ),
+            "tactical_basis_longitudinal_frame": info.get(
+                "tactical_basis_longitudinal_frame",
+                "target_velocity",
+            ),
+            "tactical_basis_lateral_frame": info.get(
+                "tactical_basis_lateral_frame",
+                "encounter_stable",
+            ),
+            "tactical_basis_vertical_frame": info.get(
+                "tactical_basis_vertical_frame",
+                "world_neu",
+            ),
+            "tactical_basis_lateral_sign_mode": info.get(
+                "tactical_basis_lateral_sign_mode",
+                "same_side",
+            ),
+            "tactical_basis_lateral_sign": float(
+                info.get("tactical_basis_lateral_sign", np.nan)
+            ),
+            "tactical_basis_ll_world_x": tactical_basis_ll_world[0],
+            "tactical_basis_ll_world_y": tactical_basis_ll_world[1],
+            "tactical_basis_ll_world_z": tactical_basis_ll_world[2],
+            "tactical_basis_io_world_x": tactical_basis_io_world[0],
+            "tactical_basis_io_world_y": tactical_basis_io_world[1],
+            "tactical_basis_io_world_z": tactical_basis_io_world[2],
+            "tactical_basis_cd_world_x": tactical_basis_cd_world[0],
+            "tactical_basis_cd_world_y": tactical_basis_cd_world[1],
+            "tactical_basis_cd_world_z": tactical_basis_cd_world[2],
+            "tactical_basis_world_offset_x": tactical_basis_world_offset[0],
+            "tactical_basis_world_offset_y": tactical_basis_world_offset[1],
+            "tactical_basis_world_offset_z": tactical_basis_world_offset[2],
+            "predicted_target_blend": float(
+                info.get("predicted_target_blend", 1.0)
+            ),
+            "predicted_target_forward_scale": float(
+                info.get("predicted_target_forward_scale", 1.0)
+            ),
+            "offensive_anchor_blend": float(
+                info.get("offensive_anchor_blend", 0.0)
+            ),
+            "offensive_anchor_longitudinal_blend": float(
+                info.get("offensive_anchor_longitudinal_blend", np.nan)
+            ),
+            "offensive_anchor_lateral_blend": float(
+                info.get("offensive_anchor_lateral_blend", np.nan)
+            ),
+            "offensive_anchor_longitudinal_m": float(
+                info.get("offensive_anchor_longitudinal_m", np.nan)
+            ),
+            "offensive_anchor_frame": info.get(
+                "offensive_anchor_frame",
+                "target_velocity",
+            ),
+            "offensive_anchor_lateral_frame": info.get(
+                "offensive_anchor_lateral_frame",
+                info.get("offensive_anchor_frame", "target_velocity"),
+            ),
+            "offensive_anchor_encounter_stable_max_heading_delta_deg": float(
+                info.get(
+                    "offensive_anchor_encounter_stable_max_heading_delta_deg",
+                    np.nan,
+                )
+            ),
+            "offensive_anchor_lateral_sign_mode": info.get(
+                "offensive_anchor_lateral_sign_mode",
+                "same_side",
+            ),
+            "offensive_anchor_lateral_sign": float(
+                info.get("offensive_anchor_lateral_sign", np.nan)
+            ),
+            "offensive_anchor_lateral_world_offset_x": (
+                offensive_anchor_lateral_world_offset[0]
+            ),
+            "offensive_anchor_lateral_world_offset_y": (
+                offensive_anchor_lateral_world_offset[1]
+            ),
+            "offensive_anchor_lateral_world_offset_z": (
+                offensive_anchor_lateral_world_offset[2]
+            ),
+            "offensive_anchor_lateral_m": float(
+                info.get("offensive_anchor_lateral_m", np.nan)
+            ),
+            "offensive_anchor_vertical_m": float(
+                info.get("offensive_anchor_vertical_m", np.nan)
+            ),
+            "post_merge_predicted_target_blend": float(
+                info.get("post_merge_predicted_target_blend", np.nan)
+            ),
+            "post_merge_predicted_target_forward_scale": float(
+                info.get("post_merge_predicted_target_forward_scale", np.nan)
+            ),
+            "post_merge_predicted_target_forward_scale_release_scale": float(
+                info.get(
+                    "post_merge_predicted_target_forward_scale_release_scale",
+                    np.nan,
+                )
+            ),
+            "post_merge_predicted_target_forward_scale_release_ego_only_streak_steps": float(
+                info.get(
+                    "post_merge_predicted_target_forward_scale_release_ego_only_streak_steps",
+                    np.nan,
+                )
+            ),
+            "post_merge_predicted_target_forward_scale_release_reset_on_streak_break": bool(
+                info.get(
+                    "post_merge_predicted_target_forward_scale_release_reset_on_streak_break",
+                    False,
+                )
+            ),
+            "post_merge_predicted_target_forward_scale_hold_steps": float(
+                info.get(
+                    "post_merge_predicted_target_forward_scale_hold_steps",
+                    np.nan,
+                )
+            ),
+            "post_merge_offensive_anchor_blend": float(
+                info.get("post_merge_offensive_anchor_blend", np.nan)
+            ),
+            "post_merge_offensive_anchor_blend_release_blend": float(
+                info.get("post_merge_offensive_anchor_blend_release_blend", np.nan)
+            ),
+            "post_merge_offensive_anchor_blend_release_ego_only_streak_steps": float(
+                info.get(
+                    "post_merge_offensive_anchor_blend_release_ego_only_streak_steps",
+                    np.nan,
+                )
+            ),
+            "post_merge_offensive_anchor_blend_release_reset_on_streak_break": bool(
+                info.get(
+                    "post_merge_offensive_anchor_blend_release_reset_on_streak_break",
+                    False,
+                )
+            ),
+            "post_merge_offensive_anchor_blend_release_direct_track_enabled": bool(
+                info.get(
+                    "post_merge_offensive_anchor_blend_release_direct_track_enabled",
+                    True,
+                )
+            ),
+            "post_merge_offensive_anchor_blend_release_direct_track_below_altitude_m": float(
+                info.get(
+                    "post_merge_offensive_anchor_blend_release_direct_track_below_altitude_m",
+                    np.nan,
+                )
+            ),
+            "post_merge_offensive_anchor_blend_release_recovery_below_altitude_m": float(
+                info.get(
+                    "post_merge_offensive_anchor_blend_release_recovery_below_altitude_m",
+                    np.nan,
+                )
+            ),
+            "post_merge_offensive_anchor_blend_release_recovery_longitudinal_blend": float(
+                info.get(
+                    "post_merge_offensive_anchor_blend_release_recovery_longitudinal_blend",
+                    np.nan,
+                )
+            ),
+            "post_merge_offensive_anchor_blend_release_recovery_lateral_blend": float(
+                info.get(
+                    "post_merge_offensive_anchor_blend_release_recovery_lateral_blend",
+                    np.nan,
+                )
+            ),
+            "post_merge_offensive_anchor_blend_release_recovery_forward_bias_m_max": float(
+                info.get(
+                    "post_merge_offensive_anchor_blend_release_recovery_forward_bias_m_max",
+                    np.nan,
+                )
+            ),
+            "post_merge_offensive_anchor_blend_release_vp_forward_bias_m_min": float(
+                info.get(
+                    "post_merge_offensive_anchor_blend_release_vp_forward_bias_m_min",
+                    np.nan,
+                )
+            ),
+            "post_merge_offensive_anchor_blend_release_lateral_only_hold_steps": float(
+                info.get(
+                    "post_merge_offensive_anchor_blend_release_lateral_only_hold_steps",
+                    np.nan,
+                )
+            ),
+            "post_merge_offensive_anchor_lateral_world_offset_latch_on_activation": bool(
+                info.get(
+                    "post_merge_offensive_anchor_lateral_world_offset_latch_on_activation",
+                    False,
+                )
+            ),
+            "post_merge_offensive_anchor_lateral_world_offset_latch_active": bool(
+                info.get(
+                    "post_merge_offensive_anchor_lateral_world_offset_latch_active",
+                    False,
+                )
+            ),
+            "post_merge_offensive_anchor_blend_release_lateral_only": bool(
+                info.get(
+                    "post_merge_offensive_anchor_blend_release_lateral_only",
+                    False,
+                )
+            ),
+            "post_merge_offensive_anchor_blend_requires_geometry_disadvantage": bool(
+                info.get(
+                    "post_merge_offensive_anchor_blend_requires_geometry_disadvantage",
+                    False,
+                )
+            ),
+            "post_merge_offensive_anchor_condition_met": bool(
+                info.get("post_merge_offensive_anchor_condition_met", False)
+            ),
+            "post_merge_offensive_anchor_target_only_attack_zone_disadvantage": bool(
+                info.get(
+                    "post_merge_offensive_anchor_target_only_attack_zone_disadvantage",
+                    False,
+                )
+            ),
+            "post_merge_offensive_anchor_geometry_disadvantage": bool(
+                info.get(
+                    "post_merge_offensive_anchor_geometry_disadvantage",
+                    False,
+                )
+            ),
+            "post_merge_offensive_anchor_alignment_disadvantage": bool(
+                info.get(
+                    "post_merge_offensive_anchor_alignment_disadvantage",
+                    False,
+                )
+            ),
+            "post_merge_offensive_anchor_gate_ego_attack_score": float(
+                info.get("post_merge_offensive_anchor_gate_ego_attack_score", np.nan)
+            ),
+            "post_merge_offensive_anchor_gate_target_attack_score": float(
+                info.get("post_merge_offensive_anchor_gate_target_attack_score", np.nan)
+            ),
+            "post_merge_offensive_anchor_gate_ego_in_attack_zone": bool(
+                info.get("post_merge_offensive_anchor_gate_ego_in_attack_zone", False)
+            ),
+            "post_merge_offensive_anchor_gate_target_in_attack_zone": bool(
+                info.get(
+                    "post_merge_offensive_anchor_gate_target_in_attack_zone",
+                    False,
+                )
+            ),
+            "post_merge_offensive_anchor_gate_aa_deg_min": float(
+                info.get("post_merge_offensive_anchor_gate_aa_deg_min", np.nan)
+            ),
+            "post_merge_offensive_anchor_gate_aa_deg": float(
+                info.get("post_merge_offensive_anchor_gate_aa_deg", np.nan)
+            ),
+            "post_merge_offensive_anchor_gate_range_rate_mps": float(
+                info.get(
+                    "post_merge_offensive_anchor_gate_range_rate_mps",
+                    np.nan,
+                )
+            ),
+            "post_merge_offensive_anchor_gate_range_opening": bool(
+                info.get("post_merge_offensive_anchor_gate_range_opening", False)
+            ),
+            "post_merge_predicted_target_blend_release_on_attack_zone": bool(
+                info.get(
+                    "post_merge_predicted_target_blend_release_on_attack_zone",
+                    False,
+                )
+            ),
+            "post_merge_predicted_target_blend_release_requires_target_attack_zone": bool(
+                info.get(
+                    "post_merge_predicted_target_blend_release_requires_target_attack_zone",
+                    False,
+                )
+            ),
+            "post_merge_predicted_target_blend_release_below_altitude_m": float(
+                info.get(
+                    "post_merge_predicted_target_blend_release_below_altitude_m",
+                    np.nan,
+                )
+            ),
+            "post_merge_predicted_target_blend_hold_steps": float(
+                info.get("post_merge_predicted_target_blend_hold_steps", np.nan)
+            ),
+            "post_merge_predicted_target_blend_release_blend": float(
+                info.get("post_merge_predicted_target_blend_release_blend", np.nan)
+            ),
+            "post_merge_predicted_target_blend_steps_since_first_pass": float(
+                info.get(
+                    "post_merge_predicted_target_blend_steps_since_first_pass",
+                    np.nan,
+                )
+            ),
+            "post_merge_predicted_target_blend_hold_remaining_steps": float(
+                info.get(
+                    "post_merge_predicted_target_blend_hold_remaining_steps",
+                    np.nan,
+                )
+            ),
+            "post_merge_predicted_target_blend_hold_window_open": bool(
+                info.get("post_merge_predicted_target_blend_hold_window_open", True)
+            ),
+            "post_merge_predicted_target_forward_scale_steps_since_first_pass": float(
+                info.get(
+                    "post_merge_predicted_target_forward_scale_steps_since_first_pass",
+                    np.nan,
+                )
+            ),
+            "post_merge_predicted_target_forward_scale_hold_remaining_steps": float(
+                info.get(
+                    "post_merge_predicted_target_forward_scale_hold_remaining_steps",
+                    np.nan,
+                )
+            ),
+            "post_merge_predicted_target_forward_scale_hold_window_open": bool(
+                info.get(
+                    "post_merge_predicted_target_forward_scale_hold_window_open",
+                    True,
+                )
+            ),
+            "post_merge_predicted_target_forward_scale_ego_only_streak_steps": float(
+                info.get(
+                    "post_merge_predicted_target_forward_scale_ego_only_streak_steps",
+                    np.nan,
+                )
+            ),
+            "post_merge_predicted_target_blend_active": bool(
+                info.get("post_merge_predicted_target_blend_active", False)
+            ),
+            "post_merge_predicted_target_forward_scale_active": bool(
+                info.get("post_merge_predicted_target_forward_scale_active", False)
+            ),
+            "post_merge_predicted_target_forward_scale_release_scale_active": bool(
+                info.get(
+                    "post_merge_predicted_target_forward_scale_release_scale_active",
+                    False,
+                )
+            ),
+            "post_merge_predicted_target_forward_scale_hold_expired": bool(
+                info.get("post_merge_predicted_target_forward_scale_hold_expired", False)
+            ),
+            "post_merge_predicted_target_forward_scale_release_triggered": bool(
+                info.get("post_merge_predicted_target_forward_scale_release_triggered", False)
+            ),
+            "post_merge_predicted_target_forward_scale_release_reset_triggered": bool(
+                info.get(
+                    "post_merge_predicted_target_forward_scale_release_reset_triggered",
+                    False,
+                )
+            ),
+            "post_merge_predicted_target_forward_scale_released": bool(
+                info.get("post_merge_predicted_target_forward_scale_released", False)
+            ),
+            "post_merge_anchor_mode_ego_only_streak_steps": float(
+                info.get("post_merge_anchor_mode_ego_only_streak_steps", np.nan)
+            ),
+            "post_merge_anchor_mode_release_triggered": bool(
+                info.get("post_merge_anchor_mode_release_triggered", False)
+            ),
+            "post_merge_anchor_mode_release_reset_triggered": bool(
+                info.get("post_merge_anchor_mode_release_reset_triggered", False)
+            ),
+            "post_merge_anchor_mode_released": bool(
+                info.get("post_merge_anchor_mode_released", False)
+            ),
+            "post_merge_offensive_anchor_blend_active": bool(
+                info.get("post_merge_offensive_anchor_blend_active", False)
+            ),
+            "post_merge_offensive_anchor_blend_release_blend_active": bool(
+                info.get(
+                    "post_merge_offensive_anchor_blend_release_blend_active",
+                    False,
+                )
+            ),
+            "post_merge_offensive_anchor_blend_ego_only_streak_steps": float(
+                info.get(
+                    "post_merge_offensive_anchor_blend_ego_only_streak_steps",
+                    np.nan,
+                )
+            ),
+            "post_merge_offensive_anchor_blend_release_triggered": bool(
+                info.get(
+                    "post_merge_offensive_anchor_blend_release_triggered",
+                    False,
+                )
+            ),
+            "post_merge_offensive_anchor_blend_release_reset_triggered": bool(
+                info.get(
+                    "post_merge_offensive_anchor_blend_release_reset_triggered",
+                    False,
+                )
+            ),
+            "post_merge_offensive_anchor_blend_released": bool(
+                info.get("post_merge_offensive_anchor_blend_released", False)
+            ),
+            "post_merge_offensive_anchor_blend_release_recovery_active": bool(
+                info.get(
+                    "post_merge_offensive_anchor_blend_release_recovery_active",
+                    False,
+                )
+            ),
+            "post_merge_offensive_anchor_blend_release_recovery_altitude_trigger_active": bool(
+                info.get(
+                    "post_merge_offensive_anchor_blend_release_recovery_altitude_trigger_active",
+                    False,
+                )
+            ),
+            "post_merge_offensive_anchor_blend_release_recovery_forward_bias_trigger_active": bool(
+                info.get(
+                    "post_merge_offensive_anchor_blend_release_recovery_forward_bias_trigger_active",
+                    False,
+                )
+            ),
+            "post_merge_offensive_anchor_blend_release_recovery_preview_vp_forward_bias_m": float(
+                info.get(
+                    "post_merge_offensive_anchor_blend_release_recovery_preview_vp_forward_bias_m",
+                    np.nan,
+                )
+            ),
+            "post_merge_offensive_anchor_blend_release_vp_forward_bias_clamp_active": bool(
+                info.get(
+                    "post_merge_offensive_anchor_blend_release_vp_forward_bias_clamp_active",
+                    False,
+                )
+            ),
+            "post_merge_offensive_anchor_blend_release_preclamp_vp_forward_bias_m": float(
+                info.get(
+                    "post_merge_offensive_anchor_blend_release_preclamp_vp_forward_bias_m",
+                    np.nan,
+                )
+            ),
+            "post_merge_offensive_anchor_blend_release_direct_track_active": bool(
+                info.get(
+                    "post_merge_offensive_anchor_blend_release_direct_track_active",
+                    False,
+                )
+            ),
+            "post_merge_offensive_anchor_blend_release_lateral_only_active": bool(
+                info.get(
+                    "post_merge_offensive_anchor_blend_release_lateral_only_active",
+                    False,
+                )
+            ),
+            "post_merge_offensive_anchor_blend_release_lateral_only_steps_since_release": float(
+                info.get(
+                    "post_merge_offensive_anchor_blend_release_lateral_only_steps_since_release",
+                    np.nan,
+                )
+            ),
+            "post_merge_offensive_anchor_blend_release_lateral_only_hold_remaining_steps": float(
+                info.get(
+                    "post_merge_offensive_anchor_blend_release_lateral_only_hold_remaining_steps",
+                    np.nan,
+                )
+            ),
+            "post_merge_offensive_anchor_blend_release_lateral_only_hold_window_open": bool(
+                info.get(
+                    "post_merge_offensive_anchor_blend_release_lateral_only_hold_window_open",
+                    True,
+                )
+            ),
+            "post_merge_predicted_target_blend_release_blend_active": bool(
+                info.get(
+                    "post_merge_predicted_target_blend_release_blend_active",
+                    False,
+                )
+            ),
+            "post_merge_predicted_target_blend_released": bool(
+                info.get("post_merge_predicted_target_blend_released", False)
+            ),
+            "longitudinal_scale": float(info.get("longitudinal_scale", 1.0)),
+            "lateral_scale": float(info.get("lateral_scale", 1.0)),
+            "offset_x": offset[0],
+            "offset_y": offset[1],
+            "offset_z": offset[2],
+            "world_offset_x": world_offset[0],
+            "world_offset_y": world_offset[1],
+            "world_offset_z": world_offset[2],
+            "lookahead_time_s": float(info.get("lookahead_time_s", np.nan)),
+            "prediction_valid": bool(info.get("prediction_valid", False)),
+            "prediction_fallback": bool(info.get("prediction_fallback", False)),
+            "vp_forward_bias_m": float(info.get("vp_forward_bias_m", np.nan)),
+            "vp_lateral_bias_m": float(info.get("vp_lateral_bias_m", np.nan)),
             "range_m": float(info.get("range_m", np.nan)),
+            "range_rate_mps": float(info.get("range_rate_mps", np.nan)),
+            "ata_deg": float(info.get("ata_deg", np.nan)),
+            "aa_deg": float(info.get("aa_deg", info.get("aspect_deg", np.nan))),
+            "ego_attack_aoa_deg": float(info.get("ego_attack_aoa_deg", np.nan)),
+            "target_attack_aoa_deg": float(info.get("target_attack_aoa_deg", np.nan)),
+            "ego_in_attack_zone": bool(info.get("ego_in_attack_zone", False)),
+            "target_in_attack_zone": bool(info.get("target_in_attack_zone", False)),
+            "ego_hp": float(info.get("ego_hp", np.nan)),
+            "target_hp": float(info.get("target_hp", np.nan)),
+            "ego_attack_score": float(info.get("ego_attack_score", 0.0)),
+            "target_attack_score": float(info.get("target_attack_score", 0.0)),
+            "pre_merge": bool(info.get("pre_merge", True)),
+            "post_merge": bool(info.get("post_merge", False)),
+            "min_range_so_far_m": float(info.get("min_range_so_far_m", np.nan)),
+            "first_pass_complete": bool(info.get("first_pass_complete", False)),
             "heading_deg": float(np.degrees(own_state.get("yaw_rad", 0.0))),
             "speed_mps": float(own_state.get("speed_mps", 250.0)),
             "altitude_m": float(
@@ -114,6 +798,24 @@ class EpisodeRecorder:
             "roll_deg": float(np.degrees(own_state.get("roll_rad", np.nan))),
             "roll_rate_cmd": float(info.get("roll_rate_cmd", np.nan)),
             "throttle_cmd": float(info.get("throttle_cmd", np.nan)),
+            "nz_saturated": float(info.get("nz_saturated", np.nan)),
+            "roll_rate_saturated": float(info.get("roll_rate_saturated", np.nan)),
+            "throttle_saturated": float(info.get("throttle_saturated", np.nan)),
+            "virtual_point_source": info.get("virtual_point_source"),
+            "direct_track_mode_requested": bool(
+                info.get("direct_track_mode_requested", False)
+            ),
+            "direct_track_mode_effective": bool(
+                info.get("direct_track_mode_effective", False)
+            ),
+            "mode_switch_requested": bool(
+                info.get("mode_switch_requested", False)
+            ),
+            "mode_switch_effective": bool(
+                info.get("mode_switch_effective", False)
+            ),
+            "mode_switch_reason": info.get("mode_switch_reason"),
+            "effective_guidance_mode": info.get("effective_guidance_mode"),
             "task_supervisor_state": info.get("task_supervisor_state"),
             "task_supervisor_pause_orbit_tracking": bool(
                 info.get("task_supervisor_pause_orbit_tracking", False)
@@ -133,9 +835,7 @@ class EpisodeRecorder:
             "turn_radius_m": info.get("turn_radius_m", np.nan),
             "orbit_direction": info.get("orbit_direction", np.nan),
             "virtual_point_m": _tolist(
-                info.get("virtual_point", {}).get("position_neu")
-                if info.get("virtual_point") is not None
-                else None
+                vp_pos
             ),
             "reward": float(reward),
         }

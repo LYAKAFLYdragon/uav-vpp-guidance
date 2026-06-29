@@ -81,6 +81,346 @@ def test_episode_recorder_multi_waypoint():
     assert point["task_supervisor_recovery_active"] is True
 
 
+def test_episode_recorder_persists_runtime_vpp_evidence():
+    recorder = EpisodeRecorder(
+        run_id="r2",
+        task="head_on",
+        controller="prediction_vpp",
+        seed=1,
+        episode=2,
+        config={},
+        config_sha256="abc",
+        git_commit="def",
+        backend="jsbsim",
+        strict_backend=True,
+    )
+    own = np.array([0.0, 0.0, 5000.0])
+    tgt = np.array([1000.0, 0.0, 5000.0])
+    info = _make_info(own, tgt)
+    info.update(
+        {
+            "longitudinal_scale": 0.25,
+            "offset_frame": "world_neu",
+            "configured_offset_frame": "target_velocity",
+            "virtual_point_source": "direct_track",
+            "close_range_anchor_mode": "offensive_position",
+            "close_range_anchor_trigger_range_m": 1000.0,
+            "close_range_anchor_release_on_post_merge": True,
+            "close_range_anchor_requires_first_pass": True,
+            "close_range_anchor_offensive_anchor_blend": 0.25,
+            "close_range_anchor_offensive_anchor_blend_active": True,
+            "close_range_anchor_release_alignment_angle_deg_max": 12.0,
+            "close_range_anchor_post_merge_hold_steps": 20.0,
+            "close_range_anchor_alignment_angle_deg_max": 10.0,
+            "close_range_anchor_mode_active": True,
+            "post_merge_anchor_mode": "offensive_position",
+            "post_merge_anchor_mode_requires_geometry_disadvantage": True,
+            "post_merge_anchor_mode_condition_met": True,
+            "post_merge_anchor_mode_active": True,
+            "post_merge_anchor_mode_recovery_active": True,
+            "post_merge_anchor_mode_release_ego_only_streak_steps": 1.0,
+            "post_merge_anchor_mode_recovery_below_altitude_m": 4500.0,
+            "post_merge_anchor_mode_release_reset_on_streak_break": False,
+            "post_merge_anchor_mode_offensive_anchor_blend": 0.25,
+            "post_merge_anchor_mode_offensive_anchor_longitudinal_blend": 1.0,
+            "post_merge_anchor_mode_offensive_anchor_lateral_blend": 0.25,
+            "post_merge_anchor_mode_offensive_anchor_blend_active": True,
+            "post_merge_anchor_mode_offensive_anchor_component_blend_active": True,
+            "post_merge_anchor_mode_lateral_world_offset_latch_on_activation": True,
+            "post_merge_anchor_mode_lateral_world_offset_latch_active": True,
+            "post_merge_anchor_mode_ego_only_streak_steps": 1.0,
+            "post_merge_anchor_mode_release_triggered": True,
+            "post_merge_anchor_mode_release_reset_triggered": False,
+            "post_merge_anchor_mode_released": True,
+            "offensive_anchor_frame": "encounter",
+            "offensive_anchor_lateral_frame": "target_velocity",
+            "offensive_anchor_lateral_sign_mode": "fixed_positive",
+            "offensive_anchor_lateral_sign": 1.0,
+            "offensive_anchor_lateral_world_offset": np.array([120.0, 40.0, 0.0]),
+            "offensive_anchor_longitudinal_blend": 1.0,
+            "offensive_anchor_lateral_blend": 0.25,
+            "offensive_anchor_lateral_m": 300.0,
+            "offensive_anchor_vertical_m": 500.0,
+            "post_merge_predicted_target_forward_scale": 0.0,
+            "post_merge_predicted_target_forward_scale_release_scale": 1.0,
+            "post_merge_predicted_target_forward_scale_release_ego_only_streak_steps": 1.0,
+            "post_merge_predicted_target_forward_scale_release_reset_on_streak_break": True,
+            "post_merge_predicted_target_forward_scale_hold_steps": 20.0,
+            "post_merge_predicted_target_forward_scale_steps_since_first_pass": 4.0,
+            "post_merge_predicted_target_forward_scale_hold_remaining_steps": 17.0,
+            "post_merge_predicted_target_forward_scale_hold_window_open": True,
+            "post_merge_predicted_target_forward_scale_ego_only_streak_steps": 1.0,
+            "post_merge_predicted_target_forward_scale_active": True,
+            "post_merge_predicted_target_forward_scale_release_scale_active": False,
+            "post_merge_predicted_target_forward_scale_hold_expired": False,
+            "post_merge_predicted_target_forward_scale_release_triggered": True,
+            "post_merge_predicted_target_forward_scale_release_reset_triggered": False,
+            "post_merge_predicted_target_forward_scale_released": True,
+            "post_merge_offensive_anchor_blend_release_blend": 0.0,
+            "post_merge_offensive_anchor_blend_release_ego_only_streak_steps": 5.0,
+            "post_merge_offensive_anchor_blend_release_reset_on_streak_break": True,
+            "post_merge_offensive_anchor_blend_release_direct_track_below_altitude_m": 800.0,
+            "post_merge_offensive_anchor_blend_release_recovery_below_altitude_m": 4500.0,
+            "post_merge_offensive_anchor_blend_release_recovery_forward_bias_m_max": -4500.0,
+            "post_merge_offensive_anchor_blend_release_vp_forward_bias_m_min": -4500.0,
+            "post_merge_offensive_anchor_blend_release_recovery_longitudinal_blend": 0.0,
+            "post_merge_offensive_anchor_blend_release_recovery_lateral_blend": 0.25,
+            "post_merge_offensive_anchor_blend_release_lateral_only_hold_steps": 20.0,
+            "post_merge_offensive_anchor_blend_release_lateral_only_steps_since_release": 4.0,
+            "post_merge_offensive_anchor_blend_release_lateral_only_hold_remaining_steps": 17.0,
+            "post_merge_offensive_anchor_blend_release_lateral_only_hold_window_open": True,
+            "post_merge_offensive_anchor_blend_requires_geometry_disadvantage": True,
+            "post_merge_offensive_anchor_condition_met": True,
+            "post_merge_offensive_anchor_target_only_attack_zone_disadvantage": True,
+            "post_merge_offensive_anchor_geometry_disadvantage": True,
+            "post_merge_offensive_anchor_alignment_disadvantage": False,
+            "post_merge_offensive_anchor_gate_ego_attack_score": 0.0,
+            "post_merge_offensive_anchor_gate_target_attack_score": 0.75,
+            "post_merge_offensive_anchor_gate_ego_in_attack_zone": False,
+            "post_merge_offensive_anchor_gate_target_in_attack_zone": True,
+            "post_merge_offensive_anchor_gate_aa_deg_min": 170.0,
+            "post_merge_offensive_anchor_gate_aa_deg": 176.0,
+            "post_merge_offensive_anchor_gate_range_rate_mps": 430.0,
+            "post_merge_offensive_anchor_gate_range_opening": True,
+            "post_merge_offensive_anchor_blend_release_blend_active": False,
+            "post_merge_offensive_anchor_blend_ego_only_streak_steps": 2.0,
+            "post_merge_offensive_anchor_blend_release_triggered": True,
+            "post_merge_offensive_anchor_blend_release_reset_triggered": False,
+            "post_merge_offensive_anchor_blend_released": True,
+            "post_merge_offensive_anchor_blend_release_recovery_active": True,
+            "post_merge_offensive_anchor_blend_release_recovery_altitude_trigger_active": False,
+            "post_merge_offensive_anchor_blend_release_recovery_forward_bias_trigger_active": True,
+            "post_merge_offensive_anchor_blend_release_recovery_preview_vp_forward_bias_m": -5200.0,
+            "post_merge_offensive_anchor_blend_release_vp_forward_bias_clamp_active": True,
+            "post_merge_offensive_anchor_blend_release_preclamp_vp_forward_bias_m": -5200.0,
+            "post_merge_offensive_anchor_blend_release_direct_track_active": True,
+            "direct_track_mode_requested": True,
+            "direct_track_mode_effective": True,
+            "mode_switch_requested": True,
+            "mode_switch_effective": True,
+            "mode_switch_reason": "gate_active",
+            "effective_guidance_mode": "proportional_navigation",
+        }
+    )
+
+    recorder.record_step(1, 0.2, info["own_state"], info["target_state"], info, 0.0)
+    point = recorder.trajectory[0]
+    assert point["longitudinal_scale"] == 0.25
+    assert point["offset_frame"] == "world_neu"
+    assert point["configured_offset_frame"] == "target_velocity"
+    assert point["virtual_point_source"] == "direct_track"
+    assert point["close_range_anchor_mode"] == "offensive_position"
+    assert point["close_range_anchor_trigger_range_m"] == 1000.0
+    assert point["close_range_anchor_release_on_post_merge"] is True
+    assert point["close_range_anchor_requires_first_pass"] is True
+    assert point["close_range_anchor_offensive_anchor_blend"] == 0.25
+    assert point["close_range_anchor_offensive_anchor_blend_active"] is True
+    assert point["close_range_anchor_release_alignment_angle_deg_max"] == 12.0
+    assert point["close_range_anchor_post_merge_hold_steps"] == 20.0
+    assert point["close_range_anchor_alignment_angle_deg_max"] == 10.0
+    assert point["close_range_anchor_mode_active"] is True
+    assert point["post_merge_anchor_mode"] == "offensive_position"
+    assert point["post_merge_anchor_mode_requires_geometry_disadvantage"] is True
+    assert point["post_merge_anchor_mode_condition_met"] is True
+    assert point["post_merge_anchor_mode_active"] is True
+    assert point["post_merge_anchor_mode_recovery_active"] is True
+    assert point["post_merge_anchor_mode_release_ego_only_streak_steps"] == 1.0
+    assert point["post_merge_anchor_mode_recovery_below_altitude_m"] == 4500.0
+    assert point["post_merge_anchor_mode_release_reset_on_streak_break"] is False
+    assert point["post_merge_anchor_mode_offensive_anchor_blend"] == 0.25
+    assert point["post_merge_anchor_mode_offensive_anchor_longitudinal_blend"] == 1.0
+    assert point["post_merge_anchor_mode_offensive_anchor_lateral_blend"] == 0.25
+    assert point["post_merge_anchor_mode_offensive_anchor_blend_active"] is True
+    assert point["post_merge_anchor_mode_offensive_anchor_component_blend_active"] is True
+    assert (
+        point["post_merge_anchor_mode_lateral_world_offset_latch_on_activation"]
+        is True
+    )
+    assert point["post_merge_anchor_mode_lateral_world_offset_latch_active"] is True
+    assert point["post_merge_anchor_mode_ego_only_streak_steps"] == 1.0
+    assert point["post_merge_anchor_mode_release_triggered"] is True
+    assert point["post_merge_anchor_mode_release_reset_triggered"] is False
+    assert point["post_merge_anchor_mode_released"] is True
+    assert point["offensive_anchor_frame"] == "encounter"
+    assert point["offensive_anchor_lateral_frame"] == "target_velocity"
+    assert point["offensive_anchor_lateral_sign_mode"] == "fixed_positive"
+    assert point["offensive_anchor_lateral_sign"] == 1.0
+    assert point["offensive_anchor_lateral_world_offset_x"] == 120.0
+    assert point["offensive_anchor_lateral_world_offset_y"] == 40.0
+    assert point["offensive_anchor_lateral_world_offset_z"] == 0.0
+    assert point["offensive_anchor_longitudinal_blend"] == 1.0
+    assert point["offensive_anchor_lateral_blend"] == 0.25
+    assert point["offensive_anchor_lateral_m"] == 300.0
+    assert point["offensive_anchor_vertical_m"] == 500.0
+    assert point["post_merge_predicted_target_forward_scale"] == 0.0
+    assert point["post_merge_predicted_target_forward_scale_release_scale"] == 1.0
+    assert point["post_merge_predicted_target_forward_scale_release_ego_only_streak_steps"] == 1.0
+    assert point["post_merge_predicted_target_forward_scale_release_reset_on_streak_break"] is True
+    assert point["post_merge_predicted_target_forward_scale_hold_steps"] == 20.0
+    assert point["post_merge_predicted_target_forward_scale_steps_since_first_pass"] == 4.0
+    assert point["post_merge_predicted_target_forward_scale_hold_remaining_steps"] == 17.0
+    assert point["post_merge_predicted_target_forward_scale_hold_window_open"] is True
+    assert point["post_merge_predicted_target_forward_scale_ego_only_streak_steps"] == 1.0
+    assert point["post_merge_predicted_target_forward_scale_active"] is True
+    assert point["post_merge_predicted_target_forward_scale_release_scale_active"] is False
+    assert point["post_merge_predicted_target_forward_scale_hold_expired"] is False
+    assert point["post_merge_predicted_target_forward_scale_release_triggered"] is True
+    assert point["post_merge_predicted_target_forward_scale_release_reset_triggered"] is False
+    assert point["post_merge_predicted_target_forward_scale_released"] is True
+    assert point["post_merge_offensive_anchor_blend_release_blend"] == 0.0
+    assert point["post_merge_offensive_anchor_blend_release_ego_only_streak_steps"] == 5.0
+    assert point["post_merge_offensive_anchor_blend_release_reset_on_streak_break"] is True
+    assert point["post_merge_offensive_anchor_blend_release_direct_track_below_altitude_m"] == 800.0
+    assert point["post_merge_offensive_anchor_blend_release_recovery_below_altitude_m"] == 4500.0
+    assert point["post_merge_offensive_anchor_blend_release_recovery_forward_bias_m_max"] == -4500.0
+    assert point["post_merge_offensive_anchor_blend_release_vp_forward_bias_m_min"] == -4500.0
+    assert point["post_merge_offensive_anchor_blend_release_recovery_longitudinal_blend"] == 0.0
+    assert point["post_merge_offensive_anchor_blend_release_recovery_lateral_blend"] == 0.25
+    assert point["post_merge_offensive_anchor_blend_release_recovery_active"] is True
+    assert point["post_merge_offensive_anchor_blend_release_recovery_altitude_trigger_active"] is False
+    assert point["post_merge_offensive_anchor_blend_release_recovery_forward_bias_trigger_active"] is True
+    assert point["post_merge_offensive_anchor_blend_release_recovery_preview_vp_forward_bias_m"] == -5200.0
+    assert point["post_merge_offensive_anchor_blend_release_vp_forward_bias_clamp_active"] is True
+    assert point["post_merge_offensive_anchor_blend_release_preclamp_vp_forward_bias_m"] == -5200.0
+    assert point["post_merge_offensive_anchor_blend_release_lateral_only_hold_steps"] == 20.0
+    assert (
+        point["post_merge_offensive_anchor_blend_release_lateral_only_steps_since_release"]
+        == 4.0
+    )
+    assert (
+        point[
+            "post_merge_offensive_anchor_blend_release_lateral_only_hold_remaining_steps"
+        ]
+        == 17.0
+    )
+    assert (
+        point["post_merge_offensive_anchor_blend_release_lateral_only_hold_window_open"]
+        is True
+    )
+    assert point["post_merge_offensive_anchor_blend_requires_geometry_disadvantage"] is True
+    assert point["post_merge_offensive_anchor_condition_met"] is True
+    assert point["post_merge_offensive_anchor_target_only_attack_zone_disadvantage"] is True
+    assert point["post_merge_offensive_anchor_geometry_disadvantage"] is True
+    assert point["post_merge_offensive_anchor_alignment_disadvantage"] is False
+    assert point["post_merge_offensive_anchor_gate_target_attack_score"] == 0.75
+    assert point["post_merge_offensive_anchor_gate_ego_in_attack_zone"] is False
+    assert point["post_merge_offensive_anchor_gate_target_in_attack_zone"] is True
+    assert point["post_merge_offensive_anchor_gate_aa_deg_min"] == 170.0
+    assert point["post_merge_offensive_anchor_gate_aa_deg"] == 176.0
+    assert point["post_merge_offensive_anchor_gate_range_rate_mps"] == 430.0
+    assert point["post_merge_offensive_anchor_gate_range_opening"] is True
+    assert point["post_merge_offensive_anchor_blend_release_blend_active"] is False
+    assert point["post_merge_offensive_anchor_blend_ego_only_streak_steps"] == 2.0
+    assert point["post_merge_offensive_anchor_blend_release_triggered"] is True
+    assert point["post_merge_offensive_anchor_blend_release_reset_triggered"] is False
+    assert point["post_merge_offensive_anchor_blend_released"] is True
+    assert point["post_merge_offensive_anchor_blend_release_direct_track_active"] is True
+    assert point["direct_track_mode_requested"] is True
+    assert point["direct_track_mode_effective"] is True
+    assert point["mode_switch_requested"] is True
+    assert point["mode_switch_effective"] is True
+    assert point["mode_switch_reason"] == "gate_active"
+    assert point["effective_guidance_mode"] == "proportional_navigation"
+
+
+def test_recorder_flattens_tactical_basis_fields():
+    recorder = EpisodeRecorder(
+        run_id="r3",
+        task="head_on",
+        controller="prediction_vpp",
+        seed=3,
+        episode=0,
+        config={},
+        config_sha256="abc",
+        git_commit="def",
+    )
+    own = np.array([0.0, 0.0, 5000.0])
+    tgt = np.array([1000.0, 0.0, 5000.0])
+    info = _make_info(own, tgt)
+    info.update(
+        {
+            "action_semantics": "tactical_basis_v1",
+            "configured_action_semantics": "tactical_basis_v1",
+            "tactical_basis_enabled": True,
+            "tactical_basis_action_ll": 0.25,
+            "tactical_basis_action_io": -0.5,
+            "tactical_basis_action_cd": 0.75,
+            "tactical_basis_lead_lag_extent_m": 1200.0,
+            "tactical_basis_inside_outside_extent_m": 300.0,
+            "tactical_basis_climb_descent_extent_m": 600.0,
+            "tactical_basis_longitudinal_frame": "target_velocity",
+            "tactical_basis_lateral_frame": "encounter_stable",
+            "tactical_basis_vertical_frame": "world_neu",
+            "tactical_basis_lateral_sign_mode": "same_side",
+            "tactical_basis_lateral_sign": 1.0,
+            "tactical_basis_ll_world": np.array([0.0, 1200.0, 0.0]),
+            "tactical_basis_io_world": np.array([200.0, 100.0, 0.0]),
+            "tactical_basis_cd_world": np.array([0.0, 0.0, 600.0]),
+            "tactical_basis_world_offset": np.array([-100.0, 250.0, 450.0]),
+        }
+    )
+
+    recorder.record_step(1, 0.2, info["own_state"], info["target_state"], info, 0.0)
+    point = recorder.trajectory[0]
+
+    assert point["action_semantics"] == "tactical_basis_v1"
+    assert point["configured_action_semantics"] == "tactical_basis_v1"
+    assert point["tactical_basis_enabled"] is True
+    assert point["tactical_basis_action_ll"] == 0.25
+    assert point["tactical_basis_action_io"] == -0.5
+    assert point["tactical_basis_action_cd"] == 0.75
+    assert point["tactical_basis_longitudinal_frame"] == "target_velocity"
+    assert point["tactical_basis_lateral_frame"] == "encounter_stable"
+    assert point["tactical_basis_vertical_frame"] == "world_neu"
+    assert point["tactical_basis_lateral_sign_mode"] == "same_side"
+    assert point["tactical_basis_lateral_sign"] == 1.0
+    assert point["tactical_basis_ll_world_y"] == 1200.0
+    assert point["tactical_basis_io_world_x"] == 200.0
+    assert point["tactical_basis_cd_world_z"] == 600.0
+    assert point["tactical_basis_world_offset_x"] == -100.0
+    assert point["tactical_basis_world_offset_y"] == 250.0
+    assert point["tactical_basis_world_offset_z"] == 450.0
+
+
+def test_recorder_preserves_legacy_vp_fields_when_tactical_basis_enabled():
+    recorder = EpisodeRecorder(
+        run_id="r4",
+        task="head_on",
+        controller="prediction_vpp",
+        seed=4,
+        episode=0,
+        config={},
+        config_sha256="abc",
+        git_commit="def",
+    )
+    own = np.array([0.0, 0.0, 5000.0])
+    tgt = np.array([1000.0, 0.0, 5000.0])
+    info = _make_info(own, tgt)
+    info.update(
+        {
+            "action_semantics": "tactical_basis_v1",
+            "configured_action_semantics": "tactical_basis_v1",
+            "tactical_basis_enabled": True,
+            "vp_offset": np.array([10.0, 20.0, 30.0]),
+            "vp_world_offset": np.array([40.0, 50.0, 60.0]),
+            "vp_forward_bias_m": -200.0,
+            "vp_lateral_bias_m": 75.0,
+        }
+    )
+
+    recorder.record_step(1, 0.2, info["own_state"], info["target_state"], info, 0.0)
+    point = recorder.trajectory[0]
+
+    assert point["offset_x"] == 10.0
+    assert point["offset_y"] == 20.0
+    assert point["offset_z"] == 30.0
+    assert point["world_offset_x"] == 40.0
+    assert point["world_offset_y"] == 50.0
+    assert point["world_offset_z"] == 60.0
+    assert point["vp_forward_bias_m"] == -200.0
+    assert point["vp_lateral_bias_m"] == 75.0
+
+
 def test_run_recorder_writes_files():
     with tempfile.TemporaryDirectory() as tmp:
         run_dir = Path(tmp)

@@ -3,9 +3,10 @@
 # Main comparison:
 #   prediction_vpp vs no_prediction_vpp vs end_to_end_rl
 #
-# Prediction ablation:
-#   perfect_prediction_vpp vs learned_prediction_vpp vs no_prediction_vpp
-#   vs noisy_prediction_vpp
+# Inference-time anchor ablation:
+#   perfect_prediction_vpp reuses the learned-policy checkpoint and only swaps
+#   the anchor at eval time; it is not a separately trained oracle upper bound.
+#   learned_prediction_vpp vs no_prediction_vpp vs noisy_prediction_vpp
 
 experiment:
   name: jsbsim_hrl_comparison
@@ -111,6 +112,7 @@ attack_zone:
   close_range_min_km: 0.3
   close_range_full_score_km: 1.0
   close_range_max_km: 3.0
+  close_range_max_aoa_deg: 40.0
   close_range_score_scale: 1.0
 
 reward:
@@ -148,6 +150,15 @@ methods:
     config_path: config/experiment/train_vpp_ppo_lstm_frozen.yaml
     prediction_variant: learned
 
+  # Fair JSBSim compare entry: cloned from no_prediction_vpp and only changes
+  # trajectory_prediction plus virtual_point.anchor_mode.
+  prediction_vpp_jsbsim_compare:
+    label: "Prediction VPP + HRL (JSBSim compare)"
+    agent_type: ppo
+    checkpoint: outputs/experiments/prediction_vpp_ppo_jsbsim_compare/checkpoints/last.pt
+    config_path: config/experiment/train_prediction_vpp_ppo_jsbsim_compare.yaml
+    prediction_variant: learned
+
   no_prediction_vpp:
     label: "No-prediction VPP + HRL"
     agent_type: ppo
@@ -163,7 +174,7 @@ methods:
     prediction_variant: none
 
   perfect_prediction_vpp:
-    label: "Perfect-prediction VPP + HRL"
+    label: "Oracle-anchor ablation VPP + HRL"
     agent_type: ppo
     checkpoint: outputs/experiments/vpp_ppo_lstm_frozen/checkpoints/best.pt
     config_path: config/experiment/train_vpp_ppo_lstm_frozen.yaml
@@ -246,13 +257,4 @@ tasks:
 
   sustained_turn:
     label: "Sustained turn target maneuver"
-    task:
-      name: sustained_turn
-      env_class: SustainedTurnEnv
-      sustained_turn:
-        target_pos_m: [2000.0, 0.0, 5000.0]
-        orbit_radius_m: 1200.0
-        tangent_lead_deg: 90.0
-        min_safe_speed_mps: 150.0
-    env:
-      max_high_level_steps: 450
+    config_path: config/experiment/task_sustained_turn_formal_bank80_nzi07_nzim05.yaml

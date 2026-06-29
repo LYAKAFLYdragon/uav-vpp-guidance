@@ -18,6 +18,7 @@ import argparse
 import csv
 import json
 import os
+from pathlib import Path
 import sys
 import time
 
@@ -34,13 +35,14 @@ from uav_vpp_guidance.trajectory_prediction.config_validator import validate_ful
 
 def load_experiment_config(config_path):
     """Load and merge experiment configuration with includes."""
+    config_path = os.path.abspath(config_path)
     base_config = load_yaml_config(config_path)
     includes = base_config.pop("includes", [])
     merged = {}
     for inc_path in includes:
-        inc_full = os.path.join(os.path.dirname(config_path), inc_path)
+        inc_full = os.path.abspath(os.path.join(os.path.dirname(config_path), inc_path))
         if os.path.exists(inc_full):
-            merged = merge_config(merged, load_yaml_config(inc_full))
+            merged = merge_config(merged, load_experiment_config(inc_full))
     return merge_config(merged, base_config)
 
 
@@ -181,6 +183,77 @@ def run_evaluation(agent, config, num_episodes=10, seeds=None, save_trajectories
     }
 
 
+def load_warm_start_checkpoint(
+    agent,
+    checkpoint_path,
+    strict_dims=True,
+    load_optimizer=False,
+):
+    """Load policy weights from an existing PPO checkpoint for warm-starting.
+
+    Supports observation-dimension expansion when the new environment adds
+    features (e.g. opponent-stage one-hot). The first-layer weights are
+    padded with zeros for the new input dimensions so the old policy
+    behaviour is preserved for the original features.
+    """
+    import torch
+
+    path = Path(checkpoint_path)
+    if not path.exists():
+        raise FileNotFoundError(f"Warm-start checkpoint not found: {path}")
+
+    checkpoint = torch.load(str(path), map_location=agent.device)
+    ckpt_obs_dim = int(checkpoint.get("obs_dim", agent.obs_dim))
+    ckpt_action_dim = int(checkpoint.get("action_dim", agent.action_dim))
+
+    if strict_dims and ckpt_action_dim != agent.action_dim:
+        raise ValueError(
+            "Warm-start checkpoint action-dim mismatch: "
+            f"checkpoint={ckpt_action_dim}, agent={agent.action_dim}"
+        )
+
+    state_dict = checkpoint["network_state_dict"]
+    expanded = False
+    if ckpt_obs_dim != agent.obs_dim and ckpt_obs_dim < agent.obs_dim:
+        # Expand the first shared layer to accept the new input dimensions.
+        # We pad with zeros so the existing policy behaviour is unchanged
+        # when the new features are zero (e.g. unknown opponent_stage).
+        first_layer_key = None
+        for key in state_dict:
+            if key.startswith("shared_net") and "weight" in key:
+                first_layer_key = key
+                break
+        if first_layer_key is not None:
+            old_weight = state_dict[first_layer_key]
+            old_bias = state_dict.get(first_layer_key.replace("weight", "bias"))
+            dim_diff = agent.obs_dim - ckpt_obs_dim
+            # weight shape: [out_features, in_features]
+            pad = torch.zeros(
+                old_weight.shape[0], dim_diff, device=old_weight.device, dtype=old_weight.dtype
+            )
+            state_dict[first_layer_key] = torch.cat([old_weight, pad], dim=1)
+            expanded = True
+
+    missing, unexpected = agent.network.load_state_dict(state_dict, strict=False)
+    optimizer_loaded = False
+    if load_optimizer and "optimizer_state_dict" in checkpoint:
+        agent.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+        optimizer_loaded = True
+
+    return {
+        "loaded": True,
+        "checkpoint_path": str(path),
+        "checkpoint_obs_dim": ckpt_obs_dim,
+        "checkpoint_action_dim": ckpt_action_dim,
+        "agent_obs_dim": int(agent.obs_dim),
+        "agent_action_dim": int(agent.action_dim),
+        "optimizer_loaded": optimizer_loaded,
+        "missing_keys": list(missing),
+        "unexpected_keys": list(unexpected),
+        "obs_dim_expanded": expanded,
+    }
+
+
 def train_ppo(config, output_dir, smoke=False):
     """
     Main PPO training loop.
@@ -238,8 +311,36 @@ def train_ppo(config, output_dir, smoke=False):
     agent = PPOAgent(obs_dim=obs_dim, action_dim=action_dim, config=config, device=device)
     print(f"Network parameters: {agent.network.count_parameters()}")
 
+    resume_step = 0
+    warm_start_cfg = config.get("warm_start", {})
+    if warm_start_cfg.get("enabled", False):
+        checkpoint_path = (
+            warm_start_cfg.get("checkpoint")
+            or warm_start_cfg.get("checkpoint_path")
+        )
+        if not checkpoint_path:
+            raise ValueError(
+                "warm_start.enabled=true requires warm_start.checkpoint"
+            )
+        warm_start_meta = load_warm_start_checkpoint(
+            agent,
+            checkpoint_path=checkpoint_path,
+            strict_dims=bool(warm_start_cfg.get("strict_dims", True)),
+            load_optimizer=bool(warm_start_cfg.get("load_optimizer", False)),
+        )
+        resume_step = int(warm_start_cfg.get("step", 0))
+        print(
+            f"Warm-start loaded from {warm_start_meta['checkpoint_path']}: "
+            f"obs_dim={warm_start_meta['checkpoint_obs_dim']}, "
+            f"action_dim={warm_start_meta['checkpoint_action_dim']}, "
+            f"resume_step={resume_step}, "
+            f"optimizer_loaded={warm_start_meta['optimizer_loaded']}, "
+            f"missing_keys={len(warm_start_meta['missing_keys'])}, "
+            f"unexpected_keys={len(warm_start_meta['unexpected_keys'])}"
+        )
+
     # Training state
-    global_step = 0
+    global_step = resume_step
     episode_count = 0
     best_eval_return = -float("inf")
 

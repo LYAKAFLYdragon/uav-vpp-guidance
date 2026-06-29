@@ -61,7 +61,7 @@ def _close_range_reward(
     min_km = float(config.get("close_range_min_km", 0.3))
     full_km = float(config.get("close_range_full_score_km", 1.0))
     max_km = float(config.get("close_range_max_km", 3.0))
-    max_aoa = float(config.get("close_range_max_aoa_rad", 2.0 * np.pi / 9.0))
+    max_aoa = _close_range_max_aoa_rad(config)
     scale = float(config.get("close_range_score_scale", 1.0))
     if range_km < min_km or range_km > max_km or not (0.0 < aoa_rad < max_aoa):
         return 0.0
@@ -71,6 +71,12 @@ def _close_range_reward(
         s_d = (max_km - range_km) / max(max_km - full_km, 1e-8)
     s_a = 1.0 - (aoa_rad / max(max_aoa, 1e-8)) ** 2
     return float(max(0.0, scale * s_d * s_a))
+
+
+def _close_range_max_aoa_rad(config: Dict[str, Any]) -> float:
+    if "close_range_max_aoa_deg" in config:
+        return float(np.deg2rad(float(config["close_range_max_aoa_deg"])))
+    return float(config.get("close_range_max_aoa_rad", 2.0 * np.pi / 9.0))
 
 
 def compute_attack_angle_rad(attacker_state: Dict[str, Any], defender_state: Dict[str, Any]) -> float:

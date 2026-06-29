@@ -27,6 +27,21 @@ def test_close_range_gun_zone_covers_near_tasks_without_changing_legacy_function
     assert compute_attack_zone_score(2.0, 0.1, {"close_range_enabled": True}) > 0.0
 
 
+def test_close_range_max_aoa_deg_is_explicit_attack_zone_knob():
+    aoa_50_deg = np.deg2rad(50.0)
+    cfg = {"legacy_range_enabled": False, "close_range_enabled": True}
+
+    assert compute_attack_zone_score(1.0, aoa_50_deg, cfg) == 0.0
+    assert (
+        compute_attack_zone_score(
+            1.0,
+            aoa_50_deg,
+            {**cfg, "close_range_max_aoa_deg": 60.0},
+        )
+        > 0.0
+    )
+
+
 def test_attack_zone_directional_geometry():
     ego = _state(0.0, [200.0, 0.0, 0.0])
     target = _state(4000.0, [200.0, 0.0, 0.0])

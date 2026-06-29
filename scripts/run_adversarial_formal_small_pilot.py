@@ -152,6 +152,10 @@ def _safe_float(value: Any) -> float:
     return out if math.isfinite(out) else float("nan")
 
 
+def _tag_value(value: Any) -> str:
+    return str(value).replace(".", "p")
+
+
 def _read_summary_rows(run_dir: Path) -> List[Dict[str, Any]]:
     summary_path = run_dir / "summary.csv"
     if not summary_path.exists():
@@ -178,6 +182,7 @@ def _summarize_hp_run(
     run_id: str,
     damage_per_step: float,
     close_range_max_km: float,
+    close_range_max_aoa_deg: float,
     opponent_stage: str,
     command_result: Dict[str, Any],
 ) -> Dict[str, Any]:
@@ -208,6 +213,7 @@ def _summarize_hp_run(
         "opponent_stage": opponent_stage,
         "damage_per_step": damage_per_step,
         "close_range_max_km": close_range_max_km,
+        "close_range_max_aoa_deg": close_range_max_aoa_deg,
         "returncode": command_result["returncode"],
         "elapsed_seconds": command_result["elapsed_seconds"],
         "failure_count": len(failures),
@@ -233,23 +239,34 @@ def _write_hp_config(
     config_dir: Path,
     damage_per_step: float,
     close_range_max_km: float,
+    close_range_max_aoa_deg: float,
 ) -> Path:
     cfg = _load_yaml(base_config)
     _apply_bank76_flight_control_profile(
         cfg,
         source="run_adversarial_formal_small_pilot.py:bank76_profile",
     )
-    attack_cfg = cfg.setdefault("attack_zone", {})
-    attack_cfg["damage_per_step"] = float(damage_per_step)
-    attack_cfg["close_range_max_km"] = float(close_range_max_km)
-    attack_cfg["close_range_enabled"] = True
-    attack_cfg["legacy_range_enabled"] = True
-    cfg.setdefault("experiment", {})
-    cfg["experiment"]["name"] = "adversarial_hp_formal_small_pilot"
-    cfg["experiment"]["description"] = (
-        "Formal-small pilot config generated for HP damage and close-range attack-zone calibration."
+    attack_source = "run_adversarial_formal_small_pilot.py:hp_attack_zone"
+    _set_config_value(cfg, "attack_zone.damage_per_step", float(damage_per_step), source=attack_source)
+    _set_config_value(cfg, "attack_zone.close_range_max_km", float(close_range_max_km), source=attack_source)
+    _set_config_value(
+        cfg,
+        "attack_zone.close_range_max_aoa_deg",
+        float(close_range_max_aoa_deg),
+        source=attack_source,
     )
-    tag = f"d{str(damage_per_step).replace('.', 'p')}_r{str(close_range_max_km).replace('.', 'p')}"
+    _set_config_value(cfg, "attack_zone.close_range_enabled", True, source=attack_source)
+    _set_config_value(cfg, "attack_zone.legacy_range_enabled", True, source=attack_source)
+    experiment_source = "run_adversarial_formal_small_pilot.py:hp_metadata"
+    _set_config_value(cfg, "experiment.name", "adversarial_hp_formal_small_pilot", source=experiment_source)
+    _set_config_value(
+        cfg,
+        "experiment.description",
+        "Formal-small pilot config generated for HP damage and close-range attack-zone calibration."
+        " Explicit close-range AoA is recorded for reproducible engagement gating.",
+        source=experiment_source,
+    )
+    tag = f"d{_tag_value(damage_per_step)}_r{_tag_value(close_range_max_km)}_a{_tag_value(close_range_max_aoa_deg)}"
     out_path = config_dir / f"jsbsim_hrl_comparison_hp_{tag}.yaml"
     _write_yaml(out_path, cfg)
     return out_path
@@ -264,11 +281,18 @@ def run_hp_calibration(args: argparse.Namespace, output_root: Path) -> List[Dict
 
     for damage in args.hp_damage_values:
         for close_max in args.hp_close_range_max_values:
-            cfg_path = _write_hp_config(base_config, config_dir, damage, close_max)
+            cfg_path = _write_hp_config(
+                base_config,
+                config_dir,
+                damage,
+                close_max,
+                args.hp_close_range_max_aoa_deg,
+            )
             for opponent_stage in args.opponent_stages:
                 run_id = (
-                    f"hp_d{str(damage).replace('.', 'p')}"
-                    f"_r{str(close_max).replace('.', 'p')}_{opponent_stage}"
+                    f"hp_d{_tag_value(damage)}"
+                    f"_r{_tag_value(close_max)}"
+                    f"_a{_tag_value(args.hp_close_range_max_aoa_deg)}_{opponent_stage}"
                 )
                 cmd = [
                     sys.executable,
@@ -296,6 +320,8 @@ def run_hp_calibration(args: argparse.Namespace, output_root: Path) -> List[Dict
                     "--no-trajectory",
                     "--opponent-stage",
                     opponent_stage,
+                    "--attack-zone-close-range-max-aoa-deg",
+                    str(args.hp_close_range_max_aoa_deg),
                 ]
                 result = _run_command(cmd, log_dir / f"{run_id}.log")
                 summaries.append(
@@ -304,6 +330,7 @@ def run_hp_calibration(args: argparse.Namespace, output_root: Path) -> List[Dict
                         run_id,
                         damage,
                         close_max,
+                        args.hp_close_range_max_aoa_deg,
                         opponent_stage,
                         result,
                     )
@@ -322,32 +349,74 @@ def _write_curriculum_config(
         cfg,
         source="run_adversarial_formal_small_pilot.py:bank76_profile",
     )
-    cfg.setdefault("experiment", {})
-    cfg["experiment"]["name"] = "adversarial_curriculum_formal_small_pilot"
-    cfg["experiment"]["description"] = "Formal-small pilot config for adversarial curriculum stability."
+    metadata_source = "run_adversarial_formal_small_pilot.py:curriculum_metadata"
+    _set_config_value(
+        cfg,
+        "experiment.name",
+        "adversarial_curriculum_formal_small_pilot",
+        source=metadata_source,
+    )
+    _set_config_value(
+        cfg,
+        "experiment.description",
+        "Formal-small pilot config for adversarial curriculum stability.",
+        source=metadata_source,
+    )
 
     env_cfg = cfg.setdefault("env", {})
-    env_cfg["backend"] = "simple"
-    env_cfg["use_jsbsim"] = False
-    env_cfg["max_high_level_steps"] = min(int(env_cfg.get("max_high_level_steps", 512)), 256)
+    env_source = "run_adversarial_formal_small_pilot.py:curriculum_env"
+    _set_config_value(cfg, "env.backend", "simple", source=env_source)
+    _set_config_value(cfg, "env.use_jsbsim", False, source=env_source)
+    _set_config_value(
+        cfg,
+        "env.max_high_level_steps",
+        min(int(env_cfg.get("max_high_level_steps", 512)), 256),
+        source=env_source,
+    )
 
     ppo_cfg = cfg.setdefault("ppo", {})
-    ppo_cfg["total_timesteps"] = int(total_timesteps)
-    ppo_cfg["rollout_steps"] = min(int(ppo_cfg.get("rollout_steps", 512)), 512)
-    ppo_cfg["minibatch_size"] = min(int(ppo_cfg.get("minibatch_size", 128)), 128)
-    ppo_cfg["update_epochs"] = min(int(ppo_cfg.get("update_epochs", 5)), 5)
-    ppo_cfg["device"] = "cpu"
+    ppo_source = "run_adversarial_formal_small_pilot.py:curriculum_ppo"
+    _set_config_value(cfg, "ppo.total_timesteps", int(total_timesteps), source=ppo_source)
+    _set_config_value(
+        cfg,
+        "ppo.rollout_steps",
+        min(int(ppo_cfg.get("rollout_steps", 512)), 512),
+        source=ppo_source,
+    )
+    _set_config_value(
+        cfg,
+        "ppo.minibatch_size",
+        min(int(ppo_cfg.get("minibatch_size", 128)), 128),
+        source=ppo_source,
+    )
+    _set_config_value(
+        cfg,
+        "ppo.update_epochs",
+        min(int(ppo_cfg.get("update_epochs", 5)), 5),
+        source=ppo_source,
+    )
+    _set_config_value(cfg, "ppo.device", "cpu", source=ppo_source)
 
-    eval_cfg = cfg.setdefault("evaluation", {})
-    eval_cfg["eval_interval"] = max(512, min(int(total_timesteps) // 4, 1024))
-    eval_cfg["eval_episodes"] = 4
-    eval_cfg["seeds"] = [0, 1]
-    eval_cfg["save_trajectories"] = False
+    eval_source = "run_adversarial_formal_small_pilot.py:curriculum_eval"
+    _set_config_value(
+        cfg,
+        "evaluation.eval_interval",
+        max(512, min(int(total_timesteps) // 4, 1024)),
+        source=eval_source,
+    )
+    _set_config_value(cfg, "evaluation.eval_episodes", 4, source=eval_source)
+    _set_config_value(cfg, "evaluation.seeds", [0, 1], source=eval_source)
+    _set_config_value(cfg, "evaluation.save_trajectories", False, source=eval_source)
 
-    checkpoint_cfg = cfg.setdefault("checkpoint", {})
-    checkpoint_cfg["save_interval"] = max(1024, min(int(total_timesteps) // 2, 2048))
-    checkpoint_cfg["save_best"] = True
-    checkpoint_cfg["save_last"] = True
+    checkpoint_source = "run_adversarial_formal_small_pilot.py:curriculum_checkpoint"
+    _set_config_value(
+        cfg,
+        "checkpoint.save_interval",
+        max(1024, min(int(total_timesteps) // 2, 2048)),
+        source=checkpoint_source,
+    )
+    _set_config_value(cfg, "checkpoint.save_best", True, source=checkpoint_source)
+    _set_config_value(cfg, "checkpoint.save_last", True, source=checkpoint_source)
 
     shaping_source = "run_adversarial_formal_small_pilot.py:safety_precurriculum_boundary_shaping"
     _set_config_value(cfg, "reward.w_boundary", 2.0, source=shaping_source)
@@ -395,13 +464,29 @@ def _write_curriculum_config(
     _set_config_value(cfg, "curriculum.rollout_gate.max_high_altitude_failure_rate", 0.30, source=rollout_gate_source)
 
     attack_cfg = cfg.setdefault("attack_zone", {})
-    attack_cfg["enabled"] = True
-    attack_cfg["damage_per_step"] = float(damage_per_step)
-    attack_cfg["legacy_range_enabled"] = True
-    attack_cfg["close_range_enabled"] = True
-    attack_cfg.setdefault("close_range_min_km", 0.3)
-    attack_cfg.setdefault("close_range_full_score_km", 1.0)
-    attack_cfg.setdefault("close_range_max_km", 3.0)
+    attack_source = "run_adversarial_formal_small_pilot.py:curriculum_attack_zone"
+    _set_config_value(cfg, "attack_zone.enabled", True, source=attack_source)
+    _set_config_value(cfg, "attack_zone.damage_per_step", float(damage_per_step), source=attack_source)
+    _set_config_value(cfg, "attack_zone.legacy_range_enabled", True, source=attack_source)
+    _set_config_value(cfg, "attack_zone.close_range_enabled", True, source=attack_source)
+    _set_config_value(
+        cfg,
+        "attack_zone.close_range_min_km",
+        float(attack_cfg.get("close_range_min_km", 0.3)),
+        source=attack_source,
+    )
+    _set_config_value(
+        cfg,
+        "attack_zone.close_range_full_score_km",
+        float(attack_cfg.get("close_range_full_score_km", 1.0)),
+        source=attack_source,
+    )
+    _set_config_value(
+        cfg,
+        "attack_zone.close_range_max_km",
+        float(attack_cfg.get("close_range_max_km", 3.0)),
+        source=attack_source,
+    )
 
     adversarial_source = "run_adversarial_formal_small_pilot.py:adversarial_curriculum"
     _set_config_value(cfg, "adversarial_curriculum.enabled", True, source=adversarial_source)
@@ -549,6 +634,7 @@ def _write_hp_csv(path: Path, rows: List[Dict[str, Any]]) -> None:
         "opponent_stage",
         "damage_per_step",
         "close_range_max_km",
+        "close_range_max_aoa_deg",
         "returncode",
         "failure_count",
         "episodes",
@@ -579,10 +665,14 @@ def _recommend_hp(rows: List[Dict[str, Any]]) -> Dict[str, Any]:
         return {"status": "no_valid_hp_run"}
     grouped: Dict[tuple, List[Dict[str, Any]]] = {}
     for row in valid:
-        key = (row["damage_per_step"], row["close_range_max_km"])
+        key = (
+            row["damage_per_step"],
+            row["close_range_max_km"],
+            row["close_range_max_aoa_deg"],
+        )
         grouped.setdefault(key, []).append(row)
     scored = []
-    for (damage, close_max), items in grouped.items():
+    for (damage, close_max, close_aoa), items in grouped.items():
         decisive = _finite_mean(row["decisive_fraction"] for row in items)
         damaged = _finite_mean(row["damaged_episode_fraction"] for row in items)
         kills = _finite_mean(row["kill_fraction"] for row in items)
@@ -594,6 +684,7 @@ def _recommend_hp(rows: List[Dict[str, Any]]) -> Dict[str, Any]:
             {
                 "damage_per_step": damage,
                 "close_range_max_km": close_max,
+                "close_range_max_aoa_deg": close_aoa,
                 "mean_decisive_fraction": decisive,
                 "mean_damaged_episode_fraction": damaged,
                 "mean_kill_fraction": kills,
@@ -618,12 +709,12 @@ def _write_markdown_report(
         f"Runs: {len(hp_rows)}",
         f"Valid runs: {sum(1 for row in hp_rows if row['returncode'] == 0 and row['failure_count'] == 0)}",
         "",
-        "| damage | close_max_km | opponent | episodes | win/loss/draw | damaged_frac | kill_frac | mean_hp_adv | failures |",
-        "|---:|---:|---|---:|---:|---:|---:|---:|---:|",
+        "| damage | close_max_km | close_max_aoa_deg | opponent | episodes | win/loss/draw | damaged_frac | kill_frac | mean_hp_adv | failures |",
+        "|---:|---:|---:|---|---:|---:|---:|---:|---:|---:|",
     ]
     for row in hp_rows:
         lines.append(
-            "| {damage_per_step:.3g} | {close_range_max_km:.3g} | {opponent_stage} | {episodes} | "
+            "| {damage_per_step:.3g} | {close_range_max_km:.3g} | {close_range_max_aoa_deg:.3g} | {opponent_stage} | {episodes} | "
             "{win_count}/{loss_count}/{draw_count} | {damaged_episode_fraction:.3g} | "
             "{kill_fraction:.3g} | {mean_hp_advantage:.3g} | {failure_count} |".format(**row)
         )
@@ -653,6 +744,7 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--jsbsim-root", default=str(DEFAULT_JSBSIM_ROOT))
     parser.add_argument("--hp-damage-values", type=_parse_float_list, default=_parse_float_list("0.5,1.0"))
     parser.add_argument("--hp-close-range-max-values", type=_parse_float_list, default=_parse_float_list("3.0"))
+    parser.add_argument("--hp-close-range-max-aoa-deg", type=float, default=60.0)
     parser.add_argument("--opponent-stages", type=_parse_str_list, default=_parse_str_list("expert,end_to_end"))
     parser.add_argument("--methods", type=_parse_str_list, default=_parse_str_list("no_prediction_vpp"))
     parser.add_argument(

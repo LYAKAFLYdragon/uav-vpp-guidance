@@ -18,7 +18,6 @@ import copy
 import csv
 import importlib
 import json
-import math
 import os
 import sys
 import time
@@ -47,6 +46,10 @@ from uav_vpp_guidance.common.provenance import (
 from uav_vpp_guidance.evaluation.recorders import EpisodeRecorder, RunRecorder
 from uav_vpp_guidance.metrics.combat_evaluator import compute_combat_metrics
 from uav_vpp_guidance.utils.config import load_yaml_config, merge_config
+from uav_vpp_guidance.virtual_point.coordinate_transform import VALID_OFFSET_FRAMES
+from uav_vpp_guidance.virtual_point.generator import (
+    VALID_OFFENSIVE_ANCHOR_LATERAL_SIGN_MODES,
+)
 
 
 SCRIPT_NAME = Path(__file__).name
@@ -91,7 +94,84 @@ DESIGN_NOTES = {
     "formal_policy": "formal-small runs are pilot evidence; paper-safe formal evidence requires a separately chosen full budget after pilot analysis.",
     "curriculum_opponent_eval_policy": "When --opponent-stage=curriculum, this runner evaluates a single resolved opponent. The YAML active_stage selects it; if omitted, the final listed stage is used.",
     "survival_rate_semantics": "survival_rate means the ego aircraft was not physically destroyed, shot down, crashed, or out-of-bounds; HP-timeout losses can still count as survived.",
+    "attack_zone_angle_policy": "close_range_max_aoa_deg is the preferred explicit close-range attack-zone angle knob; close_range_max_aoa_rad remains supported for legacy configs.",
 }
+
+COMBAT_GEOMETRY_DIAGNOSTIC_METRICS = (
+    "first_ego_attack_time_s",
+    "first_target_attack_time_s",
+    "first_pass_step",
+    "post_merge_attack_zone_advantage_s",
+    "close_range_anchor_mode_active_fraction",
+    "close_range_anchor_mode_first_active_step",
+    "post_merge_anchor_mode_active_fraction",
+    "post_merge_anchor_mode_condition_met_fraction",
+    "post_merge_anchor_mode_first_active_step",
+    "post_merge_anchor_mode_lateral_world_offset_latch_active_fraction",
+    "post_merge_anchor_mode_lateral_world_offset_latch_first_active_step",
+    "post_merge_anchor_mode_recovery_active_fraction",
+    "post_merge_anchor_mode_recovery_first_step",
+    "post_merge_anchor_mode_released_fraction",
+    "post_merge_anchor_mode_release_first_step",
+    "post_merge_offensive_anchor_condition_met_fraction",
+    "post_merge_offensive_anchor_alignment_disadvantage_fraction",
+    "post_merge_offensive_anchor_blend_active_fraction",
+    "post_merge_offensive_anchor_first_active_step",
+    "post_merge_offensive_anchor_blend_release_blend_active_fraction",
+    "post_merge_offensive_anchor_blend_released_fraction",
+    "post_merge_offensive_anchor_blend_release_first_step",
+    "post_merge_offensive_anchor_blend_release_direct_track_active_fraction",
+    "post_merge_offensive_anchor_blend_release_direct_track_first_step",
+    "post_merge_offensive_anchor_blend_release_recovery_active_fraction",
+    "post_merge_offensive_anchor_blend_release_recovery_first_step",
+    "post_merge_offensive_anchor_blend_release_recovery_altitude_trigger_active_fraction",
+    "post_merge_offensive_anchor_blend_release_recovery_altitude_trigger_first_step",
+    "post_merge_offensive_anchor_blend_release_recovery_forward_bias_trigger_active_fraction",
+    "post_merge_offensive_anchor_blend_release_recovery_forward_bias_trigger_first_step",
+    "post_merge_offensive_anchor_blend_release_vp_forward_bias_clamp_active_fraction",
+    "post_merge_offensive_anchor_blend_release_vp_forward_bias_clamp_first_step",
+    "post_merge_offensive_anchor_lateral_world_offset_latch_active_fraction",
+    "post_merge_offensive_anchor_lateral_world_offset_latch_first_active_step",
+    "post_merge_offensive_anchor_blend_release_lateral_only_active_fraction",
+    "post_merge_offensive_anchor_blend_release_lateral_only_first_step",
+    "post_merge_predicted_target_forward_scale_active_fraction",
+    "post_merge_predicted_target_forward_scale_first_active_step",
+    "post_merge_predicted_target_forward_scale_release_scale_active_fraction",
+    "post_merge_predicted_target_forward_scale_released_fraction",
+    "post_merge_predicted_target_forward_scale_release_first_step",
+    "post_merge_offensive_anchor_active_longitudinal_scale",
+    "post_merge_offensive_anchor_active_lateral_scale",
+    "post_merge_active_vp_longitudinal_scale",
+    "post_merge_active_vp_lateral_scale",
+    "post_merge_offensive_anchor_active_override_longitudinal_scale",
+    "post_merge_offensive_anchor_active_override_lateral_scale",
+    "pre_merge_vp_forward_bias_m",
+    "post_merge_anchor_mode_active_vp_forward_bias_m",
+    "post_merge_anchor_mode_active_vp_lateral_bias_m",
+    "post_merge_offensive_anchor_active_vp_forward_bias_m",
+    "post_merge_offensive_anchor_active_vp_lateral_bias_m",
+    "post_merge_predicted_target_forward_scale_active_vp_forward_bias_m",
+    "post_merge_predicted_target_forward_scale_active_vp_lateral_bias_m",
+    "pre_merge_mean_tactical_basis_action_ll",
+    "pre_merge_mean_tactical_basis_action_io",
+    "pre_merge_mean_tactical_basis_action_cd",
+    "pre_merge_positive_tactical_basis_io_fraction",
+    "post_merge_mean_tactical_basis_action_ll",
+    "post_merge_mean_tactical_basis_action_io",
+    "vp_forward_bias_m",
+    "vp_lateral_bias_m",
+    "merge_min_range_m",
+    "damage_margin",
+)
+
+VALID_VPP_ANCHOR_MODES = (
+    "current_target",
+    "constant_velocity",
+    "oracle_future_position",
+    "rule_based_pursuit",
+    "predicted_target",
+    "offensive_position",
+)
 
 
 def _load_config_with_includes(config_path: Path) -> Dict[str, Any]:
@@ -142,11 +222,20 @@ def _record_set(
     source: str,
 ) -> None:
     old_value = _get_path(config, dotted_key)
-    _set_path(config, dotted_key, value)
+    new_value = value
+    # CLI task-scoped overrides should patch the loaded YAML mapping rather than
+    # replace it wholesale, so head_on-only edits preserve baseline crossing
+    # entries and other task defaults.
+    if dotted_key.endswith("_by_task") and isinstance(value, dict):
+        if isinstance(old_value, dict):
+            new_value = _deep_update(copy.deepcopy(old_value), value)
+        else:
+            new_value = copy.deepcopy(value)
+    _set_path(config, dotted_key, new_value)
     record_config_override_if_changed(
         config,
         key=dotted_key,
-        new_value=value,
+        new_value=new_value,
         old_value=old_value,
         source=source,
     )
@@ -177,6 +266,31 @@ def _repo_path(path_value: Optional[str]) -> Optional[Path]:
     if path.is_absolute():
         return path
     return REPO_ROOT / path
+
+
+def _resolve_task_def(task_def: Dict[str, Any]) -> Dict[str, Any]:
+    task_def = copy.deepcopy(task_def)
+    task_config = task_def.get("config_path")
+    if not task_config:
+        return task_def
+
+    config_path = _repo_path(str(task_config))
+    if config_path is None:
+        raise RuntimeError("Task config path is required")
+    if not config_path.exists():
+        raise FileNotFoundError(f"Task config not found: {config_path}")
+
+    loaded = _load_config_with_includes(config_path)
+    inline_overrides = {
+        key: value
+        for key, value in task_def.items()
+        if key not in {"config_path", "label"}
+    }
+    resolved = merge_config(loaded, inline_overrides)
+    if "label" in task_def:
+        resolved["label"] = task_def["label"]
+    resolved["config_path"] = str(task_config)
+    return resolved
 
 
 def _import_class(class_path: str):
@@ -350,8 +464,12 @@ def _apply_task_and_common_overrides(
             comparison_config["low_level_controller"],
             source,
         )
+    if task_def.get("low_level_controller"):
+        _record_block(config, "low_level_controller", task_def["low_level_controller"], source)
     if comparison_config.get("guidance"):
         _record_block(config, "guidance", comparison_config["guidance"], source)
+    if task_def.get("guidance"):
+        _record_block(config, "guidance", task_def["guidance"], source)
     for block_name in ("limits", "reward", "observation", "attack_zone"):
         if comparison_config.get(block_name):
             _record_block(config, block_name, comparison_config[block_name], source)
@@ -363,6 +481,1195 @@ def _apply_task_and_common_overrides(
     if jsbsim_root and str(backend).lower() == "jsbsim":
         _record_set(config, "env.legacy_project_root", jsbsim_root, source)
     _apply_backend(config, backend, source)
+
+
+def _apply_attack_zone_cli_overrides(
+    config: Dict[str, Any],
+    overrides: Dict[str, Any],
+) -> None:
+    if not overrides:
+        return
+    source = f"{SCRIPT_NAME}:attack_zone_cli"
+    for key, value in sorted(overrides.items()):
+        _record_set(config, f"attack_zone.{key}", value, source)
+
+
+def _apply_prediction_cli_overrides(
+    config: Dict[str, Any],
+    method_def: Dict[str, Any],
+    overrides: Dict[str, Any],
+) -> None:
+    if not overrides:
+        return
+    if method_def.get("agent_type") == "end_to_end":
+        return
+    if str(method_def.get("prediction_variant", "none")).lower() == "none":
+        return
+    source = f"{SCRIPT_NAME}:prediction_cli"
+    if "lookahead_time_s" in overrides:
+        _record_set(
+            config,
+            "trajectory_prediction.prediction.lookahead_time_s",
+            float(overrides["lookahead_time_s"]),
+            source,
+        )
+
+
+def _apply_vpp_cli_overrides(
+    config: Dict[str, Any],
+    method_def: Dict[str, Any],
+    overrides: Dict[str, Any],
+) -> None:
+    if not overrides:
+        return
+    if method_def.get("agent_type") == "end_to_end":
+        raise ValueError("--vpp-offset-frame cannot be applied to end-to-end methods")
+    source = f"{SCRIPT_NAME}:vpp_cli"
+    if "offset_frame" in overrides:
+        _record_set(
+            config,
+            "virtual_point.offset_frame",
+            str(overrides["offset_frame"]),
+            source,
+        )
+    if "offset_frame_by_task" in overrides:
+        _record_set(
+            config,
+            "virtual_point.offset_frame_by_task",
+            dict(overrides["offset_frame_by_task"]),
+            source,
+        )
+    if "predicted_target_blend" in overrides:
+        _record_set(
+            config,
+            "virtual_point.predicted_target_blend",
+            float(overrides["predicted_target_blend"]),
+            source,
+        )
+    if "predicted_target_blend_by_task" in overrides:
+        _record_set(
+            config,
+            "virtual_point.predicted_target_blend_by_task",
+            dict(overrides["predicted_target_blend_by_task"]),
+            source,
+        )
+    if "predicted_target_forward_scale" in overrides:
+        _record_set(
+            config,
+            "virtual_point.predicted_target_forward_scale",
+            float(overrides["predicted_target_forward_scale"]),
+            source,
+        )
+    if "predicted_target_forward_scale_by_task" in overrides:
+        _record_set(
+            config,
+            "virtual_point.predicted_target_forward_scale_by_task",
+            dict(overrides["predicted_target_forward_scale_by_task"]),
+            source,
+        )
+    if "post_merge_predicted_target_blend" in overrides:
+        _record_set(
+            config,
+            "virtual_point.post_merge_predicted_target_blend",
+            float(overrides["post_merge_predicted_target_blend"]),
+            source,
+        )
+    if "post_merge_predicted_target_blend_by_task" in overrides:
+        _record_set(
+            config,
+            "virtual_point.post_merge_predicted_target_blend_by_task",
+            dict(overrides["post_merge_predicted_target_blend_by_task"]),
+            source,
+        )
+    if "post_merge_offensive_anchor_blend" in overrides:
+        _record_set(
+            config,
+            "virtual_point.post_merge_offensive_anchor_blend",
+            float(overrides["post_merge_offensive_anchor_blend"]),
+            source,
+        )
+    if "post_merge_offensive_anchor_blend_by_task" in overrides:
+        _record_set(
+            config,
+            "virtual_point.post_merge_offensive_anchor_blend_by_task",
+            dict(overrides["post_merge_offensive_anchor_blend_by_task"]),
+            source,
+        )
+    if "post_merge_offensive_anchor_longitudinal_scale" in overrides:
+        _record_set(
+            config,
+            "virtual_point.post_merge_offensive_anchor_longitudinal_scale",
+            float(overrides["post_merge_offensive_anchor_longitudinal_scale"]),
+            source,
+        )
+    if "post_merge_offensive_anchor_longitudinal_scale_by_task" in overrides:
+        _record_set(
+            config,
+            "virtual_point.post_merge_offensive_anchor_longitudinal_scale_by_task",
+            dict(overrides["post_merge_offensive_anchor_longitudinal_scale_by_task"]),
+            source,
+        )
+    if "post_merge_offensive_anchor_lateral_scale" in overrides:
+        _record_set(
+            config,
+            "virtual_point.post_merge_offensive_anchor_lateral_scale",
+            float(overrides["post_merge_offensive_anchor_lateral_scale"]),
+            source,
+        )
+    if "post_merge_offensive_anchor_lateral_scale_by_task" in overrides:
+        _record_set(
+            config,
+            "virtual_point.post_merge_offensive_anchor_lateral_scale_by_task",
+            dict(overrides["post_merge_offensive_anchor_lateral_scale_by_task"]),
+            source,
+        )
+    if "post_merge_offensive_anchor_blend_requires_geometry_disadvantage" in overrides:
+        _record_set(
+            config,
+            (
+                "virtual_point."
+                "post_merge_offensive_anchor_blend_requires_geometry_disadvantage"
+            ),
+            bool(
+                overrides[
+                    "post_merge_offensive_anchor_blend_requires_geometry_disadvantage"
+                ]
+            ),
+            source,
+        )
+    if (
+        "post_merge_offensive_anchor_blend_requires_geometry_disadvantage_by_task"
+        in overrides
+    ):
+        _record_set(
+            config,
+            (
+                "virtual_point."
+                "post_merge_offensive_anchor_blend_requires_geometry_disadvantage_by_task"
+            ),
+            dict(
+                overrides[
+                    "post_merge_offensive_anchor_blend_requires_geometry_disadvantage_by_task"
+                ]
+            ),
+            source,
+        )
+    if "post_merge_offensive_anchor_geometry_disadvantage_aa_deg_min" in overrides:
+        _record_set(
+            config,
+            "virtual_point.post_merge_offensive_anchor_geometry_disadvantage_aa_deg_min",
+            float(
+                overrides[
+                    "post_merge_offensive_anchor_geometry_disadvantage_aa_deg_min"
+                ]
+            ),
+            source,
+        )
+    if "post_merge_offensive_anchor_geometry_disadvantage_aa_deg_min_by_task" in overrides:
+        _record_set(
+            config,
+            (
+                "virtual_point."
+                "post_merge_offensive_anchor_geometry_disadvantage_aa_deg_min_by_task"
+            ),
+            dict(
+                overrides[
+                    "post_merge_offensive_anchor_geometry_disadvantage_aa_deg_min_by_task"
+                ]
+            ),
+            source,
+        )
+    if "post_merge_offensive_anchor_blend_release_blend" in overrides:
+        _record_set(
+            config,
+            "virtual_point.post_merge_offensive_anchor_blend_release_blend",
+            float(overrides["post_merge_offensive_anchor_blend_release_blend"]),
+            source,
+        )
+    if "post_merge_offensive_anchor_blend_release_blend_by_task" in overrides:
+        _record_set(
+            config,
+            "virtual_point.post_merge_offensive_anchor_blend_release_blend_by_task",
+            dict(overrides["post_merge_offensive_anchor_blend_release_blend_by_task"]),
+            source,
+        )
+    if "post_merge_offensive_anchor_blend_release_ego_only_streak_steps" in overrides:
+        _record_set(
+            config,
+            "virtual_point.post_merge_offensive_anchor_blend_release_ego_only_streak_steps",
+            int(
+                overrides[
+                    "post_merge_offensive_anchor_blend_release_ego_only_streak_steps"
+                ]
+            ),
+            source,
+        )
+    if (
+        "post_merge_offensive_anchor_blend_release_ego_only_streak_steps_by_task"
+        in overrides
+    ):
+        _record_set(
+            config,
+            "virtual_point.post_merge_offensive_anchor_blend_release_ego_only_streak_steps_by_task",
+            dict(
+                overrides[
+                    "post_merge_offensive_anchor_blend_release_ego_only_streak_steps_by_task"
+                ]
+            ),
+            source,
+        )
+    if "post_merge_offensive_anchor_blend_release_reset_on_streak_break" in overrides:
+        _record_set(
+            config,
+            "virtual_point.post_merge_offensive_anchor_blend_release_reset_on_streak_break",
+            bool(
+                overrides[
+                    "post_merge_offensive_anchor_blend_release_reset_on_streak_break"
+                ]
+            ),
+            source,
+        )
+    if (
+        "post_merge_offensive_anchor_blend_release_reset_on_streak_break_by_task"
+        in overrides
+    ):
+        _record_set(
+            config,
+            "virtual_point.post_merge_offensive_anchor_blend_release_reset_on_streak_break_by_task",
+            dict(
+                overrides[
+                    "post_merge_offensive_anchor_blend_release_reset_on_streak_break_by_task"
+                ]
+            ),
+            source,
+        )
+    if "post_merge_offensive_anchor_blend_release_direct_track_below_altitude_m" in overrides:
+        _record_set(
+            config,
+            "virtual_point.post_merge_offensive_anchor_blend_release_direct_track_below_altitude_m",
+            float(
+                overrides[
+                    "post_merge_offensive_anchor_blend_release_direct_track_below_altitude_m"
+                ]
+            ),
+            source,
+        )
+    if (
+        "post_merge_offensive_anchor_blend_release_direct_track_below_altitude_m_by_task"
+        in overrides
+    ):
+        _record_set(
+            config,
+            "virtual_point.post_merge_offensive_anchor_blend_release_direct_track_below_altitude_m_by_task",
+            dict(
+                overrides[
+                    "post_merge_offensive_anchor_blend_release_direct_track_below_altitude_m_by_task"
+                ]
+            ),
+            source,
+        )
+    if "post_merge_offensive_anchor_blend_release_direct_track_enabled" in overrides:
+        _record_set(
+            config,
+            "virtual_point.post_merge_offensive_anchor_blend_release_direct_track_enabled",
+            bool(overrides["post_merge_offensive_anchor_blend_release_direct_track_enabled"]),
+            source,
+        )
+    if (
+        "post_merge_offensive_anchor_blend_release_direct_track_enabled_by_task"
+        in overrides
+    ):
+        _record_set(
+            config,
+            "virtual_point.post_merge_offensive_anchor_blend_release_direct_track_enabled_by_task",
+            dict(
+                overrides[
+                    "post_merge_offensive_anchor_blend_release_direct_track_enabled_by_task"
+                ]
+            ),
+            source,
+        )
+    if "post_merge_offensive_anchor_blend_release_recovery_below_altitude_m" in overrides:
+        _record_set(
+            config,
+            "virtual_point.post_merge_offensive_anchor_blend_release_recovery_below_altitude_m",
+            float(
+                overrides[
+                    "post_merge_offensive_anchor_blend_release_recovery_below_altitude_m"
+                ]
+            ),
+            source,
+        )
+    if (
+        "post_merge_offensive_anchor_blend_release_recovery_below_altitude_m_by_task"
+        in overrides
+    ):
+        _record_set(
+            config,
+            "virtual_point.post_merge_offensive_anchor_blend_release_recovery_below_altitude_m_by_task",
+            dict(
+                overrides[
+                    "post_merge_offensive_anchor_blend_release_recovery_below_altitude_m_by_task"
+                ]
+            ),
+            source,
+        )
+    if (
+        "post_merge_offensive_anchor_blend_release_recovery_longitudinal_blend"
+        in overrides
+    ):
+        _record_set(
+            config,
+            "virtual_point.post_merge_offensive_anchor_blend_release_recovery_longitudinal_blend",
+            float(
+                overrides[
+                    "post_merge_offensive_anchor_blend_release_recovery_longitudinal_blend"
+                ]
+            ),
+            source,
+        )
+    if (
+        "post_merge_offensive_anchor_blend_release_recovery_longitudinal_blend_by_task"
+        in overrides
+    ):
+        _record_set(
+            config,
+            "virtual_point.post_merge_offensive_anchor_blend_release_recovery_longitudinal_blend_by_task",
+            dict(
+                overrides[
+                    "post_merge_offensive_anchor_blend_release_recovery_longitudinal_blend_by_task"
+                ]
+            ),
+            source,
+        )
+    if "post_merge_offensive_anchor_blend_release_recovery_lateral_blend" in overrides:
+        _record_set(
+            config,
+            "virtual_point.post_merge_offensive_anchor_blend_release_recovery_lateral_blend",
+            float(
+                overrides[
+                    "post_merge_offensive_anchor_blend_release_recovery_lateral_blend"
+                ]
+            ),
+            source,
+        )
+    if (
+        "post_merge_offensive_anchor_blend_release_recovery_lateral_blend_by_task"
+        in overrides
+    ):
+        _record_set(
+            config,
+            "virtual_point.post_merge_offensive_anchor_blend_release_recovery_lateral_blend_by_task",
+            dict(
+                overrides[
+                    "post_merge_offensive_anchor_blend_release_recovery_lateral_blend_by_task"
+                ]
+            ),
+            source,
+        )
+    if (
+        "post_merge_offensive_anchor_blend_release_recovery_forward_bias_m_max"
+        in overrides
+    ):
+        _record_set(
+            config,
+            "virtual_point.post_merge_offensive_anchor_blend_release_recovery_forward_bias_m_max",
+            float(
+                overrides[
+                    "post_merge_offensive_anchor_blend_release_recovery_forward_bias_m_max"
+                ]
+            ),
+            source,
+        )
+    if (
+        "post_merge_offensive_anchor_blend_release_recovery_forward_bias_m_max_by_task"
+        in overrides
+    ):
+        _record_set(
+            config,
+            "virtual_point.post_merge_offensive_anchor_blend_release_recovery_forward_bias_m_max_by_task",
+            dict(
+                overrides[
+                    "post_merge_offensive_anchor_blend_release_recovery_forward_bias_m_max_by_task"
+                ]
+            ),
+            source,
+        )
+    if "post_merge_offensive_anchor_blend_release_vp_forward_bias_m_min" in overrides:
+        _record_set(
+            config,
+            "virtual_point.post_merge_offensive_anchor_blend_release_vp_forward_bias_m_min",
+            float(
+                overrides[
+                    "post_merge_offensive_anchor_blend_release_vp_forward_bias_m_min"
+                ]
+            ),
+            source,
+        )
+    if (
+        "post_merge_offensive_anchor_blend_release_vp_forward_bias_m_min_by_task"
+        in overrides
+    ):
+        _record_set(
+            config,
+            "virtual_point.post_merge_offensive_anchor_blend_release_vp_forward_bias_m_min_by_task",
+            dict(
+                overrides[
+                    "post_merge_offensive_anchor_blend_release_vp_forward_bias_m_min_by_task"
+                ]
+            ),
+            source,
+        )
+    if (
+        "post_merge_offensive_anchor_blend_release_vp_forward_bias_clamp_negative_lateral_below_altitude_m"
+        in overrides
+    ):
+        _record_set(
+            config,
+            (
+                "virtual_point."
+                "post_merge_offensive_anchor_blend_release_"
+                "vp_forward_bias_clamp_negative_lateral_below_altitude_m"
+            ),
+            float(
+                overrides[
+                    "post_merge_offensive_anchor_blend_release_"
+                    "vp_forward_bias_clamp_negative_lateral_below_altitude_m"
+                ]
+            ),
+            source,
+        )
+    if (
+        "post_merge_offensive_anchor_blend_release_vp_forward_bias_clamp_negative_lateral_below_altitude_m_by_task"
+        in overrides
+    ):
+        _record_set(
+            config,
+            (
+                "virtual_point."
+                "post_merge_offensive_anchor_blend_release_"
+                "vp_forward_bias_clamp_negative_lateral_below_altitude_m_by_task"
+            ),
+            dict(
+                overrides[
+                    "post_merge_offensive_anchor_blend_release_"
+                    "vp_forward_bias_clamp_negative_lateral_below_altitude_m_by_task"
+                ]
+            ),
+            source,
+        )
+    if "post_merge_offensive_anchor_lateral_world_offset_latch_on_activation" in overrides:
+        _record_set(
+            config,
+            "virtual_point.post_merge_offensive_anchor_lateral_world_offset_latch_on_activation",
+            bool(
+                overrides[
+                    "post_merge_offensive_anchor_lateral_world_offset_latch_on_activation"
+                ]
+            ),
+            source,
+        )
+    if (
+        "post_merge_offensive_anchor_lateral_world_offset_latch_on_activation_by_task"
+        in overrides
+    ):
+        _record_set(
+            config,
+            "virtual_point.post_merge_offensive_anchor_lateral_world_offset_latch_on_activation_by_task",
+            dict(
+                overrides[
+                    "post_merge_offensive_anchor_lateral_world_offset_latch_on_activation_by_task"
+                ]
+            ),
+            source,
+        )
+    if "post_merge_offensive_anchor_blend_release_lateral_only" in overrides:
+        _record_set(
+            config,
+            "virtual_point.post_merge_offensive_anchor_blend_release_lateral_only",
+            bool(
+                overrides[
+                    "post_merge_offensive_anchor_blend_release_lateral_only"
+                ]
+            ),
+            source,
+        )
+    if "post_merge_offensive_anchor_blend_release_lateral_only_by_task" in overrides:
+        _record_set(
+            config,
+            "virtual_point.post_merge_offensive_anchor_blend_release_lateral_only_by_task",
+            dict(
+                overrides[
+                    "post_merge_offensive_anchor_blend_release_lateral_only_by_task"
+                ]
+            ),
+            source,
+        )
+    if "post_merge_offensive_anchor_blend_release_lateral_only_hold_steps" in overrides:
+        _record_set(
+            config,
+            "virtual_point.post_merge_offensive_anchor_blend_release_lateral_only_hold_steps",
+            int(overrides["post_merge_offensive_anchor_blend_release_lateral_only_hold_steps"]),
+            source,
+        )
+    if (
+        "post_merge_offensive_anchor_blend_release_lateral_only_hold_steps_by_task"
+        in overrides
+    ):
+        _record_set(
+            config,
+            "virtual_point.post_merge_offensive_anchor_blend_release_lateral_only_hold_steps_by_task",
+            dict(
+                overrides[
+                    "post_merge_offensive_anchor_blend_release_lateral_only_hold_steps_by_task"
+                ]
+            ),
+            source,
+        )
+    if "offensive_anchor_blend" in overrides:
+        _record_set(
+            config,
+            "virtual_point.offensive_anchor_blend",
+            float(overrides["offensive_anchor_blend"]),
+            source,
+        )
+    if "offensive_anchor_blend_by_task" in overrides:
+        _record_set(
+            config,
+            "virtual_point.offensive_anchor_blend_by_task",
+            dict(overrides["offensive_anchor_blend_by_task"]),
+            source,
+        )
+    if "post_merge_predicted_target_forward_scale" in overrides:
+        _record_set(
+            config,
+            "virtual_point.post_merge_predicted_target_forward_scale",
+            float(overrides["post_merge_predicted_target_forward_scale"]),
+            source,
+        )
+    if "post_merge_predicted_target_forward_scale_by_task" in overrides:
+        _record_set(
+            config,
+            "virtual_point.post_merge_predicted_target_forward_scale_by_task",
+            dict(overrides["post_merge_predicted_target_forward_scale_by_task"]),
+            source,
+        )
+    if "post_merge_predicted_target_forward_scale_release_scale" in overrides:
+        _record_set(
+            config,
+            "virtual_point.post_merge_predicted_target_forward_scale_release_scale",
+            float(overrides["post_merge_predicted_target_forward_scale_release_scale"]),
+            source,
+        )
+    if "post_merge_predicted_target_forward_scale_release_scale_by_task" in overrides:
+        _record_set(
+            config,
+            "virtual_point.post_merge_predicted_target_forward_scale_release_scale_by_task",
+            dict(overrides["post_merge_predicted_target_forward_scale_release_scale_by_task"]),
+            source,
+        )
+    if "post_merge_predicted_target_forward_scale_release_ego_only_streak_steps" in overrides:
+        _record_set(
+            config,
+            "virtual_point.post_merge_predicted_target_forward_scale_release_ego_only_streak_steps",
+            int(
+                overrides[
+                    "post_merge_predicted_target_forward_scale_release_ego_only_streak_steps"
+                ]
+            ),
+            source,
+        )
+    if (
+        "post_merge_predicted_target_forward_scale_release_ego_only_streak_steps_by_task"
+        in overrides
+    ):
+        _record_set(
+            config,
+            "virtual_point.post_merge_predicted_target_forward_scale_release_ego_only_streak_steps_by_task",
+            dict(
+                overrides[
+                    "post_merge_predicted_target_forward_scale_release_ego_only_streak_steps_by_task"
+                ]
+            ),
+            source,
+        )
+    if "post_merge_predicted_target_forward_scale_release_reset_on_streak_break" in overrides:
+        _record_set(
+            config,
+            (
+                "virtual_point."
+                "post_merge_predicted_target_forward_scale_release_reset_on_streak_break"
+            ),
+            bool(
+                overrides[
+                    "post_merge_predicted_target_forward_scale_release_reset_on_streak_break"
+                ]
+            ),
+            source,
+        )
+    if (
+        "post_merge_predicted_target_forward_scale_release_reset_on_streak_break_by_task"
+        in overrides
+    ):
+        _record_set(
+            config,
+            (
+                "virtual_point."
+                "post_merge_predicted_target_forward_scale_release_reset_on_streak_break_by_task"
+            ),
+            dict(
+                overrides[
+                    "post_merge_predicted_target_forward_scale_release_reset_on_streak_break_by_task"
+                ]
+            ),
+            source,
+        )
+    if "post_merge_predicted_target_forward_scale_hold_steps" in overrides:
+        _record_set(
+            config,
+            "virtual_point.post_merge_predicted_target_forward_scale_hold_steps",
+            int(overrides["post_merge_predicted_target_forward_scale_hold_steps"]),
+            source,
+        )
+    if "post_merge_predicted_target_forward_scale_hold_steps_by_task" in overrides:
+        _record_set(
+            config,
+            "virtual_point.post_merge_predicted_target_forward_scale_hold_steps_by_task",
+            dict(overrides["post_merge_predicted_target_forward_scale_hold_steps_by_task"]),
+            source,
+        )
+    if "post_merge_predicted_target_blend_release_on_attack_zone" in overrides:
+        _record_set(
+            config,
+            "virtual_point.post_merge_predicted_target_blend_release_on_attack_zone",
+            bool(overrides["post_merge_predicted_target_blend_release_on_attack_zone"]),
+            source,
+        )
+    if "post_merge_predicted_target_blend_release_on_attack_zone_by_task" in overrides:
+        _record_set(
+            config,
+            "virtual_point.post_merge_predicted_target_blend_release_on_attack_zone_by_task",
+            dict(overrides["post_merge_predicted_target_blend_release_on_attack_zone_by_task"]),
+            source,
+        )
+    if "post_merge_predicted_target_blend_release_requires_target_attack_zone" in overrides:
+        _record_set(
+            config,
+            (
+                "virtual_point."
+                "post_merge_predicted_target_blend_release_requires_target_attack_zone"
+            ),
+            bool(
+                overrides[
+                    "post_merge_predicted_target_blend_release_requires_target_attack_zone"
+                ]
+            ),
+            source,
+        )
+    if (
+        "post_merge_predicted_target_blend_release_requires_target_attack_zone_by_task"
+        in overrides
+    ):
+        _record_set(
+            config,
+            (
+                "virtual_point."
+                "post_merge_predicted_target_blend_release_requires_target_attack_zone_by_task"
+            ),
+            dict(
+                overrides[
+                    "post_merge_predicted_target_blend_release_requires_target_attack_zone_by_task"
+                ]
+            ),
+            source,
+        )
+    if "post_merge_predicted_target_blend_release_below_altitude_m" in overrides:
+        _record_set(
+            config,
+            "virtual_point.post_merge_predicted_target_blend_release_below_altitude_m",
+            float(overrides["post_merge_predicted_target_blend_release_below_altitude_m"]),
+            source,
+        )
+    if "post_merge_predicted_target_blend_release_below_altitude_m_by_task" in overrides:
+        _record_set(
+            config,
+            "virtual_point.post_merge_predicted_target_blend_release_below_altitude_m_by_task",
+            dict(overrides["post_merge_predicted_target_blend_release_below_altitude_m_by_task"]),
+            source,
+        )
+    if "post_merge_predicted_target_blend_hold_steps" in overrides:
+        _record_set(
+            config,
+            "virtual_point.post_merge_predicted_target_blend_hold_steps",
+            int(overrides["post_merge_predicted_target_blend_hold_steps"]),
+            source,
+        )
+    if "post_merge_predicted_target_blend_hold_steps_by_task" in overrides:
+        _record_set(
+            config,
+            "virtual_point.post_merge_predicted_target_blend_hold_steps_by_task",
+            dict(overrides["post_merge_predicted_target_blend_hold_steps_by_task"]),
+            source,
+        )
+    if "post_merge_predicted_target_blend_release_blend" in overrides:
+        _record_set(
+            config,
+            "virtual_point.post_merge_predicted_target_blend_release_blend",
+            float(overrides["post_merge_predicted_target_blend_release_blend"]),
+            source,
+        )
+    if "post_merge_predicted_target_blend_release_blend_by_task" in overrides:
+        _record_set(
+            config,
+            "virtual_point.post_merge_predicted_target_blend_release_blend_by_task",
+            dict(overrides["post_merge_predicted_target_blend_release_blend_by_task"]),
+            source,
+        )
+    if "longitudinal_scale" in overrides:
+        _record_set(
+            config,
+            "virtual_point.longitudinal_scale",
+            float(overrides["longitudinal_scale"]),
+            source,
+        )
+    if "longitudinal_scale_by_task" in overrides:
+        _record_set(
+            config,
+            "virtual_point.longitudinal_scale_by_task",
+            dict(overrides["longitudinal_scale_by_task"]),
+            source,
+        )
+    if "lateral_scale" in overrides:
+        _record_set(
+            config,
+            "virtual_point.lateral_scale",
+            float(overrides["lateral_scale"]),
+            source,
+        )
+    if "lateral_scale_by_task" in overrides:
+        _record_set(
+            config,
+            "virtual_point.lateral_scale_by_task",
+            dict(overrides["lateral_scale_by_task"]),
+            source,
+        )
+    if "offensive_anchor_longitudinal_m" in overrides:
+        _record_set(
+            config,
+            "virtual_point.offensive_anchor_longitudinal_m",
+            float(overrides["offensive_anchor_longitudinal_m"]),
+            source,
+        )
+    if "offensive_anchor_longitudinal_m_by_task" in overrides:
+        _record_set(
+            config,
+            "virtual_point.offensive_anchor_longitudinal_m_by_task",
+            dict(overrides["offensive_anchor_longitudinal_m_by_task"]),
+            source,
+        )
+    if "offensive_anchor_frame" in overrides:
+        _record_set(
+            config,
+            "virtual_point.offensive_anchor_frame",
+            str(overrides["offensive_anchor_frame"]),
+            source,
+        )
+    if "offensive_anchor_frame_by_task" in overrides:
+        _record_set(
+            config,
+            "virtual_point.offensive_anchor_frame_by_task",
+            dict(overrides["offensive_anchor_frame_by_task"]),
+            source,
+        )
+    if "offensive_anchor_encounter_stable_max_heading_delta_deg" in overrides:
+        _record_set(
+            config,
+            "virtual_point.offensive_anchor_encounter_stable_max_heading_delta_deg",
+            float(
+                overrides[
+                    "offensive_anchor_encounter_stable_max_heading_delta_deg"
+                ]
+            ),
+            source,
+        )
+    if (
+        "offensive_anchor_encounter_stable_max_heading_delta_deg_by_task"
+        in overrides
+    ):
+        _record_set(
+            config,
+            (
+                "virtual_point."
+                "offensive_anchor_encounter_stable_max_heading_delta_deg_by_task"
+            ),
+            dict(
+                overrides[
+                    "offensive_anchor_encounter_stable_max_heading_delta_deg_by_task"
+                ]
+            ),
+            source,
+        )
+    if "offensive_anchor_lateral_frame" in overrides:
+        _record_set(
+            config,
+            "virtual_point.offensive_anchor_lateral_frame",
+            str(overrides["offensive_anchor_lateral_frame"]),
+            source,
+        )
+    if "offensive_anchor_lateral_frame_by_task" in overrides:
+        _record_set(
+            config,
+            "virtual_point.offensive_anchor_lateral_frame_by_task",
+            dict(overrides["offensive_anchor_lateral_frame_by_task"]),
+            source,
+        )
+    if "offensive_anchor_lateral_sign_mode" in overrides:
+        _record_set(
+            config,
+            "virtual_point.offensive_anchor_lateral_sign_mode",
+            str(overrides["offensive_anchor_lateral_sign_mode"]),
+            source,
+        )
+    if "offensive_anchor_lateral_sign_mode_by_task" in overrides:
+        _record_set(
+            config,
+            "virtual_point.offensive_anchor_lateral_sign_mode_by_task",
+            dict(overrides["offensive_anchor_lateral_sign_mode_by_task"]),
+            source,
+        )
+    if "offensive_anchor_lateral_m" in overrides:
+        _record_set(
+            config,
+            "virtual_point.offensive_anchor_lateral_m",
+            float(overrides["offensive_anchor_lateral_m"]),
+            source,
+        )
+    if "offensive_anchor_lateral_m_by_task" in overrides:
+        _record_set(
+            config,
+            "virtual_point.offensive_anchor_lateral_m_by_task",
+            dict(overrides["offensive_anchor_lateral_m_by_task"]),
+            source,
+        )
+    if "offensive_anchor_vertical_m" in overrides:
+        _record_set(
+            config,
+            "virtual_point.offensive_anchor_vertical_m",
+            float(overrides["offensive_anchor_vertical_m"]),
+            source,
+        )
+    if "offensive_anchor_vertical_m_by_task" in overrides:
+        _record_set(
+            config,
+            "virtual_point.offensive_anchor_vertical_m_by_task",
+            dict(overrides["offensive_anchor_vertical_m_by_task"]),
+            source,
+        )
+    if "post_merge_anchor_mode" in overrides:
+        _record_set(
+            config,
+            "virtual_point.post_merge_anchor_mode",
+            str(overrides["post_merge_anchor_mode"]),
+            source,
+        )
+    if "post_merge_anchor_mode_by_task" in overrides:
+        _record_set(
+            config,
+            "virtual_point.post_merge_anchor_mode_by_task",
+            dict(overrides["post_merge_anchor_mode_by_task"]),
+            source,
+        )
+    if "post_merge_anchor_mode_requires_geometry_disadvantage" in overrides:
+        _record_set(
+            config,
+            "virtual_point.post_merge_anchor_mode_requires_geometry_disadvantage",
+            bool(overrides["post_merge_anchor_mode_requires_geometry_disadvantage"]),
+            source,
+        )
+    if "post_merge_anchor_mode_requires_geometry_disadvantage_by_task" in overrides:
+        _record_set(
+            config,
+            "virtual_point.post_merge_anchor_mode_requires_geometry_disadvantage_by_task",
+            dict(
+                overrides[
+                    "post_merge_anchor_mode_requires_geometry_disadvantage_by_task"
+                ]
+            ),
+            source,
+        )
+    if "post_merge_anchor_mode_recovery_below_altitude_m" in overrides:
+        _record_set(
+            config,
+            "virtual_point.post_merge_anchor_mode_recovery_below_altitude_m",
+            float(overrides["post_merge_anchor_mode_recovery_below_altitude_m"]),
+            source,
+        )
+    if "post_merge_anchor_mode_recovery_below_altitude_m_by_task" in overrides:
+        _record_set(
+            config,
+            "virtual_point.post_merge_anchor_mode_recovery_below_altitude_m_by_task",
+            dict(overrides["post_merge_anchor_mode_recovery_below_altitude_m_by_task"]),
+            source,
+        )
+    if "post_merge_anchor_mode_release_ego_only_streak_steps" in overrides:
+        _record_set(
+            config,
+            "virtual_point.post_merge_anchor_mode_release_ego_only_streak_steps",
+            int(overrides["post_merge_anchor_mode_release_ego_only_streak_steps"]),
+            source,
+        )
+    if "post_merge_anchor_mode_release_ego_only_streak_steps_by_task" in overrides:
+        _record_set(
+            config,
+            "virtual_point.post_merge_anchor_mode_release_ego_only_streak_steps_by_task",
+            dict(overrides["post_merge_anchor_mode_release_ego_only_streak_steps_by_task"]),
+            source,
+        )
+    if "post_merge_anchor_mode_release_reset_on_streak_break" in overrides:
+        _record_set(
+            config,
+            "virtual_point.post_merge_anchor_mode_release_reset_on_streak_break",
+            bool(overrides["post_merge_anchor_mode_release_reset_on_streak_break"]),
+            source,
+        )
+    if "post_merge_anchor_mode_release_reset_on_streak_break_by_task" in overrides:
+        _record_set(
+            config,
+            "virtual_point.post_merge_anchor_mode_release_reset_on_streak_break_by_task",
+            dict(
+                overrides[
+                    "post_merge_anchor_mode_release_reset_on_streak_break_by_task"
+                ]
+            ),
+            source,
+        )
+    if "post_merge_anchor_mode_offensive_anchor_blend" in overrides:
+        _record_set(
+            config,
+            "virtual_point.post_merge_anchor_mode_offensive_anchor_blend",
+            float(overrides["post_merge_anchor_mode_offensive_anchor_blend"]),
+            source,
+        )
+    if "post_merge_anchor_mode_offensive_anchor_blend_by_task" in overrides:
+        _record_set(
+            config,
+            "virtual_point.post_merge_anchor_mode_offensive_anchor_blend_by_task",
+            dict(overrides["post_merge_anchor_mode_offensive_anchor_blend_by_task"]),
+            source,
+        )
+    if "post_merge_anchor_mode_offensive_anchor_longitudinal_blend" in overrides:
+        _record_set(
+            config,
+            "virtual_point.post_merge_anchor_mode_offensive_anchor_longitudinal_blend",
+            float(overrides["post_merge_anchor_mode_offensive_anchor_longitudinal_blend"]),
+            source,
+        )
+    if "post_merge_anchor_mode_offensive_anchor_longitudinal_blend_by_task" in overrides:
+        _record_set(
+            config,
+            (
+                "virtual_point."
+                "post_merge_anchor_mode_offensive_anchor_longitudinal_blend_by_task"
+            ),
+            dict(
+                overrides[
+                    "post_merge_anchor_mode_offensive_anchor_longitudinal_blend_by_task"
+                ]
+            ),
+            source,
+        )
+    if "post_merge_anchor_mode_offensive_anchor_lateral_blend" in overrides:
+        _record_set(
+            config,
+            "virtual_point.post_merge_anchor_mode_offensive_anchor_lateral_blend",
+            float(overrides["post_merge_anchor_mode_offensive_anchor_lateral_blend"]),
+            source,
+        )
+    if "post_merge_anchor_mode_offensive_anchor_lateral_blend_by_task" in overrides:
+        _record_set(
+            config,
+            (
+                "virtual_point."
+                "post_merge_anchor_mode_offensive_anchor_lateral_blend_by_task"
+            ),
+            dict(
+                overrides[
+                    "post_merge_anchor_mode_offensive_anchor_lateral_blend_by_task"
+                ]
+            ),
+            source,
+        )
+    if "post_merge_anchor_mode_lateral_world_offset_latch_on_activation" in overrides:
+        _record_set(
+            config,
+            (
+                "virtual_point."
+                "post_merge_anchor_mode_lateral_world_offset_latch_on_activation"
+            ),
+            bool(
+                overrides[
+                    "post_merge_anchor_mode_lateral_world_offset_latch_on_activation"
+                ]
+            ),
+            source,
+        )
+    if (
+        "post_merge_anchor_mode_lateral_world_offset_latch_on_activation_by_task"
+        in overrides
+    ):
+        _record_set(
+            config,
+            (
+                "virtual_point."
+                "post_merge_anchor_mode_lateral_world_offset_latch_on_activation_by_task"
+            ),
+            dict(
+                overrides[
+                    "post_merge_anchor_mode_lateral_world_offset_latch_on_activation_by_task"
+                ]
+            ),
+            source,
+        )
+    if "post_merge_anchor_mode_longitudinal_scale" in overrides:
+        _record_set(
+            config,
+            "virtual_point.post_merge_anchor_mode_longitudinal_scale",
+            float(overrides["post_merge_anchor_mode_longitudinal_scale"]),
+            source,
+        )
+    if "post_merge_anchor_mode_longitudinal_scale_by_task" in overrides:
+        _record_set(
+            config,
+            "virtual_point.post_merge_anchor_mode_longitudinal_scale_by_task",
+            dict(overrides["post_merge_anchor_mode_longitudinal_scale_by_task"]),
+            source,
+        )
+    if "post_merge_anchor_mode_lateral_scale" in overrides:
+        _record_set(
+            config,
+            "virtual_point.post_merge_anchor_mode_lateral_scale",
+            float(overrides["post_merge_anchor_mode_lateral_scale"]),
+            source,
+        )
+    if "post_merge_anchor_mode_lateral_scale_by_task" in overrides:
+        _record_set(
+            config,
+            "virtual_point.post_merge_anchor_mode_lateral_scale_by_task",
+            dict(overrides["post_merge_anchor_mode_lateral_scale_by_task"]),
+            source,
+        )
+    if "close_range_anchor_mode" in overrides:
+        _record_set(
+            config,
+            "virtual_point.close_range_anchor_mode",
+            str(overrides["close_range_anchor_mode"]),
+            source,
+        )
+    if "close_range_anchor_mode_by_task" in overrides:
+        _record_set(
+            config,
+            "virtual_point.close_range_anchor_mode_by_task",
+            dict(overrides["close_range_anchor_mode_by_task"]),
+            source,
+        )
+    if "close_range_anchor_trigger_range_m" in overrides:
+        _record_set(
+            config,
+            "virtual_point.close_range_anchor_trigger_range_m",
+            float(overrides["close_range_anchor_trigger_range_m"]),
+            source,
+        )
+    if "close_range_anchor_trigger_range_m_by_task" in overrides:
+        _record_set(
+            config,
+            "virtual_point.close_range_anchor_trigger_range_m_by_task",
+            dict(overrides["close_range_anchor_trigger_range_m_by_task"]),
+            source,
+        )
+    if "close_range_anchor_alignment_angle_deg_max" in overrides:
+        _record_set(
+            config,
+            "virtual_point.close_range_anchor_alignment_angle_deg_max",
+            float(overrides["close_range_anchor_alignment_angle_deg_max"]),
+            source,
+        )
+    if "close_range_anchor_alignment_angle_deg_max_by_task" in overrides:
+        _record_set(
+            config,
+            "virtual_point.close_range_anchor_alignment_angle_deg_max_by_task",
+            dict(overrides["close_range_anchor_alignment_angle_deg_max_by_task"]),
+            source,
+        )
+    if "close_range_anchor_release_on_post_merge" in overrides:
+        _record_set(
+            config,
+            "virtual_point.close_range_anchor_release_on_post_merge",
+            bool(overrides["close_range_anchor_release_on_post_merge"]),
+            source,
+        )
+    if "close_range_anchor_release_on_post_merge_by_task" in overrides:
+        _record_set(
+            config,
+            "virtual_point.close_range_anchor_release_on_post_merge_by_task",
+            dict(overrides["close_range_anchor_release_on_post_merge_by_task"]),
+            source,
+        )
+    if "close_range_anchor_requires_first_pass" in overrides:
+        _record_set(
+            config,
+            "virtual_point.close_range_anchor_requires_first_pass",
+            bool(overrides["close_range_anchor_requires_first_pass"]),
+            source,
+        )
+    if "close_range_anchor_requires_first_pass_by_task" in overrides:
+        _record_set(
+            config,
+            "virtual_point.close_range_anchor_requires_first_pass_by_task",
+            dict(overrides["close_range_anchor_requires_first_pass_by_task"]),
+            source,
+        )
+    if "close_range_anchor_offensive_anchor_blend" in overrides:
+        _record_set(
+            config,
+            "virtual_point.close_range_anchor_offensive_anchor_blend",
+            float(overrides["close_range_anchor_offensive_anchor_blend"]),
+            source,
+        )
+    if "close_range_anchor_offensive_anchor_blend_by_task" in overrides:
+        _record_set(
+            config,
+            "virtual_point.close_range_anchor_offensive_anchor_blend_by_task",
+            dict(overrides["close_range_anchor_offensive_anchor_blend_by_task"]),
+            source,
+        )
+    if "close_range_anchor_release_alignment_angle_deg_max" in overrides:
+        _record_set(
+            config,
+            "virtual_point.close_range_anchor_release_alignment_angle_deg_max",
+            float(overrides["close_range_anchor_release_alignment_angle_deg_max"]),
+            source,
+        )
+    if "close_range_anchor_release_alignment_angle_deg_max_by_task" in overrides:
+        _record_set(
+            config,
+            "virtual_point.close_range_anchor_release_alignment_angle_deg_max_by_task",
+            dict(overrides["close_range_anchor_release_alignment_angle_deg_max_by_task"]),
+            source,
+        )
+    if "close_range_anchor_post_merge_hold_steps" in overrides:
+        _record_set(
+            config,
+            "virtual_point.close_range_anchor_post_merge_hold_steps",
+            int(overrides["close_range_anchor_post_merge_hold_steps"]),
+            source,
+        )
+    if "close_range_anchor_post_merge_hold_steps_by_task" in overrides:
+        _record_set(
+            config,
+            "virtual_point.close_range_anchor_post_merge_hold_steps_by_task",
+            dict(overrides["close_range_anchor_post_merge_hold_steps_by_task"]),
+            source,
+        )
 
 
 def _apply_prediction_variant(
@@ -473,6 +1780,9 @@ def build_eval_config(
     opponent_stage: str = "none",
     max_steps_override: Optional[int] = None,
     jsbsim_root: Optional[str] = None,
+    attack_zone_overrides: Optional[Dict[str, Any]] = None,
+    prediction_overrides: Optional[Dict[str, Any]] = None,
+    vpp_overrides: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     methods = comparison_config.get("methods", {})
     tasks = comparison_config.get("tasks", {})
@@ -482,6 +1792,7 @@ def build_eval_config(
         raise KeyError(f"Unknown task: {task_name}")
 
     method_def = methods[method_name]
+    task_def = _resolve_task_def(tasks[task_name])
     checkpoint_path = _repo_path(method_def.get("checkpoint"))
     fallback_config_path = _repo_path(method_def.get("config_path"))
     config = _load_checkpoint_config(checkpoint_path, fallback_config_path)
@@ -489,13 +1800,25 @@ def build_eval_config(
         config,
         comparison_config,
         task_name,
-        tasks[task_name],
+        task_def,
         backend=backend,
         max_steps_override=max_steps_override,
         jsbsim_root=jsbsim_root,
     )
     _apply_prediction_variant(config, comparison_config, method_name, method_def)
+    _apply_prediction_cli_overrides(config, method_def, prediction_overrides or {})
+    _apply_vpp_cli_overrides(config, method_def, vpp_overrides or {})
     _apply_opponent_stage(config, comparison_config, opponent_stage)
+    _apply_attack_zone_cli_overrides(config, attack_zone_overrides or {})
+    method_config_overrides = method_def.get("config_overrides", {})
+    if method_config_overrides:
+        for key, value in method_config_overrides.items():
+            _record_set(
+                config,
+                key,
+                value,
+                f"{SCRIPT_NAME}:method_def_override",
+            )
     return config
 
 
@@ -587,6 +1910,399 @@ def _safe_float(value: Any, default: float = float("nan")) -> float:
     return out if np.isfinite(out) else default
 
 
+def _trajectory_dt_s(record: Dict[str, Any]) -> float:
+    trajectory = record.get("trajectory", [])
+    times = [
+        _safe_float(point.get("time_s"))
+        for point in trajectory
+        if isinstance(point, dict)
+    ]
+    diffs = [
+        b - a
+        for a, b in zip(times, times[1:])
+        if np.isfinite(a) and np.isfinite(b) and b > a
+    ]
+    if diffs:
+        return _finite_median(diffs)
+    steps = int(record.get("steps", 0) or 0)
+    total_time_s = _safe_float(record.get("total_time_s"))
+    if steps > 0 and np.isfinite(total_time_s) and total_time_s > 0.0:
+        return total_time_s / steps
+    return 0.2
+
+
+def _first_true_time_s(trajectory: List[Dict[str, Any]], field: str) -> float:
+    for point in trajectory:
+        if not isinstance(point, dict) or not bool(point.get(field, False)):
+            continue
+        time_s = _safe_float(point.get("time_s"))
+        if np.isfinite(time_s):
+            return time_s
+    return float("nan")
+
+
+def _first_true_step(trajectory: List[Dict[str, Any]], field: str) -> float:
+    for index, point in enumerate(trajectory, start=1):
+        if not isinstance(point, dict) or not bool(point.get(field, False)):
+            continue
+        step = _safe_float(point.get("step"))
+        if np.isfinite(step):
+            return step
+        return float(index)
+    return float("nan")
+
+
+def _first_post_merge_true_step(
+    trajectory: List[Dict[str, Any]],
+    field: str,
+) -> float:
+    for index, point in enumerate(trajectory, start=1):
+        if not isinstance(point, dict):
+            continue
+        if not bool(point.get("post_merge", False)) or not bool(point.get(field, False)):
+            continue
+        step = _safe_float(point.get("step"))
+        if np.isfinite(step):
+            return step
+        return float(index)
+    return float("nan")
+
+
+def _damage_margin_from_record(record: Dict[str, Any]) -> float:
+    initial_hp = _safe_float(record.get("combat_initial_hp"), 100.0)
+    ego_hp = _safe_float(record.get("ego_hp"))
+    target_hp = _safe_float(record.get("target_hp"))
+    if np.isfinite(initial_hp) and np.isfinite(ego_hp) and np.isfinite(target_hp):
+        damage_dealt = initial_hp - target_hp
+        damage_taken = initial_hp - ego_hp
+        return float(damage_dealt - damage_taken)
+    return _safe_float(record.get("hp_advantage"))
+
+
+def summarize_episode_combat_geometry(record: Dict[str, Any]) -> Dict[str, float]:
+    """Build episode-level VP/merge/attack-zone diagnostics from trajectory."""
+    trajectory = [
+        point for point in record.get("trajectory", []) if isinstance(point, dict)
+    ]
+    post_merge_trajectory = [
+        point for point in trajectory if bool(point.get("post_merge", False))
+    ]
+    dt = _trajectory_dt_s(record)
+    post_merge_advantage_s = 0.0
+    for point in post_merge_trajectory:
+        ego_window = 1.0 if bool(point.get("ego_in_attack_zone", False)) else 0.0
+        target_window = 1.0 if bool(point.get("target_in_attack_zone", False)) else 0.0
+        post_merge_advantage_s += (ego_window - target_window) * dt
+
+    def _is_pre_merge(point: Dict[str, Any]) -> bool:
+        if "pre_merge" in point:
+            return bool(point.get("pre_merge", False))
+        return not bool(point.get("post_merge", False))
+
+    def _post_merge_fraction(field: str) -> float:
+        return _finite_mean(
+            1.0 if bool(point.get(field, False)) else 0.0
+            for point in post_merge_trajectory
+        )
+
+    def _post_merge_active_mean(value_field: str, active_field: str) -> float:
+        return _finite_mean(
+            _safe_float(point.get(value_field))
+            for point in post_merge_trajectory
+            if bool(point.get(active_field, False))
+        )
+
+    return {
+        "first_ego_attack_time_s": _first_true_time_s(
+            trajectory,
+            "ego_in_attack_zone",
+        ),
+        "first_target_attack_time_s": _first_true_time_s(
+            trajectory,
+            "target_in_attack_zone",
+        ),
+        "first_pass_step": _first_true_step(trajectory, "post_merge"),
+        "post_merge_attack_zone_advantage_s": float(post_merge_advantage_s),
+        "close_range_anchor_mode_active_fraction": _post_merge_fraction(
+            "close_range_anchor_mode_active"
+        ),
+        "close_range_anchor_mode_first_active_step": _first_post_merge_true_step(
+            trajectory,
+            "close_range_anchor_mode_active",
+        ),
+        "post_merge_anchor_mode_active_fraction": _post_merge_fraction(
+            "post_merge_anchor_mode_active"
+        ),
+        "post_merge_anchor_mode_condition_met_fraction": _post_merge_fraction(
+            "post_merge_anchor_mode_condition_met"
+        ),
+        "post_merge_anchor_mode_first_active_step": _first_post_merge_true_step(
+            trajectory,
+            "post_merge_anchor_mode_active",
+        ),
+        "post_merge_anchor_mode_lateral_world_offset_latch_active_fraction": (
+            _post_merge_fraction(
+                "post_merge_anchor_mode_lateral_world_offset_latch_active"
+            )
+        ),
+        "post_merge_anchor_mode_lateral_world_offset_latch_first_active_step": (
+            _first_post_merge_true_step(
+                trajectory,
+                "post_merge_anchor_mode_lateral_world_offset_latch_active",
+            )
+        ),
+        "post_merge_anchor_mode_recovery_active_fraction": _post_merge_fraction(
+            "post_merge_anchor_mode_recovery_active"
+        ),
+        "post_merge_anchor_mode_recovery_first_step": _first_post_merge_true_step(
+            trajectory,
+            "post_merge_anchor_mode_recovery_active",
+        ),
+        "post_merge_anchor_mode_released_fraction": _post_merge_fraction(
+            "post_merge_anchor_mode_released"
+        ),
+        "post_merge_anchor_mode_release_first_step": _first_post_merge_true_step(
+            trajectory,
+            "post_merge_anchor_mode_released",
+        ),
+        "post_merge_offensive_anchor_condition_met_fraction": _post_merge_fraction(
+            "post_merge_offensive_anchor_condition_met"
+        ),
+        "post_merge_offensive_anchor_alignment_disadvantage_fraction": (
+            _post_merge_fraction(
+                "post_merge_offensive_anchor_alignment_disadvantage"
+            )
+        ),
+        "post_merge_offensive_anchor_blend_active_fraction": _post_merge_fraction(
+            "post_merge_offensive_anchor_blend_active"
+        ),
+        "post_merge_offensive_anchor_first_active_step": _first_post_merge_true_step(
+            trajectory,
+            "post_merge_offensive_anchor_blend_active",
+        ),
+        "post_merge_offensive_anchor_blend_release_blend_active_fraction": (
+            _post_merge_fraction(
+                "post_merge_offensive_anchor_blend_release_blend_active"
+            )
+        ),
+        "post_merge_offensive_anchor_blend_released_fraction": _post_merge_fraction(
+            "post_merge_offensive_anchor_blend_released"
+        ),
+        "post_merge_offensive_anchor_blend_release_first_step": (
+            _first_post_merge_true_step(
+                trajectory,
+                "post_merge_offensive_anchor_blend_released",
+            )
+        ),
+        "post_merge_offensive_anchor_blend_release_direct_track_active_fraction": (
+            _post_merge_fraction(
+                "post_merge_offensive_anchor_blend_release_direct_track_active"
+            )
+        ),
+        "post_merge_offensive_anchor_blend_release_direct_track_first_step": (
+            _first_post_merge_true_step(
+                trajectory,
+                "post_merge_offensive_anchor_blend_release_direct_track_active",
+            )
+        ),
+        "post_merge_offensive_anchor_blend_release_recovery_active_fraction": (
+            _post_merge_fraction(
+                "post_merge_offensive_anchor_blend_release_recovery_active"
+            )
+        ),
+        "post_merge_offensive_anchor_blend_release_recovery_first_step": (
+            _first_post_merge_true_step(
+                trajectory,
+                "post_merge_offensive_anchor_blend_release_recovery_active",
+            )
+        ),
+        "post_merge_offensive_anchor_blend_release_recovery_altitude_trigger_active_fraction": (
+            _post_merge_fraction(
+                "post_merge_offensive_anchor_blend_release_recovery_altitude_trigger_active"
+            )
+        ),
+        "post_merge_offensive_anchor_blend_release_recovery_altitude_trigger_first_step": (
+            _first_post_merge_true_step(
+                trajectory,
+                "post_merge_offensive_anchor_blend_release_recovery_altitude_trigger_active",
+            )
+        ),
+        "post_merge_offensive_anchor_blend_release_recovery_forward_bias_trigger_active_fraction": (
+            _post_merge_fraction(
+                "post_merge_offensive_anchor_blend_release_recovery_forward_bias_trigger_active"
+            )
+        ),
+        "post_merge_offensive_anchor_blend_release_recovery_forward_bias_trigger_first_step": (
+            _first_post_merge_true_step(
+                trajectory,
+                "post_merge_offensive_anchor_blend_release_recovery_forward_bias_trigger_active",
+            )
+        ),
+        "post_merge_offensive_anchor_blend_release_vp_forward_bias_clamp_active_fraction": (
+            _post_merge_fraction(
+                "post_merge_offensive_anchor_blend_release_vp_forward_bias_clamp_active"
+            )
+        ),
+        "post_merge_offensive_anchor_blend_release_vp_forward_bias_clamp_first_step": (
+            _first_post_merge_true_step(
+                trajectory,
+                "post_merge_offensive_anchor_blend_release_vp_forward_bias_clamp_active",
+            )
+        ),
+        "post_merge_offensive_anchor_lateral_world_offset_latch_active_fraction": (
+            _post_merge_fraction(
+                "post_merge_offensive_anchor_lateral_world_offset_latch_active"
+            )
+        ),
+        "post_merge_offensive_anchor_lateral_world_offset_latch_first_active_step": (
+            _first_post_merge_true_step(
+                trajectory,
+                "post_merge_offensive_anchor_lateral_world_offset_latch_active",
+            )
+        ),
+        "post_merge_offensive_anchor_blend_release_lateral_only_active_fraction": (
+            _post_merge_fraction(
+                "post_merge_offensive_anchor_blend_release_lateral_only_active"
+            )
+        ),
+        "post_merge_offensive_anchor_blend_release_lateral_only_first_step": (
+            _first_post_merge_true_step(
+                trajectory,
+                "post_merge_offensive_anchor_blend_release_lateral_only_active",
+            )
+        ),
+        "post_merge_predicted_target_forward_scale_active_fraction": (
+            _post_merge_fraction(
+                "post_merge_predicted_target_forward_scale_active"
+            )
+        ),
+        "post_merge_predicted_target_forward_scale_first_active_step": (
+            _first_post_merge_true_step(
+                trajectory,
+                "post_merge_predicted_target_forward_scale_active",
+            )
+        ),
+        "post_merge_predicted_target_forward_scale_release_scale_active_fraction": (
+            _post_merge_fraction(
+                "post_merge_predicted_target_forward_scale_release_scale_active"
+            )
+        ),
+        "post_merge_predicted_target_forward_scale_released_fraction": (
+            _post_merge_fraction(
+                "post_merge_predicted_target_forward_scale_released"
+            )
+        ),
+        "post_merge_predicted_target_forward_scale_release_first_step": (
+            _first_post_merge_true_step(
+                trajectory,
+                "post_merge_predicted_target_forward_scale_released",
+            )
+        ),
+        "post_merge_offensive_anchor_active_longitudinal_scale": (
+            _post_merge_active_mean(
+                "longitudinal_scale",
+                "post_merge_offensive_anchor_blend_active",
+            )
+        ),
+        "post_merge_offensive_anchor_active_lateral_scale": _post_merge_active_mean(
+            "lateral_scale",
+            "post_merge_offensive_anchor_blend_active",
+        ),
+        "post_merge_active_vp_longitudinal_scale": _post_merge_active_mean(
+            "longitudinal_scale",
+            "post_merge_offensive_anchor_blend_active",
+        ),
+        "post_merge_active_vp_lateral_scale": _post_merge_active_mean(
+            "lateral_scale",
+            "post_merge_offensive_anchor_blend_active",
+        ),
+        "post_merge_offensive_anchor_active_override_longitudinal_scale": (
+            _post_merge_active_mean(
+                "post_merge_offensive_anchor_longitudinal_scale",
+                "post_merge_offensive_anchor_blend_active",
+            )
+        ),
+        "post_merge_offensive_anchor_active_override_lateral_scale": (
+            _post_merge_active_mean(
+                "post_merge_offensive_anchor_lateral_scale",
+                "post_merge_offensive_anchor_blend_active",
+            )
+        ),
+        "pre_merge_vp_forward_bias_m": _finite_mean(
+            _safe_float(point.get("vp_forward_bias_m"))
+            for point in trajectory
+            if _is_pre_merge(point)
+        ),
+        "post_merge_anchor_mode_active_vp_forward_bias_m": _post_merge_active_mean(
+            "vp_forward_bias_m",
+            "post_merge_anchor_mode_active",
+        ),
+        "post_merge_anchor_mode_active_vp_lateral_bias_m": _post_merge_active_mean(
+            "vp_lateral_bias_m",
+            "post_merge_anchor_mode_active",
+        ),
+        "post_merge_offensive_anchor_active_vp_forward_bias_m": _post_merge_active_mean(
+            "vp_forward_bias_m",
+            "post_merge_offensive_anchor_blend_active",
+        ),
+        "post_merge_offensive_anchor_active_vp_lateral_bias_m": _post_merge_active_mean(
+            "vp_lateral_bias_m",
+            "post_merge_offensive_anchor_blend_active",
+        ),
+        "post_merge_predicted_target_forward_scale_active_vp_forward_bias_m": (
+            _post_merge_active_mean(
+                "vp_forward_bias_m",
+                "post_merge_predicted_target_forward_scale_active",
+            )
+        ),
+        "post_merge_predicted_target_forward_scale_active_vp_lateral_bias_m": (
+            _post_merge_active_mean(
+                "vp_lateral_bias_m",
+                "post_merge_predicted_target_forward_scale_active",
+            )
+        ),
+        "pre_merge_mean_tactical_basis_action_ll": _finite_mean(
+            _safe_float(point.get("tactical_basis_action_ll"))
+            for point in trajectory
+            if _is_pre_merge(point)
+        ),
+        "pre_merge_mean_tactical_basis_action_io": _finite_mean(
+            _safe_float(point.get("tactical_basis_action_io"))
+            for point in trajectory
+            if _is_pre_merge(point)
+        ),
+        "pre_merge_mean_tactical_basis_action_cd": _finite_mean(
+            _safe_float(point.get("tactical_basis_action_cd"))
+            for point in trajectory
+            if _is_pre_merge(point)
+        ),
+        "pre_merge_positive_tactical_basis_io_fraction": _finite_mean(
+            1.0 if _safe_float(point.get("tactical_basis_action_io")) > 0.0 else 0.0
+            for point in trajectory
+            if _is_pre_merge(point)
+            and np.isfinite(_safe_float(point.get("tactical_basis_action_io")))
+        ),
+        "post_merge_mean_tactical_basis_action_ll": _finite_mean(
+            _safe_float(point.get("tactical_basis_action_ll"))
+            for point in post_merge_trajectory
+        ),
+        "post_merge_mean_tactical_basis_action_io": _finite_mean(
+            _safe_float(point.get("tactical_basis_action_io"))
+            for point in post_merge_trajectory
+        ),
+        "vp_forward_bias_m": _finite_mean(
+            _safe_float(point.get("vp_forward_bias_m")) for point in trajectory
+        ),
+        "vp_lateral_bias_m": _finite_mean(
+            _safe_float(point.get("vp_lateral_bias_m")) for point in trajectory
+        ),
+        "merge_min_range_m": _finite_min(
+            _safe_float(point.get("range_m")) for point in trajectory
+        ),
+        "damage_margin": _damage_margin_from_record(record),
+    }
+
+
 def _checkpoint_dimension_info(checkpoint_path: Path) -> Dict[str, Any]:
     checkpoint = torch.load(str(checkpoint_path), map_location="cpu")
     ckpt_config = checkpoint.get("config", {})
@@ -648,6 +2364,7 @@ def _run_episode(
     run_id: str,
     config: Dict[str, Any],
     git_commit: str,
+    run_status: str,
     save_full: bool,
 ) -> Dict[str, Any]:
     config_hash = config_sha256(config)
@@ -673,6 +2390,7 @@ def _run_episode(
     obs = env.reset(**reset_kwargs)
     reset_provenance = copy.deepcopy(obs.get("provenance", {}))
     observation_schema = copy.deepcopy(obs.get("observation_schema", {}))
+    attack_zone_cfg = copy.deepcopy(config.get("attack_zone", {}))
 
     total_reward = 0.0
     steps = 0
@@ -776,6 +2494,8 @@ def _run_episode(
             "method_label": method_def.get("label", method_name),
             "agent_type": method_def.get("agent_type", "ppo"),
             "prediction_variant": method_def.get("prediction_variant", "none"),
+            "run_status": run_status,
+            "mode": run_status,
             "opponent_stage": config.get("opponent_stage", "none"),
             "opponent_config": copy.deepcopy(config.get("opponent", {})),
             "scenario": _scenario_name(scenario, task_name),
@@ -783,6 +2503,11 @@ def _run_episode(
             "observation_schema": observation_schema,
             "reset_provenance": reset_provenance,
             "config_overrides": get_config_overrides(config),
+            "attack_zone_enabled": bool(attack_zone_cfg.get("enabled", False)),
+            "combat_initial_hp": _safe_float(attack_zone_cfg.get("initial_hp"), 100.0),
+            "damage_per_step": _safe_float(attack_zone_cfg.get("damage_per_step")),
+            "close_range_max_km": _safe_float(attack_zone_cfg.get("close_range_max_km")),
+            "close_range_max_aoa_deg": _safe_float(attack_zone_cfg.get("close_range_max_aoa_deg")),
             "prediction_valid_rate": prediction_valid_steps / denom,
             "prediction_fallback_rate": prediction_fallback_steps / denom,
             "mean_prediction_error_m": _finite_mean(prediction_errors),
@@ -832,6 +2557,7 @@ def _run_episode(
             },
         }
     )
+    record.update(summarize_episode_combat_geometry(record))
     return record
 
 
@@ -842,6 +2568,8 @@ def _write_summary_csv(output_dir: Path, records: List[Dict[str, Any]]) -> Path:
         "method_label",
         "agent_type",
         "prediction_variant",
+        "run_status",
+        "mode",
         "opponent_stage",
         "task",
         "scenario",
@@ -856,6 +2584,11 @@ def _write_summary_csv(output_dir: Path, records: List[Dict[str, Any]]) -> Path:
         "loss",
         "draw",
         "termination_reason",
+        "attack_zone_enabled",
+        "combat_initial_hp",
+        "damage_per_step",
+        "close_range_max_km",
+        "close_range_max_aoa_deg",
         "steps",
         "total_time_s",
         "total_reward",
@@ -899,6 +2632,8 @@ def _write_summary_csv(output_dir: Path, records: List[Dict[str, Any]]) -> Path:
                 "method_label": rec.get("method_label"),
                 "agent_type": rec.get("agent_type"),
                 "prediction_variant": rec.get("prediction_variant"),
+                "run_status": rec.get("run_status"),
+                "mode": rec.get("mode"),
                 "opponent_stage": rec.get("opponent_stage"),
                 "task": rec.get("task"),
                 "scenario": rec.get("scenario"),
@@ -913,6 +2648,11 @@ def _write_summary_csv(output_dir: Path, records: List[Dict[str, Any]]) -> Path:
                 "loss": rec.get("loss"),
                 "draw": rec.get("draw"),
                 "termination_reason": rec.get("termination_reason"),
+                "attack_zone_enabled": rec.get("attack_zone_enabled"),
+                "combat_initial_hp": rec.get("combat_initial_hp"),
+                "damage_per_step": rec.get("damage_per_step"),
+                "close_range_max_km": rec.get("close_range_max_km"),
+                "close_range_max_aoa_deg": rec.get("close_range_max_aoa_deg"),
                 "steps": rec.get("steps"),
                 "total_time_s": rec.get("total_time_s"),
                 "total_reward": rec.get("total_reward"),
@@ -961,7 +2701,14 @@ def _write_aggregate_summary(output_dir: Path, records: List[Dict[str, Any]]) ->
             {
                 "method": rec["controller"],
                 "task": rec["task"],
+                "run_status": rec.get("run_status"),
+                "mode": rec.get("mode"),
                 "opponent_stage": opponent_stage,
+                "attack_zone_enabled": rec.get("attack_zone_enabled"),
+                "combat_initial_hp": rec.get("combat_initial_hp"),
+                "damage_per_step": rec.get("damage_per_step"),
+                "close_range_max_km": rec.get("close_range_max_km"),
+                "close_range_max_aoa_deg": rec.get("close_range_max_aoa_deg"),
                 "episodes": 0,
                 "records": [],
                 "successes": 0,
@@ -977,6 +2724,10 @@ def _write_aggregate_summary(output_dir: Path, records: List[Dict[str, Any]]) ->
                 "prediction_valid_rates": [],
                 "prediction_fallback_rates": [],
                 "backend_fallbacks": 0,
+                "ego_crashes": 0,
+                "target_crash_or_oob": 0,
+                "crashes": 0,
+                "timeouts": 0,
             },
         )
         item["episodes"] += 1
@@ -997,16 +2748,36 @@ def _write_aggregate_summary(output_dir: Path, records: List[Dict[str, Any]]) ->
         item["prediction_valid_rates"].append(float(rec.get("prediction_valid_rate", 0.0)))
         item["prediction_fallback_rates"].append(float(rec.get("prediction_fallback_rate", 0.0)))
         item["backend_fallbacks"] += int(bool(rec.get("backend_fallback_occurred", False)))
+        item["ego_crashes"] += int(_record_has_ego_crash(rec))
+        item["target_crash_or_oob"] += int(_record_has_target_crash_or_oob(rec))
+        item["crashes"] = item["ego_crashes"] + item["target_crash_or_oob"]
+        item["timeouts"] += int(_record_has_timeout(rec))
 
     rows = []
     for item in aggregate.values():
         episodes = max(1, int(item["episodes"]))
         combat_metrics = compute_combat_metrics(item["records"])
+        group = _summary_group(
+            task=item["task"],
+            method=item["method"],
+            opponent_stage=item["opponent_stage"],
+            damage_per_step=item["damage_per_step"],
+            close_range_max_km=item["close_range_max_km"],
+            close_range_max_aoa_deg=item["close_range_max_aoa_deg"],
+        )
         rows.append(
             {
+                "group": group,
                 "method": item["method"],
                 "task": item["task"],
+                "run_status": item["run_status"],
+                "mode": item["mode"],
                 "opponent_stage": item["opponent_stage"],
+                "attack_zone_enabled": item["attack_zone_enabled"],
+                "combat_initial_hp": item["combat_initial_hp"],
+                "damage_per_step": item["damage_per_step"],
+                "close_range_max_km": item["close_range_max_km"],
+                "close_range_max_aoa_deg": item["close_range_max_aoa_deg"],
                 "episodes": item["episodes"],
                 "success_rate": item["successes"] / episodes,
                 "combat_success_rate": combat_metrics["combat_success_rate"],
@@ -1031,6 +2802,10 @@ def _write_aggregate_summary(output_dir: Path, records: List[Dict[str, Any]]) ->
                 "mean_prediction_valid_rate": float(np.mean(item["prediction_valid_rates"])),
                 "mean_prediction_fallback_rate": float(np.mean(item["prediction_fallback_rates"])),
                 "backend_fallbacks": item["backend_fallbacks"],
+                "ego_crashes": item["ego_crashes"],
+                "target_crash_or_oob": item["target_crash_or_oob"],
+                "crashes": item["crashes"],
+                "timeouts": item["timeouts"],
             }
         )
 
@@ -1039,6 +2814,453 @@ def _write_aggregate_summary(output_dir: Path, records: List[Dict[str, Any]]) ->
     with open(path, "w", encoding="utf-8") as f:
         json.dump({"rows": rows}, f, indent=2, ensure_ascii=False)
     return path
+
+
+def _write_combat_geometry_diagnostics(
+    output_dir: Path,
+    records: List[Dict[str, Any]],
+) -> Path:
+    episode_rows: List[Dict[str, Any]] = []
+    grouped: Dict[Tuple[str, str, str], List[Dict[str, Any]]] = {}
+    for rec in records:
+        diagnostics = summarize_episode_combat_geometry(rec)
+        rec.update(diagnostics)
+        trajectory = rec.get("trajectory", [])
+        first_step = trajectory[0] if trajectory else {}
+        row = {
+            "method": rec.get("controller"),
+            "task": rec.get("task"),
+            "opponent_stage": rec.get("opponent_stage", "none"),
+            "run_status": rec.get("run_status"),
+            "mode": rec.get("mode"),
+            "seed": rec.get("seed"),
+            "episode": rec.get("episode"),
+            "scenario": rec.get("scenario"),
+            "offset_frame": first_step.get("offset_frame"),
+            "configured_offset_frame": first_step.get("configured_offset_frame"),
+            "virtual_point_source": first_step.get("virtual_point_source"),
+            "anchor_mode": first_step.get("anchor_mode"),
+            "anchor_mode_requested": first_step.get("anchor_mode_requested"),
+            "close_range_anchor_mode": first_step.get("close_range_anchor_mode"),
+            "close_range_anchor_trigger_range_m": first_step.get(
+                "close_range_anchor_trigger_range_m"
+            ),
+            "close_range_anchor_release_on_post_merge": bool(
+                first_step.get("close_range_anchor_release_on_post_merge", False)
+            ),
+            "close_range_anchor_requires_first_pass": bool(
+                first_step.get("close_range_anchor_requires_first_pass", False)
+            ),
+            "close_range_anchor_offensive_anchor_blend": first_step.get(
+                "close_range_anchor_offensive_anchor_blend"
+            ),
+            "close_range_anchor_offensive_anchor_blend_active": bool(
+                first_step.get("close_range_anchor_offensive_anchor_blend_active", False)
+            ),
+            "close_range_anchor_post_merge_hold_steps": first_step.get(
+                "close_range_anchor_post_merge_hold_steps"
+            ),
+            "close_range_anchor_alignment_angle_deg_max": first_step.get(
+                "close_range_anchor_alignment_angle_deg_max"
+            ),
+            "close_range_anchor_release_alignment_angle_deg_max": first_step.get(
+                "close_range_anchor_release_alignment_angle_deg_max"
+            ),
+            "offensive_anchor_frame": first_step.get("offensive_anchor_frame"),
+            "offensive_anchor_lateral_frame": first_step.get(
+                "offensive_anchor_lateral_frame"
+            ),
+            "offensive_anchor_lateral_sign_mode": first_step.get(
+                "offensive_anchor_lateral_sign_mode"
+            ),
+            "offensive_anchor_lateral_sign": first_step.get(
+                "offensive_anchor_lateral_sign"
+            ),
+            "offensive_anchor_longitudinal_m": first_step.get(
+                "offensive_anchor_longitudinal_m"
+            ),
+            "offensive_anchor_lateral_m": first_step.get("offensive_anchor_lateral_m"),
+            "offensive_anchor_vertical_m": first_step.get("offensive_anchor_vertical_m"),
+            "post_merge_predicted_target_forward_scale": first_step.get(
+                "post_merge_predicted_target_forward_scale"
+            ),
+            "post_merge_predicted_target_forward_scale_release_scale": first_step.get(
+                "post_merge_predicted_target_forward_scale_release_scale"
+            ),
+            "post_merge_predicted_target_forward_scale_release_ego_only_streak_steps": (
+                first_step.get(
+                    "post_merge_predicted_target_forward_scale_release_ego_only_streak_steps"
+                )
+            ),
+            "post_merge_predicted_target_forward_scale_release_reset_on_streak_break": bool(
+                first_step.get(
+                    "post_merge_predicted_target_forward_scale_release_reset_on_streak_break",
+                    False,
+                )
+            ),
+            "post_merge_predicted_target_forward_scale_hold_steps": first_step.get(
+                "post_merge_predicted_target_forward_scale_hold_steps"
+            ),
+            "post_merge_anchor_mode": first_step.get("post_merge_anchor_mode"),
+            "post_merge_anchor_mode_requires_geometry_disadvantage": bool(
+                first_step.get(
+                    "post_merge_anchor_mode_requires_geometry_disadvantage",
+                    False,
+                )
+            ),
+            "post_merge_anchor_mode_release_ego_only_streak_steps": first_step.get(
+                "post_merge_anchor_mode_release_ego_only_streak_steps"
+            ),
+            "post_merge_anchor_mode_recovery_below_altitude_m": first_step.get(
+                "post_merge_anchor_mode_recovery_below_altitude_m"
+            ),
+            "post_merge_anchor_mode_release_reset_on_streak_break": bool(
+                first_step.get(
+                    "post_merge_anchor_mode_release_reset_on_streak_break",
+                    False,
+                )
+            ),
+            "post_merge_anchor_mode_offensive_anchor_blend": first_step.get(
+                "post_merge_anchor_mode_offensive_anchor_blend"
+            ),
+            "post_merge_anchor_mode_offensive_anchor_longitudinal_blend": first_step.get(
+                "post_merge_anchor_mode_offensive_anchor_longitudinal_blend"
+            ),
+            "post_merge_anchor_mode_offensive_anchor_lateral_blend": first_step.get(
+                "post_merge_anchor_mode_offensive_anchor_lateral_blend"
+            ),
+            "post_merge_anchor_mode_offensive_anchor_blend_active": bool(
+                first_step.get(
+                    "post_merge_anchor_mode_offensive_anchor_blend_active",
+                    False,
+                )
+            ),
+            "post_merge_anchor_mode_offensive_anchor_component_blend_active": bool(
+                first_step.get(
+                    "post_merge_anchor_mode_offensive_anchor_component_blend_active",
+                    False,
+                )
+            ),
+            "post_merge_anchor_mode_lateral_world_offset_latch_on_activation": bool(
+                first_step.get(
+                    "post_merge_anchor_mode_lateral_world_offset_latch_on_activation",
+                    False,
+                )
+            ),
+            "post_merge_offensive_anchor_blend_requires_geometry_disadvantage": bool(
+                first_step.get(
+                    "post_merge_offensive_anchor_blend_requires_geometry_disadvantage",
+                    False,
+                )
+            ),
+            "post_merge_offensive_anchor_blend_release_blend": first_step.get(
+                "post_merge_offensive_anchor_blend_release_blend"
+            ),
+            "post_merge_offensive_anchor_blend_release_ego_only_streak_steps": (
+                first_step.get(
+                    "post_merge_offensive_anchor_blend_release_ego_only_streak_steps"
+                )
+            ),
+            "post_merge_offensive_anchor_blend_release_reset_on_streak_break": bool(
+                first_step.get(
+                    "post_merge_offensive_anchor_blend_release_reset_on_streak_break",
+                    False,
+                )
+            ),
+            "post_merge_offensive_anchor_blend_release_direct_track_enabled": bool(
+                first_step.get(
+                    "post_merge_offensive_anchor_blend_release_direct_track_enabled",
+                    True,
+                )
+            ),
+            "post_merge_offensive_anchor_blend_release_direct_track_below_altitude_m": (
+                first_step.get(
+                    "post_merge_offensive_anchor_blend_release_direct_track_below_altitude_m"
+                )
+            ),
+            "post_merge_offensive_anchor_blend_release_recovery_below_altitude_m": (
+                first_step.get(
+                    "post_merge_offensive_anchor_blend_release_recovery_below_altitude_m"
+                )
+            ),
+            "post_merge_offensive_anchor_blend_release_recovery_longitudinal_blend": (
+                first_step.get(
+                    "post_merge_offensive_anchor_blend_release_recovery_longitudinal_blend"
+                )
+            ),
+            "post_merge_offensive_anchor_blend_release_recovery_lateral_blend": (
+                first_step.get(
+                    "post_merge_offensive_anchor_blend_release_recovery_lateral_blend"
+                )
+            ),
+            "post_merge_offensive_anchor_blend_release_recovery_forward_bias_m_max": (
+                first_step.get(
+                    "post_merge_offensive_anchor_blend_release_recovery_forward_bias_m_max"
+                )
+            ),
+            "post_merge_offensive_anchor_blend_release_vp_forward_bias_m_min": (
+                first_step.get(
+                    "post_merge_offensive_anchor_blend_release_vp_forward_bias_m_min"
+                )
+            ),
+            "post_merge_offensive_anchor_blend_release_lateral_only_hold_steps": (
+                first_step.get(
+                    "post_merge_offensive_anchor_blend_release_lateral_only_hold_steps"
+                )
+            ),
+            "effective_guidance_mode": first_step.get("effective_guidance_mode"),
+            "mode_switch_effective": any(
+                bool(step.get("mode_switch_effective", False))
+                for step in trajectory
+            ),
+            "direct_track_mode_effective": any(
+                bool(step.get("direct_track_mode_effective", False))
+                for step in trajectory
+            ),
+            **diagnostics,
+        }
+        episode_rows.append(row)
+        key = (
+            str(row["method"]),
+            str(row["task"]),
+            str(row["opponent_stage"]),
+        )
+        grouped.setdefault(key, []).append(row)
+
+    rows: List[Dict[str, Any]] = []
+    for (method, task, opponent_stage), items in sorted(grouped.items()):
+        row = {
+            "method": method,
+            "task": task,
+            "opponent_stage": opponent_stage,
+            "episodes": len(items),
+            "run_status": items[0].get("run_status"),
+            "mode": items[0].get("mode"),
+            "offset_frame": items[0].get("offset_frame"),
+            "configured_offset_frame": items[0].get("configured_offset_frame"),
+            "virtual_point_source": items[0].get("virtual_point_source"),
+            "anchor_mode": items[0].get("anchor_mode"),
+            "anchor_mode_requested": items[0].get("anchor_mode_requested"),
+            "close_range_anchor_mode": items[0].get("close_range_anchor_mode"),
+            "close_range_anchor_trigger_range_m": items[0].get(
+                "close_range_anchor_trigger_range_m"
+            ),
+            "close_range_anchor_release_on_post_merge": items[0].get(
+                "close_range_anchor_release_on_post_merge"
+            ),
+            "close_range_anchor_requires_first_pass": items[0].get(
+                "close_range_anchor_requires_first_pass"
+            ),
+            "close_range_anchor_offensive_anchor_blend": items[0].get(
+                "close_range_anchor_offensive_anchor_blend"
+            ),
+            "close_range_anchor_offensive_anchor_blend_active": items[0].get(
+                "close_range_anchor_offensive_anchor_blend_active"
+            ),
+            "close_range_anchor_post_merge_hold_steps": items[0].get(
+                "close_range_anchor_post_merge_hold_steps"
+            ),
+            "close_range_anchor_alignment_angle_deg_max": items[0].get(
+                "close_range_anchor_alignment_angle_deg_max"
+            ),
+            "close_range_anchor_release_alignment_angle_deg_max": items[0].get(
+                "close_range_anchor_release_alignment_angle_deg_max"
+            ),
+            "offensive_anchor_frame": items[0].get("offensive_anchor_frame"),
+            "offensive_anchor_lateral_frame": items[0].get(
+                "offensive_anchor_lateral_frame"
+            ),
+            "offensive_anchor_lateral_sign_mode": items[0].get(
+                "offensive_anchor_lateral_sign_mode"
+            ),
+            "offensive_anchor_lateral_sign": items[0].get(
+                "offensive_anchor_lateral_sign"
+            ),
+            "offensive_anchor_longitudinal_m": items[0].get(
+                "offensive_anchor_longitudinal_m"
+            ),
+            "offensive_anchor_lateral_m": items[0].get("offensive_anchor_lateral_m"),
+            "offensive_anchor_vertical_m": items[0].get("offensive_anchor_vertical_m"),
+            "post_merge_predicted_target_forward_scale": items[0].get(
+                "post_merge_predicted_target_forward_scale"
+            ),
+            "post_merge_predicted_target_forward_scale_release_scale": items[0].get(
+                "post_merge_predicted_target_forward_scale_release_scale"
+            ),
+            "post_merge_predicted_target_forward_scale_release_ego_only_streak_steps": (
+                items[0].get(
+                    "post_merge_predicted_target_forward_scale_release_ego_only_streak_steps"
+                )
+            ),
+            "post_merge_predicted_target_forward_scale_release_reset_on_streak_break": (
+                items[0].get(
+                    "post_merge_predicted_target_forward_scale_release_reset_on_streak_break"
+                )
+            ),
+            "post_merge_predicted_target_forward_scale_hold_steps": items[0].get(
+                "post_merge_predicted_target_forward_scale_hold_steps"
+            ),
+            "post_merge_anchor_mode": items[0].get("post_merge_anchor_mode"),
+            "post_merge_anchor_mode_requires_geometry_disadvantage": items[0].get(
+                "post_merge_anchor_mode_requires_geometry_disadvantage"
+            ),
+            "post_merge_anchor_mode_release_ego_only_streak_steps": items[0].get(
+                "post_merge_anchor_mode_release_ego_only_streak_steps"
+            ),
+            "post_merge_anchor_mode_recovery_below_altitude_m": items[0].get(
+                "post_merge_anchor_mode_recovery_below_altitude_m"
+            ),
+            "post_merge_anchor_mode_release_reset_on_streak_break": items[0].get(
+                "post_merge_anchor_mode_release_reset_on_streak_break"
+            ),
+            "post_merge_anchor_mode_offensive_anchor_blend": items[0].get(
+                "post_merge_anchor_mode_offensive_anchor_blend"
+            ),
+            "post_merge_anchor_mode_offensive_anchor_longitudinal_blend": items[0].get(
+                "post_merge_anchor_mode_offensive_anchor_longitudinal_blend"
+            ),
+            "post_merge_anchor_mode_offensive_anchor_lateral_blend": items[0].get(
+                "post_merge_anchor_mode_offensive_anchor_lateral_blend"
+            ),
+            "post_merge_anchor_mode_offensive_anchor_blend_active": items[0].get(
+                "post_merge_anchor_mode_offensive_anchor_blend_active"
+            ),
+            "post_merge_anchor_mode_offensive_anchor_component_blend_active": items[0].get(
+                "post_merge_anchor_mode_offensive_anchor_component_blend_active"
+            ),
+            "post_merge_anchor_mode_lateral_world_offset_latch_on_activation": items[
+                0
+            ].get("post_merge_anchor_mode_lateral_world_offset_latch_on_activation"),
+            "post_merge_offensive_anchor_blend_requires_geometry_disadvantage": items[
+                0
+            ].get("post_merge_offensive_anchor_blend_requires_geometry_disadvantage"),
+            "post_merge_offensive_anchor_blend_release_blend": items[0].get(
+                "post_merge_offensive_anchor_blend_release_blend"
+            ),
+            "post_merge_offensive_anchor_blend_release_ego_only_streak_steps": items[
+                0
+            ].get("post_merge_offensive_anchor_blend_release_ego_only_streak_steps"),
+            "post_merge_offensive_anchor_blend_release_reset_on_streak_break": items[
+                0
+            ].get("post_merge_offensive_anchor_blend_release_reset_on_streak_break"),
+            "post_merge_offensive_anchor_blend_release_direct_track_enabled": items[
+                0
+            ].get("post_merge_offensive_anchor_blend_release_direct_track_enabled"),
+            "post_merge_offensive_anchor_blend_release_direct_track_below_altitude_m": (
+                items[0].get(
+                    "post_merge_offensive_anchor_blend_release_direct_track_below_altitude_m"
+                )
+            ),
+            "post_merge_offensive_anchor_blend_release_recovery_below_altitude_m": (
+                items[0].get(
+                    "post_merge_offensive_anchor_blend_release_recovery_below_altitude_m"
+                )
+            ),
+            "post_merge_offensive_anchor_blend_release_recovery_longitudinal_blend": (
+                items[0].get(
+                    "post_merge_offensive_anchor_blend_release_recovery_longitudinal_blend"
+                )
+            ),
+            "post_merge_offensive_anchor_blend_release_recovery_lateral_blend": (
+                items[0].get(
+                    "post_merge_offensive_anchor_blend_release_recovery_lateral_blend"
+                )
+            ),
+            "post_merge_offensive_anchor_blend_release_recovery_forward_bias_m_max": (
+                items[0].get(
+                    "post_merge_offensive_anchor_blend_release_recovery_forward_bias_m_max"
+                )
+            ),
+            "post_merge_offensive_anchor_blend_release_vp_forward_bias_m_min": (
+                items[0].get(
+                    "post_merge_offensive_anchor_blend_release_vp_forward_bias_m_min"
+                )
+            ),
+            "post_merge_offensive_anchor_blend_release_lateral_only_hold_steps": items[
+                0
+            ].get("post_merge_offensive_anchor_blend_release_lateral_only_hold_steps"),
+            "effective_guidance_mode": items[0].get("effective_guidance_mode"),
+            "mode_switch_effective": any(
+                bool(item.get("mode_switch_effective", False)) for item in items
+            ),
+            "direct_track_mode_effective": any(
+                bool(item.get("direct_track_mode_effective", False))
+                for item in items
+            ),
+        }
+        for metric in COMBAT_GEOMETRY_DIAGNOSTIC_METRICS:
+            row[metric] = _finite_mean(item.get(metric) for item in items)
+        rows.append(row)
+
+    path = output_dir / "aggregate" / "combat_geometry_diagnostics.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(
+            {
+                "metrics": list(COMBAT_GEOMETRY_DIAGNOSTIC_METRICS),
+                "rows": rows,
+                "episode_rows": episode_rows,
+            },
+            f,
+            indent=2,
+            ensure_ascii=False,
+        )
+    return path
+
+
+def _summary_group_value(value: Any) -> str:
+    if value is None:
+        return "None"
+    if isinstance(value, (int, float)) and not np.isfinite(float(value)):
+        return "None"
+    return str(value)
+
+
+def _summary_group(
+    *,
+    task: str,
+    method: str,
+    opponent_stage: str,
+    damage_per_step: Any,
+    close_range_max_km: Any,
+    close_range_max_aoa_deg: Any,
+) -> str:
+    return "::".join(
+        [
+            str(task),
+            str(method),
+            str(opponent_stage),
+            f"d{_summary_group_value(damage_per_step)}",
+            f"r{_summary_group_value(close_range_max_km)}",
+            f"a{_summary_group_value(close_range_max_aoa_deg)}",
+        ]
+    )
+
+
+def _record_reason_text(rec: Dict[str, Any]) -> str:
+    return f"{rec.get('termination_reason', '')} {rec.get('combat_reason', '')}".lower()
+
+
+def _record_has_target_crash_or_oob(rec: Dict[str, Any]) -> bool:
+    reason = _record_reason_text(rec)
+    return "target_crash_or_out_of_bounds" in reason
+
+
+def _record_has_ego_crash(rec: Dict[str, Any]) -> bool:
+    reason = _record_reason_text(rec)
+    if _record_has_target_crash_or_oob(rec):
+        return False
+    return "crash" in reason or "out_of_bounds" in reason
+
+
+def _record_has_crash(rec: Dict[str, Any]) -> bool:
+    reason = f"{rec.get('termination_reason', '')} {rec.get('combat_reason', '')}".lower()
+    return "crash" in reason or "out_of_bounds" in reason
+
+
+def _record_has_timeout(rec: Dict[str, Any]) -> bool:
+    reason = _record_reason_text(rec)
+    return "timeout" in reason or bool(rec.get("is_timeout", False))
 
 
 def _write_config_snapshots(
@@ -1129,6 +3351,7 @@ def _contract_for_run(dry_run: bool) -> ArtifactContract:
             "summary.csv",
             "aggregate/episode_records.json",
             "aggregate/method_task_summary.json",
+            "aggregate/combat_geometry_diagnostics.json",
             "design_notes.json",
             "observation_audit.json",
             "artifact_contract.json",
@@ -1160,6 +3383,1116 @@ def _parse_args() -> argparse.Namespace:
         default=None,
         help="Legacy project root containing envs/JSBSim/data; recorded as env.legacy_project_root.",
     )
+    parser.add_argument(
+        "--attack-zone-enabled",
+        choices=["auto", "true", "false"],
+        default="auto",
+        help="Override attack_zone.enabled. auto keeps the config/opponent-stage behavior.",
+    )
+    parser.add_argument("--attack-zone-initial-hp", type=float, default=None)
+    parser.add_argument("--attack-zone-damage-per-step", type=float, default=None)
+    parser.add_argument("--attack-zone-close-range-max-km", type=float, default=None)
+    parser.add_argument(
+        "--attack-zone-close-range-max-aoa-deg",
+        type=float,
+        default=None,
+        help="Explicit close-range attack-zone angle threshold in degrees.",
+    )
+    parser.add_argument(
+        "--prediction-lookahead-time-s",
+        type=float,
+        default=None,
+        help="Override trajectory_prediction.prediction.lookahead_time_s for prediction-enabled methods.",
+    )
+    parser.add_argument(
+        "--vpp-offset-frame",
+        choices=["world_neu", "target_velocity", "los_relative"],
+        default=None,
+        help="Explicitly set virtual_point.offset_frame for VPP methods.",
+    )
+    parser.add_argument(
+        "--vpp-offset-frame-by-task",
+        default=None,
+        help=(
+            "Task-conditioned virtual_point.offset_frame mapping, for example "
+            "'head_on=target_velocity,crossing_feasible=world_neu'."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-predicted-target-blend",
+        type=float,
+        default=None,
+        help=(
+            "Blend factor in [0, 1] for predicted_target anchors. "
+            "1.0 keeps the full predicted anchor and 0.0 falls back to current_target."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-predicted-target-blend-by-task",
+        default=None,
+        help=(
+            "Task-conditioned predicted-target anchor blend mapping, for example "
+            "'head_on=0.35,crossing_feasible=1.0'."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-predicted-target-forward-scale",
+        type=float,
+        default=None,
+        help=(
+            "Scale in [0, 1] applied to the target-velocity-frame forward "
+            "component of predicted-target anchors before post-merge logic."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-predicted-target-forward-scale-by-task",
+        default=None,
+        help=(
+            "Task-conditioned predicted-target forward-scale mapping, for example "
+            "'head_on=0.0,crossing_feasible=1.0'."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-post-merge-predicted-target-blend",
+        type=float,
+        default=None,
+        help=(
+            "Optional predicted-target blend in [0, 1] that only applies "
+            "after first pass is complete."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-post-merge-predicted-target-blend-by-task",
+        default=None,
+        help=(
+            "Task-conditioned post-merge predicted-target blend mapping, for example "
+            "'head_on=0.5,crossing_feasible=1.0'."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-post-merge-offensive-anchor-blend",
+        type=float,
+        default=None,
+        help=(
+            "Optional blend in [0, 1] from the active post-merge anchor toward "
+            "the offensive-position anchor."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-post-merge-offensive-anchor-blend-by-task",
+        default=None,
+        help=(
+            "Task-conditioned post-merge offensive-anchor blend mapping, for "
+            "example 'head_on=0.25,crossing_feasible=0.0'."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-post-merge-offensive-anchor-longitudinal-scale",
+        type=float,
+        default=None,
+        help=(
+            "Optional longitudinal action scale override that only applies "
+            "while the post-merge offensive-anchor blend is active."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-post-merge-offensive-anchor-longitudinal-scale-by-task",
+        default=None,
+        help=(
+            "Task-conditioned longitudinal action scale override that only "
+            "applies while the post-merge offensive-anchor blend is active, "
+            "for example 'head_on=0.25,crossing_feasible=1.0'."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-post-merge-offensive-anchor-lateral-scale",
+        type=float,
+        default=None,
+        help=(
+            "Optional lateral action scale override that only applies while "
+            "the post-merge offensive-anchor blend is active."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-post-merge-offensive-anchor-lateral-scale-by-task",
+        default=None,
+        help=(
+            "Task-conditioned lateral action scale override that only applies "
+            "while the post-merge offensive-anchor blend is active, for "
+            "example 'head_on=1.0,crossing_feasible=1.0'."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-post-merge-offensive-anchor-blend-requires-geometry-disadvantage",
+        choices=["true", "false"],
+        default=None,
+        help=(
+            "Whether post-merge offensive-anchor blending should activate only "
+            "after target-side attack-zone / score disadvantage appears."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-post-merge-offensive-anchor-blend-requires-geometry-disadvantage-by-task",
+        default=None,
+        help=(
+            "Task-conditioned boolean mapping for gating post-merge offensive-"
+            "anchor blending on target-side geometry disadvantage, for example "
+            "'head_on=true,crossing_feasible=false'."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-post-merge-offensive-anchor-geometry-disadvantage-aa-deg-min",
+        type=float,
+        default=None,
+        help=(
+            "Optional AA threshold for early post-merge offensive-anchor "
+            "geometry-disadvantage activation."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-post-merge-offensive-anchor-geometry-disadvantage-aa-deg-min-by-task",
+        default=None,
+        help=(
+            "Task-conditioned AA threshold mapping for early post-merge "
+            "offensive-anchor geometry disadvantage, for example "
+            "'head_on=170.0'."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-post-merge-offensive-anchor-blend-release-blend",
+        type=float,
+        default=None,
+        help=(
+            "Optional offensive-anchor blend in [0, 1] to use after the "
+            "stronger post-merge offensive-anchor blend releases."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-post-merge-offensive-anchor-blend-release-blend-by-task",
+        default=None,
+        help=(
+            "Task-conditioned release-blend mapping for post-merge offensive-"
+            "anchor blending, for example 'head_on=0.0,crossing_feasible=0.0'."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-post-merge-offensive-anchor-blend-release-ego-only-streak-steps",
+        type=int,
+        default=None,
+        help=(
+            "Release the stronger post-merge offensive-anchor blend after this "
+            "many consecutive post-merge ego-only attack-zone steps."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-post-merge-offensive-anchor-blend-release-ego-only-streak-steps-by-task",
+        default=None,
+        help=(
+            "Task-conditioned consecutive post-merge ego-only attack-zone streak "
+            "needed to release the stronger offensive-anchor blend, for example "
+            "'head_on=5,crossing_feasible=0'."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-post-merge-offensive-anchor-blend-release-reset-on-streak-break",
+        choices=["true", "false"],
+        default=None,
+        help=(
+            "Whether to re-arm the stronger post-merge offensive-anchor blend "
+            "once the post-merge ego-only attack-zone streak breaks after release."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-post-merge-offensive-anchor-blend-release-reset-on-streak-break-by-task",
+        default=None,
+        help=(
+            "Task-conditioned boolean mapping for re-arming the stronger post-"
+            "merge offensive-anchor blend when the ego-only attack-zone streak "
+            "breaks, for example 'head_on=true,crossing_feasible=false'."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-post-merge-offensive-anchor-blend-release-direct-track-below-altitude-m",
+        type=float,
+        default=None,
+        help=(
+            "If set, then after the stronger post-merge offensive-anchor blend "
+            "has released, request direct-track recovery once the ego altitude "
+            "drops below this threshold while the fight is opening and neither "
+            "aircraft is currently in the attack zone."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-post-merge-offensive-anchor-blend-release-direct-track-below-altitude-m-by-task",
+        default=None,
+        help=(
+            "Task-conditioned altitude threshold mapping for release-phase "
+            "direct-track recovery after the stronger offensive-anchor blend "
+            "has released, for example 'head_on=800,crossing_feasible=0'."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-post-merge-offensive-anchor-blend-release-direct-track-enabled",
+        type=lambda x: x.lower() in ("true", "1", "yes"),
+        default=None,
+        help=(
+            "Global switch to enable or disable the post-merge offensive-anchor "
+            "blend release direct-track path. When false, the direct-track "
+            "recovery is never requested even if the altitude threshold is set."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-post-merge-offensive-anchor-blend-release-direct-track-enabled-by-task",
+        default=None,
+        help=(
+            "Task-conditioned boolean mapping for the direct-track enabled switch, "
+            "for example 'head_on=false,crossing_feasible=true'."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-post-merge-offensive-anchor-blend-release-recovery-below-altitude-m",
+        type=float,
+        default=None,
+        help=(
+            "Optional altitude threshold for activating the shallow post-release "
+            "rear-quarter recovery stage while the fight is opening and neither "
+            "aircraft is currently in the attack zone."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-post-merge-offensive-anchor-blend-release-recovery-below-altitude-m-by-task",
+        default=None,
+        help=(
+            "Task-conditioned altitude threshold mapping for the post-release "
+            "rear-quarter recovery stage, for example "
+            "'head_on=4500,crossing_feasible=0'."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-post-merge-offensive-anchor-blend-release-recovery-longitudinal-blend",
+        type=float,
+        default=None,
+        help=(
+            "Optional longitudinal offensive-anchor component blend in [0, 1] "
+            "used by the post-release rear-quarter recovery stage."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-post-merge-offensive-anchor-blend-release-recovery-longitudinal-blend-by-task",
+        default=None,
+        help=(
+            "Task-conditioned longitudinal component blend mapping for the "
+            "post-release rear-quarter recovery stage, for example "
+            "'head_on=0.0,crossing_feasible=0.0'."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-post-merge-offensive-anchor-blend-release-recovery-lateral-blend",
+        type=float,
+        default=None,
+        help=(
+            "Optional lateral offensive-anchor component blend in [0, 1] used "
+            "by the post-release rear-quarter recovery stage."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-post-merge-offensive-anchor-blend-release-recovery-lateral-blend-by-task",
+        default=None,
+        help=(
+            "Task-conditioned lateral component blend mapping for the "
+            "post-release rear-quarter recovery stage, for example "
+            "'head_on=0.25,crossing_feasible=0.0'."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-post-merge-offensive-anchor-blend-release-recovery-forward-bias-m-max",
+        type=float,
+        default=None,
+        help=(
+            "Optional target-velocity forward-bias threshold in meters for "
+            "activating the post-release rear-quarter recovery stage before the "
+            "altitude guard trips. More negative values require deeper overdrive."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-post-merge-offensive-anchor-blend-release-recovery-forward-bias-m-max-by-task",
+        default=None,
+        help=(
+            "Task-conditioned forward-bias threshold mapping for the post-release "
+            "rear-quarter recovery stage, for example 'head_on=-4500'."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-post-merge-offensive-anchor-blend-release-vp-forward-bias-m-min",
+        type=float,
+        default=None,
+        help=(
+            "Optional minimum allowed target-velocity forward bias in meters for "
+            "the released post-merge offensive-anchor path. More negative values "
+            "than this threshold are clamped without entering recovery."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-post-merge-offensive-anchor-blend-release-vp-forward-bias-m-min-by-task",
+        default=None,
+        help=(
+            "Task-conditioned minimum forward-bias clamp mapping for the released "
+            "post-merge offensive-anchor path, for example 'head_on=-4500'."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-post-merge-offensive-anchor-blend-release-vp-forward-bias-clamp-negative-lateral-below-altitude-m",
+        type=float,
+        default=None,
+        help=(
+            "Optional altitude gate in meters for the released forward-bias clamp. "
+            "When the clamp candidate still has negative target-velocity lateral "
+            "bias, clamp activation is deferred until own altitude is at or below "
+            "this threshold."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-post-merge-offensive-anchor-blend-release-vp-forward-bias-clamp-negative-lateral-below-altitude-m-by-task",
+        default=None,
+        help=(
+            "Task-conditioned altitude gate mapping for deferring the released "
+            "forward-bias clamp while target-velocity lateral bias is still "
+            "negative, for example 'head_on=4500'."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-post-merge-offensive-anchor-lateral-world-offset-latch-on-activation",
+        choices=["true", "false"],
+        default=None,
+        help=(
+            "Whether to latch the offensive-anchor lateral world offset once the "
+            "post-merge offensive-anchor blend first activates."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-post-merge-offensive-anchor-lateral-world-offset-latch-on-activation-by-task",
+        default=None,
+        help=(
+            "Task-conditioned boolean mapping for latching the offensive-anchor "
+            "lateral world offset when the post-merge offensive-anchor blend "
+            "activates, for example 'head_on=true,crossing_feasible=false'."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-post-merge-offensive-anchor-blend-release-lateral-only",
+        choices=["true", "false"],
+        default=None,
+        help=(
+            "Whether to keep only the latched offensive-anchor lateral body "
+            "after the stronger post-merge offensive-anchor blend releases."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-post-merge-offensive-anchor-blend-release-lateral-only-by-task",
+        default=None,
+        help=(
+            "Task-conditioned boolean mapping for keeping only the latched "
+            "offensive-anchor lateral body after the stronger post-merge "
+            "offensive-anchor blend releases, for example "
+            "'head_on=true,crossing_feasible=false'."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-post-merge-offensive-anchor-blend-release-lateral-only-hold-steps",
+        type=int,
+        default=None,
+        help=(
+            "Optional nonnegative step hold window for keeping only the latched "
+            "offensive-anchor lateral body after release before reverting to the "
+            "neutral no-direct-track path."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-post-merge-offensive-anchor-blend-release-lateral-only-hold-steps-by-task",
+        default=None,
+        help=(
+            "Task-conditioned nonnegative integer mapping for the lateral-only "
+            "post-release hold window, for example "
+            "'head_on=60,crossing_feasible=0'."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-post-merge-predicted-target-forward-scale",
+        type=float,
+        default=None,
+        help=(
+            "Optional post-merge scale in [0, 1] applied only to the "
+            "target-velocity-frame forward component of the predicted-target anchor."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-post-merge-predicted-target-forward-scale-by-task",
+        default=None,
+        help=(
+            "Task-conditioned post-merge predicted-target forward-scale mapping, "
+            "for example 'head_on=0.0,crossing_feasible=1.0'."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-post-merge-predicted-target-forward-scale-release-scale",
+        type=float,
+        default=None,
+        help=(
+            "Optional predicted-target forward scale in [0, 1] to use after the "
+            "reduced post-merge forward scale releases."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-post-merge-predicted-target-forward-scale-release-scale-by-task",
+        default=None,
+        help=(
+            "Task-conditioned release-scale mapping for post-merge predicted-target "
+            "forward scale, for example 'head_on=0.5,crossing_feasible=1.0'."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-post-merge-predicted-target-forward-scale-release-ego-only-streak-steps",
+        type=int,
+        default=None,
+        help=(
+            "Release the reduced post-merge predicted-target forward scale after "
+            "this many consecutive post-merge ego-only attack-zone steps."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-post-merge-predicted-target-forward-scale-release-ego-only-streak-steps-by-task",
+        default=None,
+        help=(
+            "Task-conditioned consecutive post-merge ego-only attack-zone streak "
+            "needed to release the reduced predicted-target forward scale, for "
+            "example 'head_on=35,crossing_feasible=0'."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-post-merge-predicted-target-forward-scale-release-reset-on-streak-break",
+        choices=["true", "false"],
+        default=None,
+        help=(
+            "Whether to re-arm the reduced post-merge predicted-target forward scale "
+            "once the post-merge ego-only attack-zone streak breaks after release."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-post-merge-predicted-target-forward-scale-release-reset-on-streak-break-by-task",
+        default=None,
+        help=(
+            "Task-conditioned boolean mapping for re-arming the reduced post-merge "
+            "predicted-target forward scale when the ego-only attack-zone streak "
+            "breaks, for example 'head_on=true,crossing_feasible=false'."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-post-merge-predicted-target-forward-scale-hold-steps",
+        type=int,
+        default=None,
+        help=(
+            "Limit the reduced post-merge predicted-target forward scale to this "
+            "many high-level steps after first pass."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-post-merge-predicted-target-forward-scale-hold-steps-by-task",
+        default=None,
+        help=(
+            "Task-conditioned hold-step mapping for the reduced post-merge "
+            "predicted-target forward scale, for example "
+            "'head_on=60,crossing_feasible=0'."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-post-merge-predicted-target-blend-release-on-attack-zone",
+        choices=["true", "false"],
+        default=None,
+        help=(
+            "Whether a reduced post-merge predicted-target blend should stop once "
+            "either aircraft enters the attack zone after first pass."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-post-merge-predicted-target-blend-release-on-attack-zone-by-task",
+        default=None,
+        help=(
+            "Task-conditioned boolean mapping for releasing the reduced post-merge "
+            "predicted-target blend on first post-merge attack-zone contact, for "
+            "example 'head_on=true,crossing_feasible=false'."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-post-merge-predicted-target-blend-release-requires-target-attack-zone",
+        choices=["true", "false"],
+        default=None,
+        help=(
+            "Whether post-merge blend release should wait for target attack-zone "
+            "exposure instead of any attack-zone contact."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-post-merge-predicted-target-blend-release-requires-target-attack-zone-by-task",
+        default=None,
+        help=(
+            "Task-conditioned boolean mapping for waiting until the target enters "
+            "the attack zone before releasing the reduced post-merge predicted-"
+            "target blend, for example 'head_on=true,crossing_feasible=false'."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-post-merge-predicted-target-blend-release-below-altitude-m",
+        type=float,
+        default=None,
+        help=(
+            "Release the reduced post-merge predicted-target blend once own "
+            "altitude drops below this threshold."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-post-merge-predicted-target-blend-release-below-altitude-m-by-task",
+        default=None,
+        help=(
+            "Task-conditioned altitude threshold mapping for releasing the reduced "
+            "post-merge predicted-target blend, for example "
+            "'head_on=2000,crossing_feasible=0'."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-post-merge-predicted-target-blend-hold-steps",
+        type=int,
+        default=None,
+        help=(
+            "Limit the reduced post-merge predicted-target blend to this many "
+            "high-level steps after first pass."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-post-merge-predicted-target-blend-hold-steps-by-task",
+        default=None,
+        help=(
+            "Task-conditioned hold-step mapping for the reduced post-merge "
+            "predicted-target blend, for example 'head_on=200,crossing_feasible=0'."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-post-merge-predicted-target-blend-release-blend",
+        type=float,
+        default=None,
+        help=(
+            "Optional predicted-target blend in [0, 1] to use after a reduced "
+            "post-merge predicted-target blend releases or expires."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-post-merge-predicted-target-blend-release-blend-by-task",
+        default=None,
+        help=(
+            "Task-conditioned post-release predicted-target blend mapping, for example "
+            "'head_on=0.75,crossing_feasible=1.0'."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-longitudinal-scale",
+        type=float,
+        default=None,
+        help="Scale the local VPP longitudinal offset component. 1.0 keeps current behavior.",
+    )
+    parser.add_argument(
+        "--vpp-longitudinal-scale-by-task",
+        default=None,
+        help=(
+            "Task-conditioned longitudinal offset scale mapping, for example "
+            "'head_on=0.0,crossing_feasible=1.0'."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-lateral-scale",
+        type=float,
+        default=None,
+        help="Scale the local VPP lateral offset component. 1.0 keeps current behavior.",
+    )
+    parser.add_argument(
+        "--vpp-lateral-scale-by-task",
+        default=None,
+        help=(
+            "Task-conditioned local VPP lateral offset scaling, for example "
+            "'head_on=0.0,crossing_feasible=1.0'."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-offensive-anchor-blend",
+        type=float,
+        default=None,
+        help=(
+            "Blend the current anchor toward an offensive behind-target anchor. "
+            "0 keeps current behavior and 1 uses the offensive anchor fully."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-offensive-anchor-blend-by-task",
+        default=None,
+        help=(
+            "Task-conditioned offensive-anchor blend mapping, for example "
+            "'head_on=0.25,crossing_feasible=0.0'."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-offensive-anchor-longitudinal-m",
+        type=float,
+        default=None,
+        help=(
+            "Distance in meters to place the offensive-position anchor behind the "
+            "target along the target-velocity axis."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-offensive-anchor-longitudinal-m-by-task",
+        default=None,
+        help=(
+            "Task-conditioned offensive anchor lag distance mapping in meters, for "
+            "example 'head_on=800,crossing_feasible=0'."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-offensive-anchor-frame",
+        choices=list(VALID_OFFSET_FRAMES),
+        default=None,
+        help=(
+            "Frame used to construct offensive_position anchors. Defaults to "
+            "target_velocity for backward compatibility."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-offensive-anchor-frame-by-task",
+        default=None,
+        help=(
+            "Task-conditioned offensive anchor frame mapping, for example "
+            "'head_on=encounter,crossing_feasible=target_velocity'."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-offensive-anchor-encounter-stable-max-heading-delta-deg",
+        type=float,
+        default=None,
+        help=(
+            "Clamp angle in degrees used when offensive_anchor_frame is "
+            "encounter_stable. Lower values keep the rear-quarter axis closer "
+            "to target motion."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-offensive-anchor-encounter-stable-max-heading-delta-deg-by-task",
+        default=None,
+        help=(
+            "Task-conditioned encounter_stable clamp angle mapping in degrees, "
+            "for example 'head_on=20,crossing_feasible=45'."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-offensive-anchor-lateral-frame",
+        choices=list(VALID_OFFSET_FRAMES),
+        default=None,
+        help=(
+            "Optional frame used only for the lateral component of offensive "
+            "anchors. Defaults to the offensive anchor frame."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-offensive-anchor-lateral-frame-by-task",
+        default=None,
+        help=(
+            "Task-conditioned offensive anchor lateral frame mapping, for example "
+            "'head_on=encounter,crossing_feasible=target_velocity'."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-offensive-anchor-lateral-sign-mode",
+        choices=list(VALID_OFFENSIVE_ANCHOR_LATERAL_SIGN_MODES),
+        default=None,
+        help=(
+            "How offensive-anchor lateral side is chosen: same_side keeps the "
+            "legacy rear-quarter side, while fixed_positive/fixed_negative force "
+            "a stable side sign."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-offensive-anchor-lateral-sign-mode-by-task",
+        default=None,
+        help=(
+            "Task-conditioned offensive anchor lateral sign mode mapping, for "
+            "example 'head_on=fixed_positive,crossing_feasible=same_side'."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-offensive-anchor-lateral-m",
+        type=float,
+        default=None,
+        help=(
+            "Same-side rear-quarter lateral offset in meters for offensive_position "
+            "anchors. Zero keeps the legacy straight-behind anchor."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-offensive-anchor-lateral-m-by-task",
+        default=None,
+        help=(
+            "Task-conditioned offensive anchor lateral distance mapping in meters, "
+            "for example 'head_on=400,crossing_feasible=0'."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-offensive-anchor-vertical-m",
+        type=float,
+        default=None,
+        help=(
+            "Vertical high-side offset in meters for offensive_position anchors. "
+            "Positive values place the anchor above the target."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-offensive-anchor-vertical-m-by-task",
+        default=None,
+        help=(
+            "Task-conditioned offensive anchor vertical distance mapping in meters, "
+            "for example 'head_on=500,crossing_feasible=0'."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-post-merge-anchor-mode",
+        choices=list(VALID_VPP_ANCHOR_MODES),
+        default=None,
+        help="Anchor mode to activate after first pass is complete.",
+    )
+    parser.add_argument(
+        "--vpp-post-merge-anchor-mode-by-task",
+        default=None,
+        help=(
+            "Task-conditioned post-merge anchor mode mapping, for example "
+            "'head_on=current_target,crossing_feasible=predicted_target'."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-post-merge-anchor-mode-requires-geometry-disadvantage",
+        default=None,
+        help=(
+            "Require the existing post-merge geometry gate before activating "
+            "the configured post-merge anchor mode. Accepts true or false."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-post-merge-anchor-mode-requires-geometry-disadvantage-by-task",
+        default=None,
+        help=(
+            "Task-conditioned post-merge anchor-mode gate mapping, for example "
+            "'head_on=true,crossing_feasible=false'."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-post-merge-anchor-mode-recovery-below-altitude-m",
+        type=float,
+        default=None,
+        help=(
+            "If set, the tactical post-merge anchor mode only activates in a "
+            "late reopening-recovery window: own altitude at or below this "
+            "threshold, range opening, and neither aircraft currently in the "
+            "attack zone."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-post-merge-anchor-mode-recovery-below-altitude-m-by-task",
+        default=None,
+        help=(
+            "Task-conditioned altitude threshold mapping for the tactical post-"
+            "merge anchor-mode reopening-recovery window, for example "
+            "'head_on=4500,crossing_feasible=0'."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-post-merge-anchor-mode-release-ego-only-streak-steps",
+        type=int,
+        default=None,
+        help=(
+            "Release the tactical post-merge anchor mode after this many "
+            "consecutive post-merge ego-only attack-zone steps."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-post-merge-anchor-mode-release-ego-only-streak-steps-by-task",
+        default=None,
+        help=(
+            "Task-conditioned consecutive post-merge ego-only attack-zone streak "
+            "needed to release the tactical post-merge anchor mode, for example "
+            "'head_on=1,crossing_feasible=0'."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-post-merge-anchor-mode-release-reset-on-streak-break",
+        choices=["true", "false"],
+        default=None,
+        help=(
+            "Whether to re-arm the tactical post-merge anchor mode when the "
+            "ego-only attack-zone streak breaks after release."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-post-merge-anchor-mode-release-reset-on-streak-break-by-task",
+        default=None,
+        help=(
+            "Task-conditioned boolean mapping for re-arming the tactical post-"
+            "merge anchor mode when the ego-only attack-zone streak breaks, for "
+            "example 'head_on=false,crossing_feasible=false'."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-post-merge-anchor-mode-offensive-anchor-blend",
+        type=float,
+        default=None,
+        help=(
+            "Optional blend in [0, 1] for expressing the tactical post-merge "
+            "anchor mode as a soft pull toward the configured offensive anchor "
+            "while preserving the underlying predicted-target anchor."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-post-merge-anchor-mode-offensive-anchor-blend-by-task",
+        default=None,
+        help=(
+            "Task-conditioned blend mapping for soft tactical post-merge anchor "
+            "mode activation, for example 'head_on=0.25,crossing_feasible=0'."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-post-merge-anchor-mode-offensive-anchor-longitudinal-blend",
+        type=float,
+        default=None,
+        help=(
+            "Optional longitudinal-only blend in [0, 1] for the soft tactical "
+            "post-merge anchor mode. Use this to control rear-lag depth "
+            "independently from lateral beam offset."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-post-merge-anchor-mode-offensive-anchor-longitudinal-blend-by-task",
+        default=None,
+        help=(
+            "Task-conditioned longitudinal-only blend mapping for the soft "
+            "tactical post-merge anchor mode, for example "
+            "'head_on=1.0,crossing_feasible=0'."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-post-merge-anchor-mode-offensive-anchor-lateral-blend",
+        type=float,
+        default=None,
+        help=(
+            "Optional lateral-only blend in [0, 1] for the soft tactical "
+            "post-merge anchor mode. Use this to control beam/side offset "
+            "independently from rear-lag depth."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-post-merge-anchor-mode-offensive-anchor-lateral-blend-by-task",
+        default=None,
+        help=(
+            "Task-conditioned lateral-only blend mapping for the soft tactical "
+            "post-merge anchor mode, for example "
+            "'head_on=0.25,crossing_feasible=0'."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-post-merge-anchor-mode-lateral-world-offset-latch-on-activation",
+        choices=("true", "false"),
+        default=None,
+        help=(
+            "Whether to latch the offensive-anchor lateral world offset at the "
+            "moment the tactical post-merge anchor mode first activates. This "
+            "keeps the rear-quarter side/body from rotating with later frame "
+            "updates."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-post-merge-anchor-mode-lateral-world-offset-latch-on-activation-by-task",
+        default=None,
+        help=(
+            "Task-conditioned boolean mapping for latching the tactical "
+            "post-merge anchor-mode lateral world offset on first activation, "
+            "for example 'head_on=true,crossing_feasible=false'."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-post-merge-anchor-mode-longitudinal-scale",
+        type=float,
+        default=None,
+        help=(
+            "Optional longitudinal policy-offset scale to apply only while the "
+            "tactical post-merge anchor mode is active. Use 0 to suppress "
+            "forward/back action drift and let the anchor geometry take over."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-post-merge-anchor-mode-longitudinal-scale-by-task",
+        default=None,
+        help=(
+            "Task-conditioned longitudinal policy-offset scale mapping for the "
+            "tactical post-merge anchor mode, for example "
+            "'head_on=0,crossing_feasible=1'."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-post-merge-anchor-mode-lateral-scale",
+        type=float,
+        default=None,
+        help=(
+            "Optional lateral policy-offset scale to apply only while the "
+            "tactical post-merge anchor mode is active. Use 0 to suppress "
+            "beam/bracket drift and keep the VP near the selected anchor."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-post-merge-anchor-mode-lateral-scale-by-task",
+        default=None,
+        help=(
+            "Task-conditioned lateral policy-offset scale mapping for the "
+            "tactical post-merge anchor mode, for example "
+            "'head_on=0,crossing_feasible=1'."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-close-range-anchor-mode",
+        choices=list(VALID_VPP_ANCHOR_MODES),
+        default=None,
+        help="Anchor mode to activate once the engagement enters the merge band.",
+    )
+    parser.add_argument(
+        "--vpp-close-range-anchor-mode-by-task",
+        default=None,
+        help=(
+            "Task-conditioned close-range anchor mode mapping, for example "
+            "'head_on=current_target,crossing_feasible=predicted_target'."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-close-range-anchor-trigger-range-m",
+        type=float,
+        default=None,
+        help=(
+            "Range threshold in meters that activates close-range anchor switching. "
+            "Defaults to combat_diagnostics.merge_range_m."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-close-range-anchor-trigger-range-m-by-task",
+        default=None,
+        help=(
+            "Task-conditioned close-range anchor trigger range mapping in meters, "
+            "for example 'head_on=150,crossing_feasible=1000'."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-close-range-anchor-alignment-angle-deg-max",
+        type=float,
+        default=None,
+        help=(
+            "Optional max(|ATA|, |AA|) gate in degrees for latching close-range "
+            "anchor switching. When omitted, no alignment gate is applied."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-close-range-anchor-alignment-angle-deg-max-by-task",
+        default=None,
+        help=(
+            "Task-conditioned close-range anchor alignment gate in degrees, "
+            "for example 'head_on=10,crossing_feasible=180'."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-close-range-anchor-release-on-post-merge",
+        choices=["true", "false"],
+        default=None,
+        help=(
+            "Whether a latched close-range anchor should release once first pass "
+            "is complete."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-close-range-anchor-release-on-post-merge-by-task",
+        default=None,
+        help=(
+            "Task-conditioned boolean mapping for releasing close-range anchor "
+            "after first pass, for example 'head_on=true,crossing_feasible=false'."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-close-range-anchor-requires-first-pass",
+        choices=["true", "false"],
+        default=None,
+        help=(
+            "Whether a latched close-range anchor may only activate after first "
+            "pass is complete."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-close-range-anchor-requires-first-pass-by-task",
+        default=None,
+        help=(
+            "Task-conditioned boolean mapping for post-first-pass-only close-range "
+            "anchor activation, for example "
+            "'head_on=true,crossing_feasible=false'."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-close-range-anchor-offensive-anchor-blend",
+        type=float,
+        default=None,
+        help=(
+            "Optional close-range tactical blend toward the offensive anchor when "
+            "the configured close-range anchor mode is offensive_position."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-close-range-anchor-offensive-anchor-blend-by-task",
+        default=None,
+        help=(
+            "Task-conditioned close-range offensive-anchor blend mapping, for "
+            "example 'head_on=0.25,crossing_feasible=0.0'."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-close-range-anchor-release-alignment-angle-deg-max",
+        type=float,
+        default=None,
+        help=(
+            "Optional post-merge max(|ATA|, |AA|) threshold in degrees that must "
+            "be satisfied before a released close-range anchor actually falls back "
+            "to the base anchor mode."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-close-range-anchor-release-alignment-angle-deg-max-by-task",
+        default=None,
+        help=(
+            "Task-conditioned post-merge release alignment gate in degrees, for "
+            "example 'head_on=120,crossing_feasible=180'."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-close-range-anchor-post-merge-hold-steps",
+        type=int,
+        default=None,
+        help=(
+            "Number of extra post-merge high-level steps to keep the close-range "
+            "anchor active before releasing it."
+        ),
+    )
+    parser.add_argument(
+        "--vpp-close-range-anchor-post-merge-hold-steps-by-task",
+        default=None,
+        help=(
+            "Task-conditioned post-merge hold-step mapping, for example "
+            "'head_on=1,crossing_feasible=0'."
+        ),
+    )
     parser.add_argument("--run-status", choices=["smoke", "formal-small", "formal"], default="smoke")
     parser.add_argument("--device", choices=["cpu", "cuda"], default="cpu")
     parser.add_argument("--no-trajectory", action="store_true")
@@ -1170,6 +4503,1376 @@ def _parse_args() -> argparse.Namespace:
         help="Only for dry-run planning on machines without trained artifacts.",
     )
     return parser.parse_args()
+
+
+def _collect_attack_zone_cli_overrides(args: argparse.Namespace) -> Dict[str, Any]:
+    overrides: Dict[str, Any] = {}
+    if args.attack_zone_enabled != "auto":
+        overrides["enabled"] = args.attack_zone_enabled == "true"
+    if args.attack_zone_initial_hp is not None:
+        overrides["initial_hp"] = float(args.attack_zone_initial_hp)
+    if args.attack_zone_damage_per_step is not None:
+        overrides["damage_per_step"] = float(args.attack_zone_damage_per_step)
+    if args.attack_zone_close_range_max_km is not None:
+        overrides["close_range_max_km"] = float(args.attack_zone_close_range_max_km)
+    if args.attack_zone_close_range_max_aoa_deg is not None:
+        overrides["close_range_max_aoa_deg"] = float(args.attack_zone_close_range_max_aoa_deg)
+    return overrides
+
+
+def _collect_prediction_cli_overrides(args: argparse.Namespace) -> Dict[str, Any]:
+    overrides: Dict[str, Any] = {}
+    if args.prediction_lookahead_time_s is not None:
+        overrides["lookahead_time_s"] = float(args.prediction_lookahead_time_s)
+    return overrides
+
+
+def _parse_task_frame_overrides(
+    raw_value: Optional[str],
+    *,
+    option_name: str = "--vpp-offset-frame-by-task",
+) -> Dict[str, str]:
+    if raw_value in (None, ""):
+        return {}
+    mapping: Dict[str, str] = {}
+    for item in str(raw_value).split(","):
+        entry = item.strip()
+        if not entry:
+            continue
+        if "=" not in entry:
+            raise ValueError(f"{option_name} entries must be task=frame pairs")
+        task_name, frame = (part.strip() for part in entry.split("=", 1))
+        if not task_name:
+            raise ValueError(f"{option_name} entries must include a task name")
+        if frame not in VALID_OFFSET_FRAMES:
+            raise ValueError(
+                f"Unknown VPP frame {frame!r} for {option_name}; "
+                f"expected one of {sorted(VALID_OFFSET_FRAMES)}"
+            )
+        mapping[task_name] = frame
+    return mapping
+
+
+def _parse_task_offensive_anchor_lateral_sign_mode_overrides(
+    raw_value: Optional[str],
+    *,
+    option_name: str = "--vpp-offensive-anchor-lateral-sign-mode-by-task",
+) -> Dict[str, str]:
+    if raw_value in (None, ""):
+        return {}
+    mapping: Dict[str, str] = {}
+    for item in str(raw_value).split(","):
+        entry = item.strip()
+        if not entry:
+            continue
+        if "=" not in entry:
+            raise ValueError(f"{option_name} entries must be task=mode pairs")
+        task_name, mode = (part.strip() for part in entry.split("=", 1))
+        if not task_name:
+            raise ValueError(f"{option_name} entries must include a task name")
+        if mode not in VALID_OFFENSIVE_ANCHOR_LATERAL_SIGN_MODES:
+            raise ValueError(
+                f"Unknown VPP lateral sign mode {mode!r} for {option_name}; "
+                f"expected one of {sorted(VALID_OFFENSIVE_ANCHOR_LATERAL_SIGN_MODES)}"
+            )
+        mapping[task_name] = mode
+    return mapping
+
+
+def _parse_task_blend_overrides(
+    raw_value: Optional[str],
+    *,
+    option_name: str = "--vpp-predicted-target-blend-by-task",
+) -> Dict[str, float]:
+    if raw_value in (None, ""):
+        return {}
+    mapping: Dict[str, float] = {}
+    for item in str(raw_value).split(","):
+        entry = item.strip()
+        if not entry:
+            continue
+        if "=" not in entry:
+            raise ValueError(f"{option_name} entries must be task=blend pairs")
+        task_name, blend_raw = (part.strip() for part in entry.split("=", 1))
+        if not task_name:
+            raise ValueError(f"{option_name} entries must include a task name")
+        blend = float(blend_raw)
+        if not np.isfinite(blend) or blend < 0.0 or blend > 1.0:
+            raise ValueError(
+                f"Invalid {option_name} blend {blend_raw!r}; expected a finite value in [0, 1]"
+            )
+        mapping[task_name] = blend
+    return mapping
+
+
+def _parse_task_nonnegative_scale_overrides(
+    raw_value: Optional[str],
+    *,
+    option_name: str,
+) -> Dict[str, float]:
+    if raw_value in (None, ""):
+        return {}
+    mapping: Dict[str, float] = {}
+    for item in str(raw_value).split(","):
+        entry = item.strip()
+        if not entry:
+            continue
+        if "=" not in entry:
+            raise ValueError(f"{option_name} entries must be task=scale pairs")
+        task_name, scale_raw = (part.strip() for part in entry.split("=", 1))
+        if not task_name:
+            raise ValueError(f"{option_name} entries must include a task name")
+        scale = float(scale_raw)
+        if not np.isfinite(scale) or scale < 0.0:
+            raise ValueError(
+                f"Invalid VPP lateral scale {scale_raw!r}; expected a finite value >= 0"
+            )
+        mapping[task_name] = scale
+    return mapping
+
+
+def _parse_task_nonnegative_float_overrides(
+    raw_value: Optional[str],
+    *,
+    option_name: str,
+) -> Dict[str, float]:
+    if raw_value in (None, ""):
+        return {}
+    mapping: Dict[str, float] = {}
+    for item in str(raw_value).split(","):
+        entry = item.strip()
+        if not entry:
+            continue
+        if "=" not in entry:
+            raise ValueError(f"{option_name} entries must be task=value pairs")
+        task_name, value_raw = (part.strip() for part in entry.split("=", 1))
+        if not task_name:
+            raise ValueError(f"{option_name} entries must include a task name")
+        value = float(value_raw)
+        if not np.isfinite(value) or value < 0.0:
+            raise ValueError(
+                f"Invalid {option_name} value {value_raw!r}; expected a finite value >= 0"
+            )
+        mapping[task_name] = value
+    return mapping
+
+
+def _parse_task_float_overrides(
+    raw_value: Optional[str],
+    *,
+    option_name: str,
+) -> Dict[str, float]:
+    if raw_value in (None, ""):
+        return {}
+    mapping: Dict[str, float] = {}
+    for item in str(raw_value).split(","):
+        entry = item.strip()
+        if not entry:
+            continue
+        if "=" not in entry:
+            raise ValueError(f"{option_name} entries must be task=value pairs")
+        task_name, value_raw = (part.strip() for part in entry.split("=", 1))
+        if not task_name:
+            raise ValueError(f"{option_name} entries must include a task name")
+        value = float(value_raw)
+        if not np.isfinite(value):
+            raise ValueError(
+                f"Invalid {option_name} value {value_raw!r}; expected a finite value"
+            )
+        mapping[task_name] = value
+    return mapping
+
+
+def _parse_task_anchor_mode_overrides(
+    raw_value: Optional[str],
+    *,
+    option_name: str,
+) -> Dict[str, str]:
+    if raw_value in (None, ""):
+        return {}
+    mapping: Dict[str, str] = {}
+    for item in str(raw_value).split(","):
+        entry = item.strip()
+        if not entry:
+            continue
+        if "=" not in entry:
+            raise ValueError(f"{option_name} entries must be task=anchor_mode pairs")
+        task_name, mode = (part.strip() for part in entry.split("=", 1))
+        if not task_name:
+            raise ValueError(f"{option_name} entries must include a task name")
+        if mode not in VALID_VPP_ANCHOR_MODES:
+            raise ValueError(
+                f"Unknown VPP anchor mode {mode!r}; expected one of {list(VALID_VPP_ANCHOR_MODES)}"
+            )
+        mapping[task_name] = mode
+    return mapping
+
+
+def _parse_boolean_literal(raw_value: str, *, option_name: str) -> bool:
+    normalized = str(raw_value).strip().lower()
+    if normalized == "true":
+        return True
+    if normalized == "false":
+        return False
+    raise ValueError(f"{option_name} values must be true or false")
+
+
+def _parse_task_boolean_overrides(
+    raw_value: Optional[str],
+    *,
+    option_name: str,
+) -> Dict[str, bool]:
+    if raw_value in (None, ""):
+        return {}
+    mapping: Dict[str, bool] = {}
+    for item in str(raw_value).split(","):
+        entry = item.strip()
+        if not entry:
+            continue
+        if "=" not in entry:
+            raise ValueError(f"{option_name} entries must be task=bool pairs")
+        task_name, bool_raw = (part.strip() for part in entry.split("=", 1))
+        if not task_name:
+            raise ValueError(f"{option_name} entries must include a task name")
+        mapping[task_name] = _parse_boolean_literal(
+            bool_raw,
+            option_name=option_name,
+        )
+    return mapping
+
+
+def _parse_task_nonnegative_int_overrides(
+    raw_value: Optional[str],
+    *,
+    option_name: str,
+) -> Dict[str, int]:
+    if raw_value in (None, ""):
+        return {}
+    mapping: Dict[str, int] = {}
+    for item in str(raw_value).split(","):
+        entry = item.strip()
+        if not entry:
+            continue
+        if "=" not in entry:
+            raise ValueError(f"{option_name} entries must be task=int pairs")
+        task_name, int_raw = (part.strip() for part in entry.split("=", 1))
+        if not task_name:
+            raise ValueError(f"{option_name} entries must include a task name")
+        value = int(int_raw)
+        if float(int_raw) != float(value) or value < 0:
+            raise ValueError(
+                f"Invalid {option_name} value {int_raw!r}; expected a nonnegative integer"
+            )
+        mapping[task_name] = value
+    return mapping
+
+
+def _collect_vpp_cli_overrides(args: argparse.Namespace) -> Dict[str, Any]:
+    overrides: Dict[str, Any] = {}
+    if args.vpp_offset_frame is not None:
+        overrides["offset_frame"] = str(args.vpp_offset_frame)
+    if args.vpp_offset_frame_by_task is not None:
+        overrides["offset_frame_by_task"] = _parse_task_frame_overrides(
+            args.vpp_offset_frame_by_task
+        )
+    if args.vpp_predicted_target_blend is not None:
+        blend = float(args.vpp_predicted_target_blend)
+        if not np.isfinite(blend) or blend < 0.0 or blend > 1.0:
+            raise ValueError(
+                "--vpp-predicted-target-blend must be a finite value in [0, 1]"
+            )
+        overrides["predicted_target_blend"] = blend
+    if args.vpp_predicted_target_blend_by_task is not None:
+        overrides["predicted_target_blend_by_task"] = _parse_task_blend_overrides(
+            args.vpp_predicted_target_blend_by_task
+        )
+    if args.vpp_predicted_target_forward_scale is not None:
+        scale = float(args.vpp_predicted_target_forward_scale)
+        if not np.isfinite(scale) or scale < 0.0 or scale > 1.0:
+            raise ValueError(
+                "--vpp-predicted-target-forward-scale must be a finite value in [0, 1]"
+            )
+        overrides["predicted_target_forward_scale"] = scale
+    if args.vpp_predicted_target_forward_scale_by_task is not None:
+        overrides["predicted_target_forward_scale_by_task"] = (
+            _parse_task_blend_overrides(
+                args.vpp_predicted_target_forward_scale_by_task
+            )
+        )
+    if args.vpp_post_merge_predicted_target_blend is not None:
+        blend = float(args.vpp_post_merge_predicted_target_blend)
+        if not np.isfinite(blend) or blend < 0.0 or blend > 1.0:
+            raise ValueError(
+                "--vpp-post-merge-predicted-target-blend must be a finite value in [0, 1]"
+            )
+        overrides["post_merge_predicted_target_blend"] = blend
+    if args.vpp_post_merge_predicted_target_blend_by_task is not None:
+        overrides["post_merge_predicted_target_blend_by_task"] = (
+            _parse_task_blend_overrides(
+                args.vpp_post_merge_predicted_target_blend_by_task
+            )
+        )
+    if args.vpp_post_merge_offensive_anchor_blend is not None:
+        blend = float(args.vpp_post_merge_offensive_anchor_blend)
+        if not np.isfinite(blend) or blend < 0.0 or blend > 1.0:
+            raise ValueError(
+                "--vpp-post-merge-offensive-anchor-blend must be a finite value in [0, 1]"
+            )
+        overrides["post_merge_offensive_anchor_blend"] = blend
+    if args.vpp_post_merge_offensive_anchor_blend_by_task is not None:
+        overrides["post_merge_offensive_anchor_blend_by_task"] = (
+            _parse_task_blend_overrides(
+                args.vpp_post_merge_offensive_anchor_blend_by_task
+            )
+        )
+    if args.vpp_post_merge_offensive_anchor_longitudinal_scale is not None:
+        scale = float(args.vpp_post_merge_offensive_anchor_longitudinal_scale)
+        if not np.isfinite(scale) or scale < 0.0:
+            raise ValueError(
+                "--vpp-post-merge-offensive-anchor-longitudinal-scale must be a finite value >= 0"
+            )
+        overrides["post_merge_offensive_anchor_longitudinal_scale"] = scale
+    if (
+        args.vpp_post_merge_offensive_anchor_longitudinal_scale_by_task
+        is not None
+    ):
+        overrides["post_merge_offensive_anchor_longitudinal_scale_by_task"] = (
+            _parse_task_nonnegative_scale_overrides(
+                args.vpp_post_merge_offensive_anchor_longitudinal_scale_by_task,
+                option_name=(
+                    "--vpp-post-merge-offensive-anchor-longitudinal-scale-by-task"
+                ),
+            )
+        )
+    if args.vpp_post_merge_offensive_anchor_lateral_scale is not None:
+        scale = float(args.vpp_post_merge_offensive_anchor_lateral_scale)
+        if not np.isfinite(scale) or scale < 0.0:
+            raise ValueError(
+                "--vpp-post-merge-offensive-anchor-lateral-scale must be a finite value >= 0"
+            )
+        overrides["post_merge_offensive_anchor_lateral_scale"] = scale
+    if args.vpp_post_merge_offensive_anchor_lateral_scale_by_task is not None:
+        overrides["post_merge_offensive_anchor_lateral_scale_by_task"] = (
+            _parse_task_nonnegative_scale_overrides(
+                args.vpp_post_merge_offensive_anchor_lateral_scale_by_task,
+                option_name=(
+                    "--vpp-post-merge-offensive-anchor-lateral-scale-by-task"
+                ),
+            )
+        )
+    if args.vpp_post_merge_offensive_anchor_blend_requires_geometry_disadvantage is not None:
+        overrides[
+            "post_merge_offensive_anchor_blend_requires_geometry_disadvantage"
+        ] = _parse_boolean_literal(
+            args.vpp_post_merge_offensive_anchor_blend_requires_geometry_disadvantage,
+            option_name=(
+                "--vpp-post-merge-offensive-anchor-blend-requires-geometry-disadvantage"
+            ),
+        )
+    if (
+        args.vpp_post_merge_offensive_anchor_blend_requires_geometry_disadvantage_by_task
+        is not None
+    ):
+        overrides[
+            "post_merge_offensive_anchor_blend_requires_geometry_disadvantage_by_task"
+        ] = _parse_task_boolean_overrides(
+            args.vpp_post_merge_offensive_anchor_blend_requires_geometry_disadvantage_by_task,
+            option_name=(
+                "--vpp-post-merge-offensive-anchor-blend-requires-geometry-disadvantage-by-task"
+            ),
+        )
+    if args.vpp_post_merge_offensive_anchor_geometry_disadvantage_aa_deg_min is not None:
+        aa_deg_min = float(
+            args.vpp_post_merge_offensive_anchor_geometry_disadvantage_aa_deg_min
+        )
+        if not np.isfinite(aa_deg_min) or aa_deg_min < 0.0:
+            raise ValueError(
+                "--vpp-post-merge-offensive-anchor-geometry-disadvantage-aa-deg-min "
+                "must be a finite value >= 0"
+            )
+        overrides["post_merge_offensive_anchor_geometry_disadvantage_aa_deg_min"] = (
+            aa_deg_min
+        )
+    if (
+        args.vpp_post_merge_offensive_anchor_geometry_disadvantage_aa_deg_min_by_task
+        is not None
+    ):
+        overrides["post_merge_offensive_anchor_geometry_disadvantage_aa_deg_min_by_task"] = (
+            _parse_task_nonnegative_float_overrides(
+                args.vpp_post_merge_offensive_anchor_geometry_disadvantage_aa_deg_min_by_task,
+                option_name=(
+                    "--vpp-post-merge-offensive-anchor-geometry-disadvantage-aa-deg-min-by-task"
+                ),
+            )
+        )
+    if args.vpp_post_merge_offensive_anchor_blend_release_blend is not None:
+        blend = float(args.vpp_post_merge_offensive_anchor_blend_release_blend)
+        if not np.isfinite(blend) or blend < 0.0 or blend > 1.0:
+            raise ValueError(
+                "--vpp-post-merge-offensive-anchor-blend-release-blend must be "
+                "a finite value in [0, 1]"
+            )
+        overrides["post_merge_offensive_anchor_blend_release_blend"] = blend
+    if args.vpp_post_merge_offensive_anchor_blend_release_blend_by_task is not None:
+        overrides["post_merge_offensive_anchor_blend_release_blend_by_task"] = (
+            _parse_task_blend_overrides(
+                args.vpp_post_merge_offensive_anchor_blend_release_blend_by_task
+            )
+        )
+    if (
+        args.vpp_post_merge_offensive_anchor_blend_release_ego_only_streak_steps
+        is not None
+    ):
+        streak_steps = int(
+            args.vpp_post_merge_offensive_anchor_blend_release_ego_only_streak_steps
+        )
+        if streak_steps < 0:
+            raise ValueError(
+                "--vpp-post-merge-offensive-anchor-blend-release-ego-only-streak-steps "
+                "must be a nonnegative integer"
+            )
+        overrides[
+            "post_merge_offensive_anchor_blend_release_ego_only_streak_steps"
+        ] = streak_steps
+    if (
+        args.vpp_post_merge_offensive_anchor_blend_release_ego_only_streak_steps_by_task
+        is not None
+    ):
+        overrides[
+            "post_merge_offensive_anchor_blend_release_ego_only_streak_steps_by_task"
+        ] = _parse_task_nonnegative_int_overrides(
+            args.vpp_post_merge_offensive_anchor_blend_release_ego_only_streak_steps_by_task,
+            option_name=(
+                "--vpp-post-merge-offensive-anchor-blend-release-ego-only-streak-steps-by-task"
+            ),
+        )
+    if (
+        args.vpp_post_merge_offensive_anchor_blend_release_reset_on_streak_break
+        is not None
+    ):
+        overrides[
+            "post_merge_offensive_anchor_blend_release_reset_on_streak_break"
+        ] = _parse_boolean_literal(
+            args.vpp_post_merge_offensive_anchor_blend_release_reset_on_streak_break,
+            option_name=(
+                "--vpp-post-merge-offensive-anchor-blend-release-reset-on-streak-break"
+            ),
+        )
+    if (
+        args.vpp_post_merge_offensive_anchor_blend_release_reset_on_streak_break_by_task
+        is not None
+    ):
+        overrides[
+            "post_merge_offensive_anchor_blend_release_reset_on_streak_break_by_task"
+        ] = _parse_task_boolean_overrides(
+            args.vpp_post_merge_offensive_anchor_blend_release_reset_on_streak_break_by_task,
+            option_name=(
+                "--vpp-post-merge-offensive-anchor-blend-release-reset-on-streak-break-by-task"
+            ),
+        )
+    if (
+        args.vpp_post_merge_offensive_anchor_blend_release_direct_track_below_altitude_m
+        is not None
+    ):
+        threshold = float(
+            args.vpp_post_merge_offensive_anchor_blend_release_direct_track_below_altitude_m
+        )
+        if not np.isfinite(threshold) or threshold < 0.0:
+            raise ValueError(
+                "--vpp-post-merge-offensive-anchor-blend-release-direct-track-below-altitude-m "
+                "must be a finite value >= 0"
+            )
+        overrides[
+            "post_merge_offensive_anchor_blend_release_direct_track_below_altitude_m"
+        ] = threshold
+    if (
+        args.vpp_post_merge_offensive_anchor_blend_release_direct_track_below_altitude_m_by_task
+        is not None
+    ):
+        overrides[
+            "post_merge_offensive_anchor_blend_release_direct_track_below_altitude_m_by_task"
+        ] = _parse_task_nonnegative_float_overrides(
+            args.vpp_post_merge_offensive_anchor_blend_release_direct_track_below_altitude_m_by_task,
+            option_name=(
+                "--vpp-post-merge-offensive-anchor-blend-release-direct-track-below-altitude-m-by-task"
+            ),
+        )
+    if args.vpp_post_merge_offensive_anchor_blend_release_direct_track_enabled is not None:
+        overrides[
+            "post_merge_offensive_anchor_blend_release_direct_track_enabled"
+        ] = bool(args.vpp_post_merge_offensive_anchor_blend_release_direct_track_enabled)
+    if (
+        args.vpp_post_merge_offensive_anchor_blend_release_direct_track_enabled_by_task
+        is not None
+    ):
+        overrides[
+            "post_merge_offensive_anchor_blend_release_direct_track_enabled_by_task"
+        ] = _parse_task_boolean_overrides(
+            args.vpp_post_merge_offensive_anchor_blend_release_direct_track_enabled_by_task,
+            option_name=(
+                "--vpp-post-merge-offensive-anchor-blend-release-direct-track-enabled-by-task"
+            ),
+        )
+    if (
+        args.vpp_post_merge_offensive_anchor_blend_release_recovery_below_altitude_m
+        is not None
+    ):
+        threshold = float(
+            args.vpp_post_merge_offensive_anchor_blend_release_recovery_below_altitude_m
+        )
+        if not np.isfinite(threshold) or threshold < 0.0:
+            raise ValueError(
+                "--vpp-post-merge-offensive-anchor-blend-release-recovery-below-altitude-m "
+                "must be a finite value >= 0"
+            )
+        overrides[
+            "post_merge_offensive_anchor_blend_release_recovery_below_altitude_m"
+        ] = threshold
+    if (
+        args.vpp_post_merge_offensive_anchor_blend_release_recovery_below_altitude_m_by_task
+        is not None
+    ):
+        overrides[
+            "post_merge_offensive_anchor_blend_release_recovery_below_altitude_m_by_task"
+        ] = _parse_task_nonnegative_float_overrides(
+            args.vpp_post_merge_offensive_anchor_blend_release_recovery_below_altitude_m_by_task,
+            option_name=(
+                "--vpp-post-merge-offensive-anchor-blend-release-recovery-below-altitude-m-by-task"
+            ),
+        )
+    if (
+        args.vpp_post_merge_offensive_anchor_blend_release_recovery_longitudinal_blend
+        is not None
+    ):
+        blend = float(
+            args.vpp_post_merge_offensive_anchor_blend_release_recovery_longitudinal_blend
+        )
+        if not np.isfinite(blend) or blend < 0.0 or blend > 1.0:
+            raise ValueError(
+                "--vpp-post-merge-offensive-anchor-blend-release-recovery-longitudinal-blend "
+                "must be a finite value in [0, 1]"
+            )
+        overrides[
+            "post_merge_offensive_anchor_blend_release_recovery_longitudinal_blend"
+        ] = blend
+    if (
+        args.vpp_post_merge_offensive_anchor_blend_release_recovery_longitudinal_blend_by_task
+        is not None
+    ):
+        overrides[
+            "post_merge_offensive_anchor_blend_release_recovery_longitudinal_blend_by_task"
+        ] = _parse_task_blend_overrides(
+            args.vpp_post_merge_offensive_anchor_blend_release_recovery_longitudinal_blend_by_task
+        )
+    if (
+        args.vpp_post_merge_offensive_anchor_blend_release_recovery_lateral_blend
+        is not None
+    ):
+        blend = float(
+            args.vpp_post_merge_offensive_anchor_blend_release_recovery_lateral_blend
+        )
+        if not np.isfinite(blend) or blend < 0.0 or blend > 1.0:
+            raise ValueError(
+                "--vpp-post-merge-offensive-anchor-blend-release-recovery-lateral-blend "
+                "must be a finite value in [0, 1]"
+            )
+        overrides[
+            "post_merge_offensive_anchor_blend_release_recovery_lateral_blend"
+        ] = blend
+    if (
+        args.vpp_post_merge_offensive_anchor_blend_release_recovery_lateral_blend_by_task
+        is not None
+    ):
+        overrides[
+            "post_merge_offensive_anchor_blend_release_recovery_lateral_blend_by_task"
+        ] = _parse_task_blend_overrides(
+            args.vpp_post_merge_offensive_anchor_blend_release_recovery_lateral_blend_by_task
+        )
+    if (
+        args.vpp_post_merge_offensive_anchor_blend_release_recovery_forward_bias_m_max
+        is not None
+    ):
+        threshold = float(
+            args.vpp_post_merge_offensive_anchor_blend_release_recovery_forward_bias_m_max
+        )
+        if not np.isfinite(threshold):
+            raise ValueError(
+                "--vpp-post-merge-offensive-anchor-blend-release-recovery-forward-bias-m-max "
+                "must be a finite value"
+            )
+        overrides[
+            "post_merge_offensive_anchor_blend_release_recovery_forward_bias_m_max"
+        ] = threshold
+    if (
+        args.vpp_post_merge_offensive_anchor_blend_release_recovery_forward_bias_m_max_by_task
+        is not None
+    ):
+        overrides[
+            "post_merge_offensive_anchor_blend_release_recovery_forward_bias_m_max_by_task"
+        ] = _parse_task_float_overrides(
+            args.vpp_post_merge_offensive_anchor_blend_release_recovery_forward_bias_m_max_by_task,
+            option_name=(
+                "--vpp-post-merge-offensive-anchor-blend-release-recovery-forward-bias-m-max-by-task"
+            ),
+        )
+    if (
+        args.vpp_post_merge_offensive_anchor_blend_release_vp_forward_bias_m_min
+        is not None
+    ):
+        threshold = float(
+            args.vpp_post_merge_offensive_anchor_blend_release_vp_forward_bias_m_min
+        )
+        if not np.isfinite(threshold):
+            raise ValueError(
+                "--vpp-post-merge-offensive-anchor-blend-release-vp-forward-bias-m-min "
+                "must be a finite value"
+            )
+        overrides[
+            "post_merge_offensive_anchor_blend_release_vp_forward_bias_m_min"
+        ] = threshold
+    if (
+        args.vpp_post_merge_offensive_anchor_blend_release_vp_forward_bias_m_min_by_task
+        is not None
+    ):
+        overrides[
+            "post_merge_offensive_anchor_blend_release_vp_forward_bias_m_min_by_task"
+        ] = _parse_task_float_overrides(
+            args.vpp_post_merge_offensive_anchor_blend_release_vp_forward_bias_m_min_by_task,
+            option_name=(
+                "--vpp-post-merge-offensive-anchor-blend-release-vp-forward-bias-m-min-by-task"
+            ),
+        )
+    if (
+        args.vpp_post_merge_offensive_anchor_blend_release_vp_forward_bias_clamp_negative_lateral_below_altitude_m
+        is not None
+    ):
+        altitude_m = float(
+            args.vpp_post_merge_offensive_anchor_blend_release_vp_forward_bias_clamp_negative_lateral_below_altitude_m
+        )
+        if not np.isfinite(altitude_m):
+            raise ValueError(
+                "--vpp-post-merge-offensive-anchor-blend-release-vp-forward-bias-clamp-negative-lateral-below-altitude-m "
+                "must be a finite value"
+            )
+        overrides[
+            "post_merge_offensive_anchor_blend_release_vp_forward_bias_clamp_negative_lateral_below_altitude_m"
+        ] = altitude_m
+    if (
+        args.vpp_post_merge_offensive_anchor_blend_release_vp_forward_bias_clamp_negative_lateral_below_altitude_m_by_task
+        is not None
+    ):
+        overrides[
+            "post_merge_offensive_anchor_blend_release_vp_forward_bias_clamp_negative_lateral_below_altitude_m_by_task"
+        ] = _parse_task_float_overrides(
+            args.vpp_post_merge_offensive_anchor_blend_release_vp_forward_bias_clamp_negative_lateral_below_altitude_m_by_task,
+            option_name=(
+                "--vpp-post-merge-offensive-anchor-blend-release-vp-forward-bias-clamp-negative-lateral-below-altitude-m-by-task"
+            ),
+        )
+    if (
+        args.vpp_post_merge_offensive_anchor_lateral_world_offset_latch_on_activation
+        is not None
+    ):
+        overrides[
+            "post_merge_offensive_anchor_lateral_world_offset_latch_on_activation"
+        ] = _parse_boolean_literal(
+            args.vpp_post_merge_offensive_anchor_lateral_world_offset_latch_on_activation,
+            option_name=(
+                "--vpp-post-merge-offensive-anchor-lateral-world-offset-latch-on-activation"
+            ),
+        )
+    if (
+        args.vpp_post_merge_offensive_anchor_lateral_world_offset_latch_on_activation_by_task
+        is not None
+    ):
+        overrides[
+            "post_merge_offensive_anchor_lateral_world_offset_latch_on_activation_by_task"
+        ] = _parse_task_boolean_overrides(
+            args.vpp_post_merge_offensive_anchor_lateral_world_offset_latch_on_activation_by_task,
+            option_name=(
+                "--vpp-post-merge-offensive-anchor-lateral-world-offset-latch-on-activation-by-task"
+            ),
+        )
+    if args.vpp_post_merge_offensive_anchor_blend_release_lateral_only is not None:
+        overrides["post_merge_offensive_anchor_blend_release_lateral_only"] = (
+            _parse_boolean_literal(
+                args.vpp_post_merge_offensive_anchor_blend_release_lateral_only,
+                option_name=(
+                    "--vpp-post-merge-offensive-anchor-blend-release-lateral-only"
+                ),
+            )
+        )
+    if (
+        args.vpp_post_merge_offensive_anchor_blend_release_lateral_only_by_task
+        is not None
+    ):
+        overrides[
+            "post_merge_offensive_anchor_blend_release_lateral_only_by_task"
+        ] = _parse_task_boolean_overrides(
+            args.vpp_post_merge_offensive_anchor_blend_release_lateral_only_by_task,
+            option_name=(
+                "--vpp-post-merge-offensive-anchor-blend-release-lateral-only-by-task"
+            ),
+        )
+    if (
+        args.vpp_post_merge_offensive_anchor_blend_release_lateral_only_hold_steps
+        is not None
+    ):
+        hold_steps = int(
+            args.vpp_post_merge_offensive_anchor_blend_release_lateral_only_hold_steps
+        )
+        if hold_steps < 0:
+            raise ValueError(
+                "--vpp-post-merge-offensive-anchor-blend-release-lateral-only-hold-steps must be >= 0"
+            )
+        overrides[
+            "post_merge_offensive_anchor_blend_release_lateral_only_hold_steps"
+        ] = hold_steps
+    if (
+        args.vpp_post_merge_offensive_anchor_blend_release_lateral_only_hold_steps_by_task
+        is not None
+    ):
+        overrides[
+            "post_merge_offensive_anchor_blend_release_lateral_only_hold_steps_by_task"
+        ] = _parse_task_nonnegative_int_overrides(
+            args.vpp_post_merge_offensive_anchor_blend_release_lateral_only_hold_steps_by_task,
+            option_name=(
+                "--vpp-post-merge-offensive-anchor-blend-release-lateral-only-hold-steps-by-task"
+            ),
+        )
+    if args.vpp_post_merge_predicted_target_forward_scale is not None:
+        scale = float(args.vpp_post_merge_predicted_target_forward_scale)
+        if not np.isfinite(scale) or scale < 0.0 or scale > 1.0:
+            raise ValueError(
+                "--vpp-post-merge-predicted-target-forward-scale must be a finite value in [0, 1]"
+            )
+        overrides["post_merge_predicted_target_forward_scale"] = scale
+    if args.vpp_post_merge_predicted_target_forward_scale_by_task is not None:
+        overrides["post_merge_predicted_target_forward_scale_by_task"] = (
+            _parse_task_blend_overrides(
+                args.vpp_post_merge_predicted_target_forward_scale_by_task
+            )
+        )
+    if args.vpp_post_merge_predicted_target_forward_scale_release_scale is not None:
+        scale = float(args.vpp_post_merge_predicted_target_forward_scale_release_scale)
+        if not np.isfinite(scale) or scale < 0.0 or scale > 1.0:
+            raise ValueError(
+                "--vpp-post-merge-predicted-target-forward-scale-release-scale must be "
+                "a finite value in [0, 1]"
+            )
+        overrides["post_merge_predicted_target_forward_scale_release_scale"] = scale
+    if (
+        args.vpp_post_merge_predicted_target_forward_scale_release_scale_by_task
+        is not None
+    ):
+        overrides["post_merge_predicted_target_forward_scale_release_scale_by_task"] = (
+            _parse_task_blend_overrides(
+                args.vpp_post_merge_predicted_target_forward_scale_release_scale_by_task
+            )
+        )
+    if (
+        args.vpp_post_merge_predicted_target_forward_scale_release_ego_only_streak_steps
+        is not None
+    ):
+        streak_steps = int(
+            args.vpp_post_merge_predicted_target_forward_scale_release_ego_only_streak_steps
+        )
+        if streak_steps < 0:
+            raise ValueError(
+                "--vpp-post-merge-predicted-target-forward-scale-release-ego-only-streak-steps "
+                "must be a nonnegative integer"
+            )
+        overrides[
+            "post_merge_predicted_target_forward_scale_release_ego_only_streak_steps"
+        ] = streak_steps
+    if (
+        args.vpp_post_merge_predicted_target_forward_scale_release_ego_only_streak_steps_by_task
+        is not None
+    ):
+        overrides[
+            "post_merge_predicted_target_forward_scale_release_ego_only_streak_steps_by_task"
+        ] = _parse_task_nonnegative_int_overrides(
+            args.vpp_post_merge_predicted_target_forward_scale_release_ego_only_streak_steps_by_task,
+            option_name=(
+                "--vpp-post-merge-predicted-target-forward-scale-release-ego-only-streak-steps-by-task"
+            ),
+        )
+    if (
+        args.vpp_post_merge_predicted_target_forward_scale_release_reset_on_streak_break
+        is not None
+    ):
+        overrides[
+            "post_merge_predicted_target_forward_scale_release_reset_on_streak_break"
+        ] = _parse_boolean_literal(
+            args.vpp_post_merge_predicted_target_forward_scale_release_reset_on_streak_break,
+            option_name=(
+                "--vpp-post-merge-predicted-target-forward-scale-release-reset-on-streak-break"
+            ),
+        )
+    if (
+        args.vpp_post_merge_predicted_target_forward_scale_release_reset_on_streak_break_by_task
+        is not None
+    ):
+        overrides[
+            "post_merge_predicted_target_forward_scale_release_reset_on_streak_break_by_task"
+        ] = _parse_task_boolean_overrides(
+            args.vpp_post_merge_predicted_target_forward_scale_release_reset_on_streak_break_by_task,
+            option_name=(
+                "--vpp-post-merge-predicted-target-forward-scale-release-reset-on-streak-break-by-task"
+            ),
+        )
+    if args.vpp_post_merge_predicted_target_forward_scale_hold_steps is not None:
+        hold_steps = int(args.vpp_post_merge_predicted_target_forward_scale_hold_steps)
+        if hold_steps < 0:
+            raise ValueError(
+                "--vpp-post-merge-predicted-target-forward-scale-hold-steps must be "
+                "a nonnegative integer"
+            )
+        overrides["post_merge_predicted_target_forward_scale_hold_steps"] = hold_steps
+    if (
+        args.vpp_post_merge_predicted_target_forward_scale_hold_steps_by_task
+        is not None
+    ):
+        overrides["post_merge_predicted_target_forward_scale_hold_steps_by_task"] = (
+            _parse_task_nonnegative_int_overrides(
+                args.vpp_post_merge_predicted_target_forward_scale_hold_steps_by_task,
+                option_name=(
+                    "--vpp-post-merge-predicted-target-forward-scale-hold-steps-by-task"
+                ),
+            )
+        )
+    if args.vpp_post_merge_predicted_target_blend_release_on_attack_zone is not None:
+        overrides["post_merge_predicted_target_blend_release_on_attack_zone"] = (
+            _parse_boolean_literal(
+                args.vpp_post_merge_predicted_target_blend_release_on_attack_zone,
+                option_name=(
+                    "--vpp-post-merge-predicted-target-blend-release-on-attack-zone"
+                ),
+            )
+        )
+    if (
+        args.vpp_post_merge_predicted_target_blend_release_on_attack_zone_by_task
+        is not None
+    ):
+        overrides["post_merge_predicted_target_blend_release_on_attack_zone_by_task"] = (
+            _parse_task_boolean_overrides(
+                args.vpp_post_merge_predicted_target_blend_release_on_attack_zone_by_task,
+                option_name=(
+                    "--vpp-post-merge-predicted-target-blend-release-on-attack-zone-by-task"
+                ),
+            )
+        )
+    if (
+        args.vpp_post_merge_predicted_target_blend_release_requires_target_attack_zone
+        is not None
+    ):
+        overrides[
+            "post_merge_predicted_target_blend_release_requires_target_attack_zone"
+        ] = _parse_boolean_literal(
+            args.vpp_post_merge_predicted_target_blend_release_requires_target_attack_zone,
+            option_name=(
+                "--vpp-post-merge-predicted-target-blend-release-requires-target-attack-zone"
+            ),
+        )
+    if (
+        args.vpp_post_merge_predicted_target_blend_release_requires_target_attack_zone_by_task
+        is not None
+    ):
+        overrides[
+            "post_merge_predicted_target_blend_release_requires_target_attack_zone_by_task"
+        ] = _parse_task_boolean_overrides(
+            args.vpp_post_merge_predicted_target_blend_release_requires_target_attack_zone_by_task,
+            option_name=(
+                "--vpp-post-merge-predicted-target-blend-release-requires-target-attack-zone-by-task"
+            ),
+        )
+    if args.vpp_post_merge_predicted_target_blend_release_below_altitude_m is not None:
+        threshold = float(args.vpp_post_merge_predicted_target_blend_release_below_altitude_m)
+        if not np.isfinite(threshold) or threshold < 0.0:
+            raise ValueError(
+                "--vpp-post-merge-predicted-target-blend-release-below-altitude-m "
+                "must be a finite value >= 0"
+            )
+        overrides["post_merge_predicted_target_blend_release_below_altitude_m"] = threshold
+    if (
+        args.vpp_post_merge_predicted_target_blend_release_below_altitude_m_by_task
+        is not None
+    ):
+        overrides[
+            "post_merge_predicted_target_blend_release_below_altitude_m_by_task"
+        ] = _parse_task_nonnegative_scale_overrides(
+            args.vpp_post_merge_predicted_target_blend_release_below_altitude_m_by_task,
+            option_name=(
+                "--vpp-post-merge-predicted-target-blend-release-below-altitude-m-by-task"
+            ),
+        )
+    if args.vpp_post_merge_predicted_target_blend_hold_steps is not None:
+        hold_steps = int(args.vpp_post_merge_predicted_target_blend_hold_steps)
+        if hold_steps < 0:
+            raise ValueError(
+                "--vpp-post-merge-predicted-target-blend-hold-steps must be a nonnegative integer"
+            )
+        overrides["post_merge_predicted_target_blend_hold_steps"] = hold_steps
+    if args.vpp_post_merge_predicted_target_blend_hold_steps_by_task is not None:
+        overrides["post_merge_predicted_target_blend_hold_steps_by_task"] = (
+            _parse_task_nonnegative_int_overrides(
+                args.vpp_post_merge_predicted_target_blend_hold_steps_by_task,
+                option_name="--vpp-post-merge-predicted-target-blend-hold-steps-by-task",
+            )
+        )
+    if args.vpp_post_merge_predicted_target_blend_release_blend is not None:
+        blend = float(args.vpp_post_merge_predicted_target_blend_release_blend)
+        if not np.isfinite(blend) or blend < 0.0 or blend > 1.0:
+            raise ValueError(
+                "--vpp-post-merge-predicted-target-blend-release-blend must be "
+                "a finite value in [0, 1]"
+            )
+        overrides["post_merge_predicted_target_blend_release_blend"] = blend
+    if args.vpp_post_merge_predicted_target_blend_release_blend_by_task is not None:
+        overrides["post_merge_predicted_target_blend_release_blend_by_task"] = (
+            _parse_task_blend_overrides(
+                args.vpp_post_merge_predicted_target_blend_release_blend_by_task
+            )
+        )
+    if args.vpp_longitudinal_scale is not None:
+        scale = float(args.vpp_longitudinal_scale)
+        if not np.isfinite(scale) or scale < 0.0:
+            raise ValueError("--vpp-longitudinal-scale must be a finite value >= 0")
+        overrides["longitudinal_scale"] = scale
+    if args.vpp_longitudinal_scale_by_task is not None:
+        overrides["longitudinal_scale_by_task"] = (
+            _parse_task_nonnegative_scale_overrides(
+                args.vpp_longitudinal_scale_by_task,
+                option_name="--vpp-longitudinal-scale-by-task",
+            )
+        )
+    if args.vpp_lateral_scale is not None:
+        scale = float(args.vpp_lateral_scale)
+        if not np.isfinite(scale) or scale < 0.0:
+            raise ValueError("--vpp-lateral-scale must be a finite value >= 0")
+        overrides["lateral_scale"] = scale
+    if args.vpp_lateral_scale_by_task is not None:
+        overrides["lateral_scale_by_task"] = _parse_task_nonnegative_scale_overrides(
+            args.vpp_lateral_scale_by_task,
+            option_name="--vpp-lateral-scale-by-task",
+        )
+    if args.vpp_offensive_anchor_blend is not None:
+        blend = float(args.vpp_offensive_anchor_blend)
+        if not np.isfinite(blend) or blend < 0.0 or blend > 1.0:
+            raise ValueError(
+                "--vpp-offensive-anchor-blend must be a finite value in [0, 1]"
+            )
+        overrides["offensive_anchor_blend"] = blend
+    if args.vpp_offensive_anchor_blend_by_task is not None:
+        overrides["offensive_anchor_blend_by_task"] = _parse_task_blend_overrides(
+            args.vpp_offensive_anchor_blend_by_task,
+            option_name="--vpp-offensive-anchor-blend-by-task",
+        )
+    if args.vpp_offensive_anchor_longitudinal_m is not None:
+        distance_m = float(args.vpp_offensive_anchor_longitudinal_m)
+        if not np.isfinite(distance_m) or distance_m < 0.0:
+            raise ValueError(
+                "--vpp-offensive-anchor-longitudinal-m must be a finite value >= 0"
+            )
+        overrides["offensive_anchor_longitudinal_m"] = distance_m
+    if args.vpp_offensive_anchor_longitudinal_m_by_task is not None:
+        overrides["offensive_anchor_longitudinal_m_by_task"] = (
+            _parse_task_nonnegative_scale_overrides(
+                args.vpp_offensive_anchor_longitudinal_m_by_task,
+                option_name="--vpp-offensive-anchor-longitudinal-m-by-task",
+            )
+        )
+    if args.vpp_offensive_anchor_frame is not None:
+        overrides["offensive_anchor_frame"] = str(args.vpp_offensive_anchor_frame)
+    if args.vpp_offensive_anchor_frame_by_task is not None:
+        overrides["offensive_anchor_frame_by_task"] = _parse_task_frame_overrides(
+            args.vpp_offensive_anchor_frame_by_task,
+            option_name="--vpp-offensive-anchor-frame-by-task",
+        )
+    if args.vpp_offensive_anchor_encounter_stable_max_heading_delta_deg is not None:
+        value = float(args.vpp_offensive_anchor_encounter_stable_max_heading_delta_deg)
+        if not np.isfinite(value) or value < 0.0:
+            raise ValueError(
+                "--vpp-offensive-anchor-encounter-stable-max-heading-delta-deg "
+                "must be a finite value >= 0"
+            )
+        overrides["offensive_anchor_encounter_stable_max_heading_delta_deg"] = value
+    if (
+        args.vpp_offensive_anchor_encounter_stable_max_heading_delta_deg_by_task
+        is not None
+    ):
+        overrides[
+            "offensive_anchor_encounter_stable_max_heading_delta_deg_by_task"
+        ] = _parse_task_nonnegative_float_overrides(
+            args.vpp_offensive_anchor_encounter_stable_max_heading_delta_deg_by_task,
+            option_name=(
+                "--vpp-offensive-anchor-encounter-stable-max-heading-delta-deg-by-task"
+            ),
+        )
+    if args.vpp_offensive_anchor_lateral_frame is not None:
+        overrides["offensive_anchor_lateral_frame"] = str(
+            args.vpp_offensive_anchor_lateral_frame
+        )
+    if args.vpp_offensive_anchor_lateral_frame_by_task is not None:
+        overrides["offensive_anchor_lateral_frame_by_task"] = (
+            _parse_task_frame_overrides(
+                args.vpp_offensive_anchor_lateral_frame_by_task,
+                option_name="--vpp-offensive-anchor-lateral-frame-by-task",
+            )
+        )
+    if args.vpp_offensive_anchor_lateral_sign_mode is not None:
+        overrides["offensive_anchor_lateral_sign_mode"] = str(
+            args.vpp_offensive_anchor_lateral_sign_mode
+        )
+    if args.vpp_offensive_anchor_lateral_sign_mode_by_task is not None:
+        overrides["offensive_anchor_lateral_sign_mode_by_task"] = (
+            _parse_task_offensive_anchor_lateral_sign_mode_overrides(
+                args.vpp_offensive_anchor_lateral_sign_mode_by_task,
+                option_name="--vpp-offensive-anchor-lateral-sign-mode-by-task",
+            )
+        )
+    if args.vpp_offensive_anchor_lateral_m is not None:
+        distance_m = float(args.vpp_offensive_anchor_lateral_m)
+        if not np.isfinite(distance_m) or distance_m < 0.0:
+            raise ValueError(
+                "--vpp-offensive-anchor-lateral-m must be a finite value >= 0"
+            )
+        overrides["offensive_anchor_lateral_m"] = distance_m
+    if args.vpp_offensive_anchor_lateral_m_by_task is not None:
+        overrides["offensive_anchor_lateral_m_by_task"] = (
+            _parse_task_nonnegative_scale_overrides(
+                args.vpp_offensive_anchor_lateral_m_by_task,
+                option_name="--vpp-offensive-anchor-lateral-m-by-task",
+            )
+        )
+    if args.vpp_offensive_anchor_vertical_m is not None:
+        distance_m = float(args.vpp_offensive_anchor_vertical_m)
+        if not np.isfinite(distance_m):
+            raise ValueError(
+                "--vpp-offensive-anchor-vertical-m must be a finite value"
+            )
+        overrides["offensive_anchor_vertical_m"] = distance_m
+    if args.vpp_offensive_anchor_vertical_m_by_task is not None:
+        overrides["offensive_anchor_vertical_m_by_task"] = (
+            _parse_task_float_overrides(
+                args.vpp_offensive_anchor_vertical_m_by_task,
+                option_name="--vpp-offensive-anchor-vertical-m-by-task",
+            )
+        )
+    if args.vpp_post_merge_anchor_mode is not None:
+        overrides["post_merge_anchor_mode"] = str(args.vpp_post_merge_anchor_mode)
+    if args.vpp_post_merge_anchor_mode_by_task is not None:
+        overrides["post_merge_anchor_mode_by_task"] = _parse_task_anchor_mode_overrides(
+            args.vpp_post_merge_anchor_mode_by_task,
+            option_name="--vpp-post-merge-anchor-mode-by-task",
+        )
+    if args.vpp_post_merge_anchor_mode_requires_geometry_disadvantage is not None:
+        overrides["post_merge_anchor_mode_requires_geometry_disadvantage"] = (
+            _parse_boolean_literal(
+                args.vpp_post_merge_anchor_mode_requires_geometry_disadvantage,
+                option_name=(
+                    "--vpp-post-merge-anchor-mode-requires-geometry-disadvantage"
+                ),
+            )
+        )
+    if (
+        args.vpp_post_merge_anchor_mode_requires_geometry_disadvantage_by_task
+        is not None
+    ):
+        overrides["post_merge_anchor_mode_requires_geometry_disadvantage_by_task"] = (
+            _parse_task_boolean_overrides(
+                args.vpp_post_merge_anchor_mode_requires_geometry_disadvantage_by_task,
+                option_name=(
+                    "--vpp-post-merge-anchor-mode-requires-geometry-disadvantage-by-task"
+                ),
+            )
+        )
+    if args.vpp_post_merge_anchor_mode_recovery_below_altitude_m is not None:
+        altitude_m = float(args.vpp_post_merge_anchor_mode_recovery_below_altitude_m)
+        if not np.isfinite(altitude_m) or altitude_m < 0.0:
+            raise ValueError(
+                "--vpp-post-merge-anchor-mode-recovery-below-altitude-m must "
+                "be a finite value >= 0"
+            )
+        overrides["post_merge_anchor_mode_recovery_below_altitude_m"] = altitude_m
+    if args.vpp_post_merge_anchor_mode_recovery_below_altitude_m_by_task is not None:
+        overrides["post_merge_anchor_mode_recovery_below_altitude_m_by_task"] = (
+            _parse_task_nonnegative_scale_overrides(
+                args.vpp_post_merge_anchor_mode_recovery_below_altitude_m_by_task,
+                option_name=(
+                    "--vpp-post-merge-anchor-mode-recovery-below-altitude-m-by-task"
+                ),
+            )
+        )
+    if args.vpp_post_merge_anchor_mode_release_ego_only_streak_steps is not None:
+        streak_steps = int(args.vpp_post_merge_anchor_mode_release_ego_only_streak_steps)
+        if streak_steps < 0:
+            raise ValueError(
+                "--vpp-post-merge-anchor-mode-release-ego-only-streak-steps must "
+                "be a nonnegative integer"
+            )
+        overrides["post_merge_anchor_mode_release_ego_only_streak_steps"] = (
+            streak_steps
+        )
+    if (
+        args.vpp_post_merge_anchor_mode_release_ego_only_streak_steps_by_task
+        is not None
+    ):
+        overrides["post_merge_anchor_mode_release_ego_only_streak_steps_by_task"] = (
+            _parse_task_nonnegative_int_overrides(
+                args.vpp_post_merge_anchor_mode_release_ego_only_streak_steps_by_task,
+                option_name=(
+                    "--vpp-post-merge-anchor-mode-release-ego-only-streak-steps-by-task"
+                ),
+            )
+        )
+    if args.vpp_post_merge_anchor_mode_release_reset_on_streak_break is not None:
+        overrides["post_merge_anchor_mode_release_reset_on_streak_break"] = (
+            _parse_boolean_literal(
+                args.vpp_post_merge_anchor_mode_release_reset_on_streak_break,
+                option_name=(
+                    "--vpp-post-merge-anchor-mode-release-reset-on-streak-break"
+                ),
+            )
+        )
+    if (
+        args.vpp_post_merge_anchor_mode_release_reset_on_streak_break_by_task
+        is not None
+    ):
+        overrides["post_merge_anchor_mode_release_reset_on_streak_break_by_task"] = (
+            _parse_task_boolean_overrides(
+                args.vpp_post_merge_anchor_mode_release_reset_on_streak_break_by_task,
+                option_name=(
+                    "--vpp-post-merge-anchor-mode-release-reset-on-streak-break-by-task"
+                ),
+            )
+        )
+    if args.vpp_post_merge_anchor_mode_offensive_anchor_blend is not None:
+        blend = float(args.vpp_post_merge_anchor_mode_offensive_anchor_blend)
+        if not np.isfinite(blend) or blend < 0.0 or blend > 1.0:
+            raise ValueError(
+                "--vpp-post-merge-anchor-mode-offensive-anchor-blend must be "
+                "a finite value in [0, 1]"
+            )
+        overrides["post_merge_anchor_mode_offensive_anchor_blend"] = blend
+    if args.vpp_post_merge_anchor_mode_offensive_anchor_blend_by_task is not None:
+        overrides["post_merge_anchor_mode_offensive_anchor_blend_by_task"] = (
+            _parse_task_blend_overrides(
+                args.vpp_post_merge_anchor_mode_offensive_anchor_blend_by_task,
+                option_name=(
+                    "--vpp-post-merge-anchor-mode-offensive-anchor-blend-by-task"
+                ),
+            )
+        )
+    if args.vpp_post_merge_anchor_mode_offensive_anchor_longitudinal_blend is not None:
+        blend = float(args.vpp_post_merge_anchor_mode_offensive_anchor_longitudinal_blend)
+        if not np.isfinite(blend) or blend < 0.0 or blend > 1.0:
+            raise ValueError(
+                "--vpp-post-merge-anchor-mode-offensive-anchor-longitudinal-blend "
+                "must be a finite value in [0, 1]"
+            )
+        overrides["post_merge_anchor_mode_offensive_anchor_longitudinal_blend"] = blend
+    if (
+        args.vpp_post_merge_anchor_mode_offensive_anchor_longitudinal_blend_by_task
+        is not None
+    ):
+        overrides["post_merge_anchor_mode_offensive_anchor_longitudinal_blend_by_task"] = (
+            _parse_task_blend_overrides(
+                args.vpp_post_merge_anchor_mode_offensive_anchor_longitudinal_blend_by_task,
+                option_name=(
+                    "--vpp-post-merge-anchor-mode-offensive-anchor-longitudinal-blend-by-task"
+                ),
+            )
+        )
+    if args.vpp_post_merge_anchor_mode_offensive_anchor_lateral_blend is not None:
+        blend = float(args.vpp_post_merge_anchor_mode_offensive_anchor_lateral_blend)
+        if not np.isfinite(blend) or blend < 0.0 or blend > 1.0:
+            raise ValueError(
+                "--vpp-post-merge-anchor-mode-offensive-anchor-lateral-blend "
+                "must be a finite value in [0, 1]"
+            )
+        overrides["post_merge_anchor_mode_offensive_anchor_lateral_blend"] = blend
+    if (
+        args.vpp_post_merge_anchor_mode_offensive_anchor_lateral_blend_by_task
+        is not None
+    ):
+        overrides["post_merge_anchor_mode_offensive_anchor_lateral_blend_by_task"] = (
+            _parse_task_blend_overrides(
+                args.vpp_post_merge_anchor_mode_offensive_anchor_lateral_blend_by_task,
+                option_name=(
+                    "--vpp-post-merge-anchor-mode-offensive-anchor-lateral-blend-by-task"
+                ),
+            )
+        )
+    if (
+        args.vpp_post_merge_anchor_mode_lateral_world_offset_latch_on_activation
+        is not None
+    ):
+        overrides["post_merge_anchor_mode_lateral_world_offset_latch_on_activation"] = (
+            _parse_boolean_literal(
+                args.vpp_post_merge_anchor_mode_lateral_world_offset_latch_on_activation,
+                option_name=(
+                    "--vpp-post-merge-anchor-mode-lateral-world-offset-latch-on-activation"
+                ),
+            )
+        )
+    if (
+        args.vpp_post_merge_anchor_mode_lateral_world_offset_latch_on_activation_by_task
+        is not None
+    ):
+        overrides[
+            "post_merge_anchor_mode_lateral_world_offset_latch_on_activation_by_task"
+        ] = _parse_task_boolean_overrides(
+            args.vpp_post_merge_anchor_mode_lateral_world_offset_latch_on_activation_by_task,
+            option_name=(
+                "--vpp-post-merge-anchor-mode-lateral-world-offset-latch-on-activation-by-task"
+            ),
+        )
+    if args.vpp_post_merge_anchor_mode_longitudinal_scale is not None:
+        scale = float(args.vpp_post_merge_anchor_mode_longitudinal_scale)
+        if not np.isfinite(scale) or scale < 0.0:
+            raise ValueError(
+                "--vpp-post-merge-anchor-mode-longitudinal-scale must be a "
+                "finite value >= 0"
+            )
+        overrides["post_merge_anchor_mode_longitudinal_scale"] = scale
+    if args.vpp_post_merge_anchor_mode_longitudinal_scale_by_task is not None:
+        overrides["post_merge_anchor_mode_longitudinal_scale_by_task"] = (
+            _parse_task_nonnegative_scale_overrides(
+                args.vpp_post_merge_anchor_mode_longitudinal_scale_by_task,
+                option_name=(
+                    "--vpp-post-merge-anchor-mode-longitudinal-scale-by-task"
+                ),
+            )
+        )
+    if args.vpp_post_merge_anchor_mode_lateral_scale is not None:
+        scale = float(args.vpp_post_merge_anchor_mode_lateral_scale)
+        if not np.isfinite(scale) or scale < 0.0:
+            raise ValueError(
+                "--vpp-post-merge-anchor-mode-lateral-scale must be a finite "
+                "value >= 0"
+            )
+        overrides["post_merge_anchor_mode_lateral_scale"] = scale
+    if args.vpp_post_merge_anchor_mode_lateral_scale_by_task is not None:
+        overrides["post_merge_anchor_mode_lateral_scale_by_task"] = (
+            _parse_task_nonnegative_scale_overrides(
+                args.vpp_post_merge_anchor_mode_lateral_scale_by_task,
+                option_name=(
+                    "--vpp-post-merge-anchor-mode-lateral-scale-by-task"
+                ),
+            )
+        )
+    if args.vpp_close_range_anchor_mode is not None:
+        overrides["close_range_anchor_mode"] = str(args.vpp_close_range_anchor_mode)
+    if args.vpp_close_range_anchor_mode_by_task is not None:
+        overrides["close_range_anchor_mode_by_task"] = _parse_task_anchor_mode_overrides(
+            args.vpp_close_range_anchor_mode_by_task,
+            option_name="--vpp-close-range-anchor-mode-by-task",
+        )
+    if args.vpp_close_range_anchor_trigger_range_m is not None:
+        trigger_range_m = float(args.vpp_close_range_anchor_trigger_range_m)
+        if not np.isfinite(trigger_range_m) or trigger_range_m < 0.0:
+            raise ValueError(
+                "--vpp-close-range-anchor-trigger-range-m must be a finite value >= 0"
+            )
+        overrides["close_range_anchor_trigger_range_m"] = trigger_range_m
+    if args.vpp_close_range_anchor_trigger_range_m_by_task is not None:
+        overrides["close_range_anchor_trigger_range_m_by_task"] = (
+            _parse_task_nonnegative_scale_overrides(
+                args.vpp_close_range_anchor_trigger_range_m_by_task,
+                option_name="--vpp-close-range-anchor-trigger-range-m-by-task",
+            )
+        )
+    if args.vpp_close_range_anchor_alignment_angle_deg_max is not None:
+        angle_deg_max = float(args.vpp_close_range_anchor_alignment_angle_deg_max)
+        if not np.isfinite(angle_deg_max) or angle_deg_max < 0.0:
+            raise ValueError(
+                "--vpp-close-range-anchor-alignment-angle-deg-max must be a finite value >= 0"
+            )
+        overrides["close_range_anchor_alignment_angle_deg_max"] = angle_deg_max
+    if args.vpp_close_range_anchor_alignment_angle_deg_max_by_task is not None:
+        overrides["close_range_anchor_alignment_angle_deg_max_by_task"] = (
+            _parse_task_nonnegative_scale_overrides(
+                args.vpp_close_range_anchor_alignment_angle_deg_max_by_task,
+                option_name="--vpp-close-range-anchor-alignment-angle-deg-max-by-task",
+            )
+        )
+    if args.vpp_close_range_anchor_release_on_post_merge is not None:
+        overrides["close_range_anchor_release_on_post_merge"] = (
+            _parse_boolean_literal(
+                args.vpp_close_range_anchor_release_on_post_merge,
+                option_name="--vpp-close-range-anchor-release-on-post-merge",
+            )
+        )
+    if args.vpp_close_range_anchor_release_on_post_merge_by_task is not None:
+        overrides["close_range_anchor_release_on_post_merge_by_task"] = (
+            _parse_task_boolean_overrides(
+                args.vpp_close_range_anchor_release_on_post_merge_by_task,
+                option_name="--vpp-close-range-anchor-release-on-post-merge-by-task",
+            )
+        )
+    if args.vpp_close_range_anchor_requires_first_pass is not None:
+        overrides["close_range_anchor_requires_first_pass"] = _parse_boolean_literal(
+            args.vpp_close_range_anchor_requires_first_pass,
+            option_name="--vpp-close-range-anchor-requires-first-pass",
+        )
+    if args.vpp_close_range_anchor_requires_first_pass_by_task is not None:
+        overrides["close_range_anchor_requires_first_pass_by_task"] = (
+            _parse_task_boolean_overrides(
+                args.vpp_close_range_anchor_requires_first_pass_by_task,
+                option_name="--vpp-close-range-anchor-requires-first-pass-by-task",
+            )
+        )
+    if args.vpp_close_range_anchor_offensive_anchor_blend is not None:
+        blend = float(args.vpp_close_range_anchor_offensive_anchor_blend)
+        if not np.isfinite(blend) or blend < 0.0 or blend > 1.0:
+            raise ValueError(
+                "--vpp-close-range-anchor-offensive-anchor-blend must be a finite value in [0, 1]"
+            )
+        overrides["close_range_anchor_offensive_anchor_blend"] = blend
+    if args.vpp_close_range_anchor_offensive_anchor_blend_by_task is not None:
+        overrides["close_range_anchor_offensive_anchor_blend_by_task"] = (
+            _parse_task_blend_overrides(
+                args.vpp_close_range_anchor_offensive_anchor_blend_by_task,
+                option_name="--vpp-close-range-anchor-offensive-anchor-blend-by-task",
+            )
+        )
+    if args.vpp_close_range_anchor_release_alignment_angle_deg_max is not None:
+        angle_deg_max = float(
+            args.vpp_close_range_anchor_release_alignment_angle_deg_max
+        )
+        if not np.isfinite(angle_deg_max) or angle_deg_max < 0.0:
+            raise ValueError(
+                "--vpp-close-range-anchor-release-alignment-angle-deg-max "
+                "must be a finite value >= 0"
+            )
+        overrides["close_range_anchor_release_alignment_angle_deg_max"] = (
+            angle_deg_max
+        )
+    if args.vpp_close_range_anchor_release_alignment_angle_deg_max_by_task is not None:
+        overrides["close_range_anchor_release_alignment_angle_deg_max_by_task"] = (
+            _parse_task_nonnegative_scale_overrides(
+                args.vpp_close_range_anchor_release_alignment_angle_deg_max_by_task,
+                option_name=(
+                    "--vpp-close-range-anchor-release-alignment-angle-deg-max-by-task"
+                ),
+            )
+        )
+    if args.vpp_close_range_anchor_post_merge_hold_steps is not None:
+        hold_steps = int(args.vpp_close_range_anchor_post_merge_hold_steps)
+        if hold_steps < 0:
+            raise ValueError(
+                "--vpp-close-range-anchor-post-merge-hold-steps must be a nonnegative integer"
+            )
+        overrides["close_range_anchor_post_merge_hold_steps"] = hold_steps
+    if args.vpp_close_range_anchor_post_merge_hold_steps_by_task is not None:
+        overrides["close_range_anchor_post_merge_hold_steps_by_task"] = (
+            _parse_task_nonnegative_int_overrides(
+                args.vpp_close_range_anchor_post_merge_hold_steps_by_task,
+                option_name="--vpp-close-range-anchor-post-merge-hold-steps-by-task",
+            )
+        )
+    return overrides
 
 
 def main() -> int:
@@ -1185,6 +5888,9 @@ def main() -> int:
     n_episodes = int(args.n_episodes or comparison_config.get("run_defaults", {}).get("n_episodes", 1))
     backend = args.backend or comparison_config.get("run_defaults", {}).get("backend", "jsbsim")
     opponent_stage = args.opponent_stage or comparison_config.get("opponent_stage", "none")
+    attack_zone_overrides = _collect_attack_zone_cli_overrides(args)
+    prediction_overrides = _collect_prediction_cli_overrides(args)
+    vpp_overrides = _collect_vpp_cli_overrides(args)
     jsbsim_root = args.jsbsim_root
     if jsbsim_root is None and str(backend).lower() == "jsbsim":
         jsbsim_root = os.environ.get("JSBSIM_ROOT") or str(REPO_ROOT)
@@ -1205,6 +5911,9 @@ def main() -> int:
         "backend": backend,
         "opponent_stage": opponent_stage,
         "jsbsim_root": jsbsim_root,
+        "attack_zone_overrides": attack_zone_overrides,
+        "prediction_overrides": prediction_overrides,
+        "vpp_overrides": vpp_overrides,
         "run_status": args.run_status,
         "dry_run": args.dry_run,
     }
@@ -1248,6 +5957,9 @@ def main() -> int:
             "backend": backend,
             "opponent_stage": opponent_stage,
             "jsbsim_root": jsbsim_root,
+            "attack_zone_overrides": attack_zone_overrides,
+            "prediction_overrides": prediction_overrides,
+            "vpp_overrides": vpp_overrides,
             "methods": methods,
             "tasks": tasks,
             "seeds": seeds,
@@ -1284,6 +5996,9 @@ def main() -> int:
                     opponent_stage=opponent_stage,
                     max_steps_override=max_steps_override,
                     jsbsim_root=jsbsim_root,
+                    attack_zone_overrides=attack_zone_overrides,
+                    prediction_overrides=prediction_overrides,
+                    vpp_overrides=vpp_overrides,
                 )
                 eval_configs[f"{method}/{task}"] = cfg
         config_snapshots = _write_config_snapshots(run_dir, eval_configs)
@@ -1387,6 +6102,7 @@ def main() -> int:
                                     run_id=args.run_id,
                                     config=cfg,
                                     git_commit=git_commit,
+                                    run_status=args.run_status,
                                     save_full=not args.no_trajectory,
                                 )
                                 rec["observation_audit"] = copy.deepcopy(observation_audit)
@@ -1413,6 +6129,10 @@ def main() -> int:
         (run_dir / "raw").mkdir(parents=True, exist_ok=True)
         summary_path = _write_summary_csv(run_dir, all_records)
         aggregate_path = _write_aggregate_summary(run_dir, all_records)
+        combat_diagnostics_path = _write_combat_geometry_diagnostics(
+            run_dir,
+            all_records,
+        )
         observation_audit_path = run_dir / "observation_audit.json"
         with open(observation_audit_path, "w", encoding="utf-8") as f:
             json.dump({"audits": observation_audits}, f, indent=2, ensure_ascii=False)
@@ -1423,6 +6143,7 @@ def main() -> int:
         manifest.record_output_file("summary.csv", summary_path)
         manifest.record_output_file("aggregate/episode_records.json", recorder.aggregate_dir / "episode_records.json")
         manifest.record_output_file("aggregate/method_task_summary.json", aggregate_path)
+        manifest.record_output_file("aggregate/combat_geometry_diagnostics.json", combat_diagnostics_path)
         manifest.record_output_file("observation_audit.json", observation_audit_path)
         manifest.record_output_file("failures.json", failures_path)
         manifest.artifacts_present["raw"] = (run_dir / "raw").is_dir()

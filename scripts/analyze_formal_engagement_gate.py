@@ -7,7 +7,7 @@ import argparse
 import json
 import math
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, Iterable, Tuple
 
 
 def _safe_float(value: Any) -> float:
@@ -18,6 +18,33 @@ def _safe_float(value: Any) -> float:
     return out if math.isfinite(out) else float("nan")
 
 
+def _safe_int(value: Any) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return 0
+
+
+def _iter_summary_items(summary_payload: Dict[str, Any]) -> Iterable[Tuple[str, Dict[str, Any]]]:
+    if isinstance(summary_payload.get("summary"), dict):
+        yield from summary_payload["summary"].items()
+        return
+
+    rows = summary_payload.get("rows")
+    if isinstance(rows, list):
+        for idx, row in enumerate(rows):
+            if not isinstance(row, dict):
+                continue
+            key = row.get("group") or "::".join(
+                str(row.get(part, "unknown"))
+                for part in ("task", "method", "opponent_stage")
+            )
+            yield str(key or idx), row
+        return
+
+    yield from summary_payload.items()
+
+
 def analyze_engagement_gate(
     summary_payload: Dict[str, Any],
     *,
@@ -25,10 +52,9 @@ def analyze_engagement_gate(
     min_effective_engagement_rate: float = 0.5,
     min_damaging_win_rate: float = 0.25,
 ) -> Dict[str, Any]:
-    summary_map = summary_payload.get("summary", summary_payload)
     groups: Dict[str, Any] = {}
 
-    for key, item in sorted(summary_map.items()):
+    for key, item in sorted(_iter_summary_items(summary_payload), key=lambda pair: pair[0]):
         task = str(item.get("task", "unknown"))
         mode = str(item.get("mode", "unknown"))
         opponent_stage = str(item.get("opponent_stage", "unknown"))
@@ -36,6 +62,13 @@ def analyze_engagement_gate(
         effective_engagement_rate = _safe_float(item.get("effective_engagement_rate"))
         damaging_win_rate = _safe_float(item.get("damaging_win_rate"))
         damage_exchange_rate = _safe_float(item.get("damage_exchange_rate"))
+        mean_damage_dealt = _safe_float(item.get("mean_damage_dealt"))
+        mean_damage_taken = _safe_float(item.get("mean_damage_taken"))
+        ego_crashes = _safe_int(item.get("ego_crashes", item.get("crashes", 0)))
+        target_crash_or_oob = _safe_int(item.get("target_crash_or_oob", 0))
+        crashes = _safe_int(item.get("crashes", ego_crashes + target_crash_or_oob))
+        timeouts = _safe_int(item.get("timeouts", 0))
+        backend_fallbacks = _safe_int(item.get("backend_fallbacks", 0))
 
         combat_ready = math.isfinite(win_rate) and win_rate >= min_win_rate
         engagement_ready = (
@@ -76,6 +109,13 @@ def analyze_engagement_gate(
             "effective_engagement_rate": effective_engagement_rate,
             "damaging_win_rate": damaging_win_rate,
             "damage_exchange_rate": damage_exchange_rate,
+            "mean_damage_dealt": mean_damage_dealt,
+            "mean_damage_taken": mean_damage_taken,
+            "ego_crashes": ego_crashes,
+            "target_crash_or_oob": target_crash_or_oob,
+            "crashes": crashes,
+            "timeouts": timeouts,
+            "backend_fallbacks": backend_fallbacks,
             "combat_ready": combat_ready,
             "engagement_ready": engagement_ready,
             "ready_for_scale": combat_ready and engagement_ready,
@@ -108,14 +148,15 @@ def render_markdown(report: Dict[str, Any], summary_path: Path) -> str:
         "",
         "## Groups",
         "",
-        "| group | eps | win_rate | effective_engagement | damaging_win | ready | action | issues |",
-        "|---|---:|---:|---:|---:|---|---|---|",
+        "| group | eps | win_rate | effective_engagement | damaging_win | damage_dealt | damage_taken | ego/target/timeout | ready | action | issues |",
+        "|---|---:|---:|---:|---:|---:|---:|---:|---|---|---|",
     ]
     for key, item in report["groups"].items():
         issues = ",".join(item["gate_issues"]) if item["gate_issues"] else "-"
         lines.append(
             "| {key} | {episodes} | {win_rate:.3g} | {effective_engagement_rate:.3g} | "
-            "{damaging_win_rate:.3g} | {ready_for_scale} | {recommended_action} | {issues} |".format(
+            "{damaging_win_rate:.3g} | {mean_damage_dealt:.3g} | {mean_damage_taken:.3g} | "
+            "{ego_crashes}/{target_crash_or_oob}/{timeouts} | {ready_for_scale} | {recommended_action} | {issues} |".format(
                 key=key,
                 issues=issues,
                 **item,

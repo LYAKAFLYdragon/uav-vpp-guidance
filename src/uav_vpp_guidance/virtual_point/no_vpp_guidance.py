@@ -36,6 +36,11 @@ class NoVPPGuidance:
         lookahead_time_s: float = 1.0,
         trajectory_predictor_adapter=None,
         predicted_target_position=None,
+        predicted_target_blend_override=None,
+        predicted_target_forward_scale_override=None,
+        offensive_anchor_blend_override=None,
+        longitudinal_scale_override=None,
+        lateral_scale_override=None,
         return_info: bool = False,
     ):
         """
@@ -66,6 +71,8 @@ class NoVPPGuidance:
         virtual_point = {
             "position": target_pos,
             "offset": offset,
+            "world_offset": offset,
+            "offset_frame": "world_neu",
         }
 
         if not return_info:
@@ -75,6 +82,8 @@ class NoVPPGuidance:
             "anchor_mode": "current_target",
             "anchor_pos": target_pos,
             "offset": offset,
+            "world_offset": offset,
+            "offset_frame": "world_neu",
             "pred_var": None,
             "prediction_info": {
                 "anchor_mode": "current_target",

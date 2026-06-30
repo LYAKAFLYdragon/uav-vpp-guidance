@@ -381,10 +381,11 @@ def _load_checkpoint_config(
     fallback_config_path: Optional[Path],
 ) -> Dict[str, Any]:
     if checkpoint_path is not None and checkpoint_path.exists():
-        checkpoint = torch.load(str(checkpoint_path), map_location="cpu")
-        ckpt_config = checkpoint.get("config", {})
-        if ckpt_config:
-            return copy.deepcopy(ckpt_config)
+        if checkpoint_path.suffix.lower() != ".zip":
+            checkpoint = torch.load(str(checkpoint_path), map_location="cpu")
+            ckpt_config = checkpoint.get("config", {})
+            if ckpt_config:
+                return copy.deepcopy(ckpt_config)
 
     if fallback_config_path is not None and fallback_config_path.exists():
         return _load_config_with_includes(fallback_config_path)
@@ -1849,6 +1850,16 @@ def _build_agent(
             constant_action=method_def.get("constant_action"),
             action_by_task=method_def.get("action_by_task"),
         )
+    elif agent_type == "legacy_hierarchical":
+        from uav_vpp_guidance.evaluation.legacy_hierarchical_policy import (
+            LegacyHierarchicalPolicy,
+        )
+
+        agent = LegacyHierarchicalPolicy(
+            checkpoint_path=str(checkpoint_path),
+            device=device,
+            guidance_config=method_def.get("guidance_config"),
+        )
     elif agent_type == "oracle_task_gate":
         from uav_vpp_guidance.evaluation.oracle_task_gate_policy import OracleTaskGatePolicy
         agent = OracleTaskGatePolicy(
@@ -2333,6 +2344,12 @@ def _checkpoint_dimension_info(checkpoint_path: Path) -> Dict[str, Any]:
             "checkpoint_action_dim": None,
             "checkpoint_policy_action_dim": None,
         }
+    if checkpoint_path.suffix.lower() == ".zip":
+        return {
+            "checkpoint_obs_dim": None,
+            "checkpoint_action_dim": None,
+            "checkpoint_policy_action_dim": None,
+        }
     checkpoint = torch.load(str(checkpoint_path), map_location="cpu")
     ckpt_config = checkpoint.get("config", {})
     return {
@@ -2444,11 +2461,36 @@ def _run_episode(
 
     while not (terminated or truncated):
         obs_vec = obs["observation_vector"]
-        action = agent.get_deterministic_action(obs_vec)
-        if method_def.get("agent_type") == "end_to_end" and hasattr(agent, "clip_action"):
+        step_kwargs: Dict[str, Any] = {}
+        action = None
+        if hasattr(agent, "get_env_step_kwargs"):
+            maybe_step_kwargs = agent.get_env_step_kwargs(obs_vec)
+            if maybe_step_kwargs is None:
+                maybe_step_kwargs = {}
+            if not isinstance(maybe_step_kwargs, dict):
+                raise TypeError(
+                    "agent.get_env_step_kwargs() must return a dict or None, "
+                    f"got {type(maybe_step_kwargs).__name__}"
+                )
+            step_kwargs = dict(maybe_step_kwargs)
+            action = step_kwargs.pop("action", None)
+        if action is None and not step_kwargs:
+            action = agent.get_deterministic_action(obs_vec)
+        if (
+            action is not None
+            and method_def.get("agent_type") == "end_to_end"
+            and hasattr(agent, "clip_action")
+        ):
             action = agent.clip_action(action)
 
-        obs, reward, terminated, truncated, info = env.step(action)
+        if action is None:
+            obs, reward, terminated, truncated, info = env.step(**step_kwargs)
+        else:
+            obs, reward, terminated, truncated, info = env.step(action, **step_kwargs)
+        if hasattr(agent, "get_last_step_metadata"):
+            step_metadata = agent.get_last_step_metadata()
+            if step_metadata:
+                info = {**info, **step_metadata}
         total_reward += float(reward)
         steps += 1
         own_state = info.get("own_state", {})
@@ -6123,6 +6165,8 @@ def main() -> int:
                             f"policy={observation_audit['policy_action_dim']}"
                         )
                     agent = _build_agent(method_def, cfg, checkpoint_path or Path("dummy"), sample_obs, args.device)
+                    if hasattr(agent, "set_env"):
+                        agent.set_env(env)
                     # Notify agent of current task if it supports it
                     if hasattr(agent, "set_task_name"):
                         agent.set_task_name(task)

@@ -386,13 +386,19 @@ algorithm-choice objection.
 - Important warning:
   old results are not protocol-compatible by default and must not be copied into
   the new paper table without reevaluation
-- New Python files to create:
+- Existing bridge code already created:
   - `src/uav_vpp_guidance/evaluation/legacy_hierarchical_policy.py`
-    This wrapper should load the legacy discrete pursuit-strategy policy and
-    translate its outputs into the current JSBSim comparison loop
+    This wrapper reconstructs the legacy 16-D observation, decodes
+    `lag/lead/pure`, and emits a current-comparison compatible command
+    override
+- Existing unit tests already created:
+  - `tests/test_legacy_hierarchical_policy.py`
 - Existing Python files to modify:
   - `scripts/run_jsbsim_hrl_comparison.py`
     Add a new `agent_type`, for example `legacy_hierarchical`
+- Additional runner hardening still required:
+  - make `.zip` SB3 checkpoints bypass the current `torch.load` config/dim
+    audit path and fall back to `config_path`
 - New config to create:
   - `config/experiment/jsbsim_hrl_reset075_no_mode_switch_longscale00_legacy_hierarchical_bridge.yaml`
 - New launcher to create:
@@ -416,10 +422,11 @@ Live file-by-file status should be read from
 From the current repo state, the next genuinely missing files on the fastest
 credible route are:
 
-1. `src/uav_vpp_guidance/evaluation/legacy_hierarchical_policy.py`
-2. `config/experiment/jsbsim_hrl_reset075_no_mode_switch_longscale00_legacy_hierarchical_bridge.yaml`
-3. `scripts/run_reset075_no_mode_switch_longscale00_legacy_hierarchical_bridge_smoke.ps1`
-4. `scripts/run_reset075_no_mode_switch_longscale00_legacy_hierarchical_bridge_10seed_pilot.ps1`
+1. `config/experiment/jsbsim_hrl_reset075_no_mode_switch_longscale00_legacy_hierarchical_bridge.yaml`
+2. `scripts/run_reset075_no_mode_switch_longscale00_legacy_hierarchical_bridge_smoke.ps1`
+3. `scripts/run_reset075_no_mode_switch_longscale00_legacy_hierarchical_bridge_10seed_pilot.ps1`
+4. runner integration in `scripts/run_jsbsim_hrl_comparison.py` for
+   `agent_type: legacy_hierarchical`
 
 If you later decide to extend beyond the minimum submission route, the next
 missing files after legacy are:
@@ -435,6 +442,11 @@ zero-offset comparator, schedule a separate redesign pass for:
 1. an action-sensitive no-VPP guidance path
 2. its paired train/eval configs
 3. a new 10-seed pilot launcher
+
+Current non-file blocker:
+
+1. `stable_baselines3` is not available in the active Python environment, so
+   the legacy bridge cannot yet load `proposed_ppo.zip` locally
 
 ## 8. Fastest Submission-Grade MVP
 

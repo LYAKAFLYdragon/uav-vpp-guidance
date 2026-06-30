@@ -65,7 +65,160 @@ These do not block the fastest submission route:
 3. semantics-only geometry-basis MVP
 4. old incompatible legacy outputs copied directly from `E:\CloseAirCombat_control`
 
-## 4. Result Fields Required for All Paper Tables
+## 4. Submission Implementation Board
+
+This is the shortest file-level checklist for the current submission MVP.
+Each row states:
+
+- which config trains the baseline
+- which config evaluates it under the frozen paper protocol
+- which launcher should be used
+- which new files are still missing
+- whether the result belongs in the manuscript main tables
+
+### Main manuscript rows
+
+1. `Cartesian VPP baseline`
+   - training config:
+     `config/experiment/train_prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00.yaml`
+   - evaluation config:
+     `config/experiment/jsbsim_hrl_reset075_no_mode_switch_longscale00_geometry_family_main_table.yaml`
+   - launcher:
+     `scripts/run_reset075_no_mode_switch_longscale00_geometry_family_10seed_pilot.ps1`
+   - new files still needed:
+     none
+   - manuscript destination:
+     Table 1
+   - result source:
+     the unified geometry-family 10-seed pilot output for `expert` and
+     `end_to_end`
+
+2. `Geometry-basis broad finetune`
+   - training config:
+     `config/experiment/train_prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp_combat_finetune.yaml`
+   - evaluation config:
+     `config/experiment/jsbsim_hrl_reset075_no_mode_switch_longscale00_geometry_family_main_table.yaml`
+   - launcher:
+     `scripts/run_reset075_no_mode_switch_longscale00_geometry_family_10seed_pilot.ps1`
+   - new files still needed:
+     none
+   - manuscript destination:
+     Table 1
+   - result source:
+     existing 10-seed pilot outputs on 2026-06-29, or the unified rerun bundle
+
+3. `Geometry-basis narrow finetune`
+   - training config:
+     `config/experiment/train_prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp_combat_finetune_narrow_extents.yaml`
+   - evaluation config:
+     `config/experiment/jsbsim_hrl_reset075_no_mode_switch_longscale00_geometry_family_main_table.yaml`
+   - launcher:
+     `scripts/run_reset075_no_mode_switch_longscale00_geometry_family_10seed_pilot.ps1`
+   - new files still needed:
+     none
+   - manuscript destination:
+     Table 1
+   - result source:
+     existing 10-seed pilot outputs on 2026-06-29, or the unified rerun bundle
+
+4. `Geometry-basis mixed finetune`
+   - training config:
+     `config/experiment/train_prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp_combat_finetune_mixed_crossing_restored.yaml`
+   - evaluation config:
+     `config/experiment/jsbsim_hrl_reset075_no_mode_switch_longscale00_geometry_family_main_table.yaml`
+   - launcher:
+     `scripts/run_reset075_no_mode_switch_longscale00_geometry_family_10seed_pilot.ps1`
+   - new files still needed:
+     none unless a newer mixed checkpoint replaces the current one
+   - manuscript destination:
+     Table 1
+   - result source:
+     existing 10-seed pilot outputs on 2026-06-29, or the unified rerun bundle
+
+### Reviewer-facing comparator rows
+
+5. `End-to-end direct-command PPO`
+   - training config:
+     `config/experiment/train_end_to_end_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_combat.yaml`
+   - evaluation config:
+     `config/experiment/jsbsim_hrl_reset075_no_mode_switch_longscale00_end_to_end_direct_command_best.yaml`
+   - launchers:
+     `scripts/run_reset075_no_mode_switch_longscale00_end_to_end_direct_command.ps1`
+     `scripts/run_reset075_no_mode_switch_longscale00_end_to_end_direct_command_10seed_pilot.ps1`
+   - new files still needed:
+     no new files; the remaining gate is a paper-protocol checkpoint if one is
+     not already present
+   - manuscript destination:
+     Table 2
+   - result source:
+     one 10-seed pilot output per opponent stage after the checkpoint is ready
+
+6. `PN zero-offset guidance`
+   - training config:
+     none
+   - evaluation config:
+     `config/experiment/jsbsim_hrl_reset075_no_mode_switch_longscale00_rule_pn_zero_offset.yaml`
+   - launcher:
+     `scripts/run_reset075_no_mode_switch_longscale00_rule_pn_zero_offset_10seed_pilot.ps1`
+   - new files still needed:
+     none
+   - manuscript destination:
+     Table 2
+   - result source:
+     one 10-seed pilot output per opponent stage
+
+7. `Legacy hierarchical Aerospace baseline`
+   - training config:
+     none new; reuse the frozen checkpoint
+     `E:\CloseAirCombat_control\baseline_results\checkpoints\proposed_ppo.zip`
+   - evaluation config:
+     `config/experiment/jsbsim_hrl_reset075_no_mode_switch_longscale00_legacy_hierarchical_bridge.yaml`
+     must still be created
+   - launchers:
+     `scripts/run_reset075_no_mode_switch_longscale00_legacy_hierarchical_bridge_smoke.ps1`
+     and
+     `scripts/run_reset075_no_mode_switch_longscale00_legacy_hierarchical_bridge_10seed_pilot.ps1`
+     must still be created
+   - new files still needed:
+     the legacy bridge eval config, the smoke launcher, the 10-seed launcher,
+     and runner integration for `agent_type: legacy_hierarchical`
+   - manuscript destination:
+     Table 2 if the bridge passes smoke cleanly; otherwise Discussion-only
+   - result source:
+     new bridge reevaluation under the current frozen paper protocol only
+
+### Appendix-only rows
+
+8. `Zero-offset target-anchor comparator`
+   - training config:
+     `config/experiment/train_prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_no_vpp_combat.yaml`
+   - evaluation config:
+     `config/experiment/jsbsim_hrl_reset075_no_mode_switch_longscale00_no_vpp_combat_best.yaml`
+   - launchers:
+     `scripts/run_reset075_no_mode_switch_longscale00_no_vpp_combat.ps1`
+     `scripts/run_reset075_no_mode_switch_longscale00_no_vpp_combat_10seed_pilot.ps1`
+   - new files still needed:
+     none
+   - manuscript destination:
+     appendix unless the no-VPP path is redesigned to be action-sensitive
+   - result source:
+     appendix-only sanity evidence
+
+9. `LOS zero-offset guidance`
+   - training config:
+     none
+   - evaluation config:
+     `config/experiment/jsbsim_hrl_reset075_no_mode_switch_longscale00_rule_los_zero_offset.yaml`
+   - launcher:
+     `scripts/run_reset075_no_mode_switch_longscale00_rule_los_zero_offset_10seed_pilot.ps1`
+   - new files still needed:
+     none
+   - manuscript destination:
+     appendix or rebuttal backup
+   - result source:
+     optional 10-seed pilot output per opponent stage
+
+## 5. Result Fields Required for All Paper Tables
 
 For every row admitted to Table 1 or Table 2, extract and archive:
 
@@ -84,7 +237,7 @@ Extraction rule:
 - remember that aggregate `crashes` means
   `ego_crashes + target_crash_or_oob`
 
-## 5. Execution Status Snapshot
+## 6. Execution Status Snapshot
 
 ### Already created
 
@@ -120,6 +273,10 @@ Extraction rule:
   `scripts/run_reset075_no_mode_switch_longscale00_rule_pn_zero_offset_10seed_pilot.ps1`
 - LOS 10-seed pilot launcher:
   `scripts/run_reset075_no_mode_switch_longscale00_rule_los_zero_offset_10seed_pilot.ps1`
+- legacy hierarchical bridge policy:
+  `src/uav_vpp_guidance/evaluation/legacy_hierarchical_policy.py`
+- legacy hierarchical bridge unit tests:
+  `tests/test_legacy_hierarchical_policy.py`
 - registry entries:
   `config/checkpoint_registry.yaml`
   - `training.no_vpp_combat`
@@ -140,9 +297,11 @@ Extraction rule:
 
 ### Not yet created
 
-- legacy hierarchical bridge policy
+- legacy hierarchical runner integration in
+  `scripts/run_jsbsim_hrl_comparison.py`
 - legacy hierarchical evaluation config
 - legacy hierarchical smoke / pilot launchers
+- local `stable_baselines3` availability in the active Python environment
 - SAC training bridge and evaluation config(s)
 
 ### Important current limitations
@@ -174,7 +333,7 @@ For the fastest credible submission route:
 - do not rely on it as a main reviewer-facing learned comparator unless the
   no-VPP path is redesigned to be action-sensitive
 
-## 6. Baseline-by-Baseline Implementation Sheet
+## 7. Baseline-by-Baseline Implementation Sheet
 
 ### A. Baseline: Cartesian VPP anchor model
 
@@ -410,11 +569,16 @@ For the fastest credible submission route:
   `observation_vector` wholesale
 - Legacy action contract:
   `0 = lag`, `1 = lead`, `2 = pure`
-- New Python support required:
+- Existing bridge code already created:
   `src/uav_vpp_guidance/evaluation/legacy_hierarchical_policy.py`
+- Existing unit tests already created:
+  `tests/test_legacy_hierarchical_policy.py`
 - Comparison-runner change required:
   extend `scripts/run_jsbsim_hrl_comparison.py` with
   `agent_type: legacy_hierarchical`
+- Additional runner hardening still required:
+  `.zip` SB3 checkpoints must bypass the current `torch.load` config-path
+  audit logic and fall back to `config_path`
 - Config to create:
   `config/experiment/jsbsim_hrl_reset075_no_mode_switch_longscale00_legacy_hierarchical_bridge.yaml`
 - Smoke launcher to create:
@@ -463,7 +627,7 @@ For the fastest credible submission route:
 - Paper table role:
   appendix or rebuttal-first, not on the fastest submission-critical path
 
-## 7. Immediate Build Order
+## 8. Immediate Build Order
 
 ### Phase A: validate what already exists
 
@@ -490,7 +654,7 @@ For the fastest credible submission route:
 3. SAC-cartesian
 4. SAC-mixed geometry-basis
 
-## 8. Main-Table Result Routing
+## 9. Main-Table Result Routing
 
 ### Table 1 must include
 
@@ -527,7 +691,7 @@ If one of these is not ready by submission freeze:
 4. any copied legacy outputs that were not reevaluated under the current
    protocol
 
-## 9. Minimal Submission-Credible MVP
+## 10. Minimal Submission-Credible MVP
 
 If the goal is the fastest credible submission without opening a larger compute
 campaign, stop at:
@@ -544,7 +708,7 @@ This is the smallest pack that still answers:
 - classical guidance comparison
 - self-evolution beyond the Aerospace hierarchical method
 
-## 10. Bottom Line
+## 11. Bottom Line
 
 The fastest credible route is:
 

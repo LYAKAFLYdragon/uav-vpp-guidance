@@ -1,0 +1,38 @@
+includes:
+  - ./jsbsim_hrl_combat_only_pilot.yaml
+
+experiment:
+  name: jsbsim_hrl_reset075_no_mode_switch_longscale00_legacy_hierarchical_bridge
+  description: "Current Cartesian VPP baseline versus the legacy hierarchical pursuit-strategy PPO baseline reevaluated through a bridge on the shared combat-only scope."
+
+run_defaults:
+  main_methods:
+    - prediction_vpp_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00
+    - legacy_hierarchical_reset075_no_mode_switch_longscale00_bridge
+  tasks:
+    - head_on
+    - crossing_feasible
+
+methods:
+  prediction_vpp_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00:
+    label: "Cartesian VPP baseline (reset075 no mode switch longscale00)"
+    agent_type: ppo
+    checkpoint: outputs/experiments/prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00/checkpoints/last.pt
+    config_path: config/experiment/train_prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00.yaml
+    prediction_variant: learned
+
+  legacy_hierarchical_reset075_no_mode_switch_longscale00_bridge:
+    label: "Legacy hierarchical pursuit-strategy baseline"
+    agent_type: legacy_hierarchical
+    checkpoint: E:/CloseAirCombat_control/baseline_results/checkpoints/proposed_ppo.zip
+    config_path: config/experiment/train_prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00.yaml
+    prediction_variant: none
+    guidance_config:
+      bullet_speed: 1000.0
+      lag_distance: 500.0
+      max_lead_time_s: 5.0
+    config_overrides:
+      trajectory_prediction.enabled: false
+      guidance.mode_switch.enabled: false
+      virtual_point.mode: zero_offset
+      virtual_point.anchor_mode: current_target

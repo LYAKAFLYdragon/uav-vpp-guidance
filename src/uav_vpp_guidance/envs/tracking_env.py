@@ -3821,6 +3821,23 @@ class CloseRangeTrackingEnv:
             }
             direct_track_mode_effective = True
             virtual_point_source = "direct_track"
+        elif use_command_override:
+            # Bridge / diagnosis path: skip VPP generation entirely when a
+            # command override is injected directly into the environment.
+            virtual_point = {"position_neu": np.asarray(target_for_vp["position_neu"], dtype=np.float64)}
+            zero_offset = np.zeros(3, dtype=np.float64)
+            vp_info = {
+                "virtual_point": virtual_point["position_neu"],
+                "anchor_mode": anchor_mode,
+                "anchor_pos": np.asarray(target_for_vp["position_neu"], dtype=np.float64),
+                "offset": zero_offset,
+                "world_offset": zero_offset,
+                "offset_frame": "world_neu",
+                "command_override": True,
+                "action_applied": False,
+            }
+            direct_track_mode_effective = False
+            virtual_point_source = "command_override"
         elif self._use_virtual_point and self.virtual_point_generator is not None:
             if (
                 pre_recovery_vp_result is not None

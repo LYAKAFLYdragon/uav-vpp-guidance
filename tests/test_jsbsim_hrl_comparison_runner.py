@@ -6,8 +6,10 @@ import json
 import math
 import subprocess
 import sys
+from unittest import mock
 from pathlib import Path
 
+import numpy as np
 import yaml
 
 
@@ -3733,3 +3735,207 @@ def test_combat_geometry_diagnostics_preserve_existing_vp_bias_metrics():
 
     assert diagnostics["vp_forward_bias_m"] == 25.0
     assert diagnostics["vp_lateral_bias_m"] == 2.5
+
+
+def test_load_checkpoint_config_falls_back_for_sb3_zip_checkpoint(tmp_path):
+    sys.path.insert(0, str(REPO_ROOT / "scripts"))
+    from run_jsbsim_hrl_comparison import _load_checkpoint_config  # noqa: WPS433
+
+    checkpoint_path = tmp_path / "legacy.zip"
+    checkpoint_path.write_bytes(b"not-a-torch-checkpoint")
+    fallback_config_path = tmp_path / "fallback.yaml"
+    fallback_config_path.write_text(
+        "policy:\n  action_dim: 3\ntrajectory_prediction:\n  enabled: false\n",
+        encoding="utf-8",
+    )
+
+    config = _load_checkpoint_config(checkpoint_path, fallback_config_path)
+
+    assert config["policy"]["action_dim"] == 3
+    assert config["trajectory_prediction"]["enabled"] is False
+
+
+def test_checkpoint_dimension_info_returns_none_for_sb3_zip_checkpoint(tmp_path):
+    sys.path.insert(0, str(REPO_ROOT / "scripts"))
+    from run_jsbsim_hrl_comparison import _checkpoint_dimension_info  # noqa: WPS433
+
+    checkpoint_path = tmp_path / "legacy.zip"
+    checkpoint_path.write_bytes(b"not-a-torch-checkpoint")
+
+    info = _checkpoint_dimension_info(checkpoint_path)
+
+    assert info == {
+        "checkpoint_obs_dim": None,
+        "checkpoint_action_dim": None,
+        "checkpoint_policy_action_dim": None,
+    }
+
+
+def test_build_agent_supports_legacy_hierarchical_bridge():
+    sys.path.insert(0, str(REPO_ROOT / "scripts"))
+    from run_jsbsim_hrl_comparison import _build_agent  # noqa: WPS433
+
+    captured = {}
+
+    class DummyLegacyPolicy:
+        def __init__(self, checkpoint_path, device, guidance_config=None):
+            captured["checkpoint_path"] = checkpoint_path
+            captured["device"] = device
+            captured["guidance_config"] = guidance_config
+
+    with mock.patch(
+        "uav_vpp_guidance.evaluation.legacy_hierarchical_policy.LegacyHierarchicalPolicy",
+        DummyLegacyPolicy,
+    ):
+        agent = _build_agent(
+            method_def={
+                "agent_type": "legacy_hierarchical",
+                "guidance_config": {"lag_distance": 500.0},
+            },
+            config={"policy": {"action_dim": 3}},
+            checkpoint_path=Path("legacy.zip"),
+            sample_obs={"observation_vector": np.zeros(16, dtype=np.float32)},
+            device="cpu",
+        )
+
+    assert isinstance(agent, DummyLegacyPolicy)
+    assert captured == {
+        "checkpoint_path": "legacy.zip",
+        "device": "cpu",
+        "guidance_config": {"lag_distance": 500.0},
+    }
+
+
+def test_run_episode_supports_command_override_bridge_agents():
+    sys.path.insert(0, str(REPO_ROOT / "scripts"))
+    import run_jsbsim_hrl_comparison as runner  # noqa: WPS433
+
+    class DummyRecorder:
+        last_instance = None
+
+        def __init__(self, **kwargs):
+            del kwargs
+            self.step_infos = []
+            DummyRecorder.last_instance = self
+
+        def record_step(self, step, time_s, own_state, target_state, info, reward):
+            del step, time_s, own_state, target_state, reward
+            self.step_infos.append(dict(info))
+
+        def finalize(
+            self,
+            *,
+            steps,
+            total_time_s,
+            total_reward,
+            termination_reason,
+            success,
+            final_position_m,
+            final_speed_mps,
+            final_altitude_m,
+        ):
+            del total_time_s, total_reward, termination_reason, success
+            del final_position_m, final_speed_mps, final_altitude_m
+            return {
+                "steps": steps,
+                "trajectory": [],
+            }
+
+    class DummyEnv:
+        def __init__(self):
+            self.env_config = {"high_level_dt": 0.2}
+            self.max_steps = 4
+            self.step_calls = []
+
+        def reset(self, **kwargs):
+            del kwargs
+            return {
+                "observation_vector": np.zeros(4, dtype=np.float32),
+                "provenance": {},
+                "observation_schema": {"dim": 4, "feature_names": ["a", "b", "c", "d"]},
+            }
+
+        def step(self, action=None, command_override=None):
+            self.step_calls.append(
+                {
+                    "action": action,
+                    "command_override": dict(command_override or {}),
+                }
+            )
+            info = {
+                "own_state": {
+                    "position_neu": [0.0, 0.0, 1000.0],
+                    "position_m": [0.0, 0.0, 1000.0],
+                    "speed_mps": 200.0,
+                    "altitude_m": 1000.0,
+                },
+                "target_state": {
+                    "position_neu": [1000.0, 0.0, 1000.0],
+                    "position_m": [1000.0, 0.0, 1000.0],
+                },
+                "reason": "terminated",
+                "is_success": False,
+                "combat_outcome": "loss",
+                "combat_reason": "ego_killed",
+            }
+            return self.reset(), 0.0, True, False, info
+
+    class DummyBridgeAgent:
+        def get_env_step_kwargs(self, obs):
+            del obs
+            return {
+                "command_override": {
+                    "nz_cmd": 1.0,
+                    "roll_rate_cmd": 2.0,
+                    "throttle_cmd": 3.0,
+                }
+            }
+
+        def get_last_step_metadata(self):
+            return {
+                "legacy_strategy_index": 1,
+                "legacy_strategy_name": "lead",
+            }
+
+    env = DummyEnv()
+    agent = DummyBridgeAgent()
+
+    with mock.patch.object(runner, "EpisodeRecorder", DummyRecorder), mock.patch.object(
+        runner,
+        "summarize_episode_combat_geometry",
+        lambda record: {},
+    ):
+        record = runner._run_episode(
+            env=env,
+            agent=agent,
+            method_name="legacy_bridge",
+            method_def={"agent_type": "legacy_hierarchical", "label": "Legacy bridge"},
+            task_name="head_on",
+            scenario=None,
+            seed=480,
+            episode=0,
+            run_id="legacy_smoke",
+            config={
+                "backend": "jsbsim",
+                "env": {"strict_backend": True},
+                "attack_zone": {},
+            },
+            git_commit="abc123",
+            run_status="smoke",
+            save_full=False,
+        )
+
+    assert env.step_calls == [
+        {
+            "action": None,
+            "command_override": {
+                "nz_cmd": 1.0,
+                "roll_rate_cmd": 2.0,
+                "throttle_cmd": 3.0,
+            },
+        }
+    ]
+    assert DummyRecorder.last_instance is not None
+    assert DummyRecorder.last_instance.step_infos[0]["legacy_strategy_index"] == 1
+    assert DummyRecorder.last_instance.step_infos[0]["legacy_strategy_name"] == "lead"
+    assert record["method_label"] == "Legacy bridge"

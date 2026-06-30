@@ -1,0 +1,124 @@
+includes:
+  - ./jsbsim_hrl_comparison.yaml
+
+observation:
+  include_task_type: false
+  include_opponent_stage: true
+
+virtual_point:
+  action_dim: 3
+  d_long_range: [-1500.0, 1500.0]
+  d_lat_range: [-800.0, 800.0]
+  d_vert_range: [-500.0, 500.0]
+  tau_pred_range: [0.0, 3.0]
+  speed_bias_range: [-80.0, 80.0]
+  smoothing_alpha: 0.3
+  anchor_mode: "predicted_target"
+  return_info: true
+  dynamics_aware: true
+  max_heading_rate: 0.3
+  lookahead_steps: 5
+  offset_frame_by_task:
+    head_on: "target_velocity"
+    crossing_feasible: "world_neu"
+  post_merge_predicted_target_blend_by_task:
+    head_on: 0.5
+    crossing_feasible: 1.0
+  post_merge_predicted_target_forward_scale_by_task:
+    head_on: 0.0
+    crossing_feasible: 1.0
+  post_merge_predicted_target_forward_scale_release_scale_by_task:
+    head_on: 0.75
+    crossing_feasible: 1.0
+  post_merge_predicted_target_forward_scale_release_ego_only_streak_steps_by_task:
+    head_on: 19
+  post_merge_predicted_target_forward_scale_release_reset_on_streak_break_by_task:
+    head_on: true
+    crossing_feasible: false
+  close_range_anchor_mode_by_task:
+    head_on: "current_target"
+    crossing_feasible: "predicted_target"
+  close_range_anchor_trigger_range_m_by_task:
+    head_on: 1000.0
+    crossing_feasible: 1000.0
+  close_range_anchor_alignment_angle_deg_max_by_task:
+    head_on: 10.0
+    crossing_feasible: 180.0
+  close_range_anchor_release_on_post_merge_by_task:
+    head_on: true
+    crossing_feasible: false
+  longitudinal_scale_by_task:
+    head_on: 1.0
+    crossing_feasible: 1.0
+  action_semantics: "tactical_basis_v1"
+  tactical_basis_longitudinal_frame: "target_velocity"
+  tactical_basis_lateral_frame: "encounter_stable"
+  tactical_basis_vertical_frame: "world_neu"
+  tactical_basis_lead_lag_extent_m: 1200.0
+  tactical_basis_lead_lag_extent_m_by_task:
+    head_on: 1200.0
+    crossing_feasible: 800.0
+  tactical_basis_inside_outside_extent_m: 0.0
+  tactical_basis_inside_outside_extent_m_by_task:
+    head_on: 1600.0
+    crossing_feasible: 300.0
+  tactical_basis_climb_descent_extent_m: 600.0
+  tactical_basis_climb_descent_extent_m_by_task:
+    head_on: 600.0
+    crossing_feasible: 300.0
+  tactical_basis_lateral_sign_mode: "same_side"
+  tactical_basis_encounter_stable_max_heading_delta_deg: 45.0
+
+trajectory_prediction:
+  enabled: true
+  predictor_type: "lstm"
+  checkpoint_path: "outputs/trajectory_prediction/best_model.pt"
+  strict_predictor_init: true
+  device: "cpu"
+  allow_device_fallback: true
+  checkpoint_strict: true
+  freeze_predictor_during_rl: true
+  model:
+    type: "lstm"
+    input_dim: 16
+    hidden_dim: 128
+    num_layers: 2
+    dropout: 0.1
+    predict_variance: false
+  history:
+    history_len: 10
+    sample_rate_hz: 5
+    padding_mode: "repeat_first"
+  prediction:
+    lookahead_time_s: 1.0
+    output_mode: "relative_displacement"
+    fallback_mode: "constant_velocity"
+  integration:
+    anchor_mode: "predicted_target"
+    add_prediction_to_observation: false
+    add_uncertainty_to_observation: false
+  normalization:
+    position_scale_m: 1000.0
+    velocity_scale_mps: 300.0
+    angle_mode: "sin_cos"
+    overload_scale: 9.0
+
+methods:
+  oracle_task_gate:
+    label: "Oracle Task Gate (Static Specialist Selection)"
+    agent_type: oracle_task_gate
+    checkpoint: null
+    config_path: null
+    prediction_variant: learned
+    specialists:
+      crossing_feasible:
+        checkpoint: outputs/experiments/prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp_combat_finetune_mixed_opponent_aware_32k_crossing_weighted/checkpoints/best.pt
+        config_path: config/experiment/train_prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp_combat_finetune_mixed_opponent_aware_32k_crossing_weighted.yaml
+
+run_defaults:
+  main_methods:
+    - oracle_task_gate
+  ablation_methods:
+    - oracle_task_gate
+  tasks:
+    - crossing_feasible

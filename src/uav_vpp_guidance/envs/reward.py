@@ -60,6 +60,11 @@ class RewardCalculator:
         self.boundary_alt_max_m = float(self.config.get("boundary_alt_max_m", 9000.0))
         # F-16 typical max heading rate ≈ 0.3 rad/s (≈17°/s) at cruise speed
         self.max_heading_rate = self.config.get("max_heading_rate", 0.3)
+        
+        # Attack-zone envelope reward (crossing v2: encourage entering/maintaining envelope)
+        self.w_attack_zone = self.config.get("w_attack_zone", 0.0)
+        self.attack_zone_score_scale = self.config.get("attack_zone_score_scale", 1.0)
+        
         self.terminal_success = self.config.get("terminal_success", 200.0)
         self.terminal_failure = self.config.get("terminal_failure", -200.0)
         self.terminal_crash = self.config.get("terminal_crash", -300.0)
@@ -189,7 +194,25 @@ class RewardCalculator:
                 boundary_penalty += (altitude_m - self.boundary_alt_max_m) / 1000.0
             reward_boundary = -self.w_boundary * boundary_penalty
 
-        # 11. 终端奖励（由调用方根据 done/reason 注入，这里预留接口）
+        # 11. 攻击区包线奖励（crossing v2 核心改动）
+        # 鼓励进入并维持攻击区包线；仅在 ego 在包线内且 target 不在包线内时给予正奖励
+        reward_attack_zone = 0.0
+        if self.w_attack_zone > 0.0:
+            attack_zone_info = info.get("attack_zone_info", {})
+            ego_in_zone = attack_zone_info.get("ego_in_attack_zone", False)
+            target_in_zone = attack_zone_info.get("target_in_attack_zone", False)
+            
+            if ego_in_zone and not target_in_zone:
+                # 理想情况：ego 在包线内，target 不在 = 优势位置
+                reward_attack_zone = self.w_attack_zone * self.attack_zone_score_scale
+            elif ego_in_zone and target_in_zone:
+                # 中性：双方都在包线内
+                reward_attack_zone = self.w_attack_zone * self.attack_zone_score_scale * 0.2
+            elif not ego_in_zone and target_in_zone:
+                # 劣势：target 在包线内，ego 不在
+                reward_attack_zone = -self.w_attack_zone * self.attack_zone_score_scale * 0.5
+
+        # 12. 终端奖励（由调用方根据 done/reason 注入，这里预留接口）
         terminal_reward = info.get("terminal_reward", 0.0)
 
         # 汇总
@@ -205,6 +228,7 @@ class RewardCalculator:
             + reward_alive
             + reward_overshoot
             + reward_boundary
+            + reward_attack_zone
             + terminal_reward
         )
 
@@ -220,6 +244,7 @@ class RewardCalculator:
             "reward_alive": reward_alive,
             "reward_overshoot": reward_overshoot,
             "reward_boundary": reward_boundary,
+            "reward_attack_zone": reward_attack_zone,
             "terminal_reward": terminal_reward,
             "reward_total": reward,
         }

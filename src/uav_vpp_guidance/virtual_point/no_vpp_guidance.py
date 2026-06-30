@@ -39,9 +39,13 @@ class NoVPPGuidance:
         predicted_target_blend_override=None,
         predicted_target_forward_scale_override=None,
         offensive_anchor_blend_override=None,
+        offensive_anchor_longitudinal_blend_override=None,
+        offensive_anchor_lateral_blend_override=None,
+        offensive_anchor_lateral_world_offset_override=None,
         longitudinal_scale_override=None,
         lateral_scale_override=None,
         return_info: bool = False,
+        **_ignored_kwargs,
     ):
         """
         Convert policy action to a virtual pursuit point.
@@ -59,7 +63,13 @@ class NoVPPGuidance:
             lookahead_time_s (float): Ignored.
             trajectory_predictor_adapter: Ignored.
             predicted_target_position: Ignored.
+            offensive_anchor_longitudinal_blend_override: Ignored.
+            offensive_anchor_lateral_blend_override: Ignored.
+            offensive_anchor_lateral_world_offset_override: Ignored.
             return_info (bool): If True, also return an info dict.
+            **_ignored_kwargs: Future compatibility hook for additional
+                action-to-VPP override keywords that are irrelevant when the
+                offset is forced to zero.
 
         Returns:
             dict or tuple: ``virtual_point`` dict, or

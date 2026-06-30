@@ -173,19 +173,18 @@ Each row states:
      `E:\CloseAirCombat_control\baseline_results\checkpoints\proposed_ppo.zip`
    - evaluation config:
      `config/experiment/jsbsim_hrl_reset075_no_mode_switch_longscale00_legacy_hierarchical_bridge.yaml`
-     must still be created
    - launchers:
      `scripts/run_reset075_no_mode_switch_longscale00_legacy_hierarchical_bridge_smoke.ps1`
      and
      `scripts/run_reset075_no_mode_switch_longscale00_legacy_hierarchical_bridge_10seed_pilot.ps1`
-     must still be created
    - new files still needed:
-     the legacy bridge eval config, the smoke launcher, the 10-seed launcher,
-     and runner integration for `agent_type: legacy_hierarchical`
+     none for the smoke path; the next gate is whether to spend compute on the
+     10-seed pilot
    - manuscript destination:
      Table 2 if the bridge passes smoke cleanly; otherwise Discussion-only
    - result source:
-     new bridge reevaluation under the current frozen paper protocol only
+     3-seed smoke reevaluation already completed under the current frozen paper
+     protocol; a 10-seed pilot is still pending
 
 ### Appendix-only rows
 
@@ -203,6 +202,9 @@ Each row states:
      appendix unless the no-VPP path is redesigned to be action-sensitive
    - result source:
      appendix-only sanity evidence
+   - current readiness note:
+     smoke training is now validated, but the formal paper-protocol checkpoint
+     is still missing
 
 9. `LOS zero-offset guidance`
    - training config:
@@ -217,6 +219,9 @@ Each row states:
      appendix or rebuttal backup
    - result source:
      optional 10-seed pilot output per opponent stage
+   - current readiness note:
+     3-seed smoke evaluation is now validated for both `expert` and
+     `end_to_end`
 
 ## 5. Result Fields Required for All Paper Tables
 
@@ -277,6 +282,14 @@ Extraction rule:
   `src/uav_vpp_guidance/evaluation/legacy_hierarchical_policy.py`
 - legacy hierarchical bridge unit tests:
   `tests/test_legacy_hierarchical_policy.py`
+- legacy hierarchical comparison-runner support:
+  `scripts/run_jsbsim_hrl_comparison.py`
+- legacy hierarchical evaluation config:
+  `config/experiment/jsbsim_hrl_reset075_no_mode_switch_longscale00_legacy_hierarchical_bridge.yaml`
+- legacy hierarchical smoke launcher:
+  `scripts/run_reset075_no_mode_switch_longscale00_legacy_hierarchical_bridge_smoke.ps1`
+- legacy hierarchical 10-seed launcher:
+  `scripts/run_reset075_no_mode_switch_longscale00_legacy_hierarchical_bridge_10seed_pilot.ps1`
 - registry entries:
   `config/checkpoint_registry.yaml`
   - `training.no_vpp_combat`
@@ -289,19 +302,43 @@ Extraction rule:
 - end-to-end comparison config builds successfully
 - PN zero-offset comparison config builds successfully
 - LOS zero-offset comparison config builds successfully
+- legacy hierarchical comparison config builds successfully
 - the no-VPP comparison config required an evaluation-side pin to keep
   `virtual_point.mode: zero_offset` because the comparison runner defaults PPO
   methods back to `virtual_point.mode: normal`
 - current missing items are checkpoint generation for
-  `end_to_end_combat`, plus legacy-hierarchical bridge work, not config syntax
+  `end_to_end_combat` plus any optional SAC work, not comparison-config syntax
+
+### Smoke validated on 2026-06-30
+
+- no-VPP smoke training completed:
+  `outputs/experiments/smoke_validate_no_vpp_combat_fix1/`
+- end-to-end smoke training completed:
+  `outputs/experiments/smoke_validate_end_to_end_combat/`
+- PN expert smoke completed:
+  `outputs/jsbsim_hrl_comparison/reset075_rule_pn_expert_3seed_smoke_20260630/`
+- PN end-to-end smoke completed:
+  `outputs/jsbsim_hrl_comparison/reset075_rule_pn_e2e_3seed_smoke_20260630/`
+- LOS expert smoke completed:
+  `outputs/jsbsim_hrl_comparison/reset075_rule_los_expert_3seed_smoke_20260630/`
+- LOS end-to-end smoke completed:
+  `outputs/jsbsim_hrl_comparison/reset075_rule_los_e2e_3seed_smoke_20260630/`
+- legacy hierarchical expert smoke completed:
+  `outputs/jsbsim_hrl_comparison/reset075_no_mode_switch_longscale00_legacy_hierarchical_bridge_expert_3seed_smoke_20260630_fix1/`
+- legacy hierarchical end-to-end smoke completed:
+  `outputs/jsbsim_hrl_comparison/reset075_no_mode_switch_longscale00_legacy_hierarchical_bridge_end_to_end_3seed_smoke_20260630_fix1/`
+- no-VPP training path required a `NoVPPGuidance` compatibility fix so the
+  zero-offset generator accepts the current override keywords
+- smoke produced complete artifact bundles with no bridge/runtime failures after
+  the command-override compatibility fix in `tracking_env.py`
+- smoke outcome mix was entirely timeout-dominated with zero ego crashes and
+  zero target crash/out-of-bounds in all four lanes
+- smoke evidence is enough to say the bridge is protocol-compatible
+- smoke evidence is not yet enough to promote the legacy row into the main
+  reviewer-facing table without a 10-seed pilot
 
 ### Not yet created
 
-- legacy hierarchical runner integration in
-  `scripts/run_jsbsim_hrl_comparison.py`
-- legacy hierarchical evaluation config
-- legacy hierarchical smoke / pilot launchers
-- local `stable_baselines3` availability in the active Python environment
 - SAC training bridge and evaluation config(s)
 
 ### Important current limitations
@@ -315,7 +352,6 @@ Extraction rule:
 
 It does not yet support:
 
-- `legacy_hierarchical`
 - `sac`
 
 ### Important interpretation risk
@@ -459,7 +495,7 @@ For the fastest credible submission route:
   path is redesigned so the policy action matters
 - Validation to run:
   dry-run comparison config
-  optional smoke train seed 0
+  smoke training seed 0 is now validated
   appendix-only pilot if you still want a zero-offset sanity row
 - Paper table role:
   appendix by default
@@ -485,8 +521,8 @@ For the fastest credible submission route:
   no additional files required before smoke validation
 - Validation to run:
   dry-run comparison config
-  smoke train seed 0
-  10-seed pilot only after checkpoint exists
+  smoke train seed 0 is now validated
+  10-seed pilot only after the formal checkpoint exists
 - Paper table role:
   Table 2
 
@@ -510,7 +546,7 @@ For the fastest credible submission route:
   no
 - Validation order:
   config dry-run
-  3-seed smoke bridge
+  3-seed smoke bridge is now validated
   10-seed pilot
 - Paper table role:
   Table 2
@@ -537,7 +573,7 @@ For the fastest credible submission route:
   no
 - Validation order:
   config dry-run
-  3-seed smoke bridge
+  3-seed smoke bridge is now validated
   10-seed pilot
 - Paper table role:
   Table 2 only if PN is skipped; otherwise appendix or rebuttal backup
@@ -573,31 +609,26 @@ For the fastest credible submission route:
   `src/uav_vpp_guidance/evaluation/legacy_hierarchical_policy.py`
 - Existing unit tests already created:
   `tests/test_legacy_hierarchical_policy.py`
-- Comparison-runner change required:
-  extend `scripts/run_jsbsim_hrl_comparison.py` with
-  `agent_type: legacy_hierarchical`
-- Additional runner hardening still required:
-  `.zip` SB3 checkpoints must bypass the current `torch.load` config-path
-  audit logic and fall back to `config_path`
-- Config to create:
+- Comparison-runner support already created:
+  `scripts/run_jsbsim_hrl_comparison.py`
+  now supports `agent_type: legacy_hierarchical`
+- Runner hardening already created:
+  SB3 `.zip` checkpoints now bypass the `torch.load` config/dim audit path and
+  fall back to `config_path`
+- Config already created:
   `config/experiment/jsbsim_hrl_reset075_no_mode_switch_longscale00_legacy_hierarchical_bridge.yaml`
-- Smoke launcher to create:
+- Smoke launcher already created:
   `scripts/run_reset075_no_mode_switch_longscale00_legacy_hierarchical_bridge_smoke.ps1`
-- 10-seed launcher to create:
+- 10-seed launcher already created:
   `scripts/run_reset075_no_mode_switch_longscale00_legacy_hierarchical_bridge_10seed_pilot.ps1`
 - Training needed:
   no new training if `proposed_ppo.zip` can be loaded cleanly
-- Mandatory smoke checklist before pilot:
-  1. load the SB3 PPO checkpoint from `proposed_ppo.zip` deterministically
-  2. rebuild the legacy 16-D observation exactly from JSBSim state
-  3. decode action `0/1/2` into `lag/lead/pure` guidance calls without extra
-     policy-side geometry shaping
-  4. verify no unavailable observation fields leak across the bridge
-  5. verify one `head_on` and one `crossing_feasible` smoke episode per opponent
-  6. verify termination JSON is emitted in the new artifact format
+- Smoke status:
+  the 3-seed smoke checklist is now satisfied for both `expert` and
+  `end_to_end`
 - Paper table role:
-  Table 2 if the bridge passes smoke cleanly
-  otherwise Discussion-only self-evolution evidence
+  eligible for Table 2 10-seed piloting
+  not yet table-ready from smoke evidence alone
 
 ### J. SAC-cartesian
 

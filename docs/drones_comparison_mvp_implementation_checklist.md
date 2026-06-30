@@ -2,76 +2,78 @@
 
 ## 1. Purpose
 
-This checklist turns the current comparison-baseline discussion into an
-execution-ready MVP plan for the `Drones` submission.
+This file is the current implementation bill of materials for the fastest
+credible `Drones` submission route.
 
-Paper terminology should use `geometry-basis`.
-Implementation terminology in the current repo should keep the existing
-`tactical_basis` config and file names unless a separate repo-wide rename is
-scheduled.
+It answers three practical questions for every baseline:
 
-## 2. Frozen Protocol
+1. which training and evaluation assets are the source of truth
+2. whether any new config or script still needs to be created
+3. whether the resulting row belongs in `Table 1`, `Table 2`, or the appendix
 
-All new baselines must be brought onto the same paper protocol:
+Paper wording should use `geometry-basis`.
+Repo config and file names may keep the existing `tactical_basis` identifiers.
+
+## 2. Frozen Paper Protocol
+
+All baselines below must stay on this same protocol:
 
 - main baseline remains `reset075_no_mode_switch_longscale00`
 - do not promote `directtrack2000`
-- combat-only scope is `head_on + crossing_feasible`
-- opponent split is `expert + end_to_end`
-- crossing entry must explicitly use `--attack-zone-close-range-max-aoa-deg 60`
-- backend must be `jsbsim`
+- combat-only scope remains `head_on + crossing_feasible`
+- opponent split remains `expert + end_to_end`
+- crossing evaluation must explicitly use
+  `--attack-zone-close-range-max-aoa-deg 60`
+- backend remains `jsbsim`
 - pilot budget remains 10 seeds: `480-489`
-- do not launch a formal `480-seed` held-out
-- every YAML mutation must be recorded through the provenance override contract
-- output pack must include:
-  - `aggregate/method_task_summary.json`
-  - `aggregate/combat_geometry_diagnostics.json`
-  - raw episode JSONs
-  - termination-mix audit
+- do not launch the formal held-out beyond this pilot path
+- do not change the observation schema for this comparison MVP
+- every YAML-loaded mutation must be recorded through the provenance contract
 
-## 3. What Should Go Where
+Every table-eligible run must archive:
 
-### Table 1: Main paper table
+- `aggregate/method_task_summary.json`
+- `aggregate/combat_geometry_diagnostics.json`
+- raw episode JSON
+- a termination-mix audit derived from raw episodes
 
-Keep the paper-core interface family compact:
+Interpretation guard:
 
-- baseline:
-  `prediction_vpp_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00`
-- broad finetune:
-  `..._tactical_basis_headon_mvp_combat_finetune_best`
-- narrow finetune:
-  `..._tactical_basis_headon_mvp_combat_finetune_narrow_extents_best`
-- mixed finetune:
-  `..._tactical_basis_headon_mvp_combat_finetune_mixed_crossing_restored_best`
+- `crashes` in `method_task_summary.json` means
+  `ego_crashes + target_crash_or_oob`
+- never read `crashes` as ego crashes alone
 
-Do not put the semantics-only MVP into Table 1.
-Keep it in method-bridge text or appendix.
+## 3. Which Rows Belong in the Paper
 
-### Table 2: External comparator table
+### Table 1: main interface-family table
 
-This should answer reviewer objections without bloating the main narrative:
+Only these four rows belong in the main paper table:
 
-- end-to-end direct-command PPO
-- zero-offset PN guidance
-- legacy hierarchical Aerospace baseline
+1. `Cartesian VPP baseline`
+2. `Geometry-basis broad finetune`
+3. `Geometry-basis narrow finetune`
+4. `Geometry-basis mixed finetune`
 
-Optional appendix / rebuttal rows:
+### Table 2: reviewer-facing comparator table
 
-- zero-offset LOS guidance
-- zero-offset target-anchor comparator (`no_vpp_combat`)
-- SAC-cartesian
-- SAC-mixed geometry-basis
+These are the minimum external rows for the fastest credible submission:
 
-### Appendix / method bridge only
+1. `End-to-end direct-command PPO`
+2. `Zero-offset PN guidance`
+3. `Legacy hierarchical Aerospace baseline`
 
-- semantics-only tactical/geometry-basis MVP
-- failed mixed candidates that do not beat the current mixed-crossing-restored
-  checkpoint
-- any legacy result that was not re-evaluated under the current paper protocol
+### Appendix or rebuttal only
 
-## 4. Required Metrics for Every Baseline
+Keep these out of the main manuscript path:
 
-Every baseline that is allowed into Table 1 or Table 2 must report, per lane:
+1. `Zero-offset LOS guidance`
+2. `Zero-offset target-anchor comparator`
+3. `Semantics-only geometry-basis MVP`
+4. `SAC` variants unless a separate compute campaign is opened
+
+## 4. Required Metrics for Every Table Row
+
+For every row admitted to `Table 1` or `Table 2`, extract and preserve:
 
 - `win_rate`
 - `damage_margin`
@@ -80,412 +82,329 @@ Every baseline that is allowed into Table 1 or Table 2 must report, per lane:
 - `pre_merge_vp_forward_bias_m`
 - raw termination semantics
 
-Recommended extraction rule:
+Extraction rule:
 
-- take `win_rate`, `ego_crashes`, `target_crash_or_oob`, `crashes`, `timeouts`
-  from `aggregate/method_task_summary.json`
-- take `pre_merge_vp_forward_bias_m` from
+- take outcome counts from `aggregate/method_task_summary.json`
+- take geometry-health metrics from
   `aggregate/combat_geometry_diagnostics.json`
-- take `damage_margin` from the same aggregated output if present; otherwise
-  compute it as `mean_damage_dealt - mean_damage_taken` and label the derivation
-  explicitly in the paper/source-data sheet
-- always verify termination mix from raw episode JSON because aggregate
-  `crashes` means `ego_crashes + target_crash_or_oob`
+- verify termination semantics from raw episode JSON
 
-## 5. Execution Order
+## 5. Baseline-by-Baseline Implementation Cards
 
-### P0: already paper-critical and mostly available
+### 5.1 Cartesian VPP baseline
 
-1. unify the four internal interface variants into one comparison config
-2. lock Table 1 from the existing 10-seed pilot outputs
-3. clean the raw termination audit for the mixed variant
-
-### P1: minimum external comparator pack
-
-1. end-to-end direct-command PPO
-2. PN guidance
-3. legacy hierarchical Aerospace baseline
-
-### P2: algorithm-choice pack
-
-1. SAC-cartesian
-2. SAC-mixed geometry-basis
-
-### P3: non-blocking appendix support
-
-1. LOS guidance
-2. zero-offset target-anchor comparator (`no_vpp_combat`) unless redesigned
-
-If compute or coding bandwidth collapses, P1 is higher priority than P2 except
-that at least one SAC comparator is still strongly recommended for rebutting the
-algorithm-choice objection.
-
-## 6. Baseline-by-Baseline Implementation Matrix
-
-### 6.1 Internal paper-core family
-
-#### A. Main baseline
-
-- Status: already exists and remains the anchor
-- Existing training config:
+- Paper label:
+  `Cartesian VPP baseline`
+- Status:
+  ready now
+- Training config:
   `config/experiment/train_prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00.yaml`
-- Existing evaluation method key:
-  `prediction_vpp_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00`
-- Existing result role:
-  Table 1
-- New files to create:
-  - `config/experiment/jsbsim_hrl_reset075_no_mode_switch_longscale00_geometry_family_main_table.yaml`
-    This should contain all four Table 1 methods in one config.
-  - `scripts/run_reset075_no_mode_switch_longscale00_geometry_family_10seed_pilot.ps1`
-    This should call `run_jsbsim_hrl_comparison.py` once for `expert` and once
-    for `end_to_end`.
-- New training needed: no
-- Result source for Table 1:
-  existing baseline pilot outputs plus the unified rerun config if you want one
-  artifact bundle
+- Unified evaluation config:
+  `config/experiment/jsbsim_hrl_reset075_no_mode_switch_longscale00_geometry_family_main_table.yaml`
+- Evaluation launcher:
+  `scripts/run_reset075_no_mode_switch_longscale00_geometry_family_10seed_pilot.ps1`
+- New files still needed:
+  none
+- Remaining gate:
+  no code gate; optionally rerun through the unified Table 1 config for a clean
+  paper bundle
+- Paper destination:
+  `Table 1`
+- Result source:
+  the baseline row in the unified geometry-family 10-seed pilot bundle
 
-#### B. Broad finetune
+### 5.2 Geometry-basis broad finetune
 
-- Status: already exists
-- Existing training config:
+- Paper label:
+  `Geometry-basis broad finetune`
+- Status:
+  ready now
+- Training config:
   `config/experiment/train_prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp_combat_finetune.yaml`
-- Existing training launcher:
+- Training launcher:
   `scripts/run_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp_combat_finetune.ps1`
-- Existing eval config:
-  `config/experiment/jsbsim_hrl_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp_combat_finetune_best.yaml`
-- Existing pilot outputs:
-  - `outputs/jsbsim_hrl_comparison/tactical_basis_headon_mvp_combat_finetune_best_expert_10seed_20260629/`
-  - `outputs/jsbsim_hrl_comparison/tactical_basis_headon_mvp_combat_finetune_best_end_to_end_10seed_20260629/`
-- Existing summary report:
+- Unified evaluation config:
+  `config/experiment/jsbsim_hrl_reset075_no_mode_switch_longscale00_geometry_family_main_table.yaml`
+- Evaluation launcher:
+  `scripts/run_reset075_no_mode_switch_longscale00_geometry_family_10seed_pilot.ps1`
+- New files still needed:
+  none
+- Remaining gate:
+  none
+- Paper destination:
+  `Table 1`
+- Locked result bundles:
+  `outputs/jsbsim_hrl_comparison/tactical_basis_headon_mvp_combat_finetune_best_expert_10seed_20260629/`
+  and
+  `outputs/jsbsim_hrl_comparison/tactical_basis_headon_mvp_combat_finetune_best_end_to_end_10seed_20260629/`
+- Locked report:
   `outputs/diagnostics/tactical_basis_combat_finetune_10seed_pilot_report.md`
-- Result role:
-  Table 1
-- New files to create:
-  none beyond the unified Table 1 config and runner
-- New training needed: no
 
-#### C. Narrow finetune
+### 5.3 Geometry-basis narrow finetune
 
-- Status: already exists
-- Existing training config:
+- Paper label:
+  `Geometry-basis narrow finetune`
+- Status:
+  ready now
+- Training config:
   `config/experiment/train_prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp_combat_finetune_narrow_extents.yaml`
-- Existing training launcher:
+- Training launcher:
   `scripts/run_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp_combat_finetune_narrow_extents.ps1`
-- Existing eval config:
-  `config/experiment/jsbsim_hrl_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp_combat_finetune_narrow_extents_best.yaml`
-- Existing pilot outputs:
-  - `outputs/jsbsim_hrl_comparison/tactical_basis_headon_mvp_combat_finetune_narrow_extents_best_expert_10seed_20260629/`
-  - `outputs/jsbsim_hrl_comparison/tactical_basis_headon_mvp_combat_finetune_narrow_extents_best_end_to_end_10seed_20260629/`
-- Existing summary report:
+- Unified evaluation config:
+  `config/experiment/jsbsim_hrl_reset075_no_mode_switch_longscale00_geometry_family_main_table.yaml`
+- Evaluation launcher:
+  `scripts/run_reset075_no_mode_switch_longscale00_geometry_family_10seed_pilot.ps1`
+- New files still needed:
+  none
+- Remaining gate:
+  none
+- Paper destination:
+  `Table 1`
+- Locked result bundles:
+  `outputs/jsbsim_hrl_comparison/tactical_basis_headon_mvp_combat_finetune_narrow_extents_best_expert_10seed_20260629/`
+  and
+  `outputs/jsbsim_hrl_comparison/tactical_basis_headon_mvp_combat_finetune_narrow_extents_best_end_to_end_10seed_20260629/`
+- Locked report:
   `outputs/diagnostics/tactical_basis_combat_finetune_narrow_extents_10seed_pilot_report.md`
-- Result role:
-  Table 1
-- New files to create:
-  none beyond the unified Table 1 config and runner
-- New training needed: no
 
-#### D. Mixed finetune
+### 5.4 Geometry-basis mixed finetune
 
-- Status: already exists and is the current best main-candidate checkpoint
-- Existing training config:
+- Paper label:
+  `Geometry-basis mixed finetune`
+- Status:
+  ready now and currently the preferred main candidate
+- Training config:
   `config/experiment/train_prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp_combat_finetune_mixed_crossing_restored.yaml`
-- Existing training launcher:
+- Training launcher:
   `scripts/run_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp_combat_finetune_mixed_crossing_restored.ps1`
-- Existing eval config:
-  `config/experiment/jsbsim_hrl_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp_combat_finetune_mixed_crossing_restored_best.yaml`
-- Existing 10-seed pilot launchers:
-  - `scripts/run_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp_combat_finetune_mixed_crossing_restored_10seed_pilot.ps1`
-- Existing pilot outputs:
-  - `outputs/jsbsim_hrl_comparison/tactical_basis_headon_mvp_combat_finetune_mixed_crossing_restored_best_expert_10seed_20260629/`
-  - `outputs/jsbsim_hrl_comparison/tactical_basis_headon_mvp_combat_finetune_mixed_crossing_restored_best_end_to_end_10seed_20260629/`
-- Current observed headline:
-  - `expert/head_on`: `win_rate 0.60 -> 1.00`, `ego_crashes 2 -> 0`
-  - `expert/crossing_feasible`: `win_rate 0.30 -> 0.90`, `ego_crashes 1 -> 0`
-  - `end_to_end/head_on`: `win_rate 0.90 -> 0.90`, `ego_crashes 1 -> 1`
-  - `end_to_end/crossing_feasible`: `win_rate 1.00 -> 1.00`, but still heavily
-    target-failure dominated
-- Result role:
-  Table 1
-- New files to create:
-  none beyond the unified Table 1 config and runner
-- New training needed: no, unless you choose to supersede this checkpoint
+- Unified evaluation config:
+  `config/experiment/jsbsim_hrl_reset075_no_mode_switch_longscale00_geometry_family_main_table.yaml`
+- Evaluation launchers:
+  `scripts/run_reset075_no_mode_switch_longscale00_geometry_family_10seed_pilot.ps1`
+  and
+  `scripts/run_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp_combat_finetune_mixed_crossing_restored_10seed_pilot.ps1`
+- New files still needed:
+  none
+- Remaining gate:
+  none unless this checkpoint is intentionally replaced
+- Paper destination:
+  `Table 1`
+- Locked result bundles:
+  `outputs/jsbsim_hrl_comparison/tactical_basis_headon_mvp_combat_finetune_mixed_crossing_restored_best_expert_10seed_20260629/`
+  and
+  `outputs/jsbsim_hrl_comparison/tactical_basis_headon_mvp_combat_finetune_mixed_crossing_restored_best_end_to_end_10seed_20260629/`
+- Locked report:
+  `outputs/diagnostics/tactical_basis_combat_finetune_mixed_crossing_restored_10seed_pilot_report.md`
 
-#### E. Semantics-only geometry-basis MVP
+### 5.5 End-to-end direct-command PPO
 
-- Status: already exists
-- Existing eval config:
-  `config/experiment/jsbsim_hrl_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp.yaml`
-- Result role:
-  appendix / method bridge only
-- New files to create:
-  none unless you want a dedicated appendix runner
-- New training needed: no
+- Paper label:
+  `End-to-end direct-command PPO`
+- Status:
+  code path ready; smoke training passed; formal checkpoint still missing
+- Training config:
+  `config/experiment/train_end_to_end_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_combat.yaml`
+- Evaluation config:
+  `config/experiment/jsbsim_hrl_reset075_no_mode_switch_longscale00_end_to_end_direct_command_best.yaml`
+- Launchers:
+  `scripts/run_reset075_no_mode_switch_longscale00_end_to_end_direct_command.ps1`
+  and
+  `scripts/run_reset075_no_mode_switch_longscale00_end_to_end_direct_command_10seed_pilot.ps1`
+- New files still needed:
+  none
+- Remaining gate:
+  generate
+  `outputs/experiments/end_to_end_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_combat/checkpoints/best.pt`
+  and then run the 10-seed pilot for both opponents
+- Smoke evidence:
+  `outputs/experiments/smoke_validate_end_to_end_combat/`
+- Paper destination:
+  `Table 2`
+- Result source after completion:
+  one 10-seed output directory for `expert` and one for `end_to_end`
 
-### 6.2 External comparator pack
+### 5.6 Zero-offset PN guidance
 
-#### F. Zero-offset / no-VPP PPO
+- Paper label:
+  `Zero-offset PN guidance`
+- Status:
+  bridge implemented; dry-run and 3-seed smoke already validated
+- Training config:
+  none
+- Evaluation config:
+  `config/experiment/jsbsim_hrl_reset075_no_mode_switch_longscale00_rule_pn_zero_offset.yaml`
+- Launcher:
+  `scripts/run_reset075_no_mode_switch_longscale00_rule_pn_zero_offset_10seed_pilot.ps1`
+- New files still needed:
+  none
+- Remaining gate:
+  run the 10-seed pilot for `expert` and `end_to_end`
+- Smoke evidence:
+  `outputs/jsbsim_hrl_comparison/reset075_rule_pn_expert_3seed_smoke_20260630/`
+  and
+  `outputs/jsbsim_hrl_comparison/reset075_rule_pn_e2e_3seed_smoke_20260630/`
+- Paper destination:
+  `Table 2`
+- Result source after completion:
+  one 10-seed output directory for `expert` and one for `end_to_end`
 
-- Reviewer question answered:
-  appendix-only sanity check for removing VPP offset geometry
-- Existing reusable assets:
-  - `config/experiment/train_no_vpp_ppo.yaml`
-  - `config/experiment/train_no_vpp_direct_command.yaml`
-  - `scripts/run_no_vpp_baseline.py`
-  - `scripts/run_p0a_vpp_ablation.sh`
-  - current comparison runner can load it as ordinary `agent_type: ppo`
-- Important implementation note:
-  `src/uav_vpp_guidance/virtual_point/no_vpp_guidance.py` ignores the policy
-  action and always returns the target position, so the current `no_vpp_combat`
-  path should not be sold as a strong learned comparator without redesign
-- Important note:
-  do not reuse the old simple-backend result directly; train and evaluate under
-  the current combat-only JSBSim protocol
-- New config to create:
-  - `config/experiment/train_prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_no_vpp_combat.yaml`
-    Derived from the main baseline training config, but force:
-    `virtual_point.mode: zero_offset`
-  - optional alias config:
-    `config/experiment/jsbsim_hrl_reset075_no_mode_switch_longscale00_no_vpp_combat_best.yaml`
-- New launcher to create:
-  - `scripts/run_reset075_no_mode_switch_longscale00_no_vpp_combat.ps1`
-  - `scripts/run_reset075_no_mode_switch_longscale00_no_vpp_combat_10seed_pilot.ps1`
-- Python code changes needed:
-  none if the zero-offset mode already behaves correctly under
-  `train_prediction_vpp_ppo`
-- Result role:
-  appendix by default
-  promote only if redesigned into a true action-sensitive learned ablation
+### 5.7 Legacy hierarchical Aerospace baseline
 
-#### G. End-to-end direct-command PPO
+- Paper label:
+  `Legacy hierarchical pursuit-strategy baseline`
+- Status:
+  bridge implemented; unit-tested; dry-run and 3-seed smoke completed
+- Legacy checkpoint:
+  `E:\CloseAirCombat_control\baseline_results\checkpoints\proposed_ppo.zip`
+- Evaluation config:
+  `config/experiment/jsbsim_hrl_reset075_no_mode_switch_longscale00_legacy_hierarchical_bridge.yaml`
+- Launchers:
+  `scripts/run_reset075_no_mode_switch_longscale00_legacy_hierarchical_bridge_smoke.ps1`
+  and
+  `scripts/run_reset075_no_mode_switch_longscale00_legacy_hierarchical_bridge_10seed_pilot.ps1`
+- Supporting code already in place:
+  `src/uav_vpp_guidance/evaluation/legacy_hierarchical_policy.py`
+  and
+  `scripts/run_jsbsim_hrl_comparison.py`
+- Supporting tests already in place:
+  `tests/test_legacy_hierarchical_policy.py`
+  and the legacy-related cases in
+  `tests/test_jsbsim_hrl_comparison_runner.py`
+- New files still needed:
+  none
+- Remaining gate:
+  run the full 10-seed pilot for `expert` and `end_to_end`
+- Smoke evidence:
+  `outputs/jsbsim_hrl_comparison/reset075_no_mode_switch_longscale00_legacy_hierarchical_bridge_expert_3seed_smoke_20260630_fix1/`
+  and
+  `outputs/jsbsim_hrl_comparison/reset075_no_mode_switch_longscale00_legacy_hierarchical_bridge_end_to_end_3seed_smoke_20260630_fix1/`
+- Paper destination:
+  `Table 2` only after the 10-seed pilot
+- If the 10-seed pilot is skipped:
+  keep it in `Discussion` as compatibility evidence, not as a main table row
 
-- Reviewer question answered:
-  is the guidance/VPP layer necessary, or does direct command work as well?
-- Existing reusable assets:
-  - `config/experiment/train_end_to_end_ppo.yaml`
-  - `scripts/train_end_to_end_baseline.py`
-  - `scripts/run_end_to_end_ppo_multi_seed.py`
-  - comparison runner already supports `agent_type: end_to_end`
-- Important note:
-  this repo's end-to-end baseline is already a cleaner 3-D direct-command
-  ablation, not raw 4D actuator output
-- New config to create:
-  - `config/experiment/train_end_to_end_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_combat.yaml`
-    Derived from the current paper protocol, not from the legacy simple-backend
-    config
-  - `config/experiment/jsbsim_hrl_reset075_no_mode_switch_longscale00_end_to_end_direct_command_best.yaml`
-- New launcher to create:
-  - `scripts/run_end_to_end_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_combat_multi_seed.py`
-  - `scripts/run_reset075_no_mode_switch_longscale00_end_to_end_direct_command_10seed_pilot.ps1`
-- Python code changes needed:
-  probably none beyond the new config and registry entries
-- Result role:
-  Table 2
+### 5.8 Zero-offset LOS guidance
 
-#### H. Zero-offset LOS guidance
-
-- Reviewer question answered:
-  how much of the gain comes from learning at all, versus a deterministic
-  geometry-tracking law?
-- Existing reusable assets:
-  - `src/uav_vpp_guidance/guidance/`
-  - comparison runner infrastructure
-- Existing created support:
-  - `src/uav_vpp_guidance/evaluation/rule_guidance_policy.py`
-  - `scripts/run_jsbsim_hrl_comparison.py`
-  - `config/experiment/jsbsim_hrl_reset075_no_mode_switch_longscale00_rule_los_zero_offset.yaml`
-  - `scripts/run_reset075_no_mode_switch_longscale00_rule_los_zero_offset_10seed_pilot.ps1`
-- Training needed:
-  no
-- Result role:
+- Paper label:
+  `Zero-offset LOS guidance`
+- Status:
+  bridge implemented; dry-run and 3-seed smoke already validated
+- Training config:
+  none
+- Evaluation config:
+  `config/experiment/jsbsim_hrl_reset075_no_mode_switch_longscale00_rule_los_zero_offset.yaml`
+- Launcher:
+  `scripts/run_reset075_no_mode_switch_longscale00_rule_los_zero_offset_10seed_pilot.ps1`
+- New files still needed:
+  none
+- Remaining gate:
+  only if appendix or rebuttal support is wanted
+- Paper destination:
   appendix or rebuttal backup
 
-#### I. Zero-offset PN guidance
+### 5.9 Zero-offset target-anchor comparator
 
-- Reviewer question answered:
-  does the proposed interface outperform a classical PN-style guidance baseline?
-- Existing reusable assets:
-  - `src/uav_vpp_guidance/guidance/proportional_navigation.py`
-  - `scripts/run_stage6g5d_pn_mode_switch_probe.py`
-- Existing created support:
-  - `src/uav_vpp_guidance/evaluation/rule_guidance_policy.py`
-  - `scripts/run_jsbsim_hrl_comparison.py`
-  - `config/experiment/jsbsim_hrl_reset075_no_mode_switch_longscale00_rule_pn_zero_offset.yaml`
-  - `scripts/run_reset075_no_mode_switch_longscale00_rule_pn_zero_offset_10seed_pilot.ps1`
-- Training needed:
-  no
-- Result role:
-  Table 2
-- Priority note:
-  if time is extremely tight, LOS is cheaper; PN is the stronger review-facing
-  classical baseline
+- Paper label:
+  `Zero-offset target-anchor comparator`
+- Status:
+  smoke training path validated; formal checkpoint still missing; still
+  action-insensitive by design
+- Training config:
+  `config/experiment/train_prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_no_vpp_combat.yaml`
+- Evaluation config:
+  `config/experiment/jsbsim_hrl_reset075_no_mode_switch_longscale00_no_vpp_combat_best.yaml`
+- Launchers:
+  `scripts/run_reset075_no_mode_switch_longscale00_no_vpp_combat.ps1`
+  and
+  `scripts/run_reset075_no_mode_switch_longscale00_no_vpp_combat_10seed_pilot.ps1`
+- Supporting compatibility fix:
+  `src/uav_vpp_guidance/virtual_point/no_vpp_guidance.py`
+- New files still needed:
+  none
+- Remaining gate:
+  if you still want an appendix row, generate
+  `outputs/experiments/prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_no_vpp_combat/checkpoints/best.pt`
+- Smoke evidence:
+  `outputs/experiments/smoke_validate_no_vpp_combat_fix1/`
+- Mandatory wording guard:
+  do not describe this as a strong learned ablation because the current
+  `no_vpp` path ignores the policy action
+- Paper destination:
+  appendix only
 
-#### J. SAC-cartesian
+## 6. File-Creation Inventory Still Open
 
-- Reviewer question answered:
-  is PPO special here, or does the interface still help under another
-  continuous-control RL algorithm?
-- Current repo status:
-  `src/uav_vpp_guidance/agents/sac_agent.py` is still a stub and cannot be used
-- Reusable precedent:
-  old SB3-SAC code exists in `E:\\CloseAirCombat_control\\run_v5_1m.py`
-  and `run_v6_1m.py`
-- New Python files to create:
-  - `src/uav_vpp_guidance/training/train_sac_guidance.py`
-  - `src/uav_vpp_guidance/agents/sb3_sac_agent.py`
-    or replace the current stub in `agents/sac_agent.py`
-- Existing Python files to modify:
-  - `scripts/run_jsbsim_hrl_comparison.py`
-    Add `agent_type: sac`
-- New config to create:
-  - `config/experiment/train_sac_prediction_vpp_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00.yaml`
-  - `config/experiment/jsbsim_hrl_reset075_no_mode_switch_longscale00_sac_cartesian_best.yaml`
-- New launcher to create:
-  - `scripts/run_reset075_no_mode_switch_longscale00_sac_cartesian.ps1`
-  - `scripts/run_reset075_no_mode_switch_longscale00_sac_cartesian_10seed_pilot.ps1`
-- Training needed:
-  yes
-- Result role:
-  appendix or rebuttal-first, not on the fastest submission-critical path
+For the fastest submission MVP, there are no remaining must-create config or
+script files for:
 
-#### K. SAC-mixed geometry-basis
+- `Table 1` internal rows
+- `End-to-end direct-command PPO`
+- `Zero-offset PN guidance`
+- `Legacy hierarchical Aerospace baseline`
 
-- Reviewer question answered:
-  is the mixed geometry-basis advantage tied to PPO, or does the interface
-  transfer to SAC as well?
-- Reuses the same new SAC training/eval bridge as SAC-cartesian
-- New config to create:
-  - `config/experiment/train_sac_prediction_vpp_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_mixed_crossing_restored.yaml`
-  - `config/experiment/jsbsim_hrl_reset075_no_mode_switch_longscale00_sac_mixed_crossing_restored_best.yaml`
-- New launcher to create:
-  - `scripts/run_reset075_no_mode_switch_longscale00_sac_mixed_crossing_restored.ps1`
-  - `scripts/run_reset075_no_mode_switch_longscale00_sac_mixed_crossing_restored_10seed_pilot.ps1`
-- Training needed:
-  yes
-- Result role:
-  appendix or rebuttal-first, not on the fastest submission-critical path
-- Priority note:
-  if only one SAC baseline fits the schedule, do SAC-cartesian first
+The remaining blockers are compute and checkpoint generation, not missing file
+plumbing.
 
-#### L. Legacy hierarchical Aerospace baseline
+New files become necessary only if the scope is expanded beyond the fastest
+submission route, especially for `SAC`.
 
-- Reviewer question answered:
-  what is the real gain over the author's prior hierarchical discrete-to-
-  continuous interface?
-- Existing assets:
-  - paper/project source tree:
-    `E:\\CloseAirCombat_control`
-  - old PPO result bundles:
-    `E:\\CloseAirCombat_control\\baseline_results*`
-  - old model/checkpoint assets such as:
-    `E:\\CloseAirCombat_control\\baseline_results\\checkpoints\\proposed_ppo.zip`
-- Legacy bridge contract that must be preserved:
-  - reconstruct the old 16-D observation with legacy
-    `extract_high_level_obs` semantics from simulator state
-  - keep the original discrete action meaning:
-    `0 = lag`, `1 = lead`, `2 = pure`
-- Important warning:
-  old results are not protocol-compatible by default and must not be copied into
-  the new paper table without reevaluation
-- Existing bridge code already created:
-  - `src/uav_vpp_guidance/evaluation/legacy_hierarchical_policy.py`
-    This wrapper reconstructs the legacy 16-D observation, decodes
-    `lag/lead/pure`, and emits a current-comparison compatible command
-    override
-- Existing unit tests already created:
-  - `tests/test_legacy_hierarchical_policy.py`
-- Existing Python files to modify:
-  - `scripts/run_jsbsim_hrl_comparison.py`
-    Add a new `agent_type`, for example `legacy_hierarchical`
-- Additional runner hardening still required:
-  - make `.zip` SB3 checkpoints bypass the current `torch.load` config/dim
-    audit path and fall back to `config_path`
-- New config to create:
-  - `config/experiment/jsbsim_hrl_reset075_no_mode_switch_longscale00_legacy_hierarchical_bridge.yaml`
-- New launcher to create:
-  - `scripts/run_reset075_no_mode_switch_longscale00_legacy_hierarchical_bridge_smoke.ps1`
-  - `scripts/run_reset075_no_mode_switch_longscale00_legacy_hierarchical_bridge_10seed_pilot.ps1`
-- Training needed:
-  no new training if the old checkpoint can be loaded directly
-- Validation step required before counting it:
-  - confirm action mapping matches the old paper semantics
-  - confirm observation bridge is not leaking unavailable state
-  - run a 3-seed smoke bridge before the 10-seed pilot
-- Result role:
-  Table 2 if the bridge works cleanly
-  otherwise Discussion-only self-evolution evidence
+## 7. Results Routing Into the Manuscript
 
-## 7. Remaining Files to Create Next
+### Main paper table
 
-Live file-by-file status should be read from
-`docs/drones_comparison_mvp_execution_sheet.md`.
+Use exactly these rows:
 
-From the current repo state, the next genuinely missing files on the fastest
-credible route are:
+1. `Cartesian VPP baseline`
+2. `Geometry-basis broad finetune`
+3. `Geometry-basis narrow finetune`
+4. `Geometry-basis mixed finetune`
 
-1. `config/experiment/jsbsim_hrl_reset075_no_mode_switch_longscale00_legacy_hierarchical_bridge.yaml`
-2. `scripts/run_reset075_no_mode_switch_longscale00_legacy_hierarchical_bridge_smoke.ps1`
-3. `scripts/run_reset075_no_mode_switch_longscale00_legacy_hierarchical_bridge_10seed_pilot.ps1`
-4. runner integration in `scripts/run_jsbsim_hrl_comparison.py` for
-   `agent_type: legacy_hierarchical`
+### Reviewer-facing comparator table
 
-If you later decide to extend beyond the minimum submission route, the next
-missing files after legacy are:
+Use these rows once their pilot outputs are ready:
 
-1. `src/uav_vpp_guidance/training/train_sac_guidance.py`
-2. `src/uav_vpp_guidance/agents/sb3_sac_agent.py`
-3. `config/experiment/train_sac_prediction_vpp_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00.yaml`
-4. `config/experiment/train_sac_prediction_vpp_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_mixed_crossing_restored.yaml`
+1. `End-to-end direct-command PPO`
+2. `Zero-offset PN guidance`
+3. `Legacy hierarchical pursuit-strategy baseline`
 
-If you later want a true no-VPP learned ablation rather than an appendix
-zero-offset comparator, schedule a separate redesign pass for:
+### Appendix
 
-1. an action-sensitive no-VPP guidance path
-2. its paired train/eval configs
-3. a new 10-seed pilot launcher
+Keep these outside the main story:
 
-Current non-file blocker:
+1. `Zero-offset LOS guidance`
+2. `Zero-offset target-anchor comparator`
+3. `Semantics-only geometry-basis MVP`
 
-1. `stable_baselines3` is not available in the active Python environment, so
-   the legacy bridge cannot yet load `proposed_ppo.zip` locally
+## 8. Fastest Execution Order From Today
 
-## 8. Fastest Submission-Grade MVP
+1. Keep `Table 1` fixed as `baseline + broad + narrow + mixed`.
+2. Do not open a new algorithm branch yet.
+3. Generate the formal `end_to_end` checkpoint.
+4. Run the PN 10-seed pilot.
+5. Run the legacy hierarchical 10-seed pilot.
+6. Run the `end_to_end` 10-seed pilot.
+7. Add LOS or no-VPP only if appendix space or rebuttal support is needed.
 
-If you want the smallest plan that can still survive a serious methods review,
-stop at:
+## 9. Explicit Non-Goals For This MVP
 
-- Table 1 internal family:
-  baseline + broad + narrow + mixed
-- Table 2 external comparators:
-  end-to-end PPO + PN + legacy hierarchical
+Do not spend the fastest submission window on:
 
-Then add SAC-cartesian if time allows.
-Only add SAC-mixed after SAC-cartesian is running.
-Keep `no_vpp_combat` in the appendix unless it is redesigned into a true
-action-sensitive ablation.
-
-## 9. Recommended Artifact Layout
-
-For each new baseline, keep one evaluation directory per opponent:
-
-- `outputs/jsbsim_hrl_comparison/<run_id>_expert_10seed_<date>/`
-- `outputs/jsbsim_hrl_comparison/<run_id>_end_to_end_10seed_<date>/`
-
-Each run should be traced back to:
-
-- one train config
-- one eval config
-- one launcher
-- one checkpoint
-- one pilot report markdown
+- formal held-out expansion beyond the 10-seed pilot
+- promoting `directtrack2000`
+- turning `no_vpp` into a headline learned baseline
+- SAC implementation
+- APN or no-prediction redesign unless the paper is deferred into a larger
+  compute cycle
 
 ## 10. Bottom Line
 
-The fastest credible route is not to explode the comparison matrix.
-It is to lock the four-row internal family first, then add exactly the
-review-facing baselines that answer:
+The current MVP is no longer blocked by missing comparison scripts or configs.
+It is now a compute-allocation problem:
 
-- is the geometry-basis interface better than raw VPP scaling?
-- is it better than direct-command PPO?
-- is it better than a classical guidance law?
-- is it materially different from the earlier hierarchical Aerospace method?
-- is the observed gain still visible under at least one non-PPO algorithm?
+- `Table 1` is already file-complete
+- `PN` is evaluation-ready
+- `legacy hierarchical` is bridge-ready
+- `end_to_end` is code-ready but still needs the formal checkpoint
+
+That is the smallest implementation set that still supports a credible
+interface-design and geometry-diagnostics paper for `Drones`.

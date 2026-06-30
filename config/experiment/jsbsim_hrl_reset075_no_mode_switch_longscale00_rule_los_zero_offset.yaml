@@ -1,0 +1,34 @@
+includes:
+  - ./jsbsim_hrl_combat_only_pilot.yaml
+
+experiment:
+  name: jsbsim_hrl_reset075_no_mode_switch_longscale00_rule_los_zero_offset
+  description: "Current Cartesian VPP baseline versus a zero-offset LOS-rate guidance baseline on the shared combat-only scope."
+
+run_defaults:
+  main_methods:
+    - prediction_vpp_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00
+    - rule_los_zero_offset_reset075_no_mode_switch_longscale00
+  tasks:
+    - head_on
+    - crossing_feasible
+
+methods:
+  prediction_vpp_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00:
+    label: "Cartesian VPP baseline (reset075 no mode switch longscale00)"
+    agent_type: ppo
+    checkpoint: outputs/experiments/prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00/checkpoints/last.pt
+    config_path: config/experiment/train_prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00.yaml
+    prediction_variant: learned
+
+  rule_los_zero_offset_reset075_no_mode_switch_longscale00:
+    label: "Zero-offset LOS-rate guidance"
+    agent_type: rule_guidance
+    config_path: config/experiment/train_prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00.yaml
+    prediction_variant: none
+    config_overrides:
+      virtual_point.mode: zero_offset
+      virtual_point.anchor_mode: current_target
+      trajectory_prediction.enabled: false
+      guidance.mode: los_rate
+      guidance.mode_switch.enabled: false

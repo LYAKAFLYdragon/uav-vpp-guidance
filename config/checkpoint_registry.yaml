@@ -179,6 +179,16 @@ training:
     checkpoint: outputs/experiments/prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp_combat_finetune_mixed_crossing_restored/checkpoints/best.pt
     seeds: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
     description: "Combat finetune with mixed crossing restored (broader crossing extents)"
+  no_vpp_combat:
+    output_dir: outputs/experiments/prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_no_vpp_combat
+    checkpoint: outputs/experiments/prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_no_vpp_combat/checkpoints/best.pt
+    seeds: [0]
+    description: "Zero-offset / no-VPP PPO comparator aligned to the reset075 combat paper protocol"
+  end_to_end_combat:
+    output_dir: outputs/experiments/end_to_end_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_combat
+    checkpoint: outputs/experiments/end_to_end_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_combat/checkpoints/best.pt
+    seeds: [0]
+    description: "End-to-end direct-command PPO comparator aligned to the reset075 combat paper protocol"
   no_prediction_vpp_ppo_control:
     output_dir: outputs/experiments/no_prediction_vpp_ppo_control_s{seed}
     checkpoint: outputs/experiments/no_prediction_vpp_ppo_control_s{seed}/checkpoints/best.pt

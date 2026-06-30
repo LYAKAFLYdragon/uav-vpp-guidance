@@ -1,0 +1,45 @@
+includes:
+  - ./jsbsim_hrl_combat_only_pilot.yaml
+
+experiment:
+  name: jsbsim_hrl_reset075_no_mode_switch_longscale00_geometry_family_main_table
+  description: "Unified main-table comparison for the reset075 Cartesian baseline and three geometry-basis interface variants on the shared combat-only scope."
+
+run_defaults:
+  main_methods:
+    - prediction_vpp_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00
+    - prediction_vpp_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp_combat_finetune_best
+    - prediction_vpp_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp_combat_finetune_narrow_extents_best
+    - prediction_vpp_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp_combat_finetune_mixed_crossing_restored_best
+  tasks:
+    - head_on
+    - crossing_feasible
+
+methods:
+  prediction_vpp_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00:
+    label: "Cartesian VPP baseline (reset075 no mode switch longscale00)"
+    agent_type: ppo
+    checkpoint: outputs/experiments/prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00/checkpoints/last.pt
+    config_path: config/experiment/train_prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00.yaml
+    prediction_variant: learned
+
+  prediction_vpp_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp_combat_finetune_best:
+    label: "Geometry-basis broad finetune"
+    agent_type: ppo
+    checkpoint: outputs/experiments/prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp_combat_finetune/checkpoints/best.pt
+    config_path: config/experiment/train_prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp_combat_finetune.yaml
+    prediction_variant: learned
+
+  prediction_vpp_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp_combat_finetune_narrow_extents_best:
+    label: "Geometry-basis narrow finetune"
+    agent_type: ppo
+    checkpoint: outputs/experiments/prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp_combat_finetune_narrow_extents/checkpoints/best.pt
+    config_path: config/experiment/train_prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp_combat_finetune_narrow_extents.yaml
+    prediction_variant: learned
+
+  prediction_vpp_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp_combat_finetune_mixed_crossing_restored_best:
+    label: "Geometry-basis mixed finetune"
+    agent_type: ppo
+    checkpoint: outputs/experiments/prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp_combat_finetune_mixed_crossing_restored/checkpoints/best.pt
+    config_path: config/experiment/train_prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp_combat_finetune_mixed_crossing_restored.yaml
+    prediction_variant: learned

@@ -51,13 +51,16 @@ Keep it in method-bridge text or appendix.
 
 This should answer reviewer objections without bloating the main narrative:
 
-- zero-offset / no-VPP PPO
 - end-to-end direct-command PPO
-- zero-offset LOS guidance
 - zero-offset PN guidance
+- legacy hierarchical Aerospace baseline
+
+Optional appendix / rebuttal rows:
+
+- zero-offset LOS guidance
+- zero-offset target-anchor comparator (`no_vpp_combat`)
 - SAC-cartesian
 - SAC-mixed geometry-basis
-- legacy hierarchical Aerospace baseline
 
 ### Appendix / method bridge only
 
@@ -99,16 +102,19 @@ Recommended extraction rule:
 
 ### P1: minimum external comparator pack
 
-1. zero-offset / no-VPP PPO
-2. end-to-end direct-command PPO
-3. LOS guidance
-4. PN guidance
-5. legacy hierarchical Aerospace baseline
+1. end-to-end direct-command PPO
+2. PN guidance
+3. legacy hierarchical Aerospace baseline
 
 ### P2: algorithm-choice pack
 
 1. SAC-cartesian
 2. SAC-mixed geometry-basis
+
+### P3: non-blocking appendix support
+
+1. LOS guidance
+2. zero-offset target-anchor comparator (`no_vpp_combat`) unless redesigned
 
 If compute or coding bandwidth collapses, P1 is higher priority than P2 except
 that at least one SAC comparator is still strongly recommended for rebutting the
@@ -220,14 +226,17 @@ algorithm-choice objection.
 #### F. Zero-offset / no-VPP PPO
 
 - Reviewer question answered:
-  does the VPP offset layer add value beyond a zero-offset target-tracking
-  policy?
+  appendix-only sanity check for removing VPP offset geometry
 - Existing reusable assets:
   - `config/experiment/train_no_vpp_ppo.yaml`
   - `config/experiment/train_no_vpp_direct_command.yaml`
   - `scripts/run_no_vpp_baseline.py`
   - `scripts/run_p0a_vpp_ablation.sh`
   - current comparison runner can load it as ordinary `agent_type: ppo`
+- Important implementation note:
+  `src/uav_vpp_guidance/virtual_point/no_vpp_guidance.py` ignores the policy
+  action and always returns the target position, so the current `no_vpp_combat`
+  path should not be sold as a strong learned comparator without redesign
 - Important note:
   do not reuse the old simple-backend result directly; train and evaluate under
   the current combat-only JSBSim protocol
@@ -244,7 +253,8 @@ algorithm-choice objection.
   none if the zero-offset mode already behaves correctly under
   `train_prediction_vpp_ppo`
 - Result role:
-  Table 2
+  appendix by default
+  promote only if redesigned into a true action-sensitive learned ablation
 
 #### G. End-to-end direct-command PPO
 
@@ -279,22 +289,15 @@ algorithm-choice objection.
 - Existing reusable assets:
   - `src/uav_vpp_guidance/guidance/`
   - comparison runner infrastructure
-- Missing piece:
-  comparison runner does not yet support a rule-guidance policy type
-- New Python files to create:
+- Existing created support:
   - `src/uav_vpp_guidance/evaluation/rule_guidance_policy.py`
-    Implement a deterministic zero-offset LOS policy wrapper.
-- Existing Python file to modify:
   - `scripts/run_jsbsim_hrl_comparison.py`
-    Add a new `agent_type`, for example `rule_guidance`.
-- New config to create:
   - `config/experiment/jsbsim_hrl_reset075_no_mode_switch_longscale00_rule_los_zero_offset.yaml`
-- New launcher to create:
   - `scripts/run_reset075_no_mode_switch_longscale00_rule_los_zero_offset_10seed_pilot.ps1`
 - Training needed:
   no
 - Result role:
-  Table 2
+  appendix or rebuttal backup
 
 #### I. Zero-offset PN guidance
 
@@ -303,17 +306,10 @@ algorithm-choice objection.
 - Existing reusable assets:
   - `src/uav_vpp_guidance/guidance/proportional_navigation.py`
   - `scripts/run_stage6g5d_pn_mode_switch_probe.py`
-- Missing piece:
-  same as LOS; needs a comparison-runner bridge
-- New Python files to create:
-  - either extend `rule_guidance_policy.py`
-  - or add `src/uav_vpp_guidance/evaluation/pn_guidance_policy.py`
-- Existing Python file to modify:
+- Existing created support:
+  - `src/uav_vpp_guidance/evaluation/rule_guidance_policy.py`
   - `scripts/run_jsbsim_hrl_comparison.py`
-    Add `agent_type: rule_guidance` or `agent_type: pn_guidance`
-- New config to create:
   - `config/experiment/jsbsim_hrl_reset075_no_mode_switch_longscale00_rule_pn_zero_offset.yaml`
-- New launcher to create:
   - `scripts/run_reset075_no_mode_switch_longscale00_rule_pn_zero_offset_10seed_pilot.ps1`
 - Training needed:
   no
@@ -349,7 +345,7 @@ algorithm-choice objection.
 - Training needed:
   yes
 - Result role:
-  Table 2
+  appendix or rebuttal-first, not on the fastest submission-critical path
 
 #### K. SAC-mixed geometry-basis
 
@@ -366,7 +362,7 @@ algorithm-choice objection.
 - Training needed:
   yes
 - Result role:
-  Table 2
+  appendix or rebuttal-first, not on the fastest submission-critical path
 - Priority note:
   if only one SAC baseline fits the schedule, do SAC-cartesian first
 
@@ -382,6 +378,11 @@ algorithm-choice objection.
     `E:\\CloseAirCombat_control\\baseline_results*`
   - old model/checkpoint assets such as:
     `E:\\CloseAirCombat_control\\baseline_results\\checkpoints\\proposed_ppo.zip`
+- Legacy bridge contract that must be preserved:
+  - reconstruct the old 16-D observation with legacy
+    `extract_high_level_obs` semantics from simulator state
+  - keep the original discrete action meaning:
+    `0 = lag`, `1 = lead`, `2 = pure`
 - Important warning:
   old results are not protocol-compatible by default and must not be copied into
   the new paper table without reevaluation
@@ -395,6 +396,7 @@ algorithm-choice objection.
 - New config to create:
   - `config/experiment/jsbsim_hrl_reset075_no_mode_switch_longscale00_legacy_hierarchical_bridge.yaml`
 - New launcher to create:
+  - `scripts/run_reset075_no_mode_switch_longscale00_legacy_hierarchical_bridge_smoke.ps1`
   - `scripts/run_reset075_no_mode_switch_longscale00_legacy_hierarchical_bridge_10seed_pilot.ps1`
 - Training needed:
   no new training if the old checkpoint can be loaded directly
@@ -406,25 +408,33 @@ algorithm-choice objection.
   Table 2 if the bridge works cleanly
   otherwise Discussion-only self-evolution evidence
 
-## 7. New Files to Create First
+## 7. Remaining Files to Create Next
 
-If the goal is the fastest credible route, create these in this order:
+Live file-by-file status should be read from
+`docs/drones_comparison_mvp_execution_sheet.md`.
 
-1. `config/experiment/jsbsim_hrl_reset075_no_mode_switch_longscale00_geometry_family_main_table.yaml`
-2. `scripts/run_reset075_no_mode_switch_longscale00_geometry_family_10seed_pilot.ps1`
-3. `config/experiment/train_prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_no_vpp_combat.yaml`
-4. `scripts/run_reset075_no_mode_switch_longscale00_no_vpp_combat.ps1`
-5. `scripts/run_reset075_no_mode_switch_longscale00_no_vpp_combat_10seed_pilot.ps1`
-6. `config/experiment/train_end_to_end_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_combat.yaml`
-7. `scripts/run_reset075_no_mode_switch_longscale00_end_to_end_direct_command_10seed_pilot.ps1`
-8. `src/uav_vpp_guidance/evaluation/rule_guidance_policy.py`
-9. `config/experiment/jsbsim_hrl_reset075_no_mode_switch_longscale00_rule_pn_zero_offset.yaml`
-10. `config/experiment/jsbsim_hrl_reset075_no_mode_switch_longscale00_rule_los_zero_offset.yaml`
-11. `src/uav_vpp_guidance/evaluation/legacy_hierarchical_policy.py`
-12. `config/experiment/jsbsim_hrl_reset075_no_mode_switch_longscale00_legacy_hierarchical_bridge.yaml`
-13. `src/uav_vpp_guidance/training/train_sac_guidance.py`
-14. `src/uav_vpp_guidance/agents/sb3_sac_agent.py`
-15. `config/experiment/train_sac_prediction_vpp_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00.yaml`
+From the current repo state, the next genuinely missing files on the fastest
+credible route are:
+
+1. `src/uav_vpp_guidance/evaluation/legacy_hierarchical_policy.py`
+2. `config/experiment/jsbsim_hrl_reset075_no_mode_switch_longscale00_legacy_hierarchical_bridge.yaml`
+3. `scripts/run_reset075_no_mode_switch_longscale00_legacy_hierarchical_bridge_smoke.ps1`
+4. `scripts/run_reset075_no_mode_switch_longscale00_legacy_hierarchical_bridge_10seed_pilot.ps1`
+
+If you later decide to extend beyond the minimum submission route, the next
+missing files after legacy are:
+
+1. `src/uav_vpp_guidance/training/train_sac_guidance.py`
+2. `src/uav_vpp_guidance/agents/sb3_sac_agent.py`
+3. `config/experiment/train_sac_prediction_vpp_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00.yaml`
+4. `config/experiment/train_sac_prediction_vpp_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_mixed_crossing_restored.yaml`
+
+If you later want a true no-VPP learned ablation rather than an appendix
+zero-offset comparator, schedule a separate redesign pass for:
+
+1. an action-sensitive no-VPP guidance path
+2. its paired train/eval configs
+3. a new 10-seed pilot launcher
 
 ## 8. Fastest Submission-Grade MVP
 
@@ -434,10 +444,12 @@ stop at:
 - Table 1 internal family:
   baseline + broad + narrow + mixed
 - Table 2 external comparators:
-  no-VPP PPO + end-to-end PPO + PN + legacy hierarchical
+  end-to-end PPO + PN + legacy hierarchical
 
 Then add SAC-cartesian if time allows.
 Only add SAC-mixed after SAC-cartesian is running.
+Keep `no_vpp_combat` in the appendix unless it is redesigned into a true
+action-sensitive ablation.
 
 ## 9. Recommended Artifact Layout
 
@@ -461,7 +473,6 @@ It is to lock the four-row internal family first, then add exactly the
 review-facing baselines that answer:
 
 - is the geometry-basis interface better than raw VPP scaling?
-- is it better than removing the VPP layer?
 - is it better than direct-command PPO?
 - is it better than a classical guidance law?
 - is it materially different from the earlier hierarchical Aerospace method?

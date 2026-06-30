@@ -1,0 +1,29 @@
+includes:
+  - ./jsbsim_hrl_combat_only_pilot.yaml
+
+experiment:
+  name: jsbsim_hrl_reset075_no_mode_switch_longscale00_end_to_end_direct_command_best
+  description: "Current Cartesian VPP baseline versus the end-to-end direct-command PPO comparator on the shared combat-only scope."
+
+run_defaults:
+  main_methods:
+    - prediction_vpp_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00
+    - end_to_end_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_combat_best
+  tasks:
+    - head_on
+    - crossing_feasible
+
+methods:
+  prediction_vpp_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00:
+    label: "Cartesian VPP baseline (reset075 no mode switch longscale00)"
+    agent_type: ppo
+    checkpoint: outputs/experiments/prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00/checkpoints/last.pt
+    config_path: config/experiment/train_prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00.yaml
+    prediction_variant: learned
+
+  end_to_end_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_combat_best:
+    label: "End-to-end direct-command PPO"
+    agent_type: end_to_end
+    checkpoint: outputs/experiments/end_to_end_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_combat/checkpoints/best.pt
+    config_path: config/experiment/train_end_to_end_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_combat.yaml
+    prediction_variant: none

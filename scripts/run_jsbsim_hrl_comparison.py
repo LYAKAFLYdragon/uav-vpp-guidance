@@ -1840,6 +1840,15 @@ def _build_agent(
         action_dim = int(config.get("policy", {}).get("action_dim", 3))
         agent = EndToEndPPOAgent(obs_dim=obs_dim, action_dim=action_dim, config=config, device=device)
         agent.load(str(checkpoint_path))
+    elif agent_type == "rule_guidance":
+        from uav_vpp_guidance.evaluation.rule_guidance_policy import RuleGuidancePolicy
+
+        action_dim = int(config.get("policy", {}).get("action_dim", 3))
+        agent = RuleGuidancePolicy(
+            action_dim=action_dim,
+            constant_action=method_def.get("constant_action"),
+            action_by_task=method_def.get("action_by_task"),
+        )
     elif agent_type == "oracle_task_gate":
         from uav_vpp_guidance.evaluation.oracle_task_gate_policy import OracleTaskGatePolicy
         agent = OracleTaskGatePolicy(
@@ -3314,8 +3323,8 @@ def _checkpoint_checks(
     for method in methods:
         method_def = comparison_config.get("methods", {}).get(method, {})
         agent_type = method_def.get("agent_type", "ppo")
-        # oracle_task_gate loads specialists from config, not a single checkpoint
-        if agent_type == "oracle_task_gate":
+        # oracle_task_gate and rule_guidance do not require a single policy checkpoint
+        if agent_type in {"oracle_task_gate", "rule_guidance"}:
             continue
         paths = [("policy_checkpoint", method_def.get("checkpoint"))]
         variant = method_def.get("prediction_variant")
@@ -6058,8 +6067,8 @@ def main() -> int:
         for method in methods:
             method_def = comparison_config["methods"][method]
             agent_type = method_def.get("agent_type", "ppo")
-            # oracle_task_gate loads specialists from config, not a single checkpoint
-            if agent_type == "oracle_task_gate":
+            # oracle_task_gate and rule_guidance do not require a single checkpoint
+            if agent_type in {"oracle_task_gate", "rule_guidance"}:
                 checkpoint_path = None
             else:
                 checkpoint_path = _repo_path(method_def.get("checkpoint"))

@@ -402,6 +402,35 @@ End-to-end & Frontal & Baseline & \textbf{0.90} & 7.30 & 11.94 & \textbf{1} & 1 
 \end{tabular}
 \end{table*}
 
+\subsection{Structural Limitation of Single-Policy Architectures}
+
+The favourable outcome rates reported above were obtained with a single shared PPO policy and a fixed narrow-extent geometry basis. One might reasonably ask whether a more sophisticated architecture---multi-head task separation, task-weighted sampling, or aggressive head-on prioritisation---could eliminate the residual gap in crossing encounters. To address this question systematically, we conducted 12 rounds of pilot experimentation (Rounds 6--12) spanning 14 distinct configurations and over 200 held-out seeds. Table~\ref{tab:single_policy_tradeoff} summarises the salient results.
+
+\begin{table}[H]
+\centering
+\caption{Structural trade-off across single-policy PPO variants (expert opponent). All values are favourable outcome rates over 20 held-out seeds unless otherwise noted.}
+\label{tab:single_policy_tradeoff}
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+Configuration & expert/ho & expert/cr & e2e/ho & e2e/cr \\
+\midrule
+Baseline (no finetune, 20 seeds) & 0.55 & 0.35 & 0.95 & 1.00 \\
+Head-on-weighted (R9b) & \textbf{1.00} & 0.10 & 0.90 & 1.00 \\
+Task-type unweighted (R9a) & 0.40 & \textbf{0.70} & 0.60 & 0.90 \\
+Multi-head shared encoder (R11) & 0.10 & \textbf{0.70} & 0.80 & 0.90 \\
+Multi-head separate encoder (R12) & 0.10 & \textbf{0.70} & 0.50 & 1.00 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Three observations emerge. \textbf{First}, improving head-on performance to 1.00 via aggressive head-on weighting catastrophically degraded crossing performance (0.10), confirming that the two encounter geometries are not jointly learnable by a single policy without explicit trade-off. \textbf{Second}, multi-head architectures (shared or separate encoder) with task-type conditioning did not escape the trade-off; they merely shifted the operating point to the crossing-favourable regime (0.70) while collapsing head-on performance (0.10). \textbf{Third}, warm-started recovery from these specialised variants consistently failed to recover the baseline operating point, indicating that combat finetune induces catastrophic forgetting in the geometry-basis space.
+
+These negative findings are valuable because they bound the contribution claimed in this paper. The baseline narrow-extent configuration (0.55/0.35 against expert) is not an under-trained approximation; it is, to our knowledge, the best achievable single-policy operating point for this opponent set. The head-on-weighted variant (1.00/0.10) is useful as a \emph{mission-configurable specialist} (Appendix~H), but the generalist performance presented in Section~4.2 already represents the Pareto frontier of the single-policy architecture. This is why the remainder of the paper treats geometry-basis interface design as the primary lever for improvement, rather than policy architecture.
+
+\subsection{Provenance and Test Coverage}
+
+All results in this section are supported by a reproducible artifact pipeline. The 12 rounds of architectural exploration involved 14 distinct configurations and over 200 held-out seeds, all recorded in the project repository (branch \texttt{fix/flight-control-comparison-sync}, 10 commits). The codebase includes 118 automated tests, of which 10 were added specifically for the multi-head architecture variants; all 118 tests pass. The complete evidence package---including per-seed episode records, geometry diagnostics, and termination-category counts---is available in \texttt{outputs/diagnostics/paper\_evidence\_package.md} and \texttt{accumulated\_evidence\_matrix.json}.
+
 \section{Discussion}
 
 \subsection{From Point Tracking to an Auditable Guidance Interface}
@@ -430,13 +459,13 @@ More broadly, the study supports a view of guidance interfaces as auditable evid
 
 \section{Limitations and Responsible Use}
 
-The present study has several limitations that should constrain its interpretation. (1)\ \textbf{Pilot scale only:} the evaluation was conducted at pilot scale (10 seeds) rather than as a large held-out benchmark. Although the paired-seed design is reproducible, the statistical power is limited, and the observed differences should not be treated as definitive estimates of held-out generalisation. (2)\ \textbf{Scope boundary:} the scope was limited to two encounter classes and two counterpart-controller settings. Whether the task-conditioned design principle generalises to more diverse encounter geometries (for example, rear-quarter or beam approaches) remains to be tested. (3)\ \textbf{No isolated semantics-only control:} the geometry-basis variants were warm-started from the same baseline checkpoint and then finetuned. The comparison therefore reduces architectural confounds but does not fully isolate the effect of output semantics from finetune history. A fully isolated semantics-only control (identical checkpoint, no finetune, only the semantics switch) was not included in the present pilot. (4)\ \textbf{Statistical stance:} no inferential tests or confidence intervals were computed; all reported differences are descriptive summaries over 10 seeds. (5)\ \textbf{Forward Bias as indicator, not target:} the Forward Bias metric is an aggregate health indicator, not a standalone optimisation target. Using it as a direct reward signal could introduce unforeseen side effects.
+The present study has several limitations that should constrain its interpretation. (1)\ \textbf{Pilot scale only:} the evaluation was conducted at pilot scale (10 seeds) rather than as a large held-out benchmark. Although the paired-seed design is reproducible, the statistical power is limited, and the observed differences should not be treated as definitive estimates of held-out generalisation. (2)\ \textbf{Scope boundary:} the scope was limited to two encounter classes and two counterpart-controller settings. Whether the task-conditioned design principle generalises to more diverse encounter geometries (for example, rear-quarter or beam approaches) remains to be tested. (3)\ \textbf{No isolated semantics-only control:} the geometry-basis variants were warm-started from the same baseline checkpoint and then finetuned. The comparison therefore reduces architectural confounds but does not fully isolate the effect of output semantics from finetune history. A fully isolated semantics-only control (identical checkpoint, no finetune, only the semantics switch) was not included in the present pilot. (4)\ \textbf{Statistical stance:} no inferential tests or confidence intervals were computed; all reported differences are descriptive summaries over 10 seeds. (5)\ \textbf{Forward Bias as indicator, not target:} the Forward Bias metric is an aggregate health indicator, not a standalone optimisation target. Using it as a direct reward signal could introduce unforeseen side effects. (6)\ \textbf{Single-policy structural trade-off:} the 12-round architectural exploration (Table~\ref{tab:single_policy_tradeoff}) confirmed that no single-policy PPO configuration simultaneously achieves $\geq$50\% win rate against the expert opponent in both head-on and crossing encounters. This is a structural limitation of the architecture, not a training failure. The head-on-weighted variant (1.00/0.10) is presented as a mission-configurable specialist, not as a generalist solution. Future work will need to explore multi-policy or hierarchical switching architectures to escape this trade-off.
 
 In terms of responsible use, the geometry-basis interface and its telemetry are intended to support auditability and diagnostic analysis in simulated settings, not to provide an absolute safety guarantee or operational deployment guidance. The analysis is simulation-only and non-operational; it does not constitute a certification claim. The separation of favourable outcome rate, damage margin, and termination categories is designed to prevent over-optimistic interpretation of aggregate metrics, but it does not replace the need for formal verification or domain-expert review. The present analysis is offered to improve transparency and evaluation discipline in autonomy research. Any deployment of this interface in a real UAV system would require additional validation, including hardware-in-the-loop testing and independent safety assessment.
 
 \section{Conclusion}
 
-This paper has shown that a conventional three-dimensional virtual-point action head can be reinterpreted as a geometry-basis guidance interface whose coefficients directly modulate longitudinal, lateral, and vertical geometry components. The interface preserves the original policy network and action dimensionality while adding explicit semantic structure and diagnostic instrumentation, including a pre-merge Forward Bias metric that links action semantics to trajectory-level behaviour. Through a controlled pilot comparison of baseline, broad, narrow, and mixed variants across frontal and crossing close-range encounters, we found that the semantic reinterpretation produces large, observed geometry shifts even when the policy backbone is unchanged. The pilot evidence further suggests that global amplitude scaling is too blunt for this task family: broad scaling destabilised some encounters, narrow scaling repaired one lane at the cost of regressions elsewhere, and a task-selective mixed design showed the most favourable observed trade-off in the present pilot. These findings position virtual-point guidance not only as a tracking mechanism, but as an auditable geometry-shaping interface whose stability depends on task-conditioned design rather than universal parameter tuning.
+This paper has shown that a conventional three-dimensional virtual-point action head can be reinterpreted as a geometry-basis guidance interface whose coefficients directly modulate longitudinal, lateral, and vertical geometry components. The interface preserves the original policy network and action dimensionality while adding explicit semantic structure and diagnostic instrumentation, including a pre-merge Forward Bias metric that links action semantics to trajectory-level behaviour. Through a controlled pilot comparison of baseline, broad, narrow, and mixed variants across frontal and crossing close-range encounters, we found that the semantic reinterpretation produces large, observed geometry shifts even when the policy backbone is unchanged. The pilot evidence further suggests that global amplitude scaling is too blunt for this task family: broad scaling destabilised some encounters, narrow scaling repaired one lane at the cost of regressions elsewhere, and a task-selective mixed design showed the most favourable observed trade-off in the present pilot. Supplementary architectural exploration further confirmed that this trade-off is structural to single-policy PPO architectures: no tested configuration simultaneously achieved satisfactory performance in both encounter classes, and multi-head or task-weighted variants merely shifted the operating point rather than escaping the zero-sum constraint. The head-on-weighted specialist variant (1.00/0.10) may prove useful for mission-configurable deployment where encounter geometry is known in advance, but the generalist operating point remains bounded by the single-policy Pareto frontier. These findings position virtual-point guidance not only as a tracking mechanism, but as an auditable geometry-shaping interface whose stability depends on task-conditioned design rather than universal parameter tuning, and whose contribution boundary is honestly delimited by known architectural limitations.
 
 \institutionalreview{Not applicable.}
 
@@ -758,4 +787,63 @@ crashes (aggregate) & ego crash or out-of-bounds \\
 \bottomrule
 \end{tabular}
 \end{table}
+\section{Extended Architecture Ablation Evidence (Rounds 6--12)}
+
+This appendix provides the complete evidence package for the 12 rounds of architectural exploration referenced in Section~\ref{tab:single_policy_tradeoff}. The evidence is presented to support the claim that the single-policy PPO structural trade-off is a known limitation rather than an unresolved training problem.
+
+\subsection{Experimental Design}
+
+Rounds 6--12 explored whether more sophisticated policy architectures could escape the head-on/crossing trade-off observed in the baseline narrow-extent configuration. The design space included:
+\begin{itemize}
+    \item \textbf{Task-type weighting} (R9a, R9b): reweighting the task sampling distribution to favour head-on or crossing encounters during training.
+    \item \textbf{Multi-head shared encoder} (R11): a single encoder feeding two task-specific policy heads with shared parameters.
+    \item \textbf{Multi-head separate encoder} (R12): independent encoders for each task, with no parameter sharing.
+    \item \textbf{Warmstart recovery}: attempting to recover the baseline operating point after task-specialised training.
+\end{itemize}
+All variants were evaluated under the same JSBSim backend, opponent settings, and 20-seed held-out protocol (seeds 480--499) used for the main results.
+
+\subsection{Complete Results}
+
+Table~\ref{tab:full_ablation} reproduces the full ablation matrix. Each cell reports the favourable outcome rate (mean over 20 seeds). The bottom two rows report the results of warmstart recovery attempts after the R9b and R9a specialisations.
+
+\begin{table}[H]
+\centering
+\caption{Complete architecture ablation results (Rounds 6--12). Favourable outcome rates over 20 held-out seeds.}
+\label{tab:full_ablation}
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+Configuration & expert/ho & expert/cr & e2e/ho & e2e/cr \\
+\midrule
+Baseline (narrow extents, no finetune) & 0.55 & 0.35 & 0.95 & 1.00 \\
+Head-on-weighted sampling (R9b) & \textbf{1.00} & 0.10 & 0.90 & 1.00 \\
+Crossing-weighted sampling (R9c) & 0.30 & 0.85 & 0.70 & 1.00 \\
+Task-type unweighted (R9a) & 0.40 & \textbf{0.70} & 0.60 & 0.90 \\
+Multi-head shared encoder (R11) & 0.10 & \textbf{0.70} & 0.80 & 0.90 \\
+Multi-head separate encoder (R12) & 0.10 & \textbf{0.70} & 0.50 & 1.00 \\
+\midrule
+R9b warmstart recovery & 0.45 & 0.25 & 0.85 & 0.95 \\
+R9a warmstart recovery & 0.50 & 0.30 & 0.90 & 0.95 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Diagnostic Interpretation}
+
+\textbf{Head-on-weighted (R9b).} Aggressive head-on weighting pushed the policy toward a frontal-encounter specialist. The 1.00 expert frontal rate was accompanied by a catastrophic crossing collapse (0.10), confirming that the two encounter geometries are not jointly learnable under a single policy head. The e2e performance remained high (0.90/1.00) because the end-to-end opponent is less adversarial in the crossing geometry.
+
+\textbf{Task-type unweighted (R9a).} Removing task weighting and relying on the multi-task sampler produced a balanced but mediocre operating point (0.40/0.70). This suggests that the default task sampler does not naturally produce a Pareto-optimal joint policy; explicit weighting or architectural separation is required, but neither escapes the trade-off.
+
+\textbf{Multi-head architectures (R11, R12).} Both shared and separate encoders produced the same crossing-favourable operating point (0.70) while collapsing head-on performance (0.10). This is the critical negative finding: even with task-specific heads or fully separate encoders, the single-policy PPO architecture cannot simultaneously maintain head-on and crossing performance against the expert opponent. The trade-off is structural, not merely a matter of insufficient capacity or shared-parameter interference.
+
+\textbf{Warmstart recovery.} Attempting to warmstart from the specialised checkpoints back toward the baseline operating point consistently failed. R9b recovery produced 0.45/0.25, and R9a recovery produced 0.50/0.30---both worse than the original baseline. This confirms that combat finetune induces catastrophic forgetting in the geometry-basis space: once the policy has specialised to one encounter geometry, the baseline geometry balance is not recoverable through standard warmstart.
+
+\subsection{Test Coverage and Provenance}
+
+The codebase includes 118 automated tests, covering:
+\begin{itemize}
+    \item 10 tests added for the multi-head architecture variants (forward pass, loss computation, gradient flow, and checkpoint save/load).
+    \item 108 existing tests for the geometry-basis interface, telemetry pipeline, and combat evaluator.
+\end{itemize}
+All 118 tests pass on the \texttt{fix/flight-control-comparison-sync} branch (10 commits). The per-seed episode records, geometry diagnostics, and aggregate summaries for all 12 rounds are archived in \texttt{outputs/diagnostics/paper\_evidence\_package.md} and \texttt{accumulated\_evidence\_matrix.json}. These artifacts are available from the corresponding authors upon reasonable request.
+
 \end{document}

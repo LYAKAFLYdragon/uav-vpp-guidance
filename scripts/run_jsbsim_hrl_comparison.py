@@ -1793,9 +1793,14 @@ def build_eval_config(
 
     method_def = methods[method_name]
     task_def = _resolve_task_def(tasks[task_name])
-    checkpoint_path = _repo_path(method_def.get("checkpoint"))
-    fallback_config_path = _repo_path(method_def.get("config_path"))
-    config = _load_checkpoint_config(checkpoint_path, fallback_config_path)
+    agent_type = method_def.get("agent_type", "ppo")
+    if agent_type == "oracle_task_gate":
+        # oracle_task_gate does not need a checkpoint config; use comparison config as base
+        config = copy.deepcopy(comparison_config)
+    else:
+        checkpoint_path = _repo_path(method_def.get("checkpoint"))
+        fallback_config_path = _repo_path(method_def.get("config_path"))
+        config = _load_checkpoint_config(checkpoint_path, fallback_config_path)
     _apply_task_and_common_overrides(
         config,
         comparison_config,
@@ -1829,14 +1834,23 @@ def _build_agent(
     sample_obs: Dict[str, Any],
     device: str,
 ):
-    obs_dim = int(sample_obs["observation_vector"].shape[0])
-    action_dim = int(config.get("policy", {}).get("action_dim", 3))
     agent_type = method_def.get("agent_type", "ppo")
     if agent_type == "end_to_end":
+        obs_dim = int(sample_obs["observation_vector"].shape[0])
+        action_dim = int(config.get("policy", {}).get("action_dim", 3))
         agent = EndToEndPPOAgent(obs_dim=obs_dim, action_dim=action_dim, config=config, device=device)
+        agent.load(str(checkpoint_path))
+    elif agent_type == "oracle_task_gate":
+        from uav_vpp_guidance.evaluation.oracle_task_gate_policy import OracleTaskGatePolicy
+        agent = OracleTaskGatePolicy(
+            specialists_config=method_def.get("specialists", {}),
+            device=device,
+        )
     else:
+        obs_dim = int(sample_obs["observation_vector"].shape[0])
+        action_dim = int(config.get("policy", {}).get("action_dim", 3))
         agent = PPOAgent(obs_dim=obs_dim, action_dim=action_dim, config=config, device=device)
-    agent.load(str(checkpoint_path))
+        agent.load(str(checkpoint_path))
     return agent
 
 
@@ -2304,6 +2318,12 @@ def summarize_episode_combat_geometry(record: Dict[str, Any]) -> Dict[str, float
 
 
 def _checkpoint_dimension_info(checkpoint_path: Path) -> Dict[str, Any]:
+    if checkpoint_path is None or not checkpoint_path.exists() or str(checkpoint_path) == "dummy":
+        return {
+            "checkpoint_obs_dim": None,
+            "checkpoint_action_dim": None,
+            "checkpoint_policy_action_dim": None,
+        }
     checkpoint = torch.load(str(checkpoint_path), map_location="cpu")
     ckpt_config = checkpoint.get("config", {})
     return {
@@ -3293,6 +3313,10 @@ def _checkpoint_checks(
     errors = []
     for method in methods:
         method_def = comparison_config.get("methods", {}).get(method, {})
+        agent_type = method_def.get("agent_type", "ppo")
+        # oracle_task_gate loads specialists from config, not a single checkpoint
+        if agent_type == "oracle_task_gate":
+            continue
         paths = [("policy_checkpoint", method_def.get("checkpoint"))]
         variant = method_def.get("prediction_variant")
         if variant in ("learned", "noisy"):
@@ -6033,16 +6057,21 @@ def main() -> int:
         start = time.time()
         for method in methods:
             method_def = comparison_config["methods"][method]
-            checkpoint_path = _repo_path(method_def.get("checkpoint"))
-            if checkpoint_path is None or not checkpoint_path.exists():
-                failures.append(
-                    {
-                        "phase": "evaluation",
-                        "method": method,
-                        "error": f"Checkpoint not found: {checkpoint_path}",
-                    }
-                )
-                continue
+            agent_type = method_def.get("agent_type", "ppo")
+            # oracle_task_gate loads specialists from config, not a single checkpoint
+            if agent_type == "oracle_task_gate":
+                checkpoint_path = None
+            else:
+                checkpoint_path = _repo_path(method_def.get("checkpoint"))
+                if checkpoint_path is None or not checkpoint_path.exists():
+                    failures.append(
+                        {
+                            "phase": "evaluation",
+                            "method": method,
+                            "error": f"Checkpoint not found: {checkpoint_path}",
+                        }
+                    )
+                    continue
             for task in tasks:
                 task_def = comparison_config["tasks"][task]
                 cfg = eval_configs.get(f"{method}/{task}")
@@ -6062,7 +6091,7 @@ def main() -> int:
                         task_name=task,
                         method_def=method_def,
                         config=cfg,
-                        checkpoint_path=checkpoint_path,
+                        checkpoint_path=checkpoint_path or Path("dummy"),
                         sample_obs=sample_obs,
                     )
                     observation_audits[audit_key] = observation_audit
@@ -6084,7 +6113,10 @@ def main() -> int:
                             f"checkpoint={observation_audit['checkpoint_action_dim']} "
                             f"policy={observation_audit['policy_action_dim']}"
                         )
-                    agent = _build_agent(method_def, cfg, checkpoint_path, sample_obs, args.device)
+                    agent = _build_agent(method_def, cfg, checkpoint_path or Path("dummy"), sample_obs, args.device)
+                    # Notify agent of current task if it supports it
+                    if hasattr(agent, "set_task_name"):
+                        agent.set_task_name(task)
                     for seed in seeds:
                         for scenario_idx, scenario in enumerate(scenarios):
                             for ep in range(n_episodes):

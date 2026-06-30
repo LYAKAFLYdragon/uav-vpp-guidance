@@ -1,0 +1,36 @@
+includes:
+  - ./jsbsim_hrl_comparison.yaml
+
+methods:
+  oracle_task_gate:
+    label: "Oracle Task Gate (Static Specialist Selection)"
+    agent_type: oracle_task_gate
+    checkpoint: null
+    config_path: null
+    prediction_variant: learned
+    specialists:
+      head_on:
+        checkpoint: outputs/experiments/prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp_combat_finetune_mixed_opponent_aware_32k_task_type_headon_weighted/checkpoints/best.pt
+        config_path: config/experiment/train_prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp_combat_finetune_mixed_opponent_aware_32k_task_type_headon_weighted.yaml
+      crossing_feasible:
+        checkpoint: outputs/experiments/prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp_combat_finetune_mixed_opponent_aware_32k_crossing_weighted/checkpoints/best.pt
+        config_path: config/experiment/train_prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp_combat_finetune_mixed_opponent_aware_32k_crossing_weighted.yaml
+
+  # Baseline for direct comparison
+  baseline:
+    label: "Baseline (No Combat Finetune)"
+    agent_type: ppo
+    checkpoint: outputs/experiments/prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00/checkpoints/last.pt
+    config_path: config/experiment/train_prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00.yaml
+    prediction_variant: learned
+
+run_defaults:
+  main_methods:
+    - oracle_task_gate
+    - baseline
+  ablation_methods:
+    - oracle_task_gate
+    - baseline
+  tasks:
+    - head_on
+    - crossing_feasible

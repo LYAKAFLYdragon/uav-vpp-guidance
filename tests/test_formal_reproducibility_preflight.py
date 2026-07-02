@@ -68,6 +68,9 @@ def test_collect_formal_dependencies_resolves_nested_includes_and_method_config(
     yaml_deps = {Path(path).name for path in report["yaml_dependencies"]}
     assert yaml_deps == {"formal.yaml", "base.yaml", "train.yaml", "train_base.yaml"}
     assert report["methods"][0]["expected_action_dim"] == 2
+    code_deps = {Path(path).name for path in report["code_dependencies"]}
+    assert "policy_network.py" in code_deps
+    assert "replay_buffer.py" in code_deps
 
 
 def test_collect_formal_dependencies_raises_on_missing_include(tmp_path):

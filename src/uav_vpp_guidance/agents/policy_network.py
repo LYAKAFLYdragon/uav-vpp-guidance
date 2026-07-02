@@ -11,6 +11,7 @@ Implements a shared-body MLP with separate actor and critic heads.
 import numpy as np
 import torch
 import torch.nn as nn
+from torch.distributions import Categorical
 from torch.distributions import Normal
 
 
@@ -296,4 +297,91 @@ class MLPActorCritic(nn.Module):
 
     def count_parameters(self):
         """Return total number of trainable parameters."""
+        return sum(p.numel() for p in self.parameters() if p.requires_grad)
+
+
+class CategoricalMLPActorCritic(nn.Module):
+    """MLP actor-critic for discrete commander mode selection."""
+
+    def __init__(self, obs_dim, action_dim, hidden_sizes, activation="tanh"):
+        super().__init__()
+        self.obs_dim = int(obs_dim)
+        self.action_dim = int(action_dim)
+
+        if self.obs_dim <= 0:
+            raise ValueError(f"obs_dim must be positive, got {obs_dim}")
+        if self.action_dim <= 0:
+            raise ValueError(f"action_dim must be positive, got {action_dim}")
+
+        shared_sizes = [self.obs_dim] + list(hidden_sizes)
+        self.shared_net = build_mlp(shared_sizes, activation=activation)
+        self.actor_logits = nn.Linear(shared_sizes[-1], self.action_dim)
+        self.critic = nn.Linear(shared_sizes[-1], 1)
+        self._init_weights()
+
+    def _init_weights(self):
+        for m in self.modules():
+            if isinstance(m, nn.Linear):
+                nn.init.orthogonal_(m.weight, gain=np.sqrt(2))
+                nn.init.constant_(m.bias, 0.0)
+        nn.init.orthogonal_(self.actor_logits.weight, gain=0.5)
+        nn.init.constant_(self.actor_logits.bias, 0.0)
+        nn.init.orthogonal_(self.critic.weight, gain=1.0)
+        nn.init.constant_(self.critic.bias, 0.0)
+
+    def forward(self, obs):
+        if obs.dim() == 1:
+            obs = obs.unsqueeze(0)
+        if obs.shape[-1] != self.obs_dim:
+            raise ValueError(
+                f"Expected obs shape [..., {self.obs_dim}], got {obs.shape}"
+            )
+        features = self.shared_net(obs)
+        logits = self.actor_logits(features)
+        value = self.critic(features).squeeze(-1)
+        return logits, value
+
+    def get_value(self, obs):
+        _, value = self.forward(obs)
+        return value
+
+    def get_action_and_value(self, obs, action=None, deterministic=False):
+        if obs.dim() == 1:
+            obs = obs.unsqueeze(0)
+        if obs.shape[-1] != self.obs_dim:
+            raise ValueError(
+                f"Expected obs shape [..., {self.obs_dim}], got {obs.shape}"
+            )
+
+        logits, value = self.forward(obs)
+        dist = Categorical(logits=logits)
+        action_was_none = action is None
+
+        if action_was_none:
+            if deterministic:
+                action = torch.argmax(logits, dim=-1)
+            else:
+                action = dist.sample()
+        else:
+            action = action.long().view(-1)
+
+        log_prob = dist.log_prob(action)
+        entropy = dist.entropy()
+
+        if torch.isnan(log_prob).any() or torch.isinf(log_prob).any():
+            raise ValueError("NaN or inf detected in discrete log_prob")
+        if torch.isnan(value).any() or torch.isinf(value).any():
+            raise ValueError("NaN or inf detected in discrete value")
+
+        if action_was_none:
+            return action, log_prob, entropy, value
+        return log_prob, entropy, value
+
+    def get_deterministic_action(self, obs):
+        with torch.no_grad():
+            logits, _ = self.forward(obs)
+            action = torch.argmax(logits, dim=-1)
+        return action
+
+    def count_parameters(self):
         return sum(p.numel() for p in self.parameters() if p.requires_grad)

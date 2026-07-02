@@ -20,6 +20,8 @@ CORE_AGENT_DEPENDENCIES = {
         "src/uav_vpp_guidance/evaluation/hierarchical_commander_policy.py",
         "src/uav_vpp_guidance/agents/commander_ppo_agent.py",
         "src/uav_vpp_guidance/agents/commander_double_dqn_agent.py",
+        "src/uav_vpp_guidance/agents/policy_network.py",
+        "src/uav_vpp_guidance/agents/replay_buffer.py",
         "src/uav_vpp_guidance/envs/hierarchical_commander_env.py",
         "src/uav_vpp_guidance/hierarchy/specialist_policy.py",
         "src/uav_vpp_guidance/hierarchy/commander_mode_constraints.py",

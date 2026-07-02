@@ -421,6 +421,133 @@ def test_recorder_preserves_legacy_vp_fields_when_tactical_basis_enabled():
     assert point["vp_lateral_bias_m"] == 75.0
 
 
+def test_episode_recorder_persists_commander_telemetry():
+    recorder = EpisodeRecorder(
+        run_id="r5",
+        task="head_on",
+        controller="hierarchical_commander_mvp_2mode",
+        seed=5,
+        episode=0,
+        config={},
+        config_sha256="abc",
+        git_commit="def",
+    )
+    own = np.array([0.0, 0.0, 5000.0])
+    tgt = np.array([1000.0, 0.0, 5000.0])
+    info = _make_info(own, tgt)
+    info.update(
+        {
+            "commander_mode_id": 1,
+            "commander_mode_name": "crossing_specialist",
+            "commander_selected_specialist": "crossing_feasible",
+            "commander_switch_count": 2,
+            "commander_steps_since_switch": 7,
+            "commander_macro_action_repeat_steps": 12,
+            "commander_task_oracle_gate": "head_on",
+            "commander_requested_mode_id": 1,
+            "commander_requested_mode_name": "crossing_specialist",
+            "commander_crossing_pre_merge_mode_lock_active": True,
+            "commander_mode_constraint_triggered": True,
+            "commander_mode_constraint_reason": "max_consecutive_crossing_macro_steps_exceeded",
+            "commander_head_on_post_merge_reopened_crossing_leash_active": True,
+            "commander_head_on_post_merge_reopened_crossing_leash_range_m": 5100.0,
+            "commander_head_on_post_merge_reopened_crossing_leash_hp_advantage": 10.0,
+            "commander_head_on_post_merge_reopened_crossing_leash_consecutive_crossing_macro_steps": 0,
+            "commander_head_on_post_merge_reopened_crossing_secondary_clamp_active": True,
+            "commander_head_on_post_merge_reopened_crossing_secondary_clamp_reason": (
+                "secondary_low_altitude_unresolved_lateral_descent"
+            ),
+            "commander_head_on_post_merge_reopened_crossing_secondary_clamp_altitude_m": 4700.0,
+            "commander_head_on_post_merge_reopened_crossing_secondary_clamp_vp_lateral_bias_m": 7600.0,
+            "commander_head_on_post_merge_reopened_crossing_secondary_clamp_vp_lateral_to_range_ratio": 1.52,
+            "commander_head_on_post_merge_reopened_crossing_secondary_clamp_altitude_drop_m_lookback": -320.0,
+            "commander_head_on_post_merge_reopened_crossing_secondary_clamp_altitude_drop_lookback_steps": 12,
+            "commander_head_on_post_merge_reopened_crossing_overdeep_clamp_active": True,
+            "commander_head_on_post_merge_reopened_crossing_overdeep_clamp_reason": (
+                "overdeep_low_lateral_reopened_head_on"
+            ),
+            "commander_head_on_post_merge_reopened_crossing_overdeep_clamp_range_m": 4800.0,
+            "commander_head_on_post_merge_reopened_crossing_overdeep_clamp_vp_forward_bias_m": -9300.0,
+            "commander_head_on_post_merge_reopened_crossing_overdeep_clamp_vp_lateral_to_range_ratio": 0.42,
+            "commander_mode_switched": True,
+            "commander_macro_step_index": 3,
+            "commander_first_switch_step": 12,
+        }
+    )
+
+    recorder.record_step(1, 0.2, info["own_state"], info["target_state"], info, 0.0)
+    point = recorder.trajectory[0]
+
+    assert point["commander_mode_id"] == 1
+    assert point["commander_mode_name"] == "crossing_specialist"
+    assert point["commander_selected_specialist"] == "crossing_feasible"
+    assert point["commander_switch_count"] == 2
+    assert point["commander_steps_since_switch"] == 7
+    assert point["commander_macro_action_repeat_steps"] == 12
+    assert point["commander_task_oracle_gate"] == "head_on"
+    assert point["commander_requested_mode_id"] == 1
+    assert point["commander_requested_mode_name"] == "crossing_specialist"
+    assert point["commander_crossing_pre_merge_mode_lock_active"] is True
+    assert point["commander_mode_constraint_triggered"] is True
+    assert (
+        point["commander_mode_constraint_reason"]
+        == "max_consecutive_crossing_macro_steps_exceeded"
+    )
+    assert point["commander_head_on_post_merge_reopened_crossing_leash_active"] is True
+    assert point["commander_head_on_post_merge_reopened_crossing_leash_range_m"] == 5100.0
+    assert point["commander_head_on_post_merge_reopened_crossing_leash_hp_advantage"] == 10.0
+    assert (
+        point["commander_head_on_post_merge_reopened_crossing_leash_consecutive_crossing_macro_steps"]
+        == 0
+    )
+    assert point["commander_head_on_post_merge_reopened_crossing_secondary_clamp_active"] is True
+    assert (
+        point["commander_head_on_post_merge_reopened_crossing_secondary_clamp_reason"]
+        == "secondary_low_altitude_unresolved_lateral_descent"
+    )
+    assert point["commander_head_on_post_merge_reopened_crossing_secondary_clamp_altitude_m"] == 4700.0
+    assert point["commander_head_on_post_merge_reopened_crossing_secondary_clamp_vp_lateral_bias_m"] == 7600.0
+    assert (
+        point["commander_head_on_post_merge_reopened_crossing_secondary_clamp_vp_lateral_to_range_ratio"]
+        == 1.52
+    )
+    assert (
+        point["commander_head_on_post_merge_reopened_crossing_secondary_clamp_altitude_drop_m_lookback"]
+        == -320.0
+    )
+    assert (
+        point["commander_head_on_post_merge_reopened_crossing_secondary_clamp_altitude_drop_lookback_steps"]
+        == 12
+    )
+    assert (
+        point["commander_head_on_post_merge_reopened_crossing_overdeep_clamp_active"]
+        is True
+    )
+    assert (
+        point["commander_head_on_post_merge_reopened_crossing_overdeep_clamp_reason"]
+        == "overdeep_low_lateral_reopened_head_on"
+    )
+    assert (
+        point["commander_head_on_post_merge_reopened_crossing_overdeep_clamp_range_m"]
+        == 4800.0
+    )
+    assert (
+        point[
+            "commander_head_on_post_merge_reopened_crossing_overdeep_clamp_vp_forward_bias_m"
+        ]
+        == -9300.0
+    )
+    assert (
+        point[
+            "commander_head_on_post_merge_reopened_crossing_overdeep_clamp_vp_lateral_to_range_ratio"
+        ]
+        == 0.42
+    )
+    assert point["commander_mode_switched"] is True
+    assert point["commander_macro_step_index"] == 3
+    assert point["commander_first_switch_step"] == 12
+
+
 def test_run_recorder_writes_files():
     with tempfile.TemporaryDirectory() as tmp:
         run_dir = Path(tmp)

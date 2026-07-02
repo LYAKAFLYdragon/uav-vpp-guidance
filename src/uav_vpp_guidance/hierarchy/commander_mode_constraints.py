@@ -277,6 +277,86 @@ def evaluate_head_on_post_merge_reopened_crossing_secondary_clamp_state(
     return state
 
 
+def evaluate_head_on_post_merge_reopened_crossing_overdeep_clamp_state(
+    *,
+    snapshot: Dict[str, Any],
+    overdeep_cfg: Optional[Dict[str, Any]],
+) -> Dict[str, Any]:
+    """Evaluate whether reopened head_on is too overdeep for a crossing detour."""
+    cfg = overdeep_cfg or {}
+    enabled = bool(cfg.get("enabled", False))
+    state = {
+        "configured": enabled,
+        "active": False,
+        "reason": "disabled" if not enabled else "inactive",
+        "range_m": _safe_float(snapshot.get("range_m")),
+        "hp_advantage": _safe_float(snapshot.get("hp_advantage")),
+        "ego_in_attack_zone": bool(snapshot.get("ego_in_attack_zone", False)),
+        "target_in_attack_zone": bool(snapshot.get("target_in_attack_zone", False)),
+        "first_pass_complete": bool(snapshot.get("first_pass_complete", False)),
+        "altitude_m": _safe_float(snapshot.get("altitude_m")),
+        "vp_forward_bias_m": _safe_float(snapshot.get("vp_forward_bias_m")),
+        "vp_lateral_bias_m": _safe_float(snapshot.get("vp_lateral_bias_m")),
+        "vp_lateral_to_range_ratio": _safe_float(
+            snapshot.get("vp_lateral_to_range_ratio")
+        ),
+    }
+    if not enabled:
+        return state
+    if not bool(snapshot.get("available", False)):
+        state["reason"] = str(snapshot.get("reason", "unavailable"))
+        return state
+
+    target_task_name = str(cfg.get("task_name", "head_on"))
+    if str(snapshot.get("task_name")) != target_task_name:
+        state["reason"] = "task_mismatch"
+        return state
+    if not state["first_pass_complete"]:
+        state["reason"] = "pre_merge"
+        return state
+
+    range_m = state["range_m"]
+    if not np.isfinite(range_m):
+        state["reason"] = "nonfinite_range"
+        return state
+    close_range_max_range_m = _safe_float(cfg.get("close_range_max_range_m"))
+    if np.isfinite(close_range_max_range_m) and range_m <= close_range_max_range_m:
+        state["active"] = True
+        state["reason"] = "close_range_reengagement_crossing"
+        return state
+
+    min_range_m = float(cfg.get("min_range_m", 4500.0))
+    if range_m < min_range_m:
+        state["reason"] = "below_min_range"
+        return state
+
+    vp_forward_bias_m = state["vp_forward_bias_m"]
+    if not np.isfinite(vp_forward_bias_m):
+        state["reason"] = "nonfinite_vp_forward_bias"
+        return state
+    min_negative_vp_forward_bias_m = float(
+        cfg.get("min_negative_vp_forward_bias_m", 9000.0)
+    )
+    if vp_forward_bias_m > -min_negative_vp_forward_bias_m:
+        state["reason"] = "forward_bias_not_overdeep"
+        return state
+
+    vp_lateral_to_range_ratio = state["vp_lateral_to_range_ratio"]
+    if not np.isfinite(vp_lateral_to_range_ratio):
+        state["reason"] = "nonfinite_vp_lateral_to_range_ratio"
+        return state
+    max_abs_vp_lateral_to_range_ratio = float(
+        cfg.get("max_abs_vp_lateral_to_range_ratio", 0.5)
+    )
+    if vp_lateral_to_range_ratio > max_abs_vp_lateral_to_range_ratio:
+        state["reason"] = "lateral_ratio_large_enough"
+        return state
+
+    state["active"] = True
+    state["reason"] = "overdeep_low_lateral_reopened_head_on"
+    return state
+
+
 def apply_head_on_post_merge_reopened_crossing_leash(
     *,
     requested_mode_id: int,
@@ -389,4 +469,54 @@ def apply_head_on_post_merge_reopened_crossing_secondary_clamp(
         "effective_mode_id": int(effective_mode_id),
         "triggered": int(effective_mode_id) != candidate_mode_id,
         "reason": "secondary_low_altitude_unresolved_lateral_descent",
+    }
+
+
+def apply_head_on_post_merge_reopened_crossing_overdeep_clamp(
+    *,
+    candidate_mode_id: Optional[int],
+    mode_registry: Dict[int, Dict[str, Any]],
+    overdeep_state: Dict[str, Any],
+    overdeep_cfg: Optional[Dict[str, Any]],
+) -> Dict[str, Any]:
+    """Force head_on when reopened head_on is already overdeep with little lateral spread."""
+    cfg = overdeep_cfg or {}
+    if candidate_mode_id is None:
+        return {
+            "effective_mode_id": None,
+            "triggered": False,
+            "reason": "no_candidate_mode",
+        }
+    candidate_mode_id = int(candidate_mode_id)
+    if not bool(cfg.get("enabled", False)):
+        return {
+            "effective_mode_id": candidate_mode_id,
+            "triggered": False,
+            "reason": "disabled",
+        }
+
+    crossing_mode_id = int(cfg.get("crossing_mode_id", 1))
+    forced_mode_id = int(cfg.get("forced_mode_id", 0))
+    if not overdeep_state.get("active", False):
+        return {
+            "effective_mode_id": candidate_mode_id,
+            "triggered": False,
+            "reason": overdeep_state.get("reason", "inactive"),
+        }
+    if candidate_mode_id != crossing_mode_id:
+        return {
+            "effective_mode_id": candidate_mode_id,
+            "triggered": False,
+            "reason": "non_crossing_mode",
+        }
+
+    effective_mode_id = forced_mode_id
+    if effective_mode_id not in mode_registry:
+        effective_mode_id = candidate_mode_id
+    return {
+        "effective_mode_id": int(effective_mode_id),
+        "triggered": int(effective_mode_id) != candidate_mode_id,
+        "reason": str(
+            overdeep_state.get("reason", "overdeep_low_lateral_reopened_head_on")
+        ),
     }

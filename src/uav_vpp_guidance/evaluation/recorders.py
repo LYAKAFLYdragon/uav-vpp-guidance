@@ -126,6 +126,125 @@ class EpisodeRecorder:
             "controller": self.controller,
             "seed": self.seed,
             "episode": self.episode,
+            "commander_mode_id": info.get("commander_mode_id"),
+            "commander_mode_name": info.get("commander_mode_name"),
+            "commander_selected_specialist": info.get(
+                "commander_selected_specialist"
+            ),
+            "commander_switch_count": info.get("commander_switch_count"),
+            "commander_steps_since_switch": info.get(
+                "commander_steps_since_switch"
+            ),
+            "commander_macro_action_repeat_steps": info.get(
+                "commander_macro_action_repeat_steps"
+            ),
+            "commander_task_oracle_gate": info.get("commander_task_oracle_gate"),
+            "commander_requested_mode_id": info.get("commander_requested_mode_id"),
+            "commander_requested_mode_name": info.get(
+                "commander_requested_mode_name"
+            ),
+            "commander_crossing_pre_merge_mode_lock_active": bool(
+                info.get("commander_crossing_pre_merge_mode_lock_active", False)
+            ),
+            "commander_mode_constraint_triggered": bool(
+                info.get("commander_mode_constraint_triggered", False)
+            ),
+            "commander_mode_constraint_reason": info.get(
+                "commander_mode_constraint_reason"
+            ),
+            "commander_head_on_post_merge_reopened_crossing_leash_active": bool(
+                info.get(
+                    "commander_head_on_post_merge_reopened_crossing_leash_active",
+                    False,
+                )
+            ),
+            "commander_head_on_post_merge_reopened_crossing_leash_range_m": float(
+                info.get(
+                    "commander_head_on_post_merge_reopened_crossing_leash_range_m",
+                    np.nan,
+                )
+            ),
+            "commander_head_on_post_merge_reopened_crossing_leash_hp_advantage": float(
+                info.get(
+                    "commander_head_on_post_merge_reopened_crossing_leash_hp_advantage",
+                    np.nan,
+                )
+            ),
+            "commander_head_on_post_merge_reopened_crossing_leash_consecutive_crossing_macro_steps": int(
+                info.get(
+                    "commander_head_on_post_merge_reopened_crossing_leash_consecutive_crossing_macro_steps",
+                    0,
+                )
+            ),
+            "commander_head_on_post_merge_reopened_crossing_secondary_clamp_active": bool(
+                info.get(
+                    "commander_head_on_post_merge_reopened_crossing_secondary_clamp_active",
+                    False,
+                )
+            ),
+            "commander_head_on_post_merge_reopened_crossing_secondary_clamp_reason": info.get(
+                "commander_head_on_post_merge_reopened_crossing_secondary_clamp_reason"
+            ),
+            "commander_head_on_post_merge_reopened_crossing_secondary_clamp_altitude_m": float(
+                info.get(
+                    "commander_head_on_post_merge_reopened_crossing_secondary_clamp_altitude_m",
+                    np.nan,
+                )
+            ),
+            "commander_head_on_post_merge_reopened_crossing_secondary_clamp_vp_lateral_bias_m": float(
+                info.get(
+                    "commander_head_on_post_merge_reopened_crossing_secondary_clamp_vp_lateral_bias_m",
+                    np.nan,
+                )
+            ),
+            "commander_head_on_post_merge_reopened_crossing_secondary_clamp_vp_lateral_to_range_ratio": float(
+                info.get(
+                    "commander_head_on_post_merge_reopened_crossing_secondary_clamp_vp_lateral_to_range_ratio",
+                    np.nan,
+                )
+            ),
+            "commander_head_on_post_merge_reopened_crossing_secondary_clamp_altitude_drop_m_lookback": float(
+                info.get(
+                    "commander_head_on_post_merge_reopened_crossing_secondary_clamp_altitude_drop_m_lookback",
+                    np.nan,
+                )
+            ),
+            "commander_head_on_post_merge_reopened_crossing_secondary_clamp_altitude_drop_lookback_steps": int(
+                info.get(
+                    "commander_head_on_post_merge_reopened_crossing_secondary_clamp_altitude_drop_lookback_steps",
+                    0,
+                )
+            ),
+            "commander_head_on_post_merge_reopened_crossing_overdeep_clamp_active": bool(
+                info.get(
+                    "commander_head_on_post_merge_reopened_crossing_overdeep_clamp_active",
+                    False,
+                )
+            ),
+            "commander_head_on_post_merge_reopened_crossing_overdeep_clamp_reason": info.get(
+                "commander_head_on_post_merge_reopened_crossing_overdeep_clamp_reason"
+            ),
+            "commander_head_on_post_merge_reopened_crossing_overdeep_clamp_range_m": float(
+                info.get(
+                    "commander_head_on_post_merge_reopened_crossing_overdeep_clamp_range_m",
+                    np.nan,
+                )
+            ),
+            "commander_head_on_post_merge_reopened_crossing_overdeep_clamp_vp_forward_bias_m": float(
+                info.get(
+                    "commander_head_on_post_merge_reopened_crossing_overdeep_clamp_vp_forward_bias_m",
+                    np.nan,
+                )
+            ),
+            "commander_head_on_post_merge_reopened_crossing_overdeep_clamp_vp_lateral_to_range_ratio": float(
+                info.get(
+                    "commander_head_on_post_merge_reopened_crossing_overdeep_clamp_vp_lateral_to_range_ratio",
+                    np.nan,
+                )
+            ),
+            "commander_mode_switched": info.get("commander_mode_switched"),
+            "commander_macro_step_index": info.get("commander_macro_step_index"),
+            "commander_first_switch_step": info.get("commander_first_switch_step"),
             "own_pos_m": own_pos,
             "target_pos_m": target_pos,
             "ego_pos_x": own_pos[0],

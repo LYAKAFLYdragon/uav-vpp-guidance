@@ -29,7 +29,7 @@ virtual_point:
     crossing_feasible: 1.0
   post_merge_predicted_target_forward_scale_release_scale_by_task:
     head_on: 0.75
-    crossing_feasible: 1.0
+    crossing_feasible: 0.75
   post_merge_predicted_target_forward_scale_release_ego_only_streak_steps_by_task:
     head_on: 19
   post_merge_predicted_target_forward_scale_release_reset_on_streak_break_by_task:
@@ -115,8 +115,8 @@ methods:
         checkpoint: outputs/experiments/prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp_combat_finetune_mixed_opponent_aware_32k_task_type_headon_weighted/checkpoints/best.pt
         config_path: config/experiment/train_prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp_combat_finetune_mixed_opponent_aware_32k_task_type_headon_weighted.yaml
       crossing_feasible:
-        checkpoint: outputs/experiments/prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp_combat_finetune_mixed_opponent_aware_32k_crossing_weighted/checkpoints/best.pt
-        config_path: config/experiment/train_prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp_combat_finetune_mixed_opponent_aware_32k_crossing_weighted.yaml
+        checkpoint: outputs/experiments/prediction_vpp_ppo_crossing_v3/checkpoints/last.pt
+        config_path: config/experiment/train_prediction_vpp_ppo_crossing_v3.yaml
 
 run_defaults:
   main_methods:

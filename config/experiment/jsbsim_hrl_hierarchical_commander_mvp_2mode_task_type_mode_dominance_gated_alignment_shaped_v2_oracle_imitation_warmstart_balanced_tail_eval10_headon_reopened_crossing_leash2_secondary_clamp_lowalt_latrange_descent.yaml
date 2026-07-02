@@ -6,6 +6,19 @@ experiment:
   description: "Eval-time head_on reopened crossing leash2 plus a low-altitude unresolved-lateral descent secondary clamp."
 
 commander:
+  crossing_pre_merge_mode_lock:
+    enabled: true
+    task_name: crossing_feasible
+    forced_specialist_key: crossing_feasible
+  head_on_post_merge_reopened_crossing_overdeep_clamp:
+    enabled: true
+    task_name: head_on
+    crossing_mode_id: 1
+    forced_mode_id: 0
+    close_range_max_range_m: 3000.0
+    min_range_m: 4500.0
+    min_negative_vp_forward_bias_m: 8000.0
+    max_abs_vp_lateral_to_range_ratio: 1.5
   head_on_post_merge_reopened_crossing_secondary_clamp:
     enabled: true
     task_name: head_on

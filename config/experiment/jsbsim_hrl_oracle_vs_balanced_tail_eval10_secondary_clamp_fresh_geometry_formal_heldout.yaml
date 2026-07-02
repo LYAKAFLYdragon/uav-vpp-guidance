@@ -1,0 +1,554 @@
+includes:
+  - ./jsbsim_hrl_oracle_vs_balanced_tail_eval10_secondary_clamp_fresh_geometry_pilot.yaml
+
+experiment:
+  name: jsbsim_hrl_oracle_vs_balanced_tail_eval10_secondary_clamp_fresh_geometry_formal_heldout
+  description: "Formal held-out evaluation for commander generalization claim. 36 head-on scenarios completely disjoint from manifest30/60/90. Frozen canonical pair. Single-seed evaluation."
+
+tasks:
+  head_on:
+    label: "Head-on intercept (formal held-out, 36 scenarios)"
+    task:
+      name: head_on
+      env_class: CloseRangeTrackingEnv
+      scenarios:
+        - name: head_on_formal_r1600_v195_v195_alt0
+          own_init:
+            position_m: [0.0, 0.0, 5000.0]
+            velocity_mps: 195.0
+            heading_deg: 0.0
+          target_init:
+            position_m: [1600.0, 0.0, 5000.0]
+            velocity_mps: 195.0
+            heading_deg: 180.0
+          metadata:
+            scenario_type: head_on
+            manifest_family: formal_heldout
+            initial_range_m: 1600.000000
+            altitude_diff_m: 0.0
+            lateral_offset_m: 0.0
+        - name: head_on_formal_r1900_v205_v195_altp150
+          own_init:
+            position_m: [0.0, 0.0, 5000.0]
+            velocity_mps: 205.0
+            heading_deg: 0.0
+          target_init:
+            position_m: [1900.0, 0.0, 5150.0]
+            velocity_mps: 195.0
+            heading_deg: 180.0
+          metadata:
+            scenario_type: head_on
+            manifest_family: formal_heldout
+            initial_range_m: 1905.911855
+            altitude_diff_m: 150.0
+            lateral_offset_m: 0.0
+        - name: head_on_formal_r2100_v215_v205_altm150
+          own_init:
+            position_m: [0.0, 0.0, 5000.0]
+            velocity_mps: 215.0
+            heading_deg: 0.0
+          target_init:
+            position_m: [2100.0, 0.0, 4850.0]
+            velocity_mps: 205.0
+            heading_deg: 180.0
+          metadata:
+            scenario_type: head_on
+            manifest_family: formal_heldout
+            initial_range_m: 2105.350327
+            altitude_diff_m: -150.0
+            lateral_offset_m: 0.0
+        - name: head_on_formal_r2300_v225_v215_altp250
+          own_init:
+            position_m: [0.0, 0.0, 5000.0]
+            velocity_mps: 225.0
+            heading_deg: 0.0
+          target_init:
+            position_m: [2300.0, 0.0, 5250.0]
+            velocity_mps: 215.0
+            heading_deg: 180.0
+          metadata:
+            scenario_type: head_on
+            manifest_family: formal_heldout
+            initial_range_m: 2313.547060
+            altitude_diff_m: 250.0
+            lateral_offset_m: 0.0
+        - name: head_on_formal_r2500_v235_v225_altm250
+          own_init:
+            position_m: [0.0, 0.0, 5000.0]
+            velocity_mps: 235.0
+            heading_deg: 0.0
+          target_init:
+            position_m: [2500.0, 0.0, 4750.0]
+            velocity_mps: 225.0
+            heading_deg: 180.0
+          metadata:
+            scenario_type: head_on
+            manifest_family: formal_heldout
+            initial_range_m: 2512.468905
+            altitude_diff_m: -250.0
+            lateral_offset_m: 0.0
+        - name: head_on_formal_r2700_v245_v235_altp350
+          own_init:
+            position_m: [0.0, 0.0, 5000.0]
+            velocity_mps: 245.0
+            heading_deg: 0.0
+          target_init:
+            position_m: [2700.0, 0.0, 5350.0]
+            velocity_mps: 235.0
+            heading_deg: 180.0
+          metadata:
+            scenario_type: head_on
+            manifest_family: formal_heldout
+            initial_range_m: 2722.590678
+            altitude_diff_m: 350.0
+            lateral_offset_m: 0.0
+        - name: head_on_formal_r2900_v255_v245_altm350
+          own_init:
+            position_m: [0.0, 0.0, 5000.0]
+            velocity_mps: 255.0
+            heading_deg: 0.0
+          target_init:
+            position_m: [2900.0, 0.0, 4650.0]
+            velocity_mps: 245.0
+            heading_deg: 180.0
+          metadata:
+            scenario_type: head_on
+            manifest_family: formal_heldout
+            initial_range_m: 2921.044334
+            altitude_diff_m: -350.0
+            lateral_offset_m: 0.0
+        - name: head_on_formal_r3100_v265_v255_altp450
+          own_init:
+            position_m: [0.0, 0.0, 5000.0]
+            velocity_mps: 265.0
+            heading_deg: 0.0
+          target_init:
+            position_m: [3100.0, 0.0, 5450.0]
+            velocity_mps: 255.0
+            heading_deg: 180.0
+          metadata:
+            scenario_type: head_on
+            manifest_family: formal_heldout
+            initial_range_m: 3132.491022
+            altitude_diff_m: 450.0
+            lateral_offset_m: 0.0
+        - name: head_on_formal_r3300_v245_v255_altm450
+          own_init:
+            position_m: [0.0, 0.0, 5000.0]
+            velocity_mps: 245.0
+            heading_deg: 0.0
+          target_init:
+            position_m: [3300.0, 0.0, 4550.0]
+            velocity_mps: 255.0
+            heading_deg: 180.0
+          metadata:
+            scenario_type: head_on
+            manifest_family: formal_heldout
+            initial_range_m: 3330.540497
+            altitude_diff_m: -450.0
+            lateral_offset_m: 0.0
+        - name: head_on_formal_r1900_v195_v205_altp550
+          own_init:
+            position_m: [0.0, 0.0, 5000.0]
+            velocity_mps: 195.0
+            heading_deg: 0.0
+          target_init:
+            position_m: [1900.0, 0.0, 5550.0]
+            velocity_mps: 205.0
+            heading_deg: 180.0
+          metadata:
+            scenario_type: head_on
+            manifest_family: formal_heldout
+            initial_range_m: 1978.004044
+            altitude_diff_m: 550.0
+            lateral_offset_m: 0.0
+        - name: head_on_formal_r2500_v225_v235_altm550
+          own_init:
+            position_m: [0.0, 0.0, 5000.0]
+            velocity_mps: 225.0
+            heading_deg: 0.0
+          target_init:
+            position_m: [2500.0, 0.0, 4450.0]
+            velocity_mps: 235.0
+            heading_deg: 180.0
+          metadata:
+            scenario_type: head_on
+            manifest_family: formal_heldout
+            initial_range_m: 2559.785147
+            altitude_diff_m: -550.0
+            lateral_offset_m: 0.0
+        - name: head_on_formal_r3100_v265_v265_alt0
+          own_init:
+            position_m: [0.0, 0.0, 5000.0]
+            velocity_mps: 265.0
+            heading_deg: 0.0
+          target_init:
+            position_m: [3100.0, 0.0, 5000.0]
+            velocity_mps: 265.0
+            heading_deg: 180.0
+          metadata:
+            scenario_type: head_on
+            manifest_family: formal_heldout
+            initial_range_m: 3100.000000
+            altitude_diff_m: 0.0
+            lateral_offset_m: 0.0
+        - name: head_on_formal_r1600_v195_v195_alt0_ypos100
+          own_init:
+            position_m: [0.0, 0.0, 5000.0]
+            velocity_mps: 195.0
+            heading_deg: 0.0
+          target_init:
+            position_m: [1600.0, 100.0, 5000.0]
+            velocity_mps: 195.0
+            heading_deg: 180.0
+          metadata:
+            scenario_type: head_on
+            manifest_family: formal_heldout
+            initial_range_m: 1603.121954
+            altitude_diff_m: 0.0
+            lateral_offset_m: 100.0
+        - name: head_on_formal_r1900_v205_v195_altp150_ypos100
+          own_init:
+            position_m: [0.0, 0.0, 5000.0]
+            velocity_mps: 205.0
+            heading_deg: 0.0
+          target_init:
+            position_m: [1900.0, 100.0, 5150.0]
+            velocity_mps: 195.0
+            heading_deg: 180.0
+          metadata:
+            scenario_type: head_on
+            manifest_family: formal_heldout
+            initial_range_m: 1908.533468
+            altitude_diff_m: 150.0
+            lateral_offset_m: 100.0
+        - name: head_on_formal_r2100_v215_v205_altm150_ypos100
+          own_init:
+            position_m: [0.0, 0.0, 5000.0]
+            velocity_mps: 215.0
+            heading_deg: 0.0
+          target_init:
+            position_m: [2100.0, 100.0, 4850.0]
+            velocity_mps: 205.0
+            heading_deg: 180.0
+          metadata:
+            scenario_type: head_on
+            manifest_family: formal_heldout
+            initial_range_m: 2107.723891
+            altitude_diff_m: -150.0
+            lateral_offset_m: 100.0
+        - name: head_on_formal_r2300_v225_v215_altp250_ypos100
+          own_init:
+            position_m: [0.0, 0.0, 5000.0]
+            velocity_mps: 225.0
+            heading_deg: 0.0
+          target_init:
+            position_m: [2300.0, 100.0, 5250.0]
+            velocity_mps: 215.0
+            heading_deg: 180.0
+          metadata:
+            scenario_type: head_on
+            manifest_family: formal_heldout
+            initial_range_m: 2315.707235
+            altitude_diff_m: 250.0
+            lateral_offset_m: 100.0
+        - name: head_on_formal_r2500_v235_v225_altm250_ypos100
+          own_init:
+            position_m: [0.0, 0.0, 5000.0]
+            velocity_mps: 235.0
+            heading_deg: 0.0
+          target_init:
+            position_m: [2500.0, 100.0, 4750.0]
+            velocity_mps: 225.0
+            heading_deg: 180.0
+          metadata:
+            scenario_type: head_on
+            manifest_family: formal_heldout
+            initial_range_m: 2514.458192
+            altitude_diff_m: -250.0
+            lateral_offset_m: 100.0
+        - name: head_on_formal_r2700_v245_v235_altp350_ypos100
+          own_init:
+            position_m: [0.0, 0.0, 5000.0]
+            velocity_mps: 245.0
+            heading_deg: 0.0
+          target_init:
+            position_m: [2700.0, 100.0, 5350.0]
+            velocity_mps: 235.0
+            heading_deg: 180.0
+          metadata:
+            scenario_type: head_on
+            manifest_family: formal_heldout
+            initial_range_m: 2724.426545
+            altitude_diff_m: 350.0
+            lateral_offset_m: 100.0
+        - name: head_on_formal_r2900_v255_v245_altm350_ypos100
+          own_init:
+            position_m: [0.0, 0.0, 5000.0]
+            velocity_mps: 255.0
+            heading_deg: 0.0
+          target_init:
+            position_m: [2900.0, 100.0, 4650.0]
+            velocity_mps: 245.0
+            heading_deg: 180.0
+          metadata:
+            scenario_type: head_on
+            manifest_family: formal_heldout
+            initial_range_m: 2922.755549
+            altitude_diff_m: -350.0
+            lateral_offset_m: 100.0
+        - name: head_on_formal_r3100_v265_v255_altp450_ypos100
+          own_init:
+            position_m: [0.0, 0.0, 5000.0]
+            velocity_mps: 265.0
+            heading_deg: 0.0
+          target_init:
+            position_m: [3100.0, 100.0, 5450.0]
+            velocity_mps: 255.0
+            heading_deg: 180.0
+          metadata:
+            scenario_type: head_on
+            manifest_family: formal_heldout
+            initial_range_m: 3134.086789
+            altitude_diff_m: 450.0
+            lateral_offset_m: 100.0
+        - name: head_on_formal_r3300_v245_v255_altm450_ypos100
+          own_init:
+            position_m: [0.0, 0.0, 5000.0]
+            velocity_mps: 245.0
+            heading_deg: 0.0
+          target_init:
+            position_m: [3300.0, 100.0, 4550.0]
+            velocity_mps: 255.0
+            heading_deg: 180.0
+          metadata:
+            scenario_type: head_on
+            manifest_family: formal_heldout
+            initial_range_m: 3332.041416
+            altitude_diff_m: -450.0
+            lateral_offset_m: 100.0
+        - name: head_on_formal_r1900_v195_v205_altp550_ypos100
+          own_init:
+            position_m: [0.0, 0.0, 5000.0]
+            velocity_mps: 195.0
+            heading_deg: 0.0
+          target_init:
+            position_m: [1900.0, 100.0, 5550.0]
+            velocity_mps: 205.0
+            heading_deg: 180.0
+          metadata:
+            scenario_type: head_on
+            manifest_family: formal_heldout
+            initial_range_m: 1980.530232
+            altitude_diff_m: 550.0
+            lateral_offset_m: 100.0
+        - name: head_on_formal_r2500_v225_v235_altm550_ypos100
+          own_init:
+            position_m: [0.0, 0.0, 5000.0]
+            velocity_mps: 225.0
+            heading_deg: 0.0
+          target_init:
+            position_m: [2500.0, 100.0, 4450.0]
+            velocity_mps: 235.0
+            heading_deg: 180.0
+          metadata:
+            scenario_type: head_on
+            manifest_family: formal_heldout
+            initial_range_m: 2561.737691
+            altitude_diff_m: -550.0
+            lateral_offset_m: 100.0
+        - name: head_on_formal_r3100_v265_v265_alt0_ypos100
+          own_init:
+            position_m: [0.0, 0.0, 5000.0]
+            velocity_mps: 265.0
+            heading_deg: 0.0
+          target_init:
+            position_m: [3100.0, 100.0, 5000.0]
+            velocity_mps: 265.0
+            heading_deg: 180.0
+          metadata:
+            scenario_type: head_on
+            manifest_family: formal_heldout
+            initial_range_m: 3101.612484
+            altitude_diff_m: 0.0
+            lateral_offset_m: 100.0
+        - name: head_on_formal_r1600_v195_v195_alt0_yneg100
+          own_init:
+            position_m: [0.0, 0.0, 5000.0]
+            velocity_mps: 195.0
+            heading_deg: 0.0
+          target_init:
+            position_m: [1600.0, -100.0, 5000.0]
+            velocity_mps: 195.0
+            heading_deg: 180.0
+          metadata:
+            scenario_type: head_on
+            manifest_family: formal_heldout
+            initial_range_m: 1603.121954
+            altitude_diff_m: 0.0
+            lateral_offset_m: -100.0
+        - name: head_on_formal_r1900_v205_v195_altp150_yneg100
+          own_init:
+            position_m: [0.0, 0.0, 5000.0]
+            velocity_mps: 205.0
+            heading_deg: 0.0
+          target_init:
+            position_m: [1900.0, -100.0, 5150.0]
+            velocity_mps: 195.0
+            heading_deg: 180.0
+          metadata:
+            scenario_type: head_on
+            manifest_family: formal_heldout
+            initial_range_m: 1908.533468
+            altitude_diff_m: 150.0
+            lateral_offset_m: -100.0
+        - name: head_on_formal_r2100_v215_v205_altm150_yneg100
+          own_init:
+            position_m: [0.0, 0.0, 5000.0]
+            velocity_mps: 215.0
+            heading_deg: 0.0
+          target_init:
+            position_m: [2100.0, -100.0, 4850.0]
+            velocity_mps: 205.0
+            heading_deg: 180.0
+          metadata:
+            scenario_type: head_on
+            manifest_family: formal_heldout
+            initial_range_m: 2107.723891
+            altitude_diff_m: -150.0
+            lateral_offset_m: -100.0
+        - name: head_on_formal_r2300_v225_v215_altp250_yneg100
+          own_init:
+            position_m: [0.0, 0.0, 5000.0]
+            velocity_mps: 225.0
+            heading_deg: 0.0
+          target_init:
+            position_m: [2300.0, -100.0, 5250.0]
+            velocity_mps: 215.0
+            heading_deg: 180.0
+          metadata:
+            scenario_type: head_on
+            manifest_family: formal_heldout
+            initial_range_m: 2315.707235
+            altitude_diff_m: 250.0
+            lateral_offset_m: -100.0
+        - name: head_on_formal_r2500_v235_v225_altm250_yneg100
+          own_init:
+            position_m: [0.0, 0.0, 5000.0]
+            velocity_mps: 235.0
+            heading_deg: 0.0
+          target_init:
+            position_m: [2500.0, -100.0, 4750.0]
+            velocity_mps: 225.0
+            heading_deg: 180.0
+          metadata:
+            scenario_type: head_on
+            manifest_family: formal_heldout
+            initial_range_m: 2514.458192
+            altitude_diff_m: -250.0
+            lateral_offset_m: -100.0
+        - name: head_on_formal_r2700_v245_v235_altp350_yneg100
+          own_init:
+            position_m: [0.0, 0.0, 5000.0]
+            velocity_mps: 245.0
+            heading_deg: 0.0
+          target_init:
+            position_m: [2700.0, -100.0, 5350.0]
+            velocity_mps: 235.0
+            heading_deg: 180.0
+          metadata:
+            scenario_type: head_on
+            manifest_family: formal_heldout
+            initial_range_m: 2724.426545
+            altitude_diff_m: 350.0
+            lateral_offset_m: -100.0
+        - name: head_on_formal_r2900_v255_v245_altm350_yneg100
+          own_init:
+            position_m: [0.0, 0.0, 5000.0]
+            velocity_mps: 255.0
+            heading_deg: 0.0
+          target_init:
+            position_m: [2900.0, -100.0, 4650.0]
+            velocity_mps: 245.0
+            heading_deg: 180.0
+          metadata:
+            scenario_type: head_on
+            manifest_family: formal_heldout
+            initial_range_m: 2922.755549
+            altitude_diff_m: -350.0
+            lateral_offset_m: -100.0
+        - name: head_on_formal_r3100_v265_v255_altp450_yneg100
+          own_init:
+            position_m: [0.0, 0.0, 5000.0]
+            velocity_mps: 265.0
+            heading_deg: 0.0
+          target_init:
+            position_m: [3100.0, -100.0, 5450.0]
+            velocity_mps: 255.0
+            heading_deg: 180.0
+          metadata:
+            scenario_type: head_on
+            manifest_family: formal_heldout
+            initial_range_m: 3134.086789
+            altitude_diff_m: 450.0
+            lateral_offset_m: -100.0
+        - name: head_on_formal_r3300_v245_v255_altm450_yneg100
+          own_init:
+            position_m: [0.0, 0.0, 5000.0]
+            velocity_mps: 245.0
+            heading_deg: 0.0
+          target_init:
+            position_m: [3300.0, -100.0, 4550.0]
+            velocity_mps: 255.0
+            heading_deg: 180.0
+          metadata:
+            scenario_type: head_on
+            manifest_family: formal_heldout
+            initial_range_m: 3332.041416
+            altitude_diff_m: -450.0
+            lateral_offset_m: -100.0
+        - name: head_on_formal_r1900_v195_v205_altp550_yneg100
+          own_init:
+            position_m: [0.0, 0.0, 5000.0]
+            velocity_mps: 195.0
+            heading_deg: 0.0
+          target_init:
+            position_m: [1900.0, -100.0, 5550.0]
+            velocity_mps: 205.0
+            heading_deg: 180.0
+          metadata:
+            scenario_type: head_on
+            manifest_family: formal_heldout
+            initial_range_m: 1980.530232
+            altitude_diff_m: 550.0
+            lateral_offset_m: -100.0
+        - name: head_on_formal_r2500_v225_v235_altm550_yneg100
+          own_init:
+            position_m: [0.0, 0.0, 5000.0]
+            velocity_mps: 225.0
+            heading_deg: 0.0
+          target_init:
+            position_m: [2500.0, -100.0, 4450.0]
+            velocity_mps: 235.0
+            heading_deg: 180.0
+          metadata:
+            scenario_type: head_on
+            manifest_family: formal_heldout
+            initial_range_m: 2561.737691
+            altitude_diff_m: -550.0
+            lateral_offset_m: -100.0
+        - name: head_on_formal_r3100_v265_v265_alt0_yneg100
+          own_init:
+            position_m: [0.0, 0.0, 5000.0]
+            velocity_mps: 265.0
+            heading_deg: 0.0
+          target_init:
+            position_m: [3100.0, -100.0, 5000.0]
+            velocity_mps: 265.0
+            heading_deg: 180.0
+          metadata:
+            scenario_type: head_on
+            manifest_family: formal_heldout
+            initial_range_m: 3101.612484
+            altitude_diff_m: 0.0
+            lateral_offset_m: -100.0

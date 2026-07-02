@@ -86,3 +86,173 @@ def test_collect_formal_dependencies_raises_on_missing_include(tmp_path):
         assert "Included config not found" in str(exc)
     else:
         raise AssertionError("Expected FileNotFoundError for missing include")
+
+
+def test_collect_formal_dependencies_includes_oracle_specialists_and_predictor(tmp_path):
+    import torch
+
+    repo_root = tmp_path
+    config_dir = repo_root / "config" / "experiment"
+    config_dir.mkdir(parents=True)
+    outputs_dir = repo_root / "outputs"
+    predictor_dir = outputs_dir / "trajectory_prediction"
+    predictor_dir.mkdir(parents=True)
+    specialist_dir = outputs_dir / "specialists" / "head_on" / "checkpoints"
+    specialist_dir.mkdir(parents=True)
+
+    (config_dir / "formal.yaml").write_text(
+        "\n".join(
+            [
+                "trajectory_prediction:",
+                "  enabled: true",
+                "  checkpoint_path: outputs/trajectory_prediction/best_model.pt",
+                "run_defaults:",
+                "  main_methods: [oracle]",
+                "methods:",
+                "  oracle:",
+                "    agent_type: oracle_task_gate",
+                "    specialists:",
+                "      head_on:",
+                "        checkpoint: outputs/specialists/head_on/checkpoints/best.pt",
+                "        config_path: config/experiment/specialist.yaml",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    (config_dir / "specialist.yaml").write_text(
+        "\n".join(
+            [
+                "trajectory_prediction:",
+                "  enabled: true",
+                "  checkpoint_path: outputs/trajectory_prediction/best_model.pt",
+                "policy:",
+                "  action_dim: 3",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    predictor_path = predictor_dir / "best_model.pt"
+    predictor_path.write_bytes(b"predictor")
+    checkpoint_path = specialist_dir / "best.pt"
+    torch.save({"obs_dim": 18, "action_dim": 3}, checkpoint_path)
+
+    report = _MODULE.collect_formal_dependencies(
+        repo_root=repo_root,
+        config_path=config_dir / "formal.yaml",
+    )
+
+    runtime_artifacts = {
+        (artifact["kind"], Path(artifact["path"]).name): artifact
+        for artifact in report["runtime_artifacts"]
+    }
+    assert ("trajectory_prediction_checkpoint", "best_model.pt") in runtime_artifacts
+    assert ("oracle_specialist_checkpoint", "best.pt") in runtime_artifacts
+    assert ("oracle_specialist_config", "specialist.yaml") in runtime_artifacts
+
+    predictor_owners = runtime_artifacts[
+        ("trajectory_prediction_checkpoint", "best_model.pt")
+    ]["owners"]
+    assert sorted(predictor_owners) == ["comparison_config", "oracle.specialists.head_on"]
+
+    yaml_deps = {Path(path).name for path in report["yaml_dependencies"]}
+    assert yaml_deps == {"formal.yaml", "specialist.yaml"}
+
+
+def test_run_preflight_reports_missing_nested_specialist_and_predictor_artifacts(tmp_path):
+    repo_root = tmp_path
+    config_dir = repo_root / "config" / "experiment"
+    config_dir.mkdir(parents=True)
+
+    (config_dir / "formal.yaml").write_text(
+        "\n".join(
+            [
+                "trajectory_prediction:",
+                "  enabled: true",
+                "  checkpoint_path: outputs/trajectory_prediction/best_model.pt",
+                "run_defaults:",
+                "  main_methods: [oracle]",
+                "methods:",
+                "  oracle:",
+                "    agent_type: oracle_task_gate",
+                "    specialists:",
+                "      crossing_feasible:",
+                "        checkpoint: outputs/specialists/crossing/checkpoints/last.pt",
+                "        config_path: config/experiment/specialist.yaml",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    (config_dir / "specialist.yaml").write_text(
+        "policy:\n  action_dim: 3\n",
+        encoding="utf-8",
+    )
+
+    _report, issues = _MODULE.run_preflight(
+        repo_root=repo_root,
+        config_path=config_dir / "formal.yaml",
+    )
+
+    assert any(
+        "trajectory_prediction_checkpoint (comparison_config): missing:" in issue
+        for issue in issues
+    )
+    assert any(
+        "oracle_specialist_checkpoint (oracle.specialists.crossing_feasible): missing:"
+        in issue
+        for issue in issues
+    )
+
+
+def test_collect_formal_dependencies_includes_commander_mode_artifacts(tmp_path):
+    import torch
+
+    repo_root = tmp_path
+    config_dir = repo_root / "config" / "experiment"
+    config_dir.mkdir(parents=True)
+    outputs_dir = repo_root / "outputs" / "modes" / "head_on" / "checkpoints"
+    outputs_dir.mkdir(parents=True)
+
+    (config_dir / "formal.yaml").write_text(
+        "\n".join(
+            [
+                "run_defaults:",
+                "  main_methods: [cmd]",
+                "methods:",
+                "  cmd:",
+                "    agent_type: hierarchical_commander",
+                "    checkpoint: outputs/commander/best.pt",
+                "    config_path: config/experiment/train.yaml",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    (config_dir / "train.yaml").write_text(
+        "\n".join(
+            [
+                "commander:",
+                "  num_modes: 1",
+                "  modes:",
+                "    - id: 0",
+                "      name: head_on_specialist",
+                "      checkpoint: outputs/modes/head_on/checkpoints/best.pt",
+                "      config_path: config/experiment/mode.yaml",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    (config_dir / "mode.yaml").write_text("policy:\n  action_dim: 3\n", encoding="utf-8")
+
+    torch.save({"obs_dim": 18, "action_dim": 3}, outputs_dir / "best.pt")
+
+    report = _MODULE.collect_formal_dependencies(
+        repo_root=repo_root,
+        config_path=config_dir / "formal.yaml",
+    )
+
+    runtime_artifacts = {
+        (artifact["kind"], Path(artifact["path"]).name): artifact
+        for artifact in report["runtime_artifacts"]
+    }
+    assert ("commander_mode_checkpoint", "best.pt") in runtime_artifacts
+    assert ("commander_mode_config", "mode.yaml") in runtime_artifacts

@@ -1,0 +1,64 @@
+includes:
+  - ./train_prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp_combat_finetune_mixed_opponent_aware_32k.yaml
+
+experiment:
+  name: prediction_vpp_ppo_crossing_v3
+
+combat_finetune:
+  task_weights:
+    head_on: 1.0
+    crossing_feasible: 2.0
+  # Crossing v3: geometry-quality-aware checkpoint selection
+  # Lower gate_bonus so win_rate matters even after gates pass.
+  # Add geometry gates: hp_advantage must be non-negative,
+  # timeout_rate must be non-trivial (real envelope advantage wins),
+  # and out_of_bounds_rate must not dominate (no exploit-by-OOB).
+  selection_metric:
+    mode: lane_gated
+    objective: "crossing_feasible::expert.win_rate"
+    fallback_metric: "crossing_feasible::expert.mean_return"
+    gate_bonus: 1000.0
+    gates:
+      - task: crossing_feasible
+        opponent_stage: expert
+        metric: win_rate
+        min_value: 0.5
+      - task: crossing_feasible
+        opponent_stage: expert
+        metric: hp_advantage
+        min_value: 0.0
+      - task: crossing_feasible
+        opponent_stage: expert
+        metric: timeout_rate
+        min_value: 0.2
+      - task: crossing_feasible
+        opponent_stage: expert
+        metric: out_of_bounds_rate
+        max_value: 0.7
+
+ppo:
+  total_timesteps: 65536
+
+evaluation:
+  eval_interval: 8192
+
+checkpoint:
+  save_interval: 8192
+
+reward:
+  # Crossing v3: shift from binary attack-zone presence to sustained score differential
+  w_attack_zone: 0.3
+  w_attack_zone_score: 0.5
+  attack_zone_score_scale: 1.0
+  # Keep existing weights
+  w_range: 0.6
+  w_angle: 0.9
+  w_energy: 0.0
+  w_safety: 3.0
+  w_saturation: 0.5
+  w_smooth: 0.2
+  w_turn_rate: 0.5
+  w_closing: 0.1
+  w_alive: 0.02
+  w_overshoot: 1.0
+  w_boundary: 0.3

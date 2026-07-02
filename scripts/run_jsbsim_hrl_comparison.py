@@ -302,6 +302,23 @@ def _import_class(class_path: str):
     return getattr(module, class_name)
 
 
+def _apply_paper_safety_guards(
+    manifest: RunManifest,
+    *,
+    run_status: str,
+    backend: str,
+    dry_run: bool,
+) -> bool:
+    """Apply reproducibility guards before computing the final paper-safe bit."""
+
+    if manifest.git_info.get("dirty"):
+        manifest.add_invalid_for_paper_reason(
+            "git working tree is dirty; formal evidence must be generated from a clean tree"
+        )
+
+    return run_status == "formal" and backend == "jsbsim" and not dry_run
+
+
 def _resolve_opponent_entry(
     comparison_config: Dict[str, Any],
     opponent_stage: str,
@@ -1795,8 +1812,9 @@ def build_eval_config(
     method_def = methods[method_name]
     task_def = _resolve_task_def(tasks[task_name])
     agent_type = method_def.get("agent_type", "ppo")
-    if agent_type == "oracle_task_gate":
-        # oracle_task_gate does not need a checkpoint config; use comparison config as base
+    if agent_type in {"oracle_task_gate", "random_task_gate", "hierarchical_commander"}:
+        # oracle/random gate and hierarchical commander use the comparison config
+        # as the evaluation environment base.
         config = copy.deepcopy(comparison_config)
     else:
         checkpoint_path = _repo_path(method_def.get("checkpoint"))
@@ -1841,6 +1859,13 @@ def _build_agent(
         action_dim = int(config.get("policy", {}).get("action_dim", 3))
         agent = EndToEndPPOAgent(obs_dim=obs_dim, action_dim=action_dim, config=config, device=device)
         agent.load(str(checkpoint_path))
+    elif agent_type == "sac":
+        from uav_vpp_guidance.agents.sac_agent import SACAgent
+
+        obs_dim = int(sample_obs["observation_vector"].shape[0])
+        action_dim = int(config.get("policy", {}).get("action_dim", 3))
+        agent = SACAgent(obs_dim=obs_dim, action_dim=action_dim, config=config, device=device)
+        agent.load(str(checkpoint_path))
     elif agent_type == "rule_guidance":
         from uav_vpp_guidance.evaluation.rule_guidance_policy import RuleGuidancePolicy
 
@@ -1860,11 +1885,30 @@ def _build_agent(
             device=device,
             guidance_config=method_def.get("guidance_config"),
         )
+    elif agent_type == "hierarchical_commander":
+        from uav_vpp_guidance.evaluation.hierarchical_commander_policy import (
+            HierarchicalCommanderPolicy,
+        )
+
+        obs_dim = int(sample_obs["observation_vector"].shape[0])
+        agent = HierarchicalCommanderPolicy(
+            checkpoint_path=str(checkpoint_path),
+            config=config,
+            obs_dim=obs_dim,
+            device=device,
+        )
     elif agent_type == "oracle_task_gate":
         from uav_vpp_guidance.evaluation.oracle_task_gate_policy import OracleTaskGatePolicy
         agent = OracleTaskGatePolicy(
             specialists_config=method_def.get("specialists", {}),
             device=device,
+        )
+    elif agent_type == "random_task_gate":
+        from uav_vpp_guidance.evaluation.random_task_gate_policy import RandomTaskGatePolicy
+        agent = RandomTaskGatePolicy(
+            specialists_config=method_def.get("specialists", {}),
+            device=device,
+            macro_step=method_def.get("macro_step", 1),
         )
     else:
         obs_dim = int(sample_obs["observation_vector"].shape[0])
@@ -2374,7 +2418,16 @@ def _build_observation_audit(
     dim_info = _checkpoint_dimension_info(checkpoint_path)
     obs_dim = int(obs_vec.shape[0])
     schema_dim = schema.get("dim")
-    policy_action_dim = int(config.get("policy", {}).get("action_dim", 3))
+    low_level_policy_action_dim = int(config.get("policy", {}).get("action_dim", 3))
+    policy_action_dim = low_level_policy_action_dim
+    if method_def.get("agent_type", "ppo") == "hierarchical_commander":
+        commander_cfg = config.get("commander", {})
+        configured_num_modes = commander_cfg.get("num_modes")
+        modes = commander_cfg.get("modes", [])
+        if configured_num_modes is not None:
+            policy_action_dim = int(configured_num_modes)
+        elif modes:
+            policy_action_dim = int(len(modes))
     ckpt_obs_dim = dim_info.get("checkpoint_obs_dim")
     ckpt_action_dim = dim_info.get("checkpoint_action_dim")
     ckpt_policy_action_dim = dim_info.get("checkpoint_policy_action_dim")
@@ -2391,6 +2444,7 @@ def _build_observation_audit(
         "checkpoint_obs_dim": ckpt_obs_dim,
         "obs_dim_matches_checkpoint": ckpt_obs_dim in (None, obs_dim),
         "policy_action_dim": policy_action_dim,
+        "low_level_policy_action_dim": low_level_policy_action_dim,
         "checkpoint_action_dim": ckpt_action_dim,
         "checkpoint_policy_action_dim": ckpt_policy_action_dim,
         "action_dim_matches_checkpoint": ckpt_action_dim in (None, policy_action_dim),
@@ -2460,6 +2514,11 @@ def _run_episode(
     backend_fallback_occurred = False
 
     while not (terminated or truncated):
+        # Macro-step: re-select specialist every macro_step steps (for random gate)
+        if hasattr(agent, "macro_step") and hasattr(agent, "select_random_specialist") and hasattr(agent, "set_specialist"):
+            if steps % agent.macro_step == 0 and steps > 0:
+                selected = agent.select_random_specialist()
+                agent.set_specialist(selected)
         obs_vec = obs["observation_vector"]
         step_kwargs: Dict[str, Any] = {}
         action = None
@@ -2628,6 +2687,7 @@ def _run_episode(
             },
         }
     )
+    record.update(summarize_episode_commander(record))
     record.update(summarize_episode_combat_geometry(record))
     return record
 
@@ -2686,6 +2746,10 @@ def _write_summary_csv(output_dir: Path, records: List[Dict[str, Any]]) -> Path:
         "hp_advantage",
         "combat_time_to_kill",
         "survived",
+        "commander_mode_head_on_fraction",
+        "commander_mode_crossing_fraction",
+        "commander_mean_switch_count",
+        "commander_first_switch_step",
         "_deprecated_tracking_mean_range_m",
         "_deprecated_tracking_mean_abs_ata_deg",
         "_deprecated_tracking_envelope_fraction",
@@ -2750,6 +2814,10 @@ def _write_summary_csv(output_dir: Path, records: List[Dict[str, Any]]) -> Path:
                 "hp_advantage": rec.get("hp_advantage"),
                 "combat_time_to_kill": rec.get("combat_time_to_kill"),
                 "survived": rec.get("survived"),
+                "commander_mode_head_on_fraction": rec.get("commander_mode_head_on_fraction"),
+                "commander_mode_crossing_fraction": rec.get("commander_mode_crossing_fraction"),
+                "commander_mean_switch_count": rec.get("commander_mean_switch_count"),
+                "commander_first_switch_step": rec.get("commander_first_switch_step"),
                 "_deprecated_tracking_mean_range_m": rec.get("_deprecated_tracking_mean_range_m"),
                 "_deprecated_tracking_mean_abs_ata_deg": rec.get("_deprecated_tracking_mean_abs_ata_deg"),
                 "_deprecated_tracking_envelope_fraction": rec.get("_deprecated_tracking_envelope_fraction"),
@@ -2794,6 +2862,10 @@ def _write_aggregate_summary(output_dir: Path, records: List[Dict[str, Any]]) ->
                 "completed_orbits": [],
                 "prediction_valid_rates": [],
                 "prediction_fallback_rates": [],
+                "commander_mode_head_on_fractions": [],
+                "commander_mode_crossing_fractions": [],
+                "commander_switch_counts": [],
+                "commander_first_switch_steps": [],
                 "backend_fallbacks": 0,
                 "ego_crashes": 0,
                 "target_crash_or_oob": 0,
@@ -2818,6 +2890,18 @@ def _write_aggregate_summary(output_dir: Path, records: List[Dict[str, Any]]) ->
             item[target].append(_safe_float(rec.get(field)))
         item["prediction_valid_rates"].append(float(rec.get("prediction_valid_rate", 0.0)))
         item["prediction_fallback_rates"].append(float(rec.get("prediction_fallback_rate", 0.0)))
+        item["commander_mode_head_on_fractions"].append(
+            _safe_float(rec.get("commander_mode_head_on_fraction"))
+        )
+        item["commander_mode_crossing_fractions"].append(
+            _safe_float(rec.get("commander_mode_crossing_fraction"))
+        )
+        item["commander_switch_counts"].append(
+            _safe_float(rec.get("commander_mean_switch_count"))
+        )
+        item["commander_first_switch_steps"].append(
+            _safe_float(rec.get("commander_first_switch_step"))
+        )
         item["backend_fallbacks"] += int(bool(rec.get("backend_fallback_occurred", False)))
         item["ego_crashes"] += int(_record_has_ego_crash(rec))
         item["target_crash_or_oob"] += int(_record_has_target_crash_or_oob(rec))
@@ -2872,6 +2956,18 @@ def _write_aggregate_summary(output_dir: Path, records: List[Dict[str, Any]]) ->
                 "mean_completed_orbits": _finite_mean(item["completed_orbits"]),
                 "mean_prediction_valid_rate": float(np.mean(item["prediction_valid_rates"])),
                 "mean_prediction_fallback_rate": float(np.mean(item["prediction_fallback_rates"])),
+                "commander_mode_head_on_fraction": _finite_mean(
+                    item["commander_mode_head_on_fractions"]
+                ),
+                "commander_mode_crossing_fraction": _finite_mean(
+                    item["commander_mode_crossing_fractions"]
+                ),
+                "commander_mean_switch_count": _finite_mean(
+                    item["commander_switch_counts"]
+                ),
+                "commander_first_switch_step": _finite_mean(
+                    item["commander_first_switch_steps"]
+                ),
                 "backend_fallbacks": item["backend_fallbacks"],
                 "ego_crashes": item["ego_crashes"],
                 "target_crash_or_oob": item["target_crash_or_oob"],
@@ -3088,6 +3184,12 @@ def _write_combat_geometry_diagnostics(
                 bool(step.get("direct_track_mode_effective", False))
                 for step in trajectory
             ),
+            "commander_mode_head_on_fraction": rec.get("commander_mode_head_on_fraction"),
+            "commander_mode_crossing_fraction": rec.get(
+                "commander_mode_crossing_fraction"
+            ),
+            "commander_mean_switch_count": rec.get("commander_mean_switch_count"),
+            "commander_first_switch_step": rec.get("commander_first_switch_step"),
             **diagnostics,
         }
         episode_rows.append(row)
@@ -3258,6 +3360,18 @@ def _write_combat_geometry_diagnostics(
                 bool(item.get("direct_track_mode_effective", False))
                 for item in items
             ),
+            "commander_mode_head_on_fraction": _finite_mean(
+                item.get("commander_mode_head_on_fraction") for item in items
+            ),
+            "commander_mode_crossing_fraction": _finite_mean(
+                item.get("commander_mode_crossing_fraction") for item in items
+            ),
+            "commander_mean_switch_count": _finite_mean(
+                item.get("commander_mean_switch_count") for item in items
+            ),
+            "commander_first_switch_step": _finite_mean(
+                item.get("commander_first_switch_step") for item in items
+            ),
         }
         for metric in COMBAT_GEOMETRY_DIAGNOSTIC_METRICS:
             row[metric] = _finite_mean(item.get(metric) for item in items)
@@ -3334,6 +3448,45 @@ def _record_has_timeout(rec: Dict[str, Any]) -> bool:
     return "timeout" in reason or bool(rec.get("is_timeout", False))
 
 
+def summarize_episode_commander(record: Dict[str, Any]) -> Dict[str, Any]:
+    """Aggregate per-step commander telemetry into episode-level metrics."""
+    trajectory = record.get("trajectory", []) or []
+    if not trajectory:
+        return {
+            "commander_mode_head_on_fraction": np.nan,
+            "commander_mode_crossing_fraction": np.nan,
+            "commander_mean_switch_count": np.nan,
+            "commander_first_switch_step": np.nan,
+        }
+
+    mode_names = [
+        str(step.get("commander_mode_name", "")).lower()
+        for step in trajectory
+        if step.get("commander_mode_name") is not None
+    ]
+    switch_counts = [
+        float(step.get("commander_switch_count"))
+        for step in trajectory
+        if step.get("commander_switch_count") is not None
+    ]
+    first_switch_steps = [
+        float(step.get("commander_first_switch_step"))
+        for step in trajectory
+        if step.get("commander_first_switch_step") is not None
+    ]
+    total = max(1, len(mode_names))
+    return {
+        "commander_mode_head_on_fraction": (
+            sum("head_on" in name for name in mode_names) / total if mode_names else np.nan
+        ),
+        "commander_mode_crossing_fraction": (
+            sum("crossing" in name for name in mode_names) / total if mode_names else np.nan
+        ),
+        "commander_mean_switch_count": switch_counts[-1] if switch_counts else np.nan,
+        "commander_first_switch_step": first_switch_steps[0] if first_switch_steps else np.nan,
+    }
+
+
 def _write_config_snapshots(
     output_dir: Path,
     configs: Dict[str, Dict[str, Any]],
@@ -3365,8 +3518,8 @@ def _checkpoint_checks(
     for method in methods:
         method_def = comparison_config.get("methods", {}).get(method, {})
         agent_type = method_def.get("agent_type", "ppo")
-        # oracle_task_gate and rule_guidance do not require a single policy checkpoint
-        if agent_type in {"oracle_task_gate", "rule_guidance"}:
+        # oracle_task_gate, random_task_gate, and rule_guidance do not require a single policy checkpoint
+        if agent_type in {"oracle_task_gate", "random_task_gate", "rule_guidance"}:
             continue
         paths = [("policy_checkpoint", method_def.get("checkpoint"))]
         variant = method_def.get("prediction_variant")
@@ -6109,8 +6262,8 @@ def main() -> int:
         for method in methods:
             method_def = comparison_config["methods"][method]
             agent_type = method_def.get("agent_type", "ppo")
-            # oracle_task_gate and rule_guidance do not require a single checkpoint
-            if agent_type in {"oracle_task_gate", "rule_guidance"}:
+            # oracle_task_gate, random_task_gate, and rule_guidance do not require a single checkpoint
+            if agent_type in {"oracle_task_gate", "random_task_gate", "rule_guidance"}:
                 checkpoint_path = None
             else:
                 checkpoint_path = _repo_path(method_def.get("checkpoint"))
@@ -6173,6 +6326,12 @@ def main() -> int:
                     for seed in seeds:
                         for scenario_idx, scenario in enumerate(scenarios):
                             for ep in range(n_episodes):
+                                if hasattr(agent, "reset_episode"):
+                                    agent.reset_episode()
+                                # Random gate: select a random specialist at episode start
+                                if hasattr(agent, "select_random_specialist") and not hasattr(agent, "reset_episode"):
+                                    selected = agent.select_random_specialist()
+                                    agent.set_specialist(selected)
                                 episode_id = scenario_idx * n_episodes + ep
                                 ep_seed = seed * 100000 + scenario_idx * 100 + ep
                                 rec = _run_episode(
@@ -6262,7 +6421,14 @@ def main() -> int:
     if failures:
         manifest.mark_failed("; ".join(str(f.get("error")) for f in failures[:3]))
     else:
-        manifest.mark_completed(paper_safe=(args.run_status == "formal" and backend == "jsbsim" and not args.dry_run))
+        manifest.mark_completed(
+            paper_safe=_apply_paper_safety_guards(
+                manifest,
+                run_status=args.run_status,
+                backend=backend,
+                dry_run=args.dry_run,
+            )
+        )
     manifest.save(run_dir)
 
     print("=" * 60)

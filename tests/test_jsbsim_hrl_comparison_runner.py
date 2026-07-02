@@ -8,13 +8,21 @@ import subprocess
 import sys
 from unittest import mock
 from pathlib import Path
+import importlib.util
 
 import numpy as np
 import yaml
 
+from uav_vpp_guidance.common.manifest import RunManifest
+
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 RUNNER = REPO_ROOT / "scripts" / "run_jsbsim_hrl_comparison.py"
+
+_RUNNER_SPEC = importlib.util.spec_from_file_location("run_jsbsim_hrl_comparison", RUNNER)
+assert _RUNNER_SPEC and _RUNNER_SPEC.loader
+_RUNNER_MODULE = importlib.util.module_from_spec(_RUNNER_SPEC)
+_RUNNER_SPEC.loader.exec_module(_RUNNER_MODULE)
 
 
 def _run_dry_run(tmp_path: Path, *extra_args: str) -> Path:
@@ -167,6 +175,88 @@ def test_vpp_offset_frame_cli_override_is_recorded(tmp_path):
         and item["source"] == "run_jsbsim_hrl_comparison.py:vpp_cli"
         for item in cfg["provenance"]["config_overrides"]
     )
+
+
+def test_paper_safe_guard_rejects_dirty_git_tree():
+    manifest = RunManifest(stage_name="jsbsim_hrl_comparison", git_info={"dirty": True})
+
+    eligible = _RUNNER_MODULE._apply_paper_safety_guards(
+        manifest,
+        run_status="formal",
+        backend="jsbsim",
+        dry_run=False,
+    )
+    manifest.mark_completed(paper_safe=eligible)
+
+    assert eligible is True
+    assert manifest.paper_safe is False
+    assert (
+        "git working tree is dirty; formal evidence must be generated from a clean tree"
+        in manifest.invalid_for_paper_reasons
+    )
+
+
+def test_paper_safe_guard_accepts_clean_formal_jsbsim_run():
+    manifest = RunManifest(stage_name="jsbsim_hrl_comparison", git_info={"dirty": False})
+
+    eligible = _RUNNER_MODULE._apply_paper_safety_guards(
+        manifest,
+        run_status="formal",
+        backend="jsbsim",
+        dry_run=False,
+    )
+    manifest.mark_completed(paper_safe=eligible)
+
+    assert eligible is True
+    assert manifest.paper_safe is True
+    assert manifest.invalid_for_paper_reasons == []
+
+
+def test_hierarchical_commander_observation_audit_uses_mode_count_for_action_dim(tmp_path):
+    checkpoint_path = tmp_path / "commander.pt"
+    torch_payload = {
+        "obs_dim": 19,
+        "action_dim": 2,
+        "config": {
+            "policy": {"action_dim": 3},
+        },
+    }
+    import torch
+
+    torch.save(torch_payload, checkpoint_path)
+
+    method_def = {
+        "agent_type": "hierarchical_commander",
+        "prediction_variant": "learned",
+    }
+    config = {
+        "policy": {"action_dim": 3},
+        "commander": {
+            "num_modes": 2,
+            "modes": [
+                {"id": 0, "name": "head_on_specialist"},
+                {"id": 1, "name": "crossing_specialist"},
+            ],
+        },
+    }
+    sample_obs = {
+        "observation_vector": np.zeros(19, dtype=np.float32),
+        "observation_schema": {"dim": 19, "feature_names": ["f"] * 19},
+    }
+
+    audit = _RUNNER_MODULE._build_observation_audit(
+        method_name="hierarchical_commander_under_test",
+        task_name="head_on",
+        method_def=method_def,
+        config=config,
+        checkpoint_path=checkpoint_path,
+        sample_obs=sample_obs,
+    )
+
+    assert audit["low_level_policy_action_dim"] == 3
+    assert audit["policy_action_dim"] == 2
+    assert audit["checkpoint_action_dim"] == 2
+    assert audit["action_dim_matches_checkpoint"] is True
 
 
 def test_vpp_offset_frame_by_task_cli_override_is_recorded(tmp_path):
@@ -3804,6 +3894,192 @@ def test_build_agent_supports_legacy_hierarchical_bridge():
         "device": "cpu",
         "guidance_config": {"lag_distance": 500.0},
     }
+
+
+def test_build_agent_supports_end_to_end_policy():
+    sys.path.insert(0, str(REPO_ROOT / "scripts"))
+    import run_jsbsim_hrl_comparison as runner  # noqa: WPS433
+
+    captured = {}
+
+    class DummyEndToEndAgent:
+        def __init__(self, obs_dim, action_dim, config, device):
+            captured["obs_dim"] = obs_dim
+            captured["action_dim"] = action_dim
+            captured["config"] = config
+            captured["device"] = device
+
+        def load(self, checkpoint_path):
+            captured["checkpoint_path"] = checkpoint_path
+
+    with mock.patch.object(runner, "EndToEndPPOAgent", DummyEndToEndAgent):
+        agent = runner._build_agent(
+            method_def={"agent_type": "end_to_end"},
+            config={"policy": {"action_dim": 4}},
+            checkpoint_path=Path("end_to_end_best.pt"),
+            sample_obs={"observation_vector": np.zeros(22, dtype=np.float32)},
+            device="cpu",
+        )
+
+    assert isinstance(agent, DummyEndToEndAgent)
+    assert captured == {
+        "obs_dim": 22,
+        "action_dim": 4,
+        "config": {"policy": {"action_dim": 4}},
+        "device": "cpu",
+        "checkpoint_path": "end_to_end_best.pt",
+    }
+
+
+def test_build_agent_supports_sac_policy():
+    sys.path.insert(0, str(REPO_ROOT / "scripts"))
+    from run_jsbsim_hrl_comparison import _build_agent  # noqa: WPS433
+
+    captured = {}
+
+    class DummySACAgent:
+        def __init__(self, obs_dim, action_dim, config, device):
+            captured["obs_dim"] = obs_dim
+            captured["action_dim"] = action_dim
+            captured["config"] = config
+            captured["device"] = device
+
+        def load(self, checkpoint_path):
+            captured["checkpoint_path"] = checkpoint_path
+
+    with mock.patch(
+        "uav_vpp_guidance.agents.sac_agent.SACAgent",
+        DummySACAgent,
+    ):
+        agent = _build_agent(
+            method_def={"agent_type": "sac"},
+            config={"policy": {"action_dim": 3}},
+            checkpoint_path=Path("sac_best.zip"),
+            sample_obs={"observation_vector": np.zeros(18, dtype=np.float32)},
+            device="cpu",
+        )
+
+    assert isinstance(agent, DummySACAgent)
+    assert captured == {
+        "obs_dim": 18,
+        "action_dim": 3,
+        "config": {"policy": {"action_dim": 3}},
+        "device": "cpu",
+        "checkpoint_path": "sac_best.zip",
+    }
+
+
+def test_build_agent_supports_rule_guidance_bridge():
+    sys.path.insert(0, str(REPO_ROOT / "scripts"))
+    from run_jsbsim_hrl_comparison import _build_agent  # noqa: WPS433
+
+    captured = {}
+
+    class DummyRuleGuidancePolicy:
+        def __init__(self, action_dim, constant_action=None, action_by_task=None):
+            captured["action_dim"] = action_dim
+            captured["constant_action"] = constant_action
+            captured["action_by_task"] = action_by_task
+
+    with mock.patch(
+        "uav_vpp_guidance.evaluation.rule_guidance_policy.RuleGuidancePolicy",
+        DummyRuleGuidancePolicy,
+    ):
+        agent = _build_agent(
+            method_def={
+                "agent_type": "rule_guidance",
+                "constant_action": [0.0, 0.0, 0.0],
+                "action_by_task": {"head_on": [0.1, -0.1, 0.0]},
+            },
+            config={"policy": {"action_dim": 3}},
+            checkpoint_path=Path("unused.pt"),
+            sample_obs={"observation_vector": np.zeros(16, dtype=np.float32)},
+            device="cpu",
+        )
+
+    assert isinstance(agent, DummyRuleGuidancePolicy)
+    assert captured == {
+        "action_dim": 3,
+        "constant_action": [0.0, 0.0, 0.0],
+        "action_by_task": {"head_on": [0.1, -0.1, 0.0]},
+    }
+
+
+def test_build_agent_supports_hierarchical_commander():
+    sys.path.insert(0, str(REPO_ROOT / "scripts"))
+    from run_jsbsim_hrl_comparison import _build_agent  # noqa: WPS433
+
+    captured = {}
+
+    class DummyHierarchicalCommanderPolicy:
+        def __init__(self, checkpoint_path, config, obs_dim, device):
+            captured["checkpoint_path"] = checkpoint_path
+            captured["config"] = config
+            captured["obs_dim"] = obs_dim
+            captured["device"] = device
+
+    with mock.patch(
+        "uav_vpp_guidance.evaluation.hierarchical_commander_policy.HierarchicalCommanderPolicy",
+        DummyHierarchicalCommanderPolicy,
+    ):
+        agent = _build_agent(
+            method_def={"agent_type": "hierarchical_commander"},
+            config={
+                "policy": {"action_dim": 3},
+                "commander": {"num_modes": 2, "modes": [{"id": 0}, {"id": 1}]},
+            },
+            checkpoint_path=Path("commander_best.pt"),
+            sample_obs={"observation_vector": np.zeros(19, dtype=np.float32)},
+            device="cpu",
+        )
+
+    assert isinstance(agent, DummyHierarchicalCommanderPolicy)
+    assert captured == {
+        "checkpoint_path": "commander_best.pt",
+        "config": {
+            "policy": {"action_dim": 3},
+            "commander": {"num_modes": 2, "modes": [{"id": 0}, {"id": 1}]},
+        },
+        "obs_dim": 19,
+        "device": "cpu",
+    }
+
+
+def test_observation_audit_uses_commander_mode_dim_for_hierarchical_commander():
+    sys.path.insert(0, str(REPO_ROOT / "scripts"))
+    import run_jsbsim_hrl_comparison as runner  # noqa: WPS433
+
+    with mock.patch.object(
+        runner,
+        "_checkpoint_dimension_info",
+        return_value={
+            "checkpoint_obs_dim": 19,
+            "checkpoint_action_dim": 2,
+            "checkpoint_policy_action_dim": 2,
+        },
+    ):
+        audit = runner._build_observation_audit(
+            method_name="hierarchical_commander_mvp_2mode",
+            task_name="head_on",
+            method_def={"agent_type": "hierarchical_commander"},
+            config={
+                "policy": {"action_dim": 3},
+                "commander": {"num_modes": 2, "modes": [{"id": 0}, {"id": 1}]},
+            },
+            checkpoint_path=Path("commander_best.pt"),
+            sample_obs={
+                "observation_vector": np.zeros(19, dtype=np.float32),
+                "observation_schema": {
+                    "dim": 19,
+                    "feature_names": [f"f{i}" for i in range(19)],
+                },
+            },
+        )
+
+    assert audit["policy_action_dim"] == 2
+    assert audit["low_level_policy_action_dim"] == 3
+    assert audit["checkpoint_action_dim"] == 2
+    assert audit["action_dim_matches_checkpoint"] is True
 
 
 def test_run_episode_supports_command_override_bridge_agents():

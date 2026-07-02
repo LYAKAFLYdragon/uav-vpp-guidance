@@ -1,0 +1,86 @@
+includes:
+  - ./train_prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp_combat_finetune.yaml
+
+experiment:
+  name: prediction_vpp_hierarchical_commander_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_mvp_2mode
+
+observation:
+  include_task_type: false
+  include_opponent_stage: true
+
+commander:
+  enabled: true
+  action_space_type: discrete
+  num_modes: 2
+  macro_action_repeat_steps: 12
+  switch_penalty: 0.0
+  include_task_type_in_observation: false
+  modes:
+    - id: 0
+      name: head_on_specialist
+      specialist_key: head_on
+      checkpoint: outputs/experiments/prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp_combat_finetune_mixed_opponent_aware_32k_task_type_headon_weighted/checkpoints/best.pt
+      config_path: config/experiment/train_prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp_combat_finetune_mixed_opponent_aware_32k_task_type_headon_weighted.yaml
+    - id: 1
+      name: crossing_specialist
+      specialist_key: crossing_feasible
+      checkpoint: outputs/experiments/prediction_vpp_ppo_crossing_v3/checkpoints/last.pt
+      config_path: config/experiment/train_prediction_vpp_ppo_crossing_v3.yaml
+
+combat_finetune:
+  comparison_config_path: config/experiment/jsbsim_hrl_comparison.yaml
+  tasks:
+    - head_on
+    - crossing_feasible
+  opponent_stages:
+    - expert
+    - end_to_end
+  task_weights:
+    head_on: 1.0
+    crossing_feasible: 1.0
+  opponent_stage_weights:
+    expert: 1.0
+    end_to_end: 1.0
+  selection_metric:
+    mode: lane_gated
+    objective: overall.win_rate
+    fallback_metric: overall.mean_return
+    gate_bonus: 1000.0
+    gates:
+      - task: head_on
+        opponent_stage: expert
+        metric: win_rate
+        min_value: 0.6
+      - task: crossing_feasible
+        opponent_stage: expert
+        metric: win_rate
+        min_value: 0.5
+      - task: head_on
+        opponent_stage: end_to_end
+        metric: win_rate
+        min_value: 0.85
+      - task: crossing_feasible
+        opponent_stage: end_to_end
+        metric: win_rate
+        min_value: 0.9
+
+warm_start:
+  enabled: false
+
+ppo:
+  total_timesteps: 16384
+  rollout_steps: 512
+  minibatch_size: 64
+  update_epochs: 10
+  learning_rate: 0.0003
+
+evaluation:
+  eval_interval: 4096
+  eval_episodes: 1
+  seeds: [480, 481, 482]
+  save_trajectories: false
+
+checkpoint:
+  save_interval: 4096
+  save_best: true
+  save_last: true

@@ -1,0 +1,12 @@
+includes:
+  - ./train_prediction_vpp_hierarchical_commander_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_mvp_2mode.yaml
+
+experiment:
+  name: prediction_vpp_hierarchical_commander_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_mvp_2mode_task_type
+
+observation:
+  include_task_type: true
+  include_opponent_stage: true
+
+commander:
+  include_task_type_in_observation: true

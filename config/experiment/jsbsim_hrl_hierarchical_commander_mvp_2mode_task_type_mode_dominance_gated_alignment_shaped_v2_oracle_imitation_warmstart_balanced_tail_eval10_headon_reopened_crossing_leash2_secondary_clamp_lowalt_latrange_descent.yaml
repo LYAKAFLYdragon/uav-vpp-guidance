@@ -1,0 +1,31 @@
+includes:
+  - ./jsbsim_hrl_hierarchical_commander_mvp_2mode_task_type_mode_dominance_gated_alignment_shaped_v2_oracle_imitation_warmstart_balanced_tail_eval10_headon_reopened_crossing_leash2.yaml
+
+experiment:
+  name: jsbsim_hrl_hierarchical_commander_mvp_2mode_task_type_mode_dominance_gated_alignment_shaped_v2_oracle_imitation_warmstart_balanced_tail_eval10_headon_reopened_crossing_leash2_secondary_clamp_lowalt_latrange_descent
+  description: "Eval-time head_on reopened crossing leash2 plus a low-altitude unresolved-lateral descent secondary clamp."
+
+commander:
+  head_on_post_merge_reopened_crossing_secondary_clamp:
+    enabled: true
+    task_name: head_on
+    crossing_mode_id: 1
+    forced_mode_id: 0
+    max_altitude_m: 5000.0
+    min_abs_vp_lateral_to_range_ratio: 1.5
+    altitude_drop_lookback_steps: 12
+    min_altitude_drop_m: 250.0
+
+methods:
+  hierarchical_commander_mvp_2mode_task_type_mode_dominance_gated_alignment_shaped_v2_oracle_imitation_warmstart_balanced_tail_eval10_headon_reopened_crossing_leash2_secondary_clamp_lowalt_latrange_descent:
+    label: "Hierarchical Commander MVP (balanced tail eval10, leash2 + low-alt lateral-descent secondary clamp)"
+    agent_type: hierarchical_commander
+    checkpoint: outputs/experiments/prediction_vpp_hierarchical_commander_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_mvp_2mode_task_type_mode_dominance_gated_alignment_shaped_v2_oracle_imitation_warmstart_balanced_tail_eval10/checkpoints/best.pt
+    config_path: config/experiment/train_prediction_vpp_hierarchical_commander_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_mvp_2mode_task_type_mode_dominance_gated_alignment_shaped_v2_oracle_imitation_warmstart_balanced_tail_eval10.yaml
+    prediction_variant: learned
+
+run_defaults:
+  main_methods:
+    - hierarchical_commander_mvp_2mode_task_type_mode_dominance_gated_alignment_shaped_v2_oracle_imitation_warmstart_balanced_tail_eval10_headon_reopened_crossing_leash2_secondary_clamp_lowalt_latrange_descent
+  ablation_methods:
+    - hierarchical_commander_mvp_2mode_task_type_mode_dominance_gated_alignment_shaped_v2_oracle_imitation_warmstart_balanced_tail_eval10_headon_reopened_crossing_leash2_secondary_clamp_lowalt_latrange_descent

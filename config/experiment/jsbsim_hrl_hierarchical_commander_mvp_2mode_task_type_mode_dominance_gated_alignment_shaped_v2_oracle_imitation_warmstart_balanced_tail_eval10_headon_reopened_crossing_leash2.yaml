@@ -1,0 +1,30 @@
+includes:
+  - ./jsbsim_hrl_hierarchical_commander_mvp_2mode_task_type_mode_dominance_gated_alignment_shaped_v2_oracle_imitation_warmstart_balanced_tail_eval10.yaml
+
+experiment:
+  name: jsbsim_hrl_hierarchical_commander_mvp_2mode_task_type_mode_dominance_gated_alignment_shaped_v2_oracle_imitation_warmstart_balanced_tail_eval10_headon_reopened_crossing_leash2
+  description: "Eval-time head_on post-merge reopened crossing leash (max 2 macro windows) on the canonical balanced-tail eval10 commander."
+
+commander:
+  head_on_post_merge_reopened_crossing_leash:
+    enabled: true
+    task_name: head_on
+    crossing_mode_id: 1
+    forced_mode_id: 0
+    min_range_m: 4500.0
+    require_no_attack_zone: true
+    max_consecutive_crossing_macro_steps: 2
+
+methods:
+  hierarchical_commander_mvp_2mode_task_type_mode_dominance_gated_alignment_shaped_v2_oracle_imitation_warmstart_balanced_tail_eval10_headon_reopened_crossing_leash2:
+    label: "Hierarchical Commander MVP (balanced tail eval10, head_on reopened crossing leash2)"
+    agent_type: hierarchical_commander
+    checkpoint: outputs/experiments/prediction_vpp_hierarchical_commander_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_mvp_2mode_task_type_mode_dominance_gated_alignment_shaped_v2_oracle_imitation_warmstart_balanced_tail_eval10/checkpoints/best.pt
+    config_path: config/experiment/train_prediction_vpp_hierarchical_commander_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_mvp_2mode_task_type_mode_dominance_gated_alignment_shaped_v2_oracle_imitation_warmstart_balanced_tail_eval10.yaml
+    prediction_variant: learned
+
+run_defaults:
+  main_methods:
+    - hierarchical_commander_mvp_2mode_task_type_mode_dominance_gated_alignment_shaped_v2_oracle_imitation_warmstart_balanced_tail_eval10_headon_reopened_crossing_leash2
+  ablation_methods:
+    - hierarchical_commander_mvp_2mode_task_type_mode_dominance_gated_alignment_shaped_v2_oracle_imitation_warmstart_balanced_tail_eval10_headon_reopened_crossing_leash2

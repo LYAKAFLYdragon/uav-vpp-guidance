@@ -1,0 +1,16 @@
+includes:
+  - ./train_prediction_vpp_hierarchical_commander_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_mvp_2mode_task_type_mode_dominance_gated_alignment_shaped.yaml
+
+experiment:
+  name: prediction_vpp_hierarchical_commander_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_mvp_2mode_task_type_mode_dominance_gated_alignment_shaped_v2
+
+commander:
+  mode_alignment_shaping:
+    head_on:
+      preferred_mode_id: 0
+      preferred_mode_reward: 0.15
+      non_preferred_mode_penalty: 0.05
+    crossing_feasible:
+      preferred_mode_id: 1
+      preferred_mode_reward: 0.30
+      non_preferred_mode_penalty: 0.10

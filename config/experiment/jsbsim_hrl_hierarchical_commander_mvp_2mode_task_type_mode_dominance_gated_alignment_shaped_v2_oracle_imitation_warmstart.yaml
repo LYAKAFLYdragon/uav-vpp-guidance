@@ -1,0 +1,20 @@
+includes:
+  - ./jsbsim_hrl_hierarchical_commander_mvp_2mode_task_type_mode_dominance_gated_alignment_shaped_v2.yaml
+
+experiment:
+  name: jsbsim_hrl_hierarchical_commander_mvp_2mode_task_type_mode_dominance_gated_alignment_shaped_v2_oracle_imitation_warmstart
+  description: "2-mode learned hierarchical commander with task_type observation, softer asymmetric shaping, and oracle-imitation warm-start."
+
+methods:
+  hierarchical_commander_mvp_2mode_task_type_mode_dominance_gated_alignment_shaped_v2_oracle_imitation_warmstart:
+    label: "Hierarchical Commander MVP (2-mode, task_type, dominance-gated, alignment-shaped v2, oracle warm-start)"
+    agent_type: hierarchical_commander
+    checkpoint: outputs/experiments/prediction_vpp_hierarchical_commander_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_mvp_2mode_task_type_mode_dominance_gated_alignment_shaped_v2_oracle_imitation_warmstart/checkpoints/best.pt
+    config_path: config/experiment/train_prediction_vpp_hierarchical_commander_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_mvp_2mode_task_type_mode_dominance_gated_alignment_shaped_v2_oracle_imitation_warmstart.yaml
+    prediction_variant: learned
+
+run_defaults:
+  main_methods:
+    - hierarchical_commander_mvp_2mode_task_type_mode_dominance_gated_alignment_shaped_v2_oracle_imitation_warmstart
+  ablation_methods:
+    - hierarchical_commander_mvp_2mode_task_type_mode_dominance_gated_alignment_shaped_v2_oracle_imitation_warmstart

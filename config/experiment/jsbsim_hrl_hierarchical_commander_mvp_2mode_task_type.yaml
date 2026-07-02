@@ -1,0 +1,30 @@
+includes:
+  - ./jsbsim_hrl_hierarchical_commander_mvp_2mode.yaml
+
+experiment:
+  name: jsbsim_hrl_hierarchical_commander_mvp_2mode_task_type
+  description: "2-mode learned hierarchical commander with explicit task_type observation."
+
+observation:
+  include_task_type: true
+  include_opponent_stage: true
+
+commander:
+  include_task_type_in_observation: true
+
+methods:
+  hierarchical_commander_mvp_2mode_task_type:
+    label: "Hierarchical Commander MVP (2-mode, task_type)"
+    agent_type: hierarchical_commander
+    checkpoint: outputs/experiments/prediction_vpp_hierarchical_commander_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_mvp_2mode_task_type/checkpoints/best.pt
+    config_path: config/experiment/train_prediction_vpp_hierarchical_commander_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_mvp_2mode_task_type.yaml
+    prediction_variant: learned
+
+run_defaults:
+  main_methods:
+    - hierarchical_commander_mvp_2mode_task_type
+  ablation_methods:
+    - hierarchical_commander_mvp_2mode_task_type
+  tasks:
+    - head_on
+    - crossing_feasible

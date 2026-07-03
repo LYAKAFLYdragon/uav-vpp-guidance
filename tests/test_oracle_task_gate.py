@@ -61,7 +61,7 @@ class TestOracleTaskGatePolicyUnit:
         from uav_vpp_guidance.evaluation.oracle_task_gate_policy import OracleTaskGatePolicy
 
         with patch(
-            "uav_vpp_guidance.utils.config.load_yaml_config",
+            "uav_vpp_guidance.evaluation.oracle_task_gate_policy.load_experiment_config",
             return_value={},
         ), patch(
             "torch.load",
@@ -136,6 +136,78 @@ class TestOracleTaskGatePolicyUnit:
         """Verify that load() is a no-op."""
         # Should not raise
         gate_with_mock.load("some_path")
+
+    def test_specialist_config_uses_include_resolved_loader(self, mock_specialist):
+        """Oracle gate should resolve includes like FrozenSpecialistPolicy does."""
+        from uav_vpp_guidance.evaluation.oracle_task_gate_policy import OracleTaskGatePolicy
+
+        resolved_config = {"virtual_point": {"action_semantics": "tactical_basis_v1"}}
+        with patch(
+            "uav_vpp_guidance.evaluation.oracle_task_gate_policy.load_experiment_config",
+            return_value=resolved_config,
+        ) as load_cfg, patch(
+            "torch.load",
+            return_value={"obs_dim": 16, "action_dim": 3},
+        ), patch(
+            "uav_vpp_guidance.evaluation.oracle_task_gate_policy.PPOAgent",
+            return_value=mock_specialist,
+        ):
+            OracleTaskGatePolicy(
+                specialists_config={
+                    "head_on": {
+                        "checkpoint": "dummy.pt",
+                        "config_path": "dummy.yaml",
+                    }
+                },
+                device="cpu",
+            )
+
+        load_cfg.assert_called_once_with("dummy.yaml")
+
+    def test_specialist_config_matches_resolved_real_head_on_training_config(self, mock_specialist):
+        """Real included specialist YAML should expose the full merged config surface."""
+        from uav_vpp_guidance.evaluation.oracle_task_gate_policy import OracleTaskGatePolicy
+        from uav_vpp_guidance.training.train_prediction_vpp_ppo import load_experiment_config
+
+        head_on_cfg_path = (
+            REPO_ROOT
+            / "config"
+            / "experiment"
+            / (
+                "train_prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_"
+                "tactical_basis_headon_mvp_combat_finetune_mixed_opponent_aware_32k_task_type_headon_weighted.yaml"
+            )
+        )
+        expected = load_experiment_config(str(head_on_cfg_path))
+        captured_config = {}
+
+        def _capture_agent(*, obs_dim, action_dim, config, device):
+            captured_config["config"] = config
+            return mock_specialist
+
+        with patch(
+            "torch.load",
+            return_value={"obs_dim": 16, "action_dim": 3},
+        ), patch(
+            "uav_vpp_guidance.evaluation.oracle_task_gate_policy.PPOAgent",
+            side_effect=_capture_agent,
+        ):
+            OracleTaskGatePolicy(
+                specialists_config={
+                    "head_on": {
+                        "checkpoint": "dummy.pt",
+                        "config_path": str(head_on_cfg_path),
+                    }
+                },
+                device="cpu",
+            )
+
+        actual = captured_config["config"]
+        assert actual == expected
+        assert actual["virtual_point"]["action_semantics"] == "tactical_basis_v1"
+        assert actual["trajectory_prediction"]["enabled"] is True
+        assert actual["observation"]["include_task_type"] is True
+        assert actual["attack_zone"]["enabled"] is True
 
 
 class TestOracleTaskGateRunnerPath:

@@ -8,6 +8,7 @@ import numpy as np
 import torch
 
 from uav_vpp_guidance.agents.ppo_agent import PPOAgent
+from uav_vpp_guidance.training.train_prediction_vpp_ppo import load_experiment_config
 
 
 class OracleTaskGatePolicy:
@@ -39,8 +40,6 @@ class OracleTaskGatePolicy:
         self.current_task_name: Optional[str] = None
         self._specialists: Dict[str, PPOAgent] = {}
 
-        from uav_vpp_guidance.utils.config import load_yaml_config
-
         for task_name, spec_cfg in specialists_config.items():
             ckpt = spec_cfg.get("checkpoint")
             cfg_path = spec_cfg.get("config_path")
@@ -48,7 +47,10 @@ class OracleTaskGatePolicy:
                 raise ValueError(
                     f"Specialist for {task_name} must have 'checkpoint' and 'config_path'"
                 )
-            config = load_yaml_config(cfg_path)
+            # Match the hierarchical commander specialist loader exactly so
+            # oracle vs commander comparisons see the same include-resolved
+            # specialist config surface.
+            config = load_experiment_config(cfg_path)
             # Load checkpoint first to infer dimensions
             checkpoint = torch.load(ckpt, map_location=device)
             ckpt_obs_dim = checkpoint.get("obs_dim")

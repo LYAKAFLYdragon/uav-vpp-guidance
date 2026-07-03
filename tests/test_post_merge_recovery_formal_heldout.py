@@ -11,6 +11,10 @@ CONFIG_DIR = REPO_ROOT / "config" / "experiment"
 FORMAL_HELDOUT = (
     CONFIG_DIR / "jsbsim_hrl_oracle_vs_commander_post_merge_recovery_formal_heldout.yaml"
 )
+FORMAL_ORACLE_ONLY_AUDIT = (
+    CONFIG_DIR
+    / "jsbsim_hrl_oracle_vs_commander_post_merge_recovery_formal_oracle_only_headon_audit.yaml"
+)
 RECOVERY_MANIFEST60 = (
     CONFIG_DIR / "jsbsim_hrl_oracle_vs_commander_post_merge_recovery_manifest60_pilot.yaml"
 )
@@ -134,3 +138,24 @@ def test_recovery_formal_heldout_carries_current_commander_guards():
     assert resolved["virtual_point"]["post_merge_tactical_basis_recovery_profile"][
         "predicted_target_forward_scale_override"
     ] == 0.25
+
+
+def test_recovery_formal_oracle_only_audit_is_exact_five_scenario_subset():
+    resolved = _load_yaml_resolved(FORMAL_ORACLE_ONLY_AUDIT)
+    head_on_scenarios = resolved["tasks"]["head_on"]["task"]["scenarios"]
+
+    assert resolved["experiment"]["name"] == (
+        "jsbsim_hrl_oracle_vs_commander_post_merge_recovery_formal_oracle_only_headon_audit"
+    )
+    assert resolved["run_defaults"]["tasks"] == ["head_on"]
+    assert len(head_on_scenarios) == 5
+    assert [scenario["name"] for scenario in head_on_scenarios] == [
+        "head_on_formal_r3300_v245_v255_altm450",
+        "head_on_formal_r1600_v195_v195_alt0_ypos100",
+        "head_on_formal_r2300_v225_v215_altp250_ypos100",
+        "head_on_formal_r3300_v245_v255_altm450_ypos100",
+        "head_on_formal_r2700_v245_v235_altp350_yneg100",
+    ]
+    assert {
+        scenario["metadata"]["manifest_family"] for scenario in head_on_scenarios
+    } == {"formal_oracle_only_audit"}

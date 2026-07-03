@@ -16,7 +16,7 @@ P4 scope: JSBSim high-fidelity bridge with unified backend interface.
 import inspect
 import logging
 import numpy as np
-from typing import Optional, Tuple
+from typing import Dict, Optional, Set, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -74,6 +74,121 @@ VALID_ANCHOR_MODES = {
 }
 
 
+def _normalize_runtime_specialist_profile_names(value) -> Set[str]:
+    if value in (None, ""):
+        return set()
+    if isinstance(value, str):
+        return {value}
+    if isinstance(value, (list, tuple, set)):
+        return {str(item) for item in value if item not in (None, "")}
+    return {str(value)}
+
+
+def _shape_tactical_basis_action_with_post_merge_recovery_profile(
+    action: np.ndarray,
+    cfg: dict,
+) -> Tuple[np.ndarray, Dict[str, float]]:
+    shaped = np.asarray(action, dtype=np.float64).copy()
+    if shaped.shape[0] < 3:
+        return shaped, {
+            "ll_pre": float("nan"),
+            "ll_post": float("nan"),
+            "io_pre": float("nan"),
+            "io_post": float("nan"),
+            "cd_pre": float("nan"),
+            "cd_post": float("nan"),
+        }
+
+    ll_pre = float(shaped[0])
+    io_pre = float(shaped[1])
+    cd_pre = float(shaped[2])
+
+    ll_scale = float(cfg.get("tactical_basis_action_ll_scale", 1.0))
+    shaped[0] = ll_pre * ll_scale
+    ll_min = cfg.get("tactical_basis_action_ll_min")
+    if ll_min is not None:
+        shaped[0] = max(float(ll_min), float(shaped[0]))
+    ll_max = cfg.get("tactical_basis_action_ll_max")
+    if ll_max is not None:
+        shaped[0] = min(float(ll_max), float(shaped[0]))
+
+    io_scale = float(cfg.get("tactical_basis_action_io_scale", 1.0))
+    shaped[1] = io_pre * io_scale
+    io_abs_max = cfg.get("tactical_basis_action_io_abs_max")
+    if io_abs_max is not None:
+        shaped[1] = float(
+            np.clip(float(shaped[1]), -abs(float(io_abs_max)), abs(float(io_abs_max)))
+        )
+
+    cd_scale = float(cfg.get("tactical_basis_action_cd_scale", 1.0))
+    cd_bias = float(cfg.get("tactical_basis_action_cd_bias", 0.0))
+    shaped[2] = cd_pre * cd_scale + cd_bias
+    cd_min = cfg.get("tactical_basis_action_cd_min")
+    if cd_min is not None:
+        shaped[2] = max(float(cd_min), float(shaped[2]))
+    cd_max = cfg.get("tactical_basis_action_cd_max")
+    if cd_max is not None:
+        shaped[2] = min(float(cd_max), float(shaped[2]))
+
+    shaped[:3] = np.clip(shaped[:3], -1.0, 1.0)
+    return shaped, {
+        "ll_pre": ll_pre,
+        "ll_post": float(shaped[0]),
+        "io_pre": io_pre,
+        "io_post": float(shaped[1]),
+        "cd_pre": cd_pre,
+        "cd_post": float(shaped[2]),
+    }
+
+
+def _apply_post_merge_tactical_basis_recovery_profile_io_entry_lateral_sign_hold(
+    action: np.ndarray,
+    cfg: dict,
+    *,
+    previous_vp_lateral_bias_m: float,
+    entry_lateral_sign: float,
+) -> Tuple[np.ndarray, Dict[str, float]]:
+    held_action = np.asarray(action, dtype=np.float64).copy()
+    enabled = bool(
+        cfg.get("tactical_basis_action_io_entry_lateral_sign_hold_enabled", False)
+    )
+    release_vp_lateral_bias_m = float(
+        cfg.get(
+            "tactical_basis_action_io_entry_lateral_sign_hold_release_vp_lateral_bias_m",
+            0.0,
+        )
+    )
+    normalized_entry_lateral_sign = float(np.sign(entry_lateral_sign))
+    hold_active = False
+    hold_applied = False
+    if (
+        enabled
+        and held_action.shape[0] >= 2
+        and normalized_entry_lateral_sign != 0.0
+        and np.isfinite(previous_vp_lateral_bias_m)
+        and previous_vp_lateral_bias_m * normalized_entry_lateral_sign
+        > -release_vp_lateral_bias_m
+    ):
+        hold_active = True
+        if held_action[1] * normalized_entry_lateral_sign < 0.0:
+            held_action[1] = (
+                abs(float(held_action[1])) * normalized_entry_lateral_sign
+            )
+            hold_applied = True
+    return held_action, {
+        "io_entry_lateral_sign_hold_enabled": enabled,
+        "io_entry_lateral_sign_hold_active": hold_active,
+        "io_entry_lateral_sign_hold_applied": hold_applied,
+        "io_entry_lateral_sign": normalized_entry_lateral_sign,
+        "io_entry_lateral_sign_hold_previous_vp_lateral_bias_m": float(
+            previous_vp_lateral_bias_m
+        ),
+        "io_entry_lateral_sign_hold_release_vp_lateral_bias_m": (
+            release_vp_lateral_bias_m
+        ),
+    }
+
+
 class CloseRangeTrackingEnv:
     """
     High-level close-range tracking environment.
@@ -112,6 +227,9 @@ class CloseRangeTrackingEnv:
             else dict(config.get("opponent", {}))
         )
         self._opponent_stage = self.opponent_config.get("stage", "none")
+        self._runtime_specialist_key: Optional[str] = None
+        self._runtime_specialist_profile: Optional[str] = None
+        self._runtime_specialist_mode_name: Optional[str] = None
         self.sim_freq = self.env_config.get("sim_freq", 60)
         self.decision_freq = self.env_config.get("decision_freq", 5)
         self.max_steps = self.env_config.get("max_high_level_steps", 512)
@@ -225,6 +343,11 @@ class CloseRangeTrackingEnv:
         self._post_merge_offensive_anchor_lateral_world_offset_latched = None
         self._post_merge_predicted_target_forward_scale_released = False
         self._post_merge_predicted_target_forward_scale_ego_only_streak_steps = 0
+        self._post_merge_tactical_basis_recovery_profile_was_active = False
+        self._post_merge_tactical_basis_recovery_profile_entry_lateral_sign = 0.0
+        self._post_merge_tactical_basis_recovery_profile_previous_vp_lateral_bias_m = (
+            float("nan")
+        )
 
         # Submodules
         vp_config = config.get(
@@ -1179,6 +1302,19 @@ class CloseRangeTrackingEnv:
                 vp_config.get("close_range_anchor_post_merge_hold_steps_by_task", {}),
                 "virtual_point.close_range_anchor_post_merge_hold_steps_by_task",
             )
+        )
+        post_merge_recovery_profile_cfg = vp_config.get(
+            "post_merge_tactical_basis_recovery_profile",
+            {},
+        )
+        if post_merge_recovery_profile_cfg in (None, ""):
+            post_merge_recovery_profile_cfg = {}
+        if not isinstance(post_merge_recovery_profile_cfg, dict):
+            raise ValueError(
+                "virtual_point.post_merge_tactical_basis_recovery_profile must be a mapping"
+            )
+        self._post_merge_tactical_basis_recovery_profile_cfg = dict(
+            post_merge_recovery_profile_cfg
         )
 
         if not vp_enabled and e2e_enabled:
@@ -2294,6 +2430,10 @@ class CloseRangeTrackingEnv:
             + 7919
             + (seed if seed is not None else self._episode_count)
         )
+        # Re-seed domain randomization RNG per episode for true seed-variance
+        self._domain_rand_rng = np.random.default_rng(
+            42 + (seed if seed is not None else self._episode_count)
+        )
         self.reward_calculator.reset()
         self.termination_checker.reset()
         self._task_reset(seed)
@@ -2304,6 +2444,10 @@ class CloseRangeTrackingEnv:
         self._mode_switch_latched = False
         self._command_filter.reset()
         self._target_command_filter.reset()
+        if self.command_post_processor is not None and hasattr(
+            self.command_post_processor, "reset"
+        ):
+            self.command_post_processor.reset()
         if self._low_level_controller is not None:
             self._low_level_controller.reset()
         if self._target_low_level_controller is not None:
@@ -2330,6 +2474,12 @@ class CloseRangeTrackingEnv:
         self._post_merge_offensive_anchor_lateral_world_offset_latched = None
         self._post_merge_predicted_target_forward_scale_released = False
         self._post_merge_predicted_target_forward_scale_ego_only_streak_steps = 0
+        self._post_merge_tactical_basis_recovery_profile_was_active = False
+        self._post_merge_tactical_basis_recovery_profile_entry_lateral_sign = 0.0
+        self._post_merge_tactical_basis_recovery_profile_previous_vp_lateral_bias_m = (
+            float("nan")
+        )
+        self.clear_runtime_specialist_context()
 
         if self.trajectory_predictor_adapter is not None:
             self.trajectory_predictor_adapter.reset()
@@ -2343,6 +2493,28 @@ class CloseRangeTrackingEnv:
 
         obs = self._get_observation()
         return obs
+
+    def set_runtime_specialist_context(
+        self,
+        *,
+        specialist_key=None,
+        specialist_profile=None,
+        specialist_mode_name=None,
+    ) -> None:
+        self._runtime_specialist_key = (
+            None if specialist_key in (None, "") else str(specialist_key)
+        )
+        self._runtime_specialist_profile = (
+            None if specialist_profile in (None, "") else str(specialist_profile)
+        )
+        self._runtime_specialist_mode_name = (
+            None if specialist_mode_name in (None, "") else str(specialist_mode_name)
+        )
+
+    def clear_runtime_specialist_context(self) -> None:
+        self._runtime_specialist_key = None
+        self._runtime_specialist_profile = None
+        self._runtime_specialist_mode_name = None
 
     def set_domain_rand_scale(self, scale: float):
         """Set the current domain randomization scale (0.0 = off)."""
@@ -3782,6 +3954,60 @@ class CloseRangeTrackingEnv:
                 post_merge_offensive_anchor_lateral_world_offset_latch_active = True
                 post_merge_offensive_anchor_blend_release_lateral_only_active = True
 
+        post_merge_tactical_basis_recovery_profile_state = {
+            "configured": False,
+            "active": False,
+            "reason": "disabled",
+            "source": None,
+            "requested_profile": self._runtime_specialist_profile,
+            "specialist_profile_match": False,
+            "blend_release_recovery_active": bool(
+                post_merge_offensive_anchor_blend_release_recovery_active
+            ),
+            "predicted_target_forward_scale_override": None,
+            "ll_pre": float("nan"),
+            "ll_post": float("nan"),
+            "io_pre": float("nan"),
+            "io_post": float("nan"),
+            "cd_pre": float("nan"),
+            "cd_post": float("nan"),
+            "io_entry_lateral_sign_hold_enabled": False,
+            "io_entry_lateral_sign_hold_active": False,
+            "io_entry_lateral_sign_hold_applied": False,
+            "io_entry_lateral_sign": float("nan"),
+            "io_entry_lateral_sign_hold_previous_vp_lateral_bias_m": float("nan"),
+            "io_entry_lateral_sign_hold_release_vp_lateral_bias_m": float("nan"),
+            "action": np.asarray(action, dtype=np.float64).copy(),
+            "shaped_action": np.asarray(action, dtype=np.float64).copy(),
+        }
+        action_for_vpp = np.asarray(action, dtype=np.float64).copy()
+        if not use_command_override:
+            post_merge_tactical_basis_recovery_profile_state = (
+                self._evaluate_post_merge_tactical_basis_recovery_profile_state(
+                    action=action_for_vpp,
+                    own_state=own_state,
+                    anchor_mode=anchor_mode,
+                    post_merge_offensive_anchor_gate=post_merge_offensive_anchor_gate,
+                    post_merge_offensive_anchor_blend_release_recovery_active=(
+                        post_merge_offensive_anchor_blend_release_recovery_active
+                    ),
+                )
+            )
+            if bool(post_merge_tactical_basis_recovery_profile_state.get("active", False)):
+                action_for_vpp = np.asarray(
+                    post_merge_tactical_basis_recovery_profile_state["shaped_action"],
+                    dtype=np.float64,
+                ).copy()
+                recovery_forward_scale_override = (
+                    post_merge_tactical_basis_recovery_profile_state.get(
+                        "predicted_target_forward_scale_override"
+                    )
+                )
+                if recovery_forward_scale_override is not None:
+                    predicted_target_forward_scale_override = float(
+                        recovery_forward_scale_override
+                    )
+
         # Mode-switch gate evaluation (if enabled)
         mode_switch_requested = self._mode_switch_config.get("enabled", False)
         mode_switch_effective = False
@@ -3842,11 +4068,16 @@ class CloseRangeTrackingEnv:
             if (
                 pre_recovery_vp_result is not None
                 and not post_merge_offensive_anchor_blend_release_recovery_active
+                and not bool(
+                    post_merge_tactical_basis_recovery_profile_state.get(
+                        "active", False
+                    )
+                )
             ):
                 vp_result = pre_recovery_vp_result
             else:
                 vp_result = self.virtual_point_generator.action_to_virtual_point(
-                    action,
+                    action_for_vpp,
                     own_state,
                     target_for_vp,
                     anchor_mode=anchor_mode,
@@ -4132,6 +4363,14 @@ class CloseRangeTrackingEnv:
             own_state_post,
             target_state_post,
         )
+        self._post_merge_tactical_basis_recovery_profile_was_active = bool(
+            post_merge_tactical_basis_recovery_profile_state.get("active", False)
+        )
+        if not self._post_merge_tactical_basis_recovery_profile_was_active:
+            self._post_merge_tactical_basis_recovery_profile_entry_lateral_sign = 0.0
+        self._post_merge_tactical_basis_recovery_profile_previous_vp_lateral_bias_m = (
+            float(vpp_geometry_info["vp_lateral_bias_m"])
+        )
         merge_info = self._update_merge_diagnostics(rel_state_post)
         attack_zone_info = self._build_attack_zone_diagnostics(term_info)
         if merge_info.get("post_merge", False):
@@ -4294,6 +4533,107 @@ class CloseRangeTrackingEnv:
                 vp_info.get("tactical_basis_world_offset", np.full(3, np.nan)),
                 dtype=np.float64,
             ).tolist(),
+            "runtime_specialist_key": self._runtime_specialist_key,
+            "runtime_specialist_profile": self._runtime_specialist_profile,
+            "runtime_specialist_mode_name": self._runtime_specialist_mode_name,
+            "post_merge_tactical_basis_recovery_profile_active": bool(
+                post_merge_tactical_basis_recovery_profile_state.get("active", False)
+            ),
+            "post_merge_tactical_basis_recovery_profile_reason": (
+                post_merge_tactical_basis_recovery_profile_state.get("reason")
+            ),
+            "post_merge_tactical_basis_recovery_profile_source": (
+                post_merge_tactical_basis_recovery_profile_state.get("source")
+            ),
+            "post_merge_tactical_basis_recovery_profile_requested": (
+                post_merge_tactical_basis_recovery_profile_state.get(
+                    "requested_profile"
+                )
+            ),
+            "post_merge_tactical_basis_recovery_profile_specialist_profile_match": bool(
+                post_merge_tactical_basis_recovery_profile_state.get(
+                    "specialist_profile_match", False
+                )
+            ),
+            "post_merge_tactical_basis_recovery_profile_blend_release_recovery_active": bool(
+                post_merge_tactical_basis_recovery_profile_state.get(
+                    "blend_release_recovery_active", False
+                )
+            ),
+            "post_merge_tactical_basis_recovery_profile_ll_pre": float(
+                post_merge_tactical_basis_recovery_profile_state.get(
+                    "ll_pre", np.nan
+                )
+            ),
+            "post_merge_tactical_basis_recovery_profile_ll_post": float(
+                post_merge_tactical_basis_recovery_profile_state.get(
+                    "ll_post", np.nan
+                )
+            ),
+            "post_merge_tactical_basis_recovery_profile_io_pre": float(
+                post_merge_tactical_basis_recovery_profile_state.get(
+                    "io_pre", np.nan
+                )
+            ),
+            "post_merge_tactical_basis_recovery_profile_io_post": float(
+                post_merge_tactical_basis_recovery_profile_state.get(
+                    "io_post", np.nan
+                )
+            ),
+            "post_merge_tactical_basis_recovery_profile_cd_pre": float(
+                post_merge_tactical_basis_recovery_profile_state.get(
+                    "cd_pre", np.nan
+                )
+            ),
+            "post_merge_tactical_basis_recovery_profile_cd_post": float(
+                post_merge_tactical_basis_recovery_profile_state.get(
+                    "cd_post", np.nan
+                )
+            ),
+            "post_merge_tactical_basis_recovery_profile_io_entry_lateral_sign_hold_enabled": bool(
+                post_merge_tactical_basis_recovery_profile_state.get(
+                    "io_entry_lateral_sign_hold_enabled", False
+                )
+            ),
+            "post_merge_tactical_basis_recovery_profile_io_entry_lateral_sign_hold_active": bool(
+                post_merge_tactical_basis_recovery_profile_state.get(
+                    "io_entry_lateral_sign_hold_active", False
+                )
+            ),
+            "post_merge_tactical_basis_recovery_profile_io_entry_lateral_sign_hold_applied": bool(
+                post_merge_tactical_basis_recovery_profile_state.get(
+                    "io_entry_lateral_sign_hold_applied", False
+                )
+            ),
+            "post_merge_tactical_basis_recovery_profile_io_entry_lateral_sign": float(
+                post_merge_tactical_basis_recovery_profile_state.get(
+                    "io_entry_lateral_sign", np.nan
+                )
+            ),
+            "post_merge_tactical_basis_recovery_profile_io_entry_lateral_sign_hold_previous_vp_lateral_bias_m": float(
+                post_merge_tactical_basis_recovery_profile_state.get(
+                    "io_entry_lateral_sign_hold_previous_vp_lateral_bias_m",
+                    np.nan,
+                )
+            ),
+            "post_merge_tactical_basis_recovery_profile_io_entry_lateral_sign_hold_release_vp_lateral_bias_m": float(
+                post_merge_tactical_basis_recovery_profile_state.get(
+                    "io_entry_lateral_sign_hold_release_vp_lateral_bias_m",
+                    np.nan,
+                )
+            ),
+            "post_merge_tactical_basis_recovery_profile_predicted_target_forward_scale_override": (
+                float(
+                    post_merge_tactical_basis_recovery_profile_state.get(
+                        "predicted_target_forward_scale_override"
+                    )
+                )
+                if post_merge_tactical_basis_recovery_profile_state.get(
+                    "predicted_target_forward_scale_override"
+                )
+                is not None
+                else np.nan
+            ),
             "anchor_mode_requested": requested_anchor_mode,
             "predicted_target_blend": float(vp_info.get("predicted_target_blend", 1.0)),
             "predicted_target_forward_scale": float(
@@ -5074,6 +5414,155 @@ class CloseRangeTrackingEnv:
             "vp_forward_bias_m": float(target_relative_vp[0]),
             "vp_lateral_bias_m": float(target_relative_vp[1]),
         }
+
+    def _evaluate_post_merge_tactical_basis_recovery_profile_state(
+        self,
+        *,
+        action: np.ndarray,
+        own_state: dict,
+        anchor_mode: str,
+        post_merge_offensive_anchor_gate: dict,
+        post_merge_offensive_anchor_blend_release_recovery_active: bool,
+    ) -> dict:
+        cfg = self._post_merge_tactical_basis_recovery_profile_cfg
+        enabled = bool(cfg.get("enabled", False))
+        configured_profiles = _normalize_runtime_specialist_profile_names(
+            cfg.get("specialist_profile_names")
+        )
+        current_profile = (
+            None
+            if self._runtime_specialist_profile in (None, "")
+            else str(self._runtime_specialist_profile)
+        )
+        active_via_specialist_profile = (
+            current_profile is not None and current_profile in configured_profiles
+        )
+        active_via_release_recovery = bool(
+            cfg.get("activate_on_blend_release_recovery", True)
+        ) and bool(post_merge_offensive_anchor_blend_release_recovery_active)
+        state = {
+            "configured": enabled,
+            "active": False,
+            "reason": "disabled" if not enabled else "inactive",
+            "source": None,
+            "requested_profile": current_profile,
+            "specialist_profile_match": bool(active_via_specialist_profile),
+            "blend_release_recovery_active": bool(
+                post_merge_offensive_anchor_blend_release_recovery_active
+            ),
+            "predicted_target_forward_scale_override": None,
+            "ll_pre": float("nan"),
+            "ll_post": float("nan"),
+            "io_pre": float("nan"),
+            "io_post": float("nan"),
+            "cd_pre": float("nan"),
+            "cd_post": float("nan"),
+            "io_entry_lateral_sign_hold_enabled": False,
+            "io_entry_lateral_sign_hold_active": False,
+            "io_entry_lateral_sign_hold_applied": False,
+            "io_entry_lateral_sign": float("nan"),
+            "io_entry_lateral_sign_hold_previous_vp_lateral_bias_m": float("nan"),
+            "io_entry_lateral_sign_hold_release_vp_lateral_bias_m": float("nan"),
+            "action": np.asarray(action, dtype=np.float64).copy(),
+            "shaped_action": np.asarray(action, dtype=np.float64).copy(),
+        }
+        if not enabled:
+            return state
+        if getattr(self.virtual_point_generator, "action_semantics", None) != "tactical_basis_v1":
+            state["reason"] = "non_tactical_basis"
+            return state
+        if str(anchor_mode) != str(cfg.get("anchor_mode", "predicted_target")):
+            state["reason"] = "anchor_mode_mismatch"
+            return state
+        if bool(cfg.get("require_first_pass_complete", True)) and not self._first_pass_complete:
+            state["reason"] = "pre_merge"
+            return state
+        task_name = str(cfg.get("task_name", "head_on"))
+        if self.task_name is not None and str(self.task_name) != task_name:
+            state["reason"] = "task_mismatch"
+            return state
+        range_opening = bool(post_merge_offensive_anchor_gate.get("range_opening", False))
+        require_range_opening = bool(cfg.get("require_range_opening", True))
+        require_range_opening_for_specialist_profile = bool(
+            cfg.get("require_range_opening_for_specialist_profile", False)
+        )
+        if require_range_opening and not range_opening:
+            specialist_profile_bypasses_range_opening = bool(
+                active_via_specialist_profile
+                and not require_range_opening_for_specialist_profile
+            )
+            if not specialist_profile_bypasses_range_opening:
+                state["reason"] = "range_not_opening"
+                return state
+
+        if bool(cfg.get("require_no_attack_zone", True)) and (
+            bool(post_merge_offensive_anchor_gate.get("ego_in_attack_zone", False))
+            or bool(post_merge_offensive_anchor_gate.get("target_in_attack_zone", False))
+        ):
+            state["reason"] = "attack_zone_active"
+            return state
+
+        max_altitude_m = cfg.get("max_altitude_m")
+        own_altitude_m = float(own_state.get("altitude_m", np.nan))
+        if (
+            max_altitude_m is not None
+            and np.isfinite(own_altitude_m)
+            and own_altitude_m > float(max_altitude_m)
+        ):
+            state["reason"] = "above_max_altitude"
+            return state
+
+        if active_via_specialist_profile:
+            state["source"] = "specialist_profile"
+        elif active_via_release_recovery:
+            state["source"] = "blend_release_recovery"
+        else:
+            state["reason"] = "inactive_source"
+            return state
+
+        shaped_action, action_diag = _shape_tactical_basis_action_with_post_merge_recovery_profile(
+            action,
+            cfg,
+        )
+        if not self._post_merge_tactical_basis_recovery_profile_was_active:
+            previous_vp_lateral_bias_m = (
+                self._post_merge_tactical_basis_recovery_profile_previous_vp_lateral_bias_m
+            )
+            if np.isfinite(previous_vp_lateral_bias_m):
+                self._post_merge_tactical_basis_recovery_profile_entry_lateral_sign = (
+                    float(np.sign(previous_vp_lateral_bias_m))
+                )
+            else:
+                self._post_merge_tactical_basis_recovery_profile_entry_lateral_sign = (
+                    float(np.sign(action_diag["io_post"]))
+                )
+        (
+            shaped_action,
+            io_sign_hold_diag,
+        ) = _apply_post_merge_tactical_basis_recovery_profile_io_entry_lateral_sign_hold(
+            shaped_action,
+            cfg,
+            previous_vp_lateral_bias_m=(
+                self._post_merge_tactical_basis_recovery_profile_previous_vp_lateral_bias_m
+            ),
+            entry_lateral_sign=(
+                self._post_merge_tactical_basis_recovery_profile_entry_lateral_sign
+            ),
+        )
+        action_diag["io_post"] = float(shaped_action[1])
+        state.update(action_diag)
+        state.update(io_sign_hold_diag)
+        state["active"] = True
+        state["reason"] = "active"
+        state["shaped_action"] = shaped_action
+        predicted_target_forward_scale_override = cfg.get(
+            "predicted_target_forward_scale_override"
+        )
+        if predicted_target_forward_scale_override is not None:
+            state["predicted_target_forward_scale_override"] = float(
+                predicted_target_forward_scale_override
+            )
+        return state
 
     def _apply_post_merge_offensive_anchor_release_forward_bias_clamp(
         self,

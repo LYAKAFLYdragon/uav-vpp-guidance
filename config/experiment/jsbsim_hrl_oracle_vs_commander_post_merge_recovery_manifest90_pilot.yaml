@@ -1,0 +1,90 @@
+includes:
+  - ./jsbsim_hrl_hierarchical_commander_reset075_3mode_post_merge_recovery_bootstrap.yaml
+  - ./jsbsim_hrl_oracle_vs_balanced_tail_eval10_secondary_clamp_fresh_geometry_manifest90_pilot.yaml
+
+experiment:
+  name: jsbsim_hrl_oracle_vs_commander_post_merge_recovery_manifest90_pilot
+  description: "Canonical manifest90 oracle-vs-commander comparison family using the repaired post-merge recovery bootstrap plus r1600 pre-threat entry guard."
+
+virtual_point:
+  post_merge_tactical_basis_recovery_profile:
+    enabled: true
+    task_name: head_on
+    anchor_mode: predicted_target
+    specialist_profile_names:
+      - post_merge_recovery
+    activate_on_blend_release_recovery: true
+    require_first_pass_complete: true
+    require_range_opening: true
+    require_range_opening_for_specialist_profile: false
+    require_no_attack_zone: true
+    max_altitude_m: 5200.0
+    tactical_basis_action_ll_scale: 0.35
+    tactical_basis_action_ll_min: -0.25
+    tactical_basis_action_ll_max: 0.35
+    tactical_basis_action_io_scale: 0.55
+    tactical_basis_action_io_abs_max: 0.60
+    tactical_basis_action_cd_scale: 0.50
+    tactical_basis_action_cd_bias: 0.20
+    tactical_basis_action_cd_min: 0.0
+    tactical_basis_action_cd_max: 0.75
+    predicted_target_forward_scale_override: 0.25
+
+commander:
+  num_modes: 3
+  modes:
+    - id: 0
+      name: head_on_specialist
+      specialist_key: head_on
+      checkpoint: outputs/experiments/prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp_combat_finetune_mixed_opponent_aware_32k_task_type_headon_weighted/checkpoints/best.pt
+      config_path: config/experiment/train_prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp_combat_finetune_mixed_opponent_aware_32k_task_type_headon_weighted.yaml
+    - id: 1
+      name: crossing_specialist
+      specialist_key: crossing_feasible
+      checkpoint: outputs/experiments/prediction_vpp_ppo_crossing_v3/checkpoints/last.pt
+      config_path: config/experiment/train_prediction_vpp_ppo_crossing_v3.yaml
+    - id: 2
+      name: post_merge_recovery_specialist
+      specialist_key: post_merge_recovery
+      source_specialist_key: head_on
+      specialist_profile: post_merge_recovery
+      checkpoint: outputs/experiments/prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp_combat_finetune_mixed_opponent_aware_32k_task_type_headon_weighted/checkpoints/best.pt
+      config_path: config/experiment/train_prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp_combat_finetune_mixed_opponent_aware_32k_task_type_headon_weighted.yaml
+  head_on_post_merge_reopened_crossing_leash:
+    forced_mode_id: 2
+  head_on_post_merge_reopened_crossing_secondary_clamp:
+    forced_mode_id: 2
+  head_on_post_merge_reopened_crossing_overdeep_clamp:
+    forced_mode_id: 2
+  head_on_post_merge_reopened_crossing_geometry_quality_guard:
+    forced_mode_id: 2
+  head_on_post_merge_reopened_crossing_target_threat_clamp:
+    enabled: true
+    task_name: head_on
+    crossing_mode_id: 1
+    forced_mode_id: 0
+    pre_threat_entry_guard_enabled: true
+    pre_threat_require_no_attack_zone: true
+    pre_threat_min_range_m: 4500.0
+    pre_threat_min_range_rate_mps: 50.0
+    pre_threat_max_vp_forward_bias_m: -2500.0
+    pre_threat_min_abs_vp_lateral_to_range_ratio: 1.5
+
+methods:
+  commander_post_merge_recovery3:
+    label: "Hierarchical Commander MVP (balanced tail eval10, 3-mode post-merge recovery bootstrap)"
+    agent_type: hierarchical_commander
+    checkpoint: outputs/diagnostics/hierarchical_commander_mvp_2mode_task_type_mode_dominance_gated_alignment_shaped_v2_oracle_imitation_warmstart_balanced_tail_checkpoint_retrospective_expert_10seed_20260701_checkpoint_snapshots/best.pt
+    config_path: config/experiment/train_prediction_vpp_hierarchical_commander_ppo_reset075_tactical_basis_3mode_post_merge_recovery_bootstrap.yaml
+    prediction_variant: learned
+
+run_defaults:
+  tasks:
+    - head_on
+    - crossing_feasible
+  main_methods:
+    - oracle_task_gate
+    - commander_post_merge_recovery3
+  ablation_methods:
+    - oracle_task_gate
+    - commander_post_merge_recovery3

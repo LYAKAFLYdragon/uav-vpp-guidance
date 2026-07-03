@@ -5,16 +5,21 @@ from __future__ import annotations
 from typing import Any, Dict, Optional
 
 import numpy as np
+import torch
 
 from uav_vpp_guidance.agents.commander_double_dqn_agent import CommanderDoubleDQNAgent
 from uav_vpp_guidance.agents.commander_ppo_agent import CommanderPPOAgent
 from uav_vpp_guidance.hierarchy.commander_mode_constraints import (
+    apply_head_on_post_merge_reopened_crossing_geometry_quality_guard,
     apply_head_on_post_merge_reopened_crossing_overdeep_clamp,
     apply_head_on_post_merge_reopened_crossing_secondary_clamp,
+    apply_head_on_post_merge_reopened_crossing_target_threat_clamp,
     apply_head_on_post_merge_reopened_crossing_leash,
     build_head_on_post_merge_reopened_crossing_snapshot,
+    evaluate_head_on_post_merge_reopened_crossing_geometry_quality_guard_state,
     evaluate_head_on_post_merge_reopened_crossing_overdeep_clamp_state,
     evaluate_head_on_post_merge_reopened_crossing_secondary_clamp_state,
+    evaluate_head_on_post_merge_reopened_crossing_target_threat_clamp_state,
     evaluate_head_on_post_merge_reopened_crossing_leash_state,
 )
 from uav_vpp_guidance.hierarchy.specialist_policy import load_frozen_specialist_registry
@@ -47,9 +52,21 @@ class HierarchicalCommanderPolicy:
             )
             or {}
         )
+        self.head_on_post_merge_reopened_crossing_target_threat_clamp = dict(
+            commander_cfg.get(
+                "head_on_post_merge_reopened_crossing_target_threat_clamp", {}
+            )
+            or {}
+        )
         self.head_on_post_merge_reopened_crossing_overdeep_clamp = dict(
             commander_cfg.get(
                 "head_on_post_merge_reopened_crossing_overdeep_clamp", {}
+            )
+            or {}
+        )
+        self.head_on_post_merge_reopened_crossing_geometry_quality_guard = dict(
+            commander_cfg.get(
+                "head_on_post_merge_reopened_crossing_geometry_quality_guard", {}
             )
             or {}
         )
@@ -60,18 +77,27 @@ class HierarchicalCommanderPolicy:
             list(commander_cfg.get("modes", [])),
             device=device,
         )
+        self.commander_action_dim = self._infer_commander_action_dim(
+            self.checkpoint_path,
+            fallback_action_dim=len(self.mode_registry),
+        )
+        if self.commander_action_dim > len(self.mode_registry):
+            raise ValueError(
+                "Commander checkpoint action_dim exceeds configured mode registry size: "
+                f"checkpoint={self.commander_action_dim}, modes={len(self.mode_registry)}"
+            )
         algorithm = str(commander_cfg.get("algorithm", "ppo")).lower()
         if algorithm == "double_dqn":
             self.commander = CommanderDoubleDQNAgent(
                 obs_dim=int(obs_dim),
-                action_dim=len(self.mode_registry),
+                action_dim=self.commander_action_dim,
                 config=config,
                 device=device,
             )
         else:
             self.commander = CommanderPPOAgent(
                 obs_dim=int(obs_dim),
-                action_dim=len(self.mode_registry),
+                action_dim=self.commander_action_dim,
                 config=config,
                 device=device,
             )
@@ -96,6 +122,8 @@ class HierarchicalCommanderPolicy:
         self._hold_steps_remaining = 0
         self._head_on_post_merge_reopened_crossing_consecutive_macro_steps = 0
         self._head_on_post_merge_reopened_crossing_altitude_history_m = []
+        self._head_on_post_merge_reopened_crossing_leash_active_steps = 0
+        self._head_on_post_merge_reopened_crossing_overdeep_active_steps = 0
         self._last_step_metadata: Dict[str, Any] = {}
 
     def _select_mode(self, obs_vec: np.ndarray) -> int:
@@ -114,6 +142,30 @@ class HierarchicalCommanderPolicy:
             if str(mode.get("specialist_key")) == str(specialist_key):
                 return int(mode_id)
         return None
+
+    @staticmethod
+    def _infer_commander_action_dim(
+        checkpoint_path: str,
+        *,
+        fallback_action_dim: int,
+    ) -> int:
+        try:
+            checkpoint = torch.load(checkpoint_path, map_location="cpu")
+        except Exception:
+            return int(fallback_action_dim)
+        action_dim = checkpoint.get("action_dim")
+        if action_dim is None:
+            return int(fallback_action_dim)
+        return max(1, int(action_dim))
+
+    def _set_env_specialist_context(self, mode: Dict[str, Any]) -> None:
+        if self.env is None or not hasattr(self.env, "set_runtime_specialist_context"):
+            return
+        self.env.set_runtime_specialist_context(
+            specialist_key=mode.get("specialist_key"),
+            specialist_profile=mode.get("specialist_profile"),
+            specialist_mode_name=mode.get("name"),
+        )
 
     def _initial_task_bootstrap_mode_id(self) -> Optional[int]:
         """Narrow repair: guarantee crossing starts in crossing specialist."""
@@ -165,6 +217,26 @@ class HierarchicalCommanderPolicy:
         if len(self._head_on_post_merge_reopened_crossing_altitude_history_m) > 128:
             self._head_on_post_merge_reopened_crossing_altitude_history_m.pop(0)
 
+    def _update_post_merge_guard_counters(
+        self,
+        *,
+        commander_snapshot: Dict[str, Any],
+        leash_state: Dict[str, Any],
+        overdeep_clamp_state: Dict[str, Any],
+    ) -> None:
+        if not bool(commander_snapshot.get("first_pass_complete", False)):
+            self._head_on_post_merge_reopened_crossing_leash_active_steps = 0
+            self._head_on_post_merge_reopened_crossing_overdeep_active_steps = 0
+            return
+
+        if bool(leash_state.get("active", False)):
+            self._head_on_post_merge_reopened_crossing_leash_active_steps += 1
+        else:
+            self._head_on_post_merge_reopened_crossing_leash_active_steps = 0
+
+        if bool(overdeep_clamp_state.get("active", False)):
+            self._head_on_post_merge_reopened_crossing_overdeep_active_steps += 1
+
     def get_deterministic_action(self, obs: np.ndarray) -> np.ndarray:
         commander_snapshot = build_head_on_post_merge_reopened_crossing_snapshot(
             env=self.env,
@@ -185,12 +257,44 @@ class HierarchicalCommanderPolicy:
                 ),
             )
         )
+        target_threat_clamp_state = (
+            evaluate_head_on_post_merge_reopened_crossing_target_threat_clamp_state(
+                snapshot=commander_snapshot,
+                target_threat_cfg=(
+                    self.head_on_post_merge_reopened_crossing_target_threat_clamp
+                ),
+            )
+        )
         overdeep_clamp_state = (
             evaluate_head_on_post_merge_reopened_crossing_overdeep_clamp_state(
                 snapshot=commander_snapshot,
                 overdeep_cfg=(
                     self.head_on_post_merge_reopened_crossing_overdeep_clamp
                 ),
+            )
+        )
+        self._update_post_merge_guard_counters(
+            commander_snapshot=commander_snapshot,
+            leash_state=leash_state,
+            overdeep_clamp_state=overdeep_clamp_state,
+        )
+        geometry_quality_guard_state = (
+            evaluate_head_on_post_merge_reopened_crossing_geometry_quality_guard_state(
+                snapshot=commander_snapshot,
+                altitude_history_m=(
+                    self._head_on_post_merge_reopened_crossing_altitude_history_m
+                ),
+                leash_active_steps=(
+                    self._head_on_post_merge_reopened_crossing_leash_active_steps
+                ),
+                overdeep_active_steps=(
+                    self._head_on_post_merge_reopened_crossing_overdeep_active_steps
+                ),
+                geometry_guard_cfg=(
+                    self.head_on_post_merge_reopened_crossing_geometry_quality_guard
+                ),
+                leash_state=leash_state,
+                overdeep_state=overdeep_clamp_state,
             )
         )
         should_select = (
@@ -236,6 +340,21 @@ class HierarchicalCommanderPolicy:
             self._head_on_post_merge_reopened_crossing_consecutive_macro_steps = int(
                 constraint_result["next_consecutive_crossing_macro_steps"]
             )
+            target_threat_result = (
+                apply_head_on_post_merge_reopened_crossing_target_threat_clamp(
+                    candidate_mode_id=new_mode,
+                    mode_registry=self.mode_registry,
+                    target_threat_state=target_threat_clamp_state,
+                    target_threat_cfg=(
+                        self.head_on_post_merge_reopened_crossing_target_threat_clamp
+                    ),
+                )
+            )
+            if bool(target_threat_result["triggered"]):
+                new_mode = int(target_threat_result["effective_mode_id"])
+                constraint_triggered = True
+                constraint_reason = str(target_threat_result["reason"])
+                self._head_on_post_merge_reopened_crossing_consecutive_macro_steps = 0
             overdeep_result = (
                 apply_head_on_post_merge_reopened_crossing_overdeep_clamp(
                     candidate_mode_id=new_mode,
@@ -266,9 +385,34 @@ class HierarchicalCommanderPolicy:
                 constraint_triggered = True
                 constraint_reason = str(secondary_result["reason"])
                 self._head_on_post_merge_reopened_crossing_consecutive_macro_steps = 0
+            geometry_quality_result = (
+                apply_head_on_post_merge_reopened_crossing_geometry_quality_guard(
+                    candidate_mode_id=new_mode,
+                    mode_registry=self.mode_registry,
+                    geometry_guard_state=geometry_quality_guard_state,
+                    geometry_guard_cfg=(
+                        self.head_on_post_merge_reopened_crossing_geometry_quality_guard
+                    ),
+                )
+            )
+            if bool(geometry_quality_result["triggered"]):
+                new_mode = int(geometry_quality_result["effective_mode_id"])
+                constraint_triggered = True
+                constraint_reason = str(geometry_quality_result["reason"])
+                self._head_on_post_merge_reopened_crossing_consecutive_macro_steps = 0
             switched = self._update_active_mode(new_mode)
         else:
             active_mode_name = self._mode_name(self._active_mode_id)
+            target_threat_result = (
+                apply_head_on_post_merge_reopened_crossing_target_threat_clamp(
+                    candidate_mode_id=self._active_mode_id,
+                    mode_registry=self.mode_registry,
+                    target_threat_state=target_threat_clamp_state,
+                    target_threat_cfg=(
+                        self.head_on_post_merge_reopened_crossing_target_threat_clamp
+                    ),
+                )
+            )
             overdeep_result = apply_head_on_post_merge_reopened_crossing_overdeep_clamp(
                 candidate_mode_id=self._active_mode_id,
                 mode_registry=self.mode_registry,
@@ -281,7 +425,25 @@ class HierarchicalCommanderPolicy:
                 secondary_state=secondary_clamp_state,
                 secondary_cfg=self.head_on_post_merge_reopened_crossing_secondary_clamp,
             )
-            if bool(overdeep_result["triggered"]):
+            geometry_quality_result = (
+                apply_head_on_post_merge_reopened_crossing_geometry_quality_guard(
+                    candidate_mode_id=self._active_mode_id,
+                    mode_registry=self.mode_registry,
+                    geometry_guard_state=geometry_quality_guard_state,
+                    geometry_guard_cfg=(
+                        self.head_on_post_merge_reopened_crossing_geometry_quality_guard
+                    ),
+                )
+            )
+            if bool(target_threat_result["triggered"]):
+                requested_mode_name = active_mode_name
+                constraint_triggered = True
+                constraint_reason = str(target_threat_result["reason"])
+                self._head_on_post_merge_reopened_crossing_consecutive_macro_steps = 0
+                switched = self._update_active_mode(
+                    int(target_threat_result["effective_mode_id"])
+                )
+            elif bool(overdeep_result["triggered"]):
                 requested_mode_name = active_mode_name
                 constraint_triggered = True
                 constraint_reason = str(overdeep_result["reason"])
@@ -297,6 +459,14 @@ class HierarchicalCommanderPolicy:
                 switched = self._update_active_mode(
                     int(secondary_result["effective_mode_id"])
                 )
+            elif bool(geometry_quality_result["triggered"]):
+                requested_mode_name = active_mode_name
+                constraint_triggered = True
+                constraint_reason = str(geometry_quality_result["reason"])
+                self._head_on_post_merge_reopened_crossing_consecutive_macro_steps = 0
+                switched = self._update_active_mode(
+                    int(geometry_quality_result["effective_mode_id"])
+                )
             elif (
                 not leash_state.get("active", False)
                 or active_mode_name != "crossing_specialist"
@@ -307,6 +477,7 @@ class HierarchicalCommanderPolicy:
             raise RuntimeError("HierarchicalCommanderPolicy failed to select a mode")
 
         mode = self.mode_registry[self._active_mode_id]
+        self._set_env_specialist_context(mode)
         action = mode["policy"].get_deterministic_action(obs)
         self._step_counter += 1
         self._steps_since_switch += 1
@@ -314,6 +485,10 @@ class HierarchicalCommanderPolicy:
             "commander_mode_id": int(self._active_mode_id),
             "commander_mode_name": mode["name"],
             "commander_selected_specialist": mode["specialist_key"],
+            "commander_selected_specialist_profile": mode.get("specialist_profile"),
+            "commander_selected_source_specialist": mode.get(
+                "source_specialist_key"
+            ),
             "commander_switch_count": int(self._switch_count),
             "commander_steps_since_switch": int(self._steps_since_switch),
             "commander_macro_action_repeat_steps": int(self.macro_action_repeat_steps),
@@ -360,6 +535,21 @@ class HierarchicalCommanderPolicy:
             "commander_head_on_post_merge_reopened_crossing_secondary_clamp_altitude_drop_lookback_steps": int(
                 secondary_clamp_state.get("altitude_drop_lookback_steps", 0)
             ),
+            "commander_head_on_post_merge_reopened_crossing_target_threat_clamp_active": bool(
+                target_threat_clamp_state.get("active", False)
+            ),
+            "commander_head_on_post_merge_reopened_crossing_target_threat_clamp_reason": (
+                target_threat_clamp_state.get("reason")
+            ),
+            "commander_head_on_post_merge_reopened_crossing_target_threat_clamp_target_in_attack_zone": bool(
+                target_threat_clamp_state.get("target_in_attack_zone", False)
+            ),
+            "commander_head_on_post_merge_reopened_crossing_target_threat_clamp_range_m": float(
+                target_threat_clamp_state.get("range_m", np.nan)
+            ),
+            "commander_head_on_post_merge_reopened_crossing_target_threat_clamp_range_rate_mps": float(
+                target_threat_clamp_state.get("range_rate_mps", np.nan)
+            ),
             "commander_head_on_post_merge_reopened_crossing_overdeep_clamp_active": bool(
                 overdeep_clamp_state.get("active", False)
             ),
@@ -374,6 +564,47 @@ class HierarchicalCommanderPolicy:
             ),
             "commander_head_on_post_merge_reopened_crossing_overdeep_clamp_vp_lateral_to_range_ratio": float(
                 overdeep_clamp_state.get("vp_lateral_to_range_ratio", np.nan)
+            ),
+            "commander_head_on_post_merge_reopened_crossing_geometry_quality_guard_active": bool(
+                geometry_quality_guard_state.get("active", False)
+            ),
+            "commander_head_on_post_merge_reopened_crossing_geometry_quality_guard_reason": (
+                geometry_quality_guard_state.get("reason")
+            ),
+            "commander_head_on_post_merge_reopened_crossing_geometry_quality_guard_altitude_m": float(
+                geometry_quality_guard_state.get("altitude_m", np.nan)
+            ),
+            "commander_head_on_post_merge_reopened_crossing_geometry_quality_guard_altitude_delta_m_lookback": float(
+                geometry_quality_guard_state.get(
+                    "altitude_delta_m_lookback", np.nan
+                )
+            ),
+            "commander_head_on_post_merge_reopened_crossing_geometry_quality_guard_altitude_trend_lookback_steps": int(
+                geometry_quality_guard_state.get(
+                    "altitude_trend_lookback_steps", 0
+                )
+            ),
+            "commander_head_on_post_merge_reopened_crossing_geometry_quality_guard_vp_forward_bias_m": float(
+                geometry_quality_guard_state.get("vp_forward_bias_m", np.nan)
+            ),
+            "commander_head_on_post_merge_reopened_crossing_geometry_quality_guard_vp_lateral_bias_m": float(
+                geometry_quality_guard_state.get("vp_lateral_bias_m", np.nan)
+            ),
+            "commander_head_on_post_merge_reopened_crossing_geometry_quality_guard_vp_lateral_to_range_ratio": float(
+                geometry_quality_guard_state.get(
+                    "vp_lateral_to_range_ratio", np.nan
+                )
+            ),
+            "commander_head_on_post_merge_reopened_crossing_geometry_quality_guard_leash_active_steps": int(
+                geometry_quality_guard_state.get("leash_active_steps", 0)
+            ),
+            "commander_head_on_post_merge_reopened_crossing_geometry_quality_guard_overdeep_active_steps": int(
+                geometry_quality_guard_state.get("overdeep_active_steps", 0)
+            ),
+            "commander_head_on_post_merge_reopened_crossing_geometry_quality_guard_overdeep_seen_since_post_merge": bool(
+                geometry_quality_guard_state.get(
+                    "overdeep_seen_since_post_merge", False
+                )
             ),
             "commander_mode_switched": bool(switched),
             "commander_first_switch_step": self._first_switch_step,

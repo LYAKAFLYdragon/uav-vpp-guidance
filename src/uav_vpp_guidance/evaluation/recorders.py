@@ -131,6 +131,12 @@ class EpisodeRecorder:
             "commander_selected_specialist": info.get(
                 "commander_selected_specialist"
             ),
+            "commander_selected_specialist_profile": info.get(
+                "commander_selected_specialist_profile"
+            ),
+            "commander_selected_source_specialist": info.get(
+                "commander_selected_source_specialist"
+            ),
             "commander_switch_count": info.get("commander_switch_count"),
             "commander_steps_since_switch": info.get(
                 "commander_steps_since_switch"
@@ -215,6 +221,33 @@ class EpisodeRecorder:
                     0,
                 )
             ),
+            "commander_head_on_post_merge_reopened_crossing_target_threat_clamp_active": bool(
+                info.get(
+                    "commander_head_on_post_merge_reopened_crossing_target_threat_clamp_active",
+                    False,
+                )
+            ),
+            "commander_head_on_post_merge_reopened_crossing_target_threat_clamp_reason": info.get(
+                "commander_head_on_post_merge_reopened_crossing_target_threat_clamp_reason"
+            ),
+            "commander_head_on_post_merge_reopened_crossing_target_threat_clamp_target_in_attack_zone": bool(
+                info.get(
+                    "commander_head_on_post_merge_reopened_crossing_target_threat_clamp_target_in_attack_zone",
+                    False,
+                )
+            ),
+            "commander_head_on_post_merge_reopened_crossing_target_threat_clamp_range_m": float(
+                info.get(
+                    "commander_head_on_post_merge_reopened_crossing_target_threat_clamp_range_m",
+                    np.nan,
+                )
+            ),
+            "commander_head_on_post_merge_reopened_crossing_target_threat_clamp_range_rate_mps": float(
+                info.get(
+                    "commander_head_on_post_merge_reopened_crossing_target_threat_clamp_range_rate_mps",
+                    np.nan,
+                )
+            ),
             "commander_head_on_post_merge_reopened_crossing_overdeep_clamp_active": bool(
                 info.get(
                     "commander_head_on_post_merge_reopened_crossing_overdeep_clamp_active",
@@ -240,6 +273,69 @@ class EpisodeRecorder:
                 info.get(
                     "commander_head_on_post_merge_reopened_crossing_overdeep_clamp_vp_lateral_to_range_ratio",
                     np.nan,
+                )
+            ),
+            "commander_head_on_post_merge_reopened_crossing_geometry_quality_guard_active": bool(
+                info.get(
+                    "commander_head_on_post_merge_reopened_crossing_geometry_quality_guard_active",
+                    False,
+                )
+            ),
+            "commander_head_on_post_merge_reopened_crossing_geometry_quality_guard_reason": info.get(
+                "commander_head_on_post_merge_reopened_crossing_geometry_quality_guard_reason"
+            ),
+            "commander_head_on_post_merge_reopened_crossing_geometry_quality_guard_altitude_m": float(
+                info.get(
+                    "commander_head_on_post_merge_reopened_crossing_geometry_quality_guard_altitude_m",
+                    np.nan,
+                )
+            ),
+            "commander_head_on_post_merge_reopened_crossing_geometry_quality_guard_altitude_delta_m_lookback": float(
+                info.get(
+                    "commander_head_on_post_merge_reopened_crossing_geometry_quality_guard_altitude_delta_m_lookback",
+                    np.nan,
+                )
+            ),
+            "commander_head_on_post_merge_reopened_crossing_geometry_quality_guard_altitude_trend_lookback_steps": int(
+                info.get(
+                    "commander_head_on_post_merge_reopened_crossing_geometry_quality_guard_altitude_trend_lookback_steps",
+                    0,
+                )
+            ),
+            "commander_head_on_post_merge_reopened_crossing_geometry_quality_guard_vp_forward_bias_m": float(
+                info.get(
+                    "commander_head_on_post_merge_reopened_crossing_geometry_quality_guard_vp_forward_bias_m",
+                    np.nan,
+                )
+            ),
+            "commander_head_on_post_merge_reopened_crossing_geometry_quality_guard_vp_lateral_bias_m": float(
+                info.get(
+                    "commander_head_on_post_merge_reopened_crossing_geometry_quality_guard_vp_lateral_bias_m",
+                    np.nan,
+                )
+            ),
+            "commander_head_on_post_merge_reopened_crossing_geometry_quality_guard_vp_lateral_to_range_ratio": float(
+                info.get(
+                    "commander_head_on_post_merge_reopened_crossing_geometry_quality_guard_vp_lateral_to_range_ratio",
+                    np.nan,
+                )
+            ),
+            "commander_head_on_post_merge_reopened_crossing_geometry_quality_guard_leash_active_steps": int(
+                info.get(
+                    "commander_head_on_post_merge_reopened_crossing_geometry_quality_guard_leash_active_steps",
+                    0,
+                )
+            ),
+            "commander_head_on_post_merge_reopened_crossing_geometry_quality_guard_overdeep_active_steps": int(
+                info.get(
+                    "commander_head_on_post_merge_reopened_crossing_geometry_quality_guard_overdeep_active_steps",
+                    0,
+                )
+            ),
+            "commander_head_on_post_merge_reopened_crossing_geometry_quality_guard_overdeep_seen_since_post_merge": bool(
+                info.get(
+                    "commander_head_on_post_merge_reopened_crossing_geometry_quality_guard_overdeep_seen_since_post_merge",
+                    False,
                 )
             ),
             "commander_mode_switched": info.get("commander_mode_switched"),
@@ -436,6 +532,77 @@ class EpisodeRecorder:
             "tactical_basis_world_offset_x": tactical_basis_world_offset[0],
             "tactical_basis_world_offset_y": tactical_basis_world_offset[1],
             "tactical_basis_world_offset_z": tactical_basis_world_offset[2],
+            "runtime_specialist_key": info.get("runtime_specialist_key"),
+            "runtime_specialist_profile": info.get("runtime_specialist_profile"),
+            "runtime_specialist_mode_name": info.get(
+                "runtime_specialist_mode_name"
+            ),
+            "post_merge_tactical_basis_recovery_profile_active": bool(
+                info.get("post_merge_tactical_basis_recovery_profile_active", False)
+            ),
+            "post_merge_tactical_basis_recovery_profile_reason": info.get(
+                "post_merge_tactical_basis_recovery_profile_reason"
+            ),
+            "post_merge_tactical_basis_recovery_profile_source": info.get(
+                "post_merge_tactical_basis_recovery_profile_source"
+            ),
+            "post_merge_tactical_basis_recovery_profile_requested": info.get(
+                "post_merge_tactical_basis_recovery_profile_requested"
+            ),
+            "post_merge_tactical_basis_recovery_profile_specialist_profile_match": bool(
+                info.get(
+                    "post_merge_tactical_basis_recovery_profile_specialist_profile_match",
+                    False,
+                )
+            ),
+            "post_merge_tactical_basis_recovery_profile_blend_release_recovery_active": bool(
+                info.get(
+                    "post_merge_tactical_basis_recovery_profile_blend_release_recovery_active",
+                    False,
+                )
+            ),
+            "post_merge_tactical_basis_recovery_profile_ll_pre": float(
+                info.get(
+                    "post_merge_tactical_basis_recovery_profile_ll_pre",
+                    np.nan,
+                )
+            ),
+            "post_merge_tactical_basis_recovery_profile_ll_post": float(
+                info.get(
+                    "post_merge_tactical_basis_recovery_profile_ll_post",
+                    np.nan,
+                )
+            ),
+            "post_merge_tactical_basis_recovery_profile_io_pre": float(
+                info.get(
+                    "post_merge_tactical_basis_recovery_profile_io_pre",
+                    np.nan,
+                )
+            ),
+            "post_merge_tactical_basis_recovery_profile_io_post": float(
+                info.get(
+                    "post_merge_tactical_basis_recovery_profile_io_post",
+                    np.nan,
+                )
+            ),
+            "post_merge_tactical_basis_recovery_profile_cd_pre": float(
+                info.get(
+                    "post_merge_tactical_basis_recovery_profile_cd_pre",
+                    np.nan,
+                )
+            ),
+            "post_merge_tactical_basis_recovery_profile_cd_post": float(
+                info.get(
+                    "post_merge_tactical_basis_recovery_profile_cd_post",
+                    np.nan,
+                )
+            ),
+            "post_merge_tactical_basis_recovery_profile_predicted_target_forward_scale_override": float(
+                info.get(
+                    "post_merge_tactical_basis_recovery_profile_predicted_target_forward_scale_override",
+                    np.nan,
+                )
+            ),
             "predicted_target_blend": float(
                 info.get("predicted_target_blend", 1.0)
             ),

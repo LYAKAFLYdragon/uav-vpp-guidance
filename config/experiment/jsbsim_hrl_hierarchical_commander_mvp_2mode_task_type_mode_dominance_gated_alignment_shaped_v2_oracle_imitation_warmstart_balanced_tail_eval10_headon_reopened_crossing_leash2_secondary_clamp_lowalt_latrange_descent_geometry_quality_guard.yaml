@@ -1,0 +1,38 @@
+includes:
+  - ./jsbsim_hrl_hierarchical_commander_mvp_2mode_task_type_mode_dominance_gated_alignment_shaped_v2_oracle_imitation_warmstart_balanced_tail_eval10_headon_reopened_crossing_leash2_secondary_clamp_lowalt_latrange_descent.yaml
+
+experiment:
+  name: jsbsim_hrl_hierarchical_commander_mvp_2mode_task_type_mode_dominance_gated_alignment_shaped_v2_oracle_imitation_warmstart_balanced_tail_eval10_headon_reopened_crossing_leash2_secondary_clamp_lowalt_latrange_descent_geometry_quality_guard
+  description: "Eval-time head_on reopened crossing leash2 plus low-alt lateral-descent secondary clamp and a narrow post-merge geometry-quality guard."
+
+commander:
+  head_on_post_merge_reopened_crossing_geometry_quality_guard:
+    enabled: true
+    task_name: head_on
+    crossing_mode_id: 1
+    forced_mode_id: 0
+    require_leash_active: true
+    min_leash_active_steps: 72
+    require_overdeep_seen: true
+    min_overdeep_active_steps: 1
+    altitude_trend_lookback_steps: 24
+    min_altitude_drop_m: 250.0
+    min_altitude_gain_m: 250.0
+    min_negative_vp_forward_bias_m: 8000.0
+    min_positive_vp_forward_bias_m: 1200.0
+    min_abs_vp_lateral_bias_m: 2500.0
+    min_abs_vp_lateral_to_range_ratio: 0.5
+
+methods:
+  hierarchical_commander_mvp_2mode_task_type_mode_dominance_gated_alignment_shaped_v2_oracle_imitation_warmstart_balanced_tail_eval10_headon_reopened_crossing_leash2_secondary_clamp_lowalt_latrange_descent_geometry_quality_guard:
+    label: "Hierarchical Commander MVP (balanced tail eval10, leash2 + low-alt lateral-descent secondary clamp + geometry-quality guard)"
+    agent_type: hierarchical_commander
+    checkpoint: outputs/diagnostics/hierarchical_commander_mvp_2mode_task_type_mode_dominance_gated_alignment_shaped_v2_oracle_imitation_warmstart_balanced_tail_checkpoint_retrospective_expert_10seed_20260701_checkpoint_snapshots/best.pt
+    config_path: config/experiment/train_prediction_vpp_hierarchical_commander_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_mvp_2mode_task_type_mode_dominance_gated_alignment_shaped_v2_oracle_imitation_warmstart_balanced_tail_eval10.yaml
+    prediction_variant: learned
+
+run_defaults:
+  main_methods:
+    - hierarchical_commander_mvp_2mode_task_type_mode_dominance_gated_alignment_shaped_v2_oracle_imitation_warmstart_balanced_tail_eval10_headon_reopened_crossing_leash2_secondary_clamp_lowalt_latrange_descent_geometry_quality_guard
+  ablation_methods:
+    - hierarchical_commander_mvp_2mode_task_type_mode_dominance_gated_alignment_shaped_v2_oracle_imitation_warmstart_balanced_tail_eval10_headon_reopened_crossing_leash2_secondary_clamp_lowalt_latrange_descent_geometry_quality_guard

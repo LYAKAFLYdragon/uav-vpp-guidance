@@ -462,6 +462,13 @@ def test_episode_recorder_persists_commander_telemetry():
             "commander_head_on_post_merge_reopened_crossing_secondary_clamp_vp_lateral_to_range_ratio": 1.52,
             "commander_head_on_post_merge_reopened_crossing_secondary_clamp_altitude_drop_m_lookback": -320.0,
             "commander_head_on_post_merge_reopened_crossing_secondary_clamp_altitude_drop_lookback_steps": 12,
+            "commander_head_on_post_merge_reopened_crossing_target_threat_clamp_active": True,
+            "commander_head_on_post_merge_reopened_crossing_target_threat_clamp_reason": (
+                "target_attack_zone_reopened_head_on"
+            ),
+            "commander_head_on_post_merge_reopened_crossing_target_threat_clamp_target_in_attack_zone": True,
+            "commander_head_on_post_merge_reopened_crossing_target_threat_clamp_range_m": 3600.0,
+            "commander_head_on_post_merge_reopened_crossing_target_threat_clamp_range_rate_mps": 105.0,
             "commander_head_on_post_merge_reopened_crossing_overdeep_clamp_active": True,
             "commander_head_on_post_merge_reopened_crossing_overdeep_clamp_reason": (
                 "overdeep_low_lateral_reopened_head_on"
@@ -469,6 +476,19 @@ def test_episode_recorder_persists_commander_telemetry():
             "commander_head_on_post_merge_reopened_crossing_overdeep_clamp_range_m": 4800.0,
             "commander_head_on_post_merge_reopened_crossing_overdeep_clamp_vp_forward_bias_m": -9300.0,
             "commander_head_on_post_merge_reopened_crossing_overdeep_clamp_vp_lateral_to_range_ratio": 0.42,
+            "commander_head_on_post_merge_reopened_crossing_geometry_quality_guard_active": True,
+            "commander_head_on_post_merge_reopened_crossing_geometry_quality_guard_reason": (
+                "geometry_quality_high_side_positive_forward_lateral"
+            ),
+            "commander_head_on_post_merge_reopened_crossing_geometry_quality_guard_altitude_m": 5400.0,
+            "commander_head_on_post_merge_reopened_crossing_geometry_quality_guard_altitude_delta_m_lookback": 400.0,
+            "commander_head_on_post_merge_reopened_crossing_geometry_quality_guard_altitude_trend_lookback_steps": 24,
+            "commander_head_on_post_merge_reopened_crossing_geometry_quality_guard_vp_forward_bias_m": 1500.0,
+            "commander_head_on_post_merge_reopened_crossing_geometry_quality_guard_vp_lateral_bias_m": 3600.0,
+            "commander_head_on_post_merge_reopened_crossing_geometry_quality_guard_vp_lateral_to_range_ratio": 0.72,
+            "commander_head_on_post_merge_reopened_crossing_geometry_quality_guard_leash_active_steps": 84,
+            "commander_head_on_post_merge_reopened_crossing_geometry_quality_guard_overdeep_active_steps": 19,
+            "commander_head_on_post_merge_reopened_crossing_geometry_quality_guard_overdeep_seen_since_post_merge": True,
             "commander_mode_switched": True,
             "commander_macro_step_index": 3,
             "commander_first_switch_step": 12,
@@ -520,6 +540,36 @@ def test_episode_recorder_persists_commander_telemetry():
         == 12
     )
     assert (
+        point[
+            "commander_head_on_post_merge_reopened_crossing_target_threat_clamp_active"
+        ]
+        is True
+    )
+    assert (
+        point[
+            "commander_head_on_post_merge_reopened_crossing_target_threat_clamp_reason"
+        ]
+        == "target_attack_zone_reopened_head_on"
+    )
+    assert (
+        point[
+            "commander_head_on_post_merge_reopened_crossing_target_threat_clamp_target_in_attack_zone"
+        ]
+        is True
+    )
+    assert (
+        point[
+            "commander_head_on_post_merge_reopened_crossing_target_threat_clamp_range_m"
+        ]
+        == 3600.0
+    )
+    assert (
+        point[
+            "commander_head_on_post_merge_reopened_crossing_target_threat_clamp_range_rate_mps"
+        ]
+        == 105.0
+    )
+    assert (
         point["commander_head_on_post_merge_reopened_crossing_overdeep_clamp_active"]
         is True
     )
@@ -542,6 +592,72 @@ def test_episode_recorder_persists_commander_telemetry():
             "commander_head_on_post_merge_reopened_crossing_overdeep_clamp_vp_lateral_to_range_ratio"
         ]
         == 0.42
+    )
+    assert (
+        point[
+            "commander_head_on_post_merge_reopened_crossing_geometry_quality_guard_active"
+        ]
+        is True
+    )
+    assert (
+        point[
+            "commander_head_on_post_merge_reopened_crossing_geometry_quality_guard_reason"
+        ]
+        == "geometry_quality_high_side_positive_forward_lateral"
+    )
+    assert (
+        point[
+            "commander_head_on_post_merge_reopened_crossing_geometry_quality_guard_altitude_m"
+        ]
+        == 5400.0
+    )
+    assert (
+        point[
+            "commander_head_on_post_merge_reopened_crossing_geometry_quality_guard_altitude_delta_m_lookback"
+        ]
+        == 400.0
+    )
+    assert (
+        point[
+            "commander_head_on_post_merge_reopened_crossing_geometry_quality_guard_altitude_trend_lookback_steps"
+        ]
+        == 24
+    )
+    assert (
+        point[
+            "commander_head_on_post_merge_reopened_crossing_geometry_quality_guard_vp_forward_bias_m"
+        ]
+        == 1500.0
+    )
+    assert (
+        point[
+            "commander_head_on_post_merge_reopened_crossing_geometry_quality_guard_vp_lateral_bias_m"
+        ]
+        == 3600.0
+    )
+    assert (
+        point[
+            "commander_head_on_post_merge_reopened_crossing_geometry_quality_guard_vp_lateral_to_range_ratio"
+        ]
+        == 0.72
+    )
+    assert (
+        point[
+            "commander_head_on_post_merge_reopened_crossing_geometry_quality_guard_leash_active_steps"
+        ]
+        == 84
+    )
+    assert (
+        point[
+            "commander_head_on_post_merge_reopened_crossing_geometry_quality_guard_overdeep_active_steps"
+        ]
+        == 19
+    )
+    assert (
+        point[
+            "commander_head_on_post_merge_reopened_crossing_geometry_quality_guard_overdeep_seen_since_post_merge"
+        ]
+        is True
     )
     assert point["commander_mode_switched"] is True
     assert point["commander_macro_step_index"] == 3

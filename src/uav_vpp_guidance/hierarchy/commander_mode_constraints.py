@@ -64,6 +64,7 @@ def build_head_on_post_merge_reopened_crossing_snapshot(
         "reason": "inactive",
         "first_pass_complete": False,
         "range_m": np.nan,
+        "range_rate_mps": np.nan,
         "hp_advantage": np.nan,
         "ego_in_attack_zone": False,
         "target_in_attack_zone": False,
@@ -85,6 +86,7 @@ def build_head_on_post_merge_reopened_crossing_snapshot(
     rel_state = compute_relative_geometry(own_state, target_state)
     range_m = _safe_float(rel_state.get("range_m"))
     snapshot["range_m"] = range_m
+    snapshot["range_rate_mps"] = _safe_float(rel_state.get("range_rate_mps"))
 
     combat_info = getattr(getattr(env, "combat_hp", None), "last_info", {}) or {}
     snapshot["ego_in_attack_zone"] = bool(combat_info.get("ego_in_attack_zone", False))
@@ -144,6 +146,7 @@ def evaluate_head_on_post_merge_reopened_crossing_leash_state(
         "active": False,
         "reason": "disabled" if not enabled else "inactive",
         "range_m": np.nan,
+        "range_rate_mps": np.nan,
         "hp_advantage": np.nan,
         "ego_in_attack_zone": False,
         "target_in_attack_zone": False,
@@ -172,6 +175,7 @@ def evaluate_head_on_post_merge_reopened_crossing_leash_state(
 
     range_m = _safe_float(snapshot.get("range_m"))
     state["range_m"] = range_m
+    state["range_rate_mps"] = _safe_float(snapshot.get("range_rate_mps"))
     state["hp_advantage"] = _safe_float(snapshot.get("hp_advantage"))
     state["ego_in_attack_zone"] = bool(snapshot.get("ego_in_attack_zone", False))
     state["target_in_attack_zone"] = bool(snapshot.get("target_in_attack_zone", False))
@@ -197,6 +201,115 @@ def evaluate_head_on_post_merge_reopened_crossing_leash_state(
 
     state["active"] = True
     state["reason"] = "active"
+    return state
+
+
+def evaluate_head_on_post_merge_reopened_crossing_target_threat_clamp_state(
+    *,
+    snapshot: Dict[str, Any],
+    target_threat_cfg: Optional[Dict[str, Any]],
+) -> Dict[str, Any]:
+    """Evaluate whether a head_on crossing request should stop under target threat."""
+    cfg = target_threat_cfg or {}
+    enabled = bool(cfg.get("enabled", False))
+    state = {
+        "configured": enabled,
+        "active": False,
+        "reason": "disabled" if not enabled else "inactive",
+        "range_m": _safe_float(snapshot.get("range_m")),
+        "range_rate_mps": _safe_float(snapshot.get("range_rate_mps")),
+        "hp_advantage": _safe_float(snapshot.get("hp_advantage")),
+        "ego_in_attack_zone": bool(snapshot.get("ego_in_attack_zone", False)),
+        "target_in_attack_zone": bool(snapshot.get("target_in_attack_zone", False)),
+        "first_pass_complete": bool(snapshot.get("first_pass_complete", False)),
+        "altitude_m": _safe_float(snapshot.get("altitude_m")),
+        "vp_forward_bias_m": _safe_float(snapshot.get("vp_forward_bias_m")),
+        "vp_lateral_bias_m": _safe_float(snapshot.get("vp_lateral_bias_m")),
+        "vp_lateral_to_range_ratio": _safe_float(
+            snapshot.get("vp_lateral_to_range_ratio")
+        ),
+    }
+    if not enabled:
+        return state
+    if not bool(snapshot.get("available", False)):
+        state["reason"] = str(snapshot.get("reason", "unavailable"))
+        return state
+
+    target_task_name = str(cfg.get("task_name", "head_on"))
+    if str(snapshot.get("task_name")) != target_task_name:
+        state["reason"] = "task_mismatch"
+        return state
+    if not state["first_pass_complete"]:
+        state["reason"] = "pre_merge"
+        return state
+
+    range_m = state["range_m"]
+    min_range_m = cfg.get("min_range_m")
+    if min_range_m is not None:
+        if not np.isfinite(range_m):
+            state["reason"] = "nonfinite_range"
+            return state
+        if range_m < float(min_range_m):
+            state["reason"] = "below_min_range"
+            return state
+
+    if not state["target_in_attack_zone"]:
+        if bool(cfg.get("pre_threat_entry_guard_enabled", False)):
+            if bool(cfg.get("pre_threat_require_no_attack_zone", True)) and (
+                state["ego_in_attack_zone"] or state["target_in_attack_zone"]
+            ):
+                state["reason"] = "pre_threat_attack_zone_active"
+                return state
+
+            min_pre_threat_range_m = float(
+                cfg.get("pre_threat_min_range_m", cfg.get("min_range_m", 4500.0))
+            )
+            if not np.isfinite(state["range_m"]):
+                state["reason"] = "pre_threat_nonfinite_range"
+                return state
+            if state["range_m"] < min_pre_threat_range_m:
+                state["reason"] = "pre_threat_below_min_range"
+                return state
+
+            min_range_rate_mps = float(
+                cfg.get("pre_threat_min_range_rate_mps", 50.0)
+            )
+            if not np.isfinite(state["range_rate_mps"]):
+                state["reason"] = "pre_threat_nonfinite_range_rate"
+                return state
+            if state["range_rate_mps"] < min_range_rate_mps:
+                state["reason"] = "pre_threat_not_opening_fast_enough"
+                return state
+
+            max_vp_forward_bias_m = float(
+                cfg.get("pre_threat_max_vp_forward_bias_m", -2500.0)
+            )
+            if not np.isfinite(state["vp_forward_bias_m"]):
+                state["reason"] = "pre_threat_nonfinite_vp_forward_bias"
+                return state
+            if state["vp_forward_bias_m"] > max_vp_forward_bias_m:
+                state["reason"] = "pre_threat_vp_forward_not_negative_enough"
+                return state
+
+            min_abs_lateral_ratio = float(
+                cfg.get("pre_threat_min_abs_vp_lateral_to_range_ratio", 1.5)
+            )
+            if not np.isfinite(state["vp_lateral_to_range_ratio"]):
+                state["reason"] = "pre_threat_nonfinite_lateral_ratio"
+                return state
+            if state["vp_lateral_to_range_ratio"] < min_abs_lateral_ratio:
+                state["reason"] = "pre_threat_lateral_ratio_below_min"
+                return state
+
+            state["active"] = True
+            state["reason"] = "pre_threat_opening_overlateral_negative_forward_head_on"
+            return state
+
+        state["reason"] = "target_not_in_attack_zone"
+        return state
+
+    state["active"] = True
+    state["reason"] = "target_attack_zone_reopened_head_on"
     return state
 
 
@@ -357,6 +470,143 @@ def evaluate_head_on_post_merge_reopened_crossing_overdeep_clamp_state(
     return state
 
 
+def evaluate_head_on_post_merge_reopened_crossing_geometry_quality_guard_state(
+    *,
+    snapshot: Dict[str, Any],
+    altitude_history_m: List[float],
+    leash_active_steps: int,
+    overdeep_active_steps: int,
+    geometry_guard_cfg: Optional[Dict[str, Any]],
+    leash_state: Optional[Dict[str, Any]] = None,
+    overdeep_state: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    """Evaluate a narrow post-merge head_on geometry-quality guard state."""
+    cfg = geometry_guard_cfg or {}
+    enabled = bool(cfg.get("enabled", False))
+    lookback_steps = max(1, int(cfg.get("altitude_trend_lookback_steps", 24)))
+    state = {
+        "configured": enabled,
+        "active": False,
+        "reason": "disabled" if not enabled else "inactive",
+        "range_m": _safe_float(snapshot.get("range_m")),
+        "hp_advantage": _safe_float(snapshot.get("hp_advantage")),
+        "ego_in_attack_zone": bool(snapshot.get("ego_in_attack_zone", False)),
+        "target_in_attack_zone": bool(snapshot.get("target_in_attack_zone", False)),
+        "first_pass_complete": bool(snapshot.get("first_pass_complete", False)),
+        "altitude_m": _safe_float(snapshot.get("altitude_m")),
+        "vp_forward_bias_m": _safe_float(snapshot.get("vp_forward_bias_m")),
+        "vp_lateral_bias_m": _safe_float(snapshot.get("vp_lateral_bias_m")),
+        "vp_lateral_to_range_ratio": _safe_float(
+            snapshot.get("vp_lateral_to_range_ratio")
+        ),
+        "altitude_trend_lookback_steps": lookback_steps,
+        "altitude_delta_m_lookback": np.nan,
+        "leash_active_steps": int(max(0, leash_active_steps)),
+        "overdeep_active_steps": int(max(0, overdeep_active_steps)),
+        "leash_active": bool((leash_state or {}).get("active", False)),
+        "overdeep_active": bool((overdeep_state or {}).get("active", False)),
+        "overdeep_seen_since_post_merge": int(max(0, overdeep_active_steps)) > 0,
+    }
+    if not enabled:
+        return state
+    if not bool(snapshot.get("available", False)):
+        state["reason"] = str(snapshot.get("reason", "unavailable"))
+        return state
+
+    target_task_name = str(cfg.get("task_name", "head_on"))
+    if str(snapshot.get("task_name")) != target_task_name:
+        state["reason"] = "task_mismatch"
+        return state
+    if not state["first_pass_complete"]:
+        state["reason"] = "pre_merge"
+        return state
+
+    if bool(cfg.get("require_leash_active", True)) and not state["leash_active"]:
+        state["reason"] = "leash_inactive"
+        return state
+
+    min_leash_active_steps = max(1, int(cfg.get("min_leash_active_steps", 72)))
+    if state["leash_active_steps"] < min_leash_active_steps:
+        state["reason"] = "leash_not_sustained"
+        return state
+
+    if bool(cfg.get("require_overdeep_seen", True)):
+        min_overdeep_active_steps = max(
+            1, int(cfg.get("min_overdeep_active_steps", 1))
+        )
+        if state["overdeep_active_steps"] < min_overdeep_active_steps:
+            state["reason"] = "overdeep_not_seen"
+            return state
+
+    if len(altitude_history_m) < lookback_steps:
+        state["reason"] = "insufficient_altitude_history"
+        return state
+
+    altitude_m = state["altitude_m"]
+    if not np.isfinite(altitude_m):
+        state["reason"] = "nonfinite_altitude"
+        return state
+
+    altitude_delta_m_lookback = altitude_m - float(altitude_history_m[-lookback_steps])
+    state["altitude_delta_m_lookback"] = altitude_delta_m_lookback
+
+    vp_forward_bias_m = state["vp_forward_bias_m"]
+    if not np.isfinite(vp_forward_bias_m):
+        state["reason"] = "nonfinite_vp_forward_bias"
+        return state
+
+    vp_lateral_bias_m = state["vp_lateral_bias_m"]
+    if not np.isfinite(vp_lateral_bias_m):
+        state["reason"] = "nonfinite_vp_lateral_bias"
+        return state
+
+    vp_lateral_to_range_ratio = state["vp_lateral_to_range_ratio"]
+    if not np.isfinite(vp_lateral_to_range_ratio):
+        state["reason"] = "nonfinite_vp_lateral_to_range_ratio"
+        return state
+
+    min_abs_vp_lateral_bias_m = float(cfg.get("min_abs_vp_lateral_bias_m", 2500.0))
+    min_abs_vp_lateral_to_range_ratio = float(
+        cfg.get("min_abs_vp_lateral_to_range_ratio", 0.5)
+    )
+    if (
+        abs(vp_lateral_bias_m) < min_abs_vp_lateral_bias_m
+        and vp_lateral_to_range_ratio < min_abs_vp_lateral_to_range_ratio
+    ):
+        state["reason"] = "lateral_bias_too_small"
+        return state
+
+    min_negative_vp_forward_bias_m = float(
+        cfg.get("min_negative_vp_forward_bias_m", 8000.0)
+    )
+    min_positive_vp_forward_bias_m = float(
+        cfg.get("min_positive_vp_forward_bias_m", 800.0)
+    )
+    min_altitude_drop_m = float(cfg.get("min_altitude_drop_m", 250.0))
+    min_altitude_gain_m = float(cfg.get("min_altitude_gain_m", 250.0))
+
+    if (
+        altitude_delta_m_lookback <= -min_altitude_drop_m
+        and vp_forward_bias_m <= -min_negative_vp_forward_bias_m
+    ):
+        state["active"] = True
+        state["reason"] = "geometry_quality_low_side_negative_forward_lateral"
+        return state
+
+    if altitude_delta_m_lookback >= min_altitude_gain_m:
+        if vp_forward_bias_m >= min_positive_vp_forward_bias_m:
+            state["active"] = True
+            state["reason"] = "geometry_quality_high_side_positive_forward_lateral"
+            return state
+        if vp_forward_bias_m <= -min_negative_vp_forward_bias_m:
+            state["active"] = True
+            state["reason"] = "geometry_quality_high_side_negative_forward_lateral"
+            return state
+
+    state["reason"] = "geometry_quality_not_degraded"
+    return state
+
+
 def apply_head_on_post_merge_reopened_crossing_leash(
     *,
     requested_mode_id: int,
@@ -380,7 +630,7 @@ def apply_head_on_post_merge_reopened_crossing_leash(
     crossing_mode_id = int(cfg.get("crossing_mode_id", 1))
     forced_mode_id = int(cfg.get("forced_mode_id", 0))
     max_consecutive_crossing_macro_steps = max(
-        1,
+        0,
         int(cfg.get("max_consecutive_crossing_macro_steps", 2)),
     )
 
@@ -421,6 +671,59 @@ def apply_head_on_post_merge_reopened_crossing_leash(
         "triggered": False,
         "reason": "allowed",
         "next_consecutive_crossing_macro_steps": proposed_consecutive,
+    }
+
+
+def apply_head_on_post_merge_reopened_crossing_target_threat_clamp(
+    *,
+    candidate_mode_id: Optional[int],
+    mode_registry: Dict[int, Dict[str, Any]],
+    target_threat_state: Dict[str, Any],
+    target_threat_cfg: Optional[Dict[str, Any]],
+) -> Dict[str, Any]:
+    """Force head_on when a head_on crossing detour reopens target threat."""
+    cfg = target_threat_cfg or {}
+    if candidate_mode_id is None:
+        return {
+            "effective_mode_id": None,
+            "triggered": False,
+            "reason": "no_candidate_mode",
+        }
+    candidate_mode_id = int(candidate_mode_id)
+    if not bool(cfg.get("enabled", False)):
+        return {
+            "effective_mode_id": candidate_mode_id,
+            "triggered": False,
+            "reason": "disabled",
+        }
+
+    crossing_mode_id = int(cfg.get("crossing_mode_id", 1))
+    forced_mode_id = int(cfg.get("forced_mode_id", 0))
+    if not target_threat_state.get("active", False):
+        return {
+            "effective_mode_id": candidate_mode_id,
+            "triggered": False,
+            "reason": target_threat_state.get("reason", "inactive"),
+        }
+    if candidate_mode_id != crossing_mode_id:
+        return {
+            "effective_mode_id": candidate_mode_id,
+            "triggered": False,
+            "reason": "non_crossing_mode",
+        }
+
+    effective_mode_id = forced_mode_id
+    if effective_mode_id not in mode_registry:
+        effective_mode_id = candidate_mode_id
+    return {
+        "effective_mode_id": int(effective_mode_id),
+        "triggered": int(effective_mode_id) != candidate_mode_id,
+        "reason": str(
+            target_threat_state.get(
+                "reason",
+                "target_attack_zone_reopened_head_on",
+            )
+        ),
     }
 
 
@@ -518,5 +821,58 @@ def apply_head_on_post_merge_reopened_crossing_overdeep_clamp(
         "triggered": int(effective_mode_id) != candidate_mode_id,
         "reason": str(
             overdeep_state.get("reason", "overdeep_low_lateral_reopened_head_on")
+        ),
+    }
+
+
+def apply_head_on_post_merge_reopened_crossing_geometry_quality_guard(
+    *,
+    candidate_mode_id: Optional[int],
+    mode_registry: Dict[int, Dict[str, Any]],
+    geometry_guard_state: Dict[str, Any],
+    geometry_guard_cfg: Optional[Dict[str, Any]],
+) -> Dict[str, Any]:
+    """Force head_on when post-merge head_on geometry quality has degraded."""
+    cfg = geometry_guard_cfg or {}
+    if candidate_mode_id is None:
+        return {
+            "effective_mode_id": None,
+            "triggered": False,
+            "reason": "no_candidate_mode",
+        }
+    candidate_mode_id = int(candidate_mode_id)
+    if not bool(cfg.get("enabled", False)):
+        return {
+            "effective_mode_id": candidate_mode_id,
+            "triggered": False,
+            "reason": "disabled",
+        }
+
+    crossing_mode_id = int(cfg.get("crossing_mode_id", 1))
+    forced_mode_id = int(cfg.get("forced_mode_id", 0))
+    if not geometry_guard_state.get("active", False):
+        return {
+            "effective_mode_id": candidate_mode_id,
+            "triggered": False,
+            "reason": geometry_guard_state.get("reason", "inactive"),
+        }
+    if candidate_mode_id != crossing_mode_id:
+        return {
+            "effective_mode_id": candidate_mode_id,
+            "triggered": False,
+            "reason": "non_crossing_mode",
+        }
+
+    effective_mode_id = forced_mode_id
+    if effective_mode_id not in mode_registry:
+        effective_mode_id = candidate_mode_id
+    return {
+        "effective_mode_id": int(effective_mode_id),
+        "triggered": int(effective_mode_id) != candidate_mode_id,
+        "reason": str(
+            geometry_guard_state.get(
+                "reason",
+                "geometry_quality_low_side_negative_forward_lateral",
+            )
         ),
     }

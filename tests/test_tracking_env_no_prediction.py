@@ -7,7 +7,10 @@ import os
 
 import pytest
 import numpy as np
-from uav_vpp_guidance.envs.tracking_env import CloseRangeTrackingEnv
+from uav_vpp_guidance.envs.tracking_env import (
+    CloseRangeTrackingEnv,
+    _shape_tactical_basis_action_with_post_merge_recovery_profile,
+)
 from uav_vpp_guidance.virtual_point.coordinate_transform import world_to_offset_frame
 
 
@@ -112,6 +115,30 @@ class TestCloseRangeTrackingEnvNoPrediction:
             "roll_rate_cmd",
             "throttle_cmd",
         }
+        env.close()
+
+    def test_reset_clears_command_post_processor_episode_state(self, base_config):
+        config = copy.deepcopy(base_config)
+        config["guidance"]["post_process"] = {
+            "enabled": True,
+            "enable_lift_compensation": True,
+            "lift_compensation_factor": 1.0,
+            "lift_compensation_filter_alpha": 1.0,
+            "start_in_safety_mode": True,
+        }
+        env = CloseRangeTrackingEnv(config)
+
+        env.reset(seed=0)
+        assert env.command_post_processor is not None
+        env.command_post_processor._lift_compensation_state = 1.25
+        env.command_post_processor.set_safety_mode(False)
+
+        env.reset(seed=1)
+
+        assert env.command_post_processor._lift_compensation_state == pytest.approx(
+            0.0
+        )
+        assert env.command_post_processor._safety_mode is True
         env.close()
 
     def test_info_contains_combat_geometry_diagnostics(self, base_config):
@@ -5756,3 +5783,151 @@ class TestObservationSchema:
 
         _run_case(own_altitude_m=5000.0, expect_clamped=False)
         _run_case(own_altitude_m=4000.0, expect_clamped=True)
+
+    def test_post_merge_tactical_basis_recovery_profile_shapes_action_coefficients(
+        self,
+    ):
+        shaped, diag = _shape_tactical_basis_action_with_post_merge_recovery_profile(
+            np.array([-1.0, 1.0, -1.0], dtype=np.float64),
+            {
+                "tactical_basis_action_ll_scale": 0.35,
+                "tactical_basis_action_ll_min": -0.25,
+                "tactical_basis_action_io_scale": 0.55,
+                "tactical_basis_action_io_abs_max": 0.60,
+                "tactical_basis_action_cd_scale": 0.50,
+                "tactical_basis_action_cd_bias": 0.20,
+                "tactical_basis_action_cd_min": 0.0,
+                "tactical_basis_action_cd_max": 0.75,
+            },
+        )
+
+        np.testing.assert_allclose(
+            shaped,
+            np.array([-0.25, 0.55, 0.0], dtype=np.float64),
+        )
+        assert diag == {
+            "ll_pre": -1.0,
+            "ll_post": -0.25,
+            "io_pre": 1.0,
+            "io_post": 0.55,
+            "cd_pre": -1.0,
+            "cd_post": 0.0,
+        }
+
+    def test_post_merge_tactical_basis_recovery_profile_activates_from_specialist_profile(
+        self,
+        base_config,
+    ):
+        config = copy.deepcopy(base_config)
+        config["task"] = {"name": "head_on", "env_class": "CloseRangeTrackingEnv"}
+        config["virtual_point"]["action_semantics"] = "tactical_basis_v1"
+        config["virtual_point"]["post_merge_tactical_basis_recovery_profile"] = {
+            "enabled": True,
+            "task_name": "head_on",
+            "anchor_mode": "predicted_target",
+            "specialist_profile_names": ["post_merge_recovery"],
+            "activate_on_blend_release_recovery": True,
+            "require_first_pass_complete": True,
+            "require_range_opening": True,
+            "require_range_opening_for_specialist_profile": False,
+            "require_no_attack_zone": True,
+            "max_altitude_m": 5200.0,
+            "tactical_basis_action_ll_scale": 0.35,
+            "tactical_basis_action_ll_min": -0.25,
+            "tactical_basis_action_io_scale": 0.55,
+            "tactical_basis_action_io_abs_max": 0.60,
+            "tactical_basis_action_cd_scale": 0.50,
+            "tactical_basis_action_cd_bias": 0.20,
+            "tactical_basis_action_cd_min": 0.0,
+            "predicted_target_forward_scale_override": 0.25,
+        }
+        env = CloseRangeTrackingEnv(config)
+        env._first_pass_complete = True
+        env.set_runtime_specialist_context(
+            specialist_key="post_merge_recovery",
+            specialist_profile="post_merge_recovery",
+            specialist_mode_name="post_merge_recovery_specialist",
+        )
+
+        state = env._evaluate_post_merge_tactical_basis_recovery_profile_state(
+            action=np.array([-1.0, 1.0, -1.0], dtype=np.float64),
+            own_state={"altitude_m": 5000.0},
+            anchor_mode="predicted_target",
+            post_merge_offensive_anchor_gate={
+                "range_opening": True,
+                "ego_in_attack_zone": False,
+                "target_in_attack_zone": False,
+            },
+            post_merge_offensive_anchor_blend_release_recovery_active=False,
+        )
+
+        assert state["active"] is True
+        assert state["source"] == "specialist_profile"
+        assert state["requested_profile"] == "post_merge_recovery"
+        assert state["predicted_target_forward_scale_override"] == pytest.approx(0.25)
+        np.testing.assert_allclose(
+            state["shaped_action"],
+            np.array([-0.25, 0.55, 0.0], dtype=np.float64),
+        )
+
+        env.clear_runtime_specialist_context()
+        assert env._runtime_specialist_profile is None
+        env.close()
+
+    def test_post_merge_tactical_basis_recovery_profile_bypasses_range_opening_for_specialist_profile(
+        self,
+        base_config,
+    ):
+        config = copy.deepcopy(base_config)
+        config["task"] = {"name": "head_on", "env_class": "CloseRangeTrackingEnv"}
+        config["virtual_point"]["action_semantics"] = "tactical_basis_v1"
+        config["virtual_point"]["post_merge_tactical_basis_recovery_profile"] = {
+            "enabled": True,
+            "task_name": "head_on",
+            "anchor_mode": "predicted_target",
+            "specialist_profile_names": ["post_merge_recovery"],
+            "activate_on_blend_release_recovery": True,
+            "require_first_pass_complete": True,
+            "require_range_opening": True,
+            "require_range_opening_for_specialist_profile": False,
+            "require_no_attack_zone": True,
+            "max_altitude_m": 5200.0,
+            "tactical_basis_action_ll_scale": 0.35,
+            "tactical_basis_action_ll_min": -0.25,
+            "tactical_basis_action_io_scale": 0.55,
+            "tactical_basis_action_io_abs_max": 0.60,
+            "tactical_basis_action_cd_scale": 0.50,
+            "tactical_basis_action_cd_bias": 0.20,
+            "tactical_basis_action_cd_min": 0.0,
+            "predicted_target_forward_scale_override": 0.25,
+        }
+        env = CloseRangeTrackingEnv(config)
+        env._first_pass_complete = True
+        env.set_runtime_specialist_context(
+            specialist_key="post_merge_recovery",
+            specialist_profile="post_merge_recovery",
+            specialist_mode_name="post_merge_recovery_specialist",
+        )
+
+        state = env._evaluate_post_merge_tactical_basis_recovery_profile_state(
+            action=np.array([-1.0, 1.0, -1.0], dtype=np.float64),
+            own_state={"altitude_m": 5000.0},
+            anchor_mode="predicted_target",
+            post_merge_offensive_anchor_gate={
+                "range_opening": False,
+                "range_rate_mps": -120.0,
+                "ego_in_attack_zone": False,
+                "target_in_attack_zone": False,
+            },
+            post_merge_offensive_anchor_blend_release_recovery_active=False,
+        )
+
+        assert state["active"] is True
+        assert state["source"] == "specialist_profile"
+        assert state["reason"] == "active"
+        np.testing.assert_allclose(
+            state["shaped_action"],
+            np.array([-0.25, 0.55, 0.0], dtype=np.float64),
+        )
+
+        env.close()

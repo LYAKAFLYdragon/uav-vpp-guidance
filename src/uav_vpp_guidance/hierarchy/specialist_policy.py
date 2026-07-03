@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 import numpy as np
 import torch
@@ -59,7 +59,7 @@ class FrozenSpecialistPolicy:
 
 
 def load_frozen_specialist_registry(
-    modes: list[dict[str, Any]],
+    modes: List[Dict[str, Any]],
     device: str = "cpu",
 ) -> Dict[int, Dict[str, Any]]:
     """Load all frozen specialists keyed by commander mode id."""
@@ -70,6 +70,13 @@ def load_frozen_specialist_registry(
             "id": mode_id,
             "name": str(mode_cfg["name"]),
             "specialist_key": str(mode_cfg.get("specialist_key", mode_cfg["name"])),
+            "specialist_profile": mode_cfg.get("specialist_profile"),
+            "source_specialist_key": str(
+                mode_cfg.get(
+                    "source_specialist_key",
+                    mode_cfg.get("specialist_key", mode_cfg["name"]),
+                )
+            ),
             "policy": FrozenSpecialistPolicy(
                 checkpoint_path=str(mode_cfg["checkpoint"]),
                 config_path=str(mode_cfg["config_path"]),

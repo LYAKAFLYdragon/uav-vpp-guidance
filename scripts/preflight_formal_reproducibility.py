@@ -17,12 +17,15 @@ import yaml
 
 CORE_AGENT_DEPENDENCIES = {
     "hierarchical_commander": [
+        "scripts/run_jsbsim_hrl_comparison.py",
         "src/uav_vpp_guidance/evaluation/hierarchical_commander_policy.py",
+        "src/uav_vpp_guidance/evaluation/recorders.py",
         "src/uav_vpp_guidance/agents/commander_ppo_agent.py",
         "src/uav_vpp_guidance/agents/commander_double_dqn_agent.py",
         "src/uav_vpp_guidance/agents/policy_network.py",
         "src/uav_vpp_guidance/agents/replay_buffer.py",
         "src/uav_vpp_guidance/envs/hierarchical_commander_env.py",
+        "src/uav_vpp_guidance/envs/tracking_env.py",
         "src/uav_vpp_guidance/hierarchy/specialist_policy.py",
         "src/uav_vpp_guidance/hierarchy/commander_mode_constraints.py",
     ],
@@ -136,6 +139,19 @@ def _expected_action_dim(agent_type: str, config: Dict[str, Any]) -> Optional[in
     policy_cfg = config.get("policy", {})
     action_dim = policy_cfg.get("action_dim")
     return int(action_dim) if action_dim is not None else None
+
+
+def _checkpoint_action_dim_is_compatible(
+    *,
+    agent_type: str,
+    expected_action_dim: Optional[int],
+    checkpoint_action_dim: Optional[int],
+) -> bool:
+    if expected_action_dim is None or checkpoint_action_dim is None:
+        return True
+    if agent_type == "hierarchical_commander":
+        return int(checkpoint_action_dim) <= int(expected_action_dim)
+    return int(expected_action_dim) == int(checkpoint_action_dim)
 
 
 def _add_runtime_artifact(
@@ -398,10 +414,10 @@ def run_preflight(*, repo_root: Path, config_path: Path) -> Tuple[Dict[str, Any]
             issues.append(f"{method_report['method']}: checkpoint missing: {checkpoint['path']}")
         expected_action_dim = method_report.get("expected_action_dim")
         checkpoint_action_dim = checkpoint.get("checkpoint_action_dim")
-        if (
-            expected_action_dim is not None
-            and checkpoint_action_dim is not None
-            and int(expected_action_dim) != int(checkpoint_action_dim)
+        if not _checkpoint_action_dim_is_compatible(
+            agent_type=str(method_report["agent_type"]),
+            expected_action_dim=expected_action_dim,
+            checkpoint_action_dim=checkpoint_action_dim,
         ):
             issues.append(
                 f"{method_report['method']}: checkpoint action dim mismatch "
@@ -426,10 +442,10 @@ def run_preflight(*, repo_root: Path, config_path: Path) -> Tuple[Dict[str, Any]
             issues.append(
                 f"{artifact_label}: checkpoint unreadable: {artifact_path} ({checkpoint_load_error})"
             )
-        if (
-            expected_action_dim is not None
-            and checkpoint_action_dim is not None
-            and int(expected_action_dim) != int(checkpoint_action_dim)
+        if not _checkpoint_action_dim_is_compatible(
+            agent_type="ppo",
+            expected_action_dim=expected_action_dim,
+            checkpoint_action_dim=checkpoint_action_dim,
         ):
             issues.append(
                 f"{artifact_label}: checkpoint action dim mismatch "

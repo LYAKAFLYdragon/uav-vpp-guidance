@@ -29,6 +29,24 @@ def test_expected_action_dim_for_hierarchical_commander_uses_mode_count():
     assert _MODULE._expected_action_dim("hierarchical_commander", cfg) == 2
 
 
+def test_hierarchical_commander_preflight_allows_smaller_checkpoint_action_dim():
+    assert _MODULE._checkpoint_action_dim_is_compatible(
+        agent_type="hierarchical_commander",
+        expected_action_dim=3,
+        checkpoint_action_dim=2,
+    )
+    assert not _MODULE._checkpoint_action_dim_is_compatible(
+        agent_type="hierarchical_commander",
+        expected_action_dim=2,
+        checkpoint_action_dim=3,
+    )
+    assert not _MODULE._checkpoint_action_dim_is_compatible(
+        agent_type="ppo",
+        expected_action_dim=3,
+        checkpoint_action_dim=2,
+    )
+
+
 def test_collect_formal_dependencies_resolves_nested_includes_and_method_config(tmp_path):
     repo_root = tmp_path
     config_dir = repo_root / "config" / "experiment"
@@ -71,6 +89,9 @@ def test_collect_formal_dependencies_resolves_nested_includes_and_method_config(
     code_deps = {Path(path).name for path in report["code_dependencies"]}
     assert "policy_network.py" in code_deps
     assert "replay_buffer.py" in code_deps
+    assert "tracking_env.py" in code_deps
+    assert "recorders.py" in code_deps
+    assert "run_jsbsim_hrl_comparison.py" in code_deps
 
 
 def test_collect_formal_dependencies_raises_on_missing_include(tmp_path):

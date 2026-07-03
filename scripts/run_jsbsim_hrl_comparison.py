@@ -134,6 +134,8 @@ COMBAT_GEOMETRY_DIAGNOSTIC_METRICS = (
     "post_merge_offensive_anchor_lateral_world_offset_latch_first_active_step",
     "post_merge_offensive_anchor_blend_release_lateral_only_active_fraction",
     "post_merge_offensive_anchor_blend_release_lateral_only_first_step",
+    "post_merge_tactical_basis_recovery_profile_active_fraction",
+    "post_merge_tactical_basis_recovery_profile_first_step",
     "post_merge_predicted_target_forward_scale_active_fraction",
     "post_merge_predicted_target_forward_scale_first_active_step",
     "post_merge_predicted_target_forward_scale_release_scale_active_fraction",
@@ -2249,6 +2251,15 @@ def summarize_episode_combat_geometry(record: Dict[str, Any]) -> Dict[str, float
                 "post_merge_offensive_anchor_blend_release_lateral_only_active",
             )
         ),
+        "post_merge_tactical_basis_recovery_profile_active_fraction": (
+            _post_merge_fraction("post_merge_tactical_basis_recovery_profile_active")
+        ),
+        "post_merge_tactical_basis_recovery_profile_first_step": (
+            _first_post_merge_true_step(
+                trajectory,
+                "post_merge_tactical_basis_recovery_profile_active",
+            )
+        ),
         "post_merge_predicted_target_forward_scale_active_fraction": (
             _post_merge_fraction(
                 "post_merge_predicted_target_forward_scale_active"
@@ -2431,6 +2442,12 @@ def _build_observation_audit(
     ckpt_obs_dim = dim_info.get("checkpoint_obs_dim")
     ckpt_action_dim = dim_info.get("checkpoint_action_dim")
     ckpt_policy_action_dim = dim_info.get("checkpoint_policy_action_dim")
+    action_dim_matches_checkpoint = ckpt_action_dim in (None, policy_action_dim)
+    if (
+        method_def.get("agent_type", "ppo") == "hierarchical_commander"
+        and ckpt_action_dim is not None
+    ):
+        action_dim_matches_checkpoint = int(ckpt_action_dim) <= int(policy_action_dim)
 
     return {
         "method": method_name,
@@ -2447,7 +2464,7 @@ def _build_observation_audit(
         "low_level_policy_action_dim": low_level_policy_action_dim,
         "checkpoint_action_dim": ckpt_action_dim,
         "checkpoint_policy_action_dim": ckpt_policy_action_dim,
-        "action_dim_matches_checkpoint": ckpt_action_dim in (None, policy_action_dim),
+        "action_dim_matches_checkpoint": action_dim_matches_checkpoint,
         "observation_schema": schema,
     }
 
@@ -2748,6 +2765,7 @@ def _write_summary_csv(output_dir: Path, records: List[Dict[str, Any]]) -> Path:
         "survived",
         "commander_mode_head_on_fraction",
         "commander_mode_crossing_fraction",
+        "commander_mode_recovery_fraction",
         "commander_mean_switch_count",
         "commander_first_switch_step",
         "_deprecated_tracking_mean_range_m",
@@ -2816,6 +2834,7 @@ def _write_summary_csv(output_dir: Path, records: List[Dict[str, Any]]) -> Path:
                 "survived": rec.get("survived"),
                 "commander_mode_head_on_fraction": rec.get("commander_mode_head_on_fraction"),
                 "commander_mode_crossing_fraction": rec.get("commander_mode_crossing_fraction"),
+                "commander_mode_recovery_fraction": rec.get("commander_mode_recovery_fraction"),
                 "commander_mean_switch_count": rec.get("commander_mean_switch_count"),
                 "commander_first_switch_step": rec.get("commander_first_switch_step"),
                 "_deprecated_tracking_mean_range_m": rec.get("_deprecated_tracking_mean_range_m"),
@@ -2864,6 +2883,7 @@ def _write_aggregate_summary(output_dir: Path, records: List[Dict[str, Any]]) ->
                 "prediction_fallback_rates": [],
                 "commander_mode_head_on_fractions": [],
                 "commander_mode_crossing_fractions": [],
+                "commander_mode_recovery_fractions": [],
                 "commander_switch_counts": [],
                 "commander_first_switch_steps": [],
                 "backend_fallbacks": 0,
@@ -2895,6 +2915,9 @@ def _write_aggregate_summary(output_dir: Path, records: List[Dict[str, Any]]) ->
         )
         item["commander_mode_crossing_fractions"].append(
             _safe_float(rec.get("commander_mode_crossing_fraction"))
+        )
+        item["commander_mode_recovery_fractions"].append(
+            _safe_float(rec.get("commander_mode_recovery_fraction"))
         )
         item["commander_switch_counts"].append(
             _safe_float(rec.get("commander_mean_switch_count"))
@@ -2961,6 +2984,9 @@ def _write_aggregate_summary(output_dir: Path, records: List[Dict[str, Any]]) ->
                 ),
                 "commander_mode_crossing_fraction": _finite_mean(
                     item["commander_mode_crossing_fractions"]
+                ),
+                "commander_mode_recovery_fraction": _finite_mean(
+                    item["commander_mode_recovery_fractions"]
                 ),
                 "commander_mean_switch_count": _finite_mean(
                     item["commander_switch_counts"]
@@ -3188,6 +3214,9 @@ def _write_combat_geometry_diagnostics(
             "commander_mode_crossing_fraction": rec.get(
                 "commander_mode_crossing_fraction"
             ),
+            "commander_mode_recovery_fraction": rec.get(
+                "commander_mode_recovery_fraction"
+            ),
             "commander_mean_switch_count": rec.get("commander_mean_switch_count"),
             "commander_first_switch_step": rec.get("commander_first_switch_step"),
             **diagnostics,
@@ -3366,6 +3395,9 @@ def _write_combat_geometry_diagnostics(
             "commander_mode_crossing_fraction": _finite_mean(
                 item.get("commander_mode_crossing_fraction") for item in items
             ),
+            "commander_mode_recovery_fraction": _finite_mean(
+                item.get("commander_mode_recovery_fraction") for item in items
+            ),
             "commander_mean_switch_count": _finite_mean(
                 item.get("commander_mean_switch_count") for item in items
             ),
@@ -3455,10 +3487,16 @@ def summarize_episode_commander(record: Dict[str, Any]) -> Dict[str, Any]:
         return {
             "commander_mode_head_on_fraction": np.nan,
             "commander_mode_crossing_fraction": np.nan,
+            "commander_mode_recovery_fraction": np.nan,
             "commander_mean_switch_count": np.nan,
             "commander_first_switch_step": np.nan,
         }
 
+    selected_specialists = [
+        str(step.get("commander_selected_specialist", "")).lower()
+        for step in trajectory
+        if step.get("commander_selected_specialist") is not None
+    ]
     mode_names = [
         str(step.get("commander_mode_name", "")).lower()
         for step in trajectory
@@ -3474,13 +3512,17 @@ def summarize_episode_commander(record: Dict[str, Any]) -> Dict[str, Any]:
         for step in trajectory
         if step.get("commander_first_switch_step") is not None
     ]
-    total = max(1, len(mode_names))
+    labels = selected_specialists if selected_specialists else mode_names
+    total = max(1, len(labels))
     return {
         "commander_mode_head_on_fraction": (
-            sum("head_on" in name for name in mode_names) / total if mode_names else np.nan
+            sum("head_on" in name for name in labels) / total if labels else np.nan
         ),
         "commander_mode_crossing_fraction": (
-            sum("crossing" in name for name in mode_names) / total if mode_names else np.nan
+            sum("crossing" in name for name in labels) / total if labels else np.nan
+        ),
+        "commander_mode_recovery_fraction": (
+            sum("recovery" in name for name in labels) / total if labels else np.nan
         ),
         "commander_mean_switch_count": switch_counts[-1] if switch_counts else np.nan,
         "commander_first_switch_step": first_switch_steps[0] if first_switch_steps else np.nan,

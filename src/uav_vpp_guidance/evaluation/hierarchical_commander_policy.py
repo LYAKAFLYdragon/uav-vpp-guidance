@@ -10,12 +10,14 @@ import torch
 from uav_vpp_guidance.agents.commander_double_dqn_agent import CommanderDoubleDQNAgent
 from uav_vpp_guidance.agents.commander_ppo_agent import CommanderPPOAgent
 from uav_vpp_guidance.hierarchy.commander_mode_constraints import (
+    apply_head_on_post_merge_recovery_hold,
     apply_head_on_post_merge_reopened_crossing_geometry_quality_guard,
     apply_head_on_post_merge_reopened_crossing_overdeep_clamp,
     apply_head_on_post_merge_reopened_crossing_secondary_clamp,
     apply_head_on_post_merge_reopened_crossing_target_threat_clamp,
     apply_head_on_post_merge_reopened_crossing_leash,
     build_head_on_post_merge_reopened_crossing_snapshot,
+    evaluate_head_on_post_merge_recovery_hold_state,
     evaluate_head_on_post_merge_reopened_crossing_geometry_quality_guard_state,
     evaluate_head_on_post_merge_reopened_crossing_overdeep_clamp_state,
     evaluate_head_on_post_merge_reopened_crossing_secondary_clamp_state,
@@ -69,6 +71,12 @@ class HierarchicalCommanderPolicy:
                 "head_on_post_merge_reopened_crossing_geometry_quality_guard", {}
             )
             or {}
+        )
+        self.head_on_post_merge_first_recovery_entry_hold = dict(
+            commander_cfg.get("head_on_post_merge_first_recovery_entry_hold", {}) or {}
+        )
+        self.head_on_post_merge_recovery_hold = dict(
+            commander_cfg.get("head_on_post_merge_recovery_hold", {}) or {}
         )
         self.crossing_pre_merge_mode_lock = dict(
             commander_cfg.get("crossing_pre_merge_mode_lock", {}) or {}
@@ -124,6 +132,12 @@ class HierarchicalCommanderPolicy:
         self._head_on_post_merge_reopened_crossing_altitude_history_m = []
         self._head_on_post_merge_reopened_crossing_leash_active_steps = 0
         self._head_on_post_merge_reopened_crossing_overdeep_active_steps = 0
+        self._head_on_post_merge_first_recovery_entry_hold_used = False
+        self._head_on_post_merge_first_recovery_entry_hold_steps_remaining = 0
+        self._head_on_post_merge_first_recovery_entry_hold_original_reason: Optional[
+            str
+        ] = None
+        self._head_on_post_merge_recovery_mode_seen = False
         self._last_step_metadata: Dict[str, Any] = {}
 
     def _select_mode(self, obs_vec: np.ndarray) -> int:
@@ -237,6 +251,100 @@ class HierarchicalCommanderPolicy:
         if bool(overdeep_clamp_state.get("active", False)):
             self._head_on_post_merge_reopened_crossing_overdeep_active_steps += 1
 
+    def _evaluate_head_on_first_recovery_entry_hold_state(
+        self,
+        *,
+        commander_snapshot: Dict[str, Any],
+        requested_mode_id: Optional[int],
+        proposed_mode_id: Optional[int],
+        original_reason: Optional[str],
+    ) -> Dict[str, Any]:
+        cfg = self.head_on_post_merge_first_recovery_entry_hold
+        enabled = bool(cfg.get("enabled", False))
+        state = {
+            "configured": enabled,
+            "active": False,
+            "reason": "disabled" if not enabled else "inactive",
+            "effective_mode_id": proposed_mode_id,
+            "original_reason": (
+                self._head_on_post_merge_first_recovery_entry_hold_original_reason
+            ),
+            "cooldown_steps_remaining": int(
+                self._head_on_post_merge_first_recovery_entry_hold_steps_remaining
+            ),
+            "armed_this_step": False,
+        }
+        if not enabled:
+            return state
+        if not bool(commander_snapshot.get("available", False)):
+            state["reason"] = str(commander_snapshot.get("reason", "unavailable"))
+            return state
+        if str(self.current_task_name) != str(cfg.get("task_name", "head_on")):
+            state["reason"] = "task_mismatch"
+            return state
+        if not bool(commander_snapshot.get("first_pass_complete", False)):
+            state["reason"] = "pre_merge"
+            return state
+        head_on_mode_id = int(cfg.get("head_on_mode_id", 0))
+        recovery_mode_id = int(cfg.get("recovery_mode_id", 2))
+        hold_window_steps = max(1, int(cfg.get("hold_window_steps", 1)))
+        if requested_mode_id is None or int(requested_mode_id) != head_on_mode_id:
+            state["reason"] = "requested_mode_not_head_on"
+            return state
+        if proposed_mode_id is None or int(proposed_mode_id) != recovery_mode_id:
+            state["reason"] = "non_recovery_mode"
+            return state
+        if (
+            self._active_mode_id is not None
+            and int(self._active_mode_id) != head_on_mode_id
+        ):
+            state["reason"] = "active_mode_not_head_on"
+            return state
+        if self._head_on_post_merge_recovery_mode_seen:
+            state["reason"] = "recovery_already_seen"
+            return state
+
+        allowed_reasons = [
+            str(reason)
+            for reason in (cfg.get("allowed_reasons", []) or [])
+            if reason is not None
+        ]
+        normalized_original_reason = (
+            str(original_reason) if original_reason is not None else None
+        )
+        if allowed_reasons and normalized_original_reason not in allowed_reasons:
+            state["reason"] = "constraint_reason_not_eligible"
+            return state
+
+        if self._head_on_post_merge_first_recovery_entry_hold_steps_remaining > 0:
+            state["active"] = True
+            state["reason"] = "cooldown_active"
+            state["effective_mode_id"] = head_on_mode_id
+            state["original_reason"] = (
+                self._head_on_post_merge_first_recovery_entry_hold_original_reason
+            )
+            state["cooldown_steps_remaining"] = int(
+                self._head_on_post_merge_first_recovery_entry_hold_steps_remaining
+            )
+            return state
+        if self._head_on_post_merge_first_recovery_entry_hold_used:
+            state["reason"] = "already_used"
+            return state
+        state["active"] = True
+        state["reason"] = "armed"
+        state["effective_mode_id"] = head_on_mode_id
+        state["original_reason"] = normalized_original_reason
+        state["cooldown_steps_remaining"] = hold_window_steps
+        state["armed_this_step"] = True
+        self._head_on_post_merge_first_recovery_entry_hold_used = True
+        self._head_on_post_merge_first_recovery_entry_hold_steps_remaining = (
+            hold_window_steps
+        )
+        self._head_on_post_merge_first_recovery_entry_hold_original_reason = (
+            normalized_original_reason
+        )
+        return state
+
     def get_deterministic_action(self, obs: np.ndarray) -> np.ndarray:
         commander_snapshot = build_head_on_post_merge_reopened_crossing_snapshot(
             env=self.env,
@@ -297,6 +405,10 @@ class HierarchicalCommanderPolicy:
                 overdeep_state=overdeep_clamp_state,
             )
         )
+        recovery_hold_state = evaluate_head_on_post_merge_recovery_hold_state(
+            snapshot=commander_snapshot,
+            recovery_hold_cfg=self.head_on_post_merge_recovery_hold,
+        )
         should_select = (
             self._active_mode_id is None
             or self._step_counter % self.macro_action_repeat_steps == 0
@@ -307,6 +419,19 @@ class HierarchicalCommanderPolicy:
         constraint_triggered = False
         constraint_reason = None
         crossing_pre_merge_mode_lock_active = False
+        first_recovery_entry_hold_state = {
+            "configured": bool(
+                self.head_on_post_merge_first_recovery_entry_hold.get("enabled", False)
+            ),
+            "active": False,
+            "reason": "disabled"
+            if not bool(
+                self.head_on_post_merge_first_recovery_entry_hold.get("enabled", False)
+            )
+            else "inactive",
+            "effective_mode_id": None,
+            "original_reason": None,
+        }
         if should_select:
             self._macro_steps_since_switch += 1
             if self._hold_steps_remaining > 0:
@@ -400,9 +525,37 @@ class HierarchicalCommanderPolicy:
                 constraint_triggered = True
                 constraint_reason = str(geometry_quality_result["reason"])
                 self._head_on_post_merge_reopened_crossing_consecutive_macro_steps = 0
+            recovery_hold_result = apply_head_on_post_merge_recovery_hold(
+                candidate_mode_id=new_mode,
+                active_mode_id=self._active_mode_id,
+                mode_registry=self.mode_registry,
+                recovery_hold_state=recovery_hold_state,
+                recovery_hold_cfg=self.head_on_post_merge_recovery_hold,
+            )
+            if bool(recovery_hold_result["triggered"]):
+                new_mode = int(recovery_hold_result["effective_mode_id"])
+                constraint_triggered = True
+                constraint_reason = str(recovery_hold_result["reason"])
+                self._head_on_post_merge_reopened_crossing_consecutive_macro_steps = 0
+            first_recovery_entry_hold_state = (
+                self._evaluate_head_on_first_recovery_entry_hold_state(
+                    commander_snapshot=commander_snapshot,
+                    requested_mode_id=requested_mode_id,
+                    proposed_mode_id=new_mode,
+                    original_reason=constraint_reason,
+                )
+            )
+            if bool(first_recovery_entry_hold_state["active"]):
+                new_mode = int(first_recovery_entry_hold_state["effective_mode_id"])
+                constraint_triggered = True
+                constraint_reason = "head_on_first_recovery_entry_hold"
+                self._head_on_post_merge_reopened_crossing_consecutive_macro_steps = 0
             switched = self._update_active_mode(new_mode)
         else:
             active_mode_name = self._mode_name(self._active_mode_id)
+            candidate_mode_id = (
+                int(self._active_mode_id) if self._active_mode_id is not None else None
+            )
             target_threat_result = (
                 apply_head_on_post_merge_reopened_crossing_target_threat_clamp(
                     candidate_mode_id=self._active_mode_id,
@@ -440,33 +593,40 @@ class HierarchicalCommanderPolicy:
                 constraint_triggered = True
                 constraint_reason = str(target_threat_result["reason"])
                 self._head_on_post_merge_reopened_crossing_consecutive_macro_steps = 0
-                switched = self._update_active_mode(
-                    int(target_threat_result["effective_mode_id"])
-                )
+                candidate_mode_id = int(target_threat_result["effective_mode_id"])
             elif bool(overdeep_result["triggered"]):
                 requested_mode_name = active_mode_name
                 constraint_triggered = True
                 constraint_reason = str(overdeep_result["reason"])
                 self._head_on_post_merge_reopened_crossing_consecutive_macro_steps = 0
-                switched = self._update_active_mode(
-                    int(overdeep_result["effective_mode_id"])
-                )
+                candidate_mode_id = int(overdeep_result["effective_mode_id"])
             elif bool(secondary_result["triggered"]):
                 requested_mode_name = active_mode_name
                 constraint_triggered = True
                 constraint_reason = str(secondary_result["reason"])
                 self._head_on_post_merge_reopened_crossing_consecutive_macro_steps = 0
-                switched = self._update_active_mode(
-                    int(secondary_result["effective_mode_id"])
-                )
+                candidate_mode_id = int(secondary_result["effective_mode_id"])
             elif bool(geometry_quality_result["triggered"]):
                 requested_mode_name = active_mode_name
                 constraint_triggered = True
                 constraint_reason = str(geometry_quality_result["reason"])
                 self._head_on_post_merge_reopened_crossing_consecutive_macro_steps = 0
-                switched = self._update_active_mode(
-                    int(geometry_quality_result["effective_mode_id"])
+                candidate_mode_id = int(geometry_quality_result["effective_mode_id"])
+            if constraint_triggered and candidate_mode_id is not None:
+                first_recovery_entry_hold_state = (
+                    self._evaluate_head_on_first_recovery_entry_hold_state(
+                        commander_snapshot=commander_snapshot,
+                        requested_mode_id=self._active_mode_id,
+                        proposed_mode_id=candidate_mode_id,
+                        original_reason=constraint_reason,
+                    )
                 )
+                if bool(first_recovery_entry_hold_state["active"]):
+                    candidate_mode_id = int(
+                        first_recovery_entry_hold_state["effective_mode_id"]
+                    )
+                    constraint_reason = "head_on_first_recovery_entry_hold"
+                switched = self._update_active_mode(candidate_mode_id)
             elif (
                 not leash_state.get("active", False)
                 or active_mode_name != "crossing_specialist"
@@ -477,6 +637,8 @@ class HierarchicalCommanderPolicy:
             raise RuntimeError("HierarchicalCommanderPolicy failed to select a mode")
 
         mode = self.mode_registry[self._active_mode_id]
+        if mode.get("specialist_key") == "post_merge_recovery":
+            self._head_on_post_merge_recovery_mode_seen = True
         self._set_env_specialist_context(mode)
         action = mode["policy"].get_deterministic_action(obs)
         self._step_counter += 1
@@ -559,6 +721,9 @@ class HierarchicalCommanderPolicy:
             "commander_head_on_post_merge_reopened_crossing_overdeep_clamp_range_m": float(
                 overdeep_clamp_state.get("range_m", np.nan)
             ),
+            "commander_head_on_post_merge_reopened_crossing_overdeep_clamp_min_range_so_far_m": float(
+                overdeep_clamp_state.get("min_range_so_far_m", np.nan)
+            ),
             "commander_head_on_post_merge_reopened_crossing_overdeep_clamp_vp_forward_bias_m": float(
                 overdeep_clamp_state.get("vp_forward_bias_m", np.nan)
             ),
@@ -606,6 +771,39 @@ class HierarchicalCommanderPolicy:
                     "overdeep_seen_since_post_merge", False
                 )
             ),
+            "commander_head_on_post_merge_recovery_hold_active": bool(
+                recovery_hold_state.get("active", False)
+            ),
+            "commander_head_on_post_merge_recovery_hold_reason": recovery_hold_state.get(
+                "reason"
+            ),
+            "commander_head_on_post_merge_recovery_hold_range_m": float(
+                recovery_hold_state.get("range_m", np.nan)
+            ),
+            "commander_head_on_post_merge_recovery_hold_vp_lateral_bias_m": float(
+                recovery_hold_state.get("vp_lateral_bias_m", np.nan)
+            ),
+            "commander_head_on_post_merge_recovery_hold_vp_lateral_to_range_ratio": float(
+                recovery_hold_state.get("vp_lateral_to_range_ratio", np.nan)
+            ),
+            "commander_head_on_post_merge_first_recovery_entry_hold_active": bool(
+                first_recovery_entry_hold_state.get("active", False)
+            ),
+            "commander_head_on_post_merge_first_recovery_entry_hold_reason": (
+                first_recovery_entry_hold_state.get("reason")
+            ),
+            "commander_head_on_post_merge_first_recovery_entry_hold_original_reason": (
+                first_recovery_entry_hold_state.get("original_reason")
+            ),
+            "commander_head_on_post_merge_first_recovery_entry_hold_armed_this_step": bool(
+                first_recovery_entry_hold_state.get("armed_this_step", False)
+            ),
+            "commander_head_on_post_merge_first_recovery_entry_hold_cooldown_steps_remaining": int(
+                first_recovery_entry_hold_state.get(
+                    "cooldown_steps_remaining",
+                    self._head_on_post_merge_first_recovery_entry_hold_steps_remaining,
+                )
+            ),
             "commander_mode_switched": bool(switched),
             "commander_first_switch_step": self._first_switch_step,
             "commander_macro_steps_since_switch": int(self._macro_steps_since_switch),
@@ -614,6 +812,8 @@ class HierarchicalCommanderPolicy:
         self._remember_secondary_clamp_altitude(
             float(secondary_clamp_state.get("altitude_m", np.nan))
         )
+        if self._head_on_post_merge_first_recovery_entry_hold_steps_remaining > 0:
+            self._head_on_post_merge_first_recovery_entry_hold_steps_remaining -= 1
         return action
 
     def get_last_step_metadata(self) -> Dict[str, Any]:

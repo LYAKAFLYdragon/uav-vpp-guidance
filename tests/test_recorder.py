@@ -489,6 +489,22 @@ def test_episode_recorder_persists_commander_telemetry():
             "commander_head_on_post_merge_reopened_crossing_geometry_quality_guard_leash_active_steps": 84,
             "commander_head_on_post_merge_reopened_crossing_geometry_quality_guard_overdeep_active_steps": 19,
             "commander_head_on_post_merge_reopened_crossing_geometry_quality_guard_overdeep_seen_since_post_merge": True,
+            "commander_head_on_post_merge_recovery_hold_active": True,
+            "commander_head_on_post_merge_recovery_hold_reason": (
+                "large_lateral_bias_close_range_recovery_hold"
+            ),
+            "commander_head_on_post_merge_recovery_hold_range_m": 4200.0,
+            "commander_head_on_post_merge_recovery_hold_vp_lateral_bias_m": 6800.0,
+            "commander_head_on_post_merge_recovery_hold_vp_lateral_to_range_ratio": 1.62,
+            "commander_head_on_post_merge_first_recovery_entry_hold_active": True,
+            "commander_head_on_post_merge_first_recovery_entry_hold_reason": (
+                "cooldown_active"
+            ),
+            "commander_head_on_post_merge_first_recovery_entry_hold_original_reason": (
+                "pre_threat_opening_overlateral_negative_forward_head_on"
+            ),
+            "commander_head_on_post_merge_first_recovery_entry_hold_armed_this_step": False,
+            "commander_head_on_post_merge_first_recovery_entry_hold_cooldown_steps_remaining": 6,
             "commander_mode_switched": True,
             "commander_macro_step_index": 3,
             "commander_first_switch_step": 12,
@@ -658,6 +674,40 @@ def test_episode_recorder_persists_commander_telemetry():
             "commander_head_on_post_merge_reopened_crossing_geometry_quality_guard_overdeep_seen_since_post_merge"
         ]
         is True
+    )
+    assert point["commander_head_on_post_merge_recovery_hold_active"] is True
+    assert (
+        point["commander_head_on_post_merge_recovery_hold_reason"]
+        == "large_lateral_bias_close_range_recovery_hold"
+    )
+    assert point["commander_head_on_post_merge_recovery_hold_range_m"] == 4200.0
+    assert (
+        point["commander_head_on_post_merge_recovery_hold_vp_lateral_bias_m"] == 6800.0
+    )
+    assert (
+        point["commander_head_on_post_merge_recovery_hold_vp_lateral_to_range_ratio"]
+        == 1.62
+    )
+    assert (
+        point["commander_head_on_post_merge_first_recovery_entry_hold_active"] is True
+    )
+    assert (
+        point["commander_head_on_post_merge_first_recovery_entry_hold_reason"]
+        == "cooldown_active"
+    )
+    assert (
+        point["commander_head_on_post_merge_first_recovery_entry_hold_original_reason"]
+        == "pre_threat_opening_overlateral_negative_forward_head_on"
+    )
+    assert (
+        point["commander_head_on_post_merge_first_recovery_entry_hold_armed_this_step"]
+        is False
+    )
+    assert (
+        point[
+            "commander_head_on_post_merge_first_recovery_entry_hold_cooldown_steps_remaining"
+        ]
+        == 6
     )
     assert point["commander_mode_switched"] is True
     assert point["commander_macro_step_index"] == 3

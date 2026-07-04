@@ -65,6 +65,7 @@ def build_head_on_post_merge_reopened_crossing_snapshot(
         "first_pass_complete": False,
         "range_m": np.nan,
         "range_rate_mps": np.nan,
+        "min_range_so_far_m": np.nan,
         "hp_advantage": np.nan,
         "ego_in_attack_zone": False,
         "target_in_attack_zone": False,
@@ -87,6 +88,9 @@ def build_head_on_post_merge_reopened_crossing_snapshot(
     range_m = _safe_float(rel_state.get("range_m"))
     snapshot["range_m"] = range_m
     snapshot["range_rate_mps"] = _safe_float(rel_state.get("range_rate_mps"))
+    snapshot["min_range_so_far_m"] = _safe_float(
+        getattr(env, "_merge_min_range_so_far_m", np.nan)
+    )
 
     combat_info = getattr(getattr(env, "combat_hp", None), "last_info", {}) or {}
     snapshot["ego_in_attack_zone"] = bool(combat_info.get("ego_in_attack_zone", False))
@@ -301,6 +305,29 @@ def evaluate_head_on_post_merge_reopened_crossing_target_threat_clamp_state(
                 state["reason"] = "pre_threat_lateral_ratio_below_min"
                 return state
 
+            positive_lateral_min_vp_lateral_bias_m = cfg.get(
+                "pre_threat_positive_lateral_min_vp_lateral_bias_m"
+            )
+            positive_lateral_max_vp_forward_bias_m = cfg.get(
+                "pre_threat_positive_lateral_max_vp_forward_bias_m"
+            )
+            if (
+                positive_lateral_min_vp_lateral_bias_m is not None
+                and positive_lateral_max_vp_forward_bias_m is not None
+            ):
+                if not np.isfinite(state["vp_lateral_bias_m"]):
+                    state["reason"] = "pre_threat_nonfinite_vp_lateral_bias"
+                    return state
+                if state["vp_lateral_bias_m"] >= float(
+                    positive_lateral_min_vp_lateral_bias_m
+                ) and state["vp_forward_bias_m"] > float(
+                    positive_lateral_max_vp_forward_bias_m
+                ):
+                    state["reason"] = (
+                        "pre_threat_positive_lateral_forward_bias_not_negative_enough"
+                    )
+                    return state
+
             state["active"] = True
             state["reason"] = "pre_threat_opening_overlateral_negative_forward_head_on"
             return state
@@ -328,6 +355,7 @@ def evaluate_head_on_post_merge_reopened_crossing_secondary_clamp_state(
         "active": False,
         "reason": "disabled" if not enabled else "inactive",
         "range_m": _safe_float(snapshot.get("range_m")),
+        "min_range_so_far_m": _safe_float(snapshot.get("min_range_so_far_m")),
         "hp_advantage": _safe_float(snapshot.get("hp_advantage")),
         "ego_in_attack_zone": bool(snapshot.get("ego_in_attack_zone", False)),
         "target_in_attack_zone": bool(snapshot.get("target_in_attack_zone", False)),
@@ -403,6 +431,7 @@ def evaluate_head_on_post_merge_reopened_crossing_overdeep_clamp_state(
         "active": False,
         "reason": "disabled" if not enabled else "inactive",
         "range_m": _safe_float(snapshot.get("range_m")),
+        "min_range_so_far_m": _safe_float(snapshot.get("min_range_so_far_m")),
         "hp_advantage": _safe_float(snapshot.get("hp_advantage")),
         "ego_in_attack_zone": bool(snapshot.get("ego_in_attack_zone", False)),
         "target_in_attack_zone": bool(snapshot.get("target_in_attack_zone", False)),
@@ -607,6 +636,86 @@ def evaluate_head_on_post_merge_reopened_crossing_geometry_quality_guard_state(
     return state
 
 
+def evaluate_head_on_post_merge_recovery_hold_state(
+    *,
+    snapshot: Dict[str, Any],
+    recovery_hold_cfg: Optional[Dict[str, Any]],
+) -> Dict[str, Any]:
+    """Keep recovery active while reopened head_on geometry remains severely over-lateral."""
+    cfg = recovery_hold_cfg or {}
+    enabled = bool(cfg.get("enabled", False))
+    state = {
+        "configured": enabled,
+        "active": False,
+        "reason": "disabled" if not enabled else "inactive",
+        "range_m": _safe_float(snapshot.get("range_m")),
+        "range_rate_mps": _safe_float(snapshot.get("range_rate_mps")),
+        "hp_advantage": _safe_float(snapshot.get("hp_advantage")),
+        "ego_in_attack_zone": bool(snapshot.get("ego_in_attack_zone", False)),
+        "target_in_attack_zone": bool(snapshot.get("target_in_attack_zone", False)),
+        "first_pass_complete": bool(snapshot.get("first_pass_complete", False)),
+        "altitude_m": _safe_float(snapshot.get("altitude_m")),
+        "vp_forward_bias_m": _safe_float(snapshot.get("vp_forward_bias_m")),
+        "vp_lateral_bias_m": _safe_float(snapshot.get("vp_lateral_bias_m")),
+        "vp_lateral_to_range_ratio": _safe_float(
+            snapshot.get("vp_lateral_to_range_ratio")
+        ),
+    }
+    if not enabled:
+        return state
+    if not bool(snapshot.get("available", False)):
+        state["reason"] = str(snapshot.get("reason", "unavailable"))
+        return state
+
+    target_task_name = str(cfg.get("task_name", "head_on"))
+    if str(snapshot.get("task_name")) != target_task_name:
+        state["reason"] = "task_mismatch"
+        return state
+    if not state["first_pass_complete"]:
+        state["reason"] = "pre_merge"
+        return state
+
+    if bool(cfg.get("require_no_attack_zone", True)) and (
+        state["ego_in_attack_zone"] or state["target_in_attack_zone"]
+    ):
+        state["reason"] = "attack_zone_active"
+        return state
+
+    range_m = state["range_m"]
+    if not np.isfinite(range_m):
+        state["reason"] = "nonfinite_range"
+        return state
+    min_range_m = float(cfg.get("min_range_m", 4500.0))
+    if range_m < min_range_m:
+        state["reason"] = "below_min_range"
+        return state
+
+    vp_lateral_bias_m = state["vp_lateral_bias_m"]
+    if not np.isfinite(vp_lateral_bias_m):
+        state["reason"] = "nonfinite_vp_lateral_bias"
+        return state
+    vp_lateral_to_range_ratio = state["vp_lateral_to_range_ratio"]
+    if not np.isfinite(vp_lateral_to_range_ratio):
+        state["reason"] = "nonfinite_vp_lateral_to_range_ratio"
+        return state
+
+    min_abs_vp_lateral_bias_m = float(cfg.get("min_abs_vp_lateral_bias_m", 6000.0))
+    if abs(vp_lateral_bias_m) < min_abs_vp_lateral_bias_m:
+        state["reason"] = "vp_lateral_bias_not_large_enough"
+        return state
+
+    min_abs_vp_lateral_to_range_ratio = float(
+        cfg.get("min_abs_vp_lateral_to_range_ratio", 1.4)
+    )
+    if abs(vp_lateral_to_range_ratio) < min_abs_vp_lateral_to_range_ratio:
+        state["reason"] = "vp_lateral_to_range_ratio_not_large_enough"
+        return state
+
+    state["active"] = True
+    state["reason"] = "recovery_reopened_geometry_still_overlateral"
+    return state
+
+
 def apply_head_on_post_merge_reopened_crossing_leash(
     *,
     requested_mode_id: int,
@@ -674,6 +783,64 @@ def apply_head_on_post_merge_reopened_crossing_leash(
     }
 
 
+def apply_head_on_post_merge_recovery_hold(
+    *,
+    candidate_mode_id: Optional[int],
+    active_mode_id: Optional[int],
+    mode_registry: Dict[int, Dict[str, Any]],
+    recovery_hold_state: Dict[str, Any],
+    recovery_hold_cfg: Optional[Dict[str, Any]],
+) -> Dict[str, Any]:
+    """Keep the recovery specialist active while reopened geometry remains severely over-lateral."""
+    cfg = recovery_hold_cfg or {}
+    if candidate_mode_id is None:
+        return {
+            "effective_mode_id": None,
+            "triggered": False,
+            "reason": "no_candidate_mode",
+        }
+    candidate_mode_id = int(candidate_mode_id)
+    if not bool(cfg.get("enabled", False)):
+        return {
+            "effective_mode_id": candidate_mode_id,
+            "triggered": False,
+            "reason": "disabled",
+        }
+    if not recovery_hold_state.get("active", False):
+        return {
+            "effective_mode_id": candidate_mode_id,
+            "triggered": False,
+            "reason": recovery_hold_state.get("reason", "inactive"),
+        }
+
+    recovery_mode_id = int(cfg.get("recovery_mode_id", 2))
+    if active_mode_id is None or int(active_mode_id) != recovery_mode_id:
+        return {
+            "effective_mode_id": candidate_mode_id,
+            "triggered": False,
+            "reason": "non_recovery_mode",
+        }
+    if candidate_mode_id == recovery_mode_id:
+        return {
+            "effective_mode_id": candidate_mode_id,
+            "triggered": False,
+            "reason": "already_recovery_mode",
+        }
+
+    effective_mode_id = recovery_mode_id
+    if effective_mode_id not in mode_registry:
+        effective_mode_id = candidate_mode_id
+    return {
+        "effective_mode_id": int(effective_mode_id),
+        "triggered": int(effective_mode_id) != candidate_mode_id,
+        "reason": str(
+            recovery_hold_state.get(
+                "reason", "recovery_reopened_geometry_still_overlateral"
+            )
+        ),
+    }
+
+
 def apply_head_on_post_merge_reopened_crossing_target_threat_clamp(
     *,
     candidate_mode_id: Optional[int],
@@ -697,22 +864,27 @@ def apply_head_on_post_merge_reopened_crossing_target_threat_clamp(
             "reason": "disabled",
         }
 
-    crossing_mode_id = int(cfg.get("crossing_mode_id", 1))
-    forced_mode_id = int(cfg.get("forced_mode_id", 0))
     if not target_threat_state.get("active", False):
         return {
             "effective_mode_id": candidate_mode_id,
             "triggered": False,
             "reason": target_threat_state.get("reason", "inactive"),
         }
-    if candidate_mode_id != crossing_mode_id:
+    crossing_mode_id = int(cfg.get("crossing_mode_id", 1))
+    head_on_mode_id = cfg.get("head_on_mode_id")
+    if candidate_mode_id == crossing_mode_id:
+        effective_mode_id = int(cfg.get("forced_mode_id", 0))
+    elif head_on_mode_id is not None and candidate_mode_id == int(head_on_mode_id):
+        effective_mode_id = int(
+            cfg.get("head_on_forced_mode_id", cfg.get("forced_mode_id", 0))
+        )
+    else:
         return {
             "effective_mode_id": candidate_mode_id,
             "triggered": False,
             "reason": "non_crossing_mode",
         }
 
-    effective_mode_id = forced_mode_id
     if effective_mode_id not in mode_registry:
         effective_mode_id = candidate_mode_id
     return {
@@ -798,22 +970,63 @@ def apply_head_on_post_merge_reopened_crossing_overdeep_clamp(
             "reason": "disabled",
         }
 
-    crossing_mode_id = int(cfg.get("crossing_mode_id", 1))
-    forced_mode_id = int(cfg.get("forced_mode_id", 0))
     if not overdeep_state.get("active", False):
         return {
             "effective_mode_id": candidate_mode_id,
             "triggered": False,
             "reason": overdeep_state.get("reason", "inactive"),
         }
-    if candidate_mode_id != crossing_mode_id:
+    crossing_mode_id = int(cfg.get("crossing_mode_id", 1))
+    head_on_mode_id = cfg.get("head_on_mode_id")
+    if candidate_mode_id == crossing_mode_id:
+        effective_mode_id = int(cfg.get("forced_mode_id", 0))
+    elif head_on_mode_id is not None and candidate_mode_id == int(head_on_mode_id):
+        if str(overdeep_state.get("reason")) == "close_range_reengagement_crossing":
+            head_on_min_range_so_far_m = _safe_float(
+                cfg.get("head_on_min_range_so_far_m")
+            )
+            min_range_so_far_m = _safe_float(overdeep_state.get("min_range_so_far_m"))
+            if np.isfinite(head_on_min_range_so_far_m):
+                if not np.isfinite(min_range_so_far_m):
+                    return {
+                        "effective_mode_id": candidate_mode_id,
+                        "triggered": False,
+                        "reason": "head_on_min_range_so_far_unavailable",
+                    }
+                if min_range_so_far_m < head_on_min_range_so_far_m:
+                    return {
+                        "effective_mode_id": candidate_mode_id,
+                        "triggered": False,
+                        "reason": "head_on_close_range_reengagement_min_range_so_far_too_small",
+                    }
+        else:
+            head_on_min_vp_lateral_bias_m = _safe_float(
+                cfg.get("head_on_min_vp_lateral_bias_m")
+            )
+            vp_lateral_bias_m = _safe_float(overdeep_state.get("vp_lateral_bias_m"))
+            if np.isfinite(head_on_min_vp_lateral_bias_m):
+                if not np.isfinite(vp_lateral_bias_m):
+                    return {
+                        "effective_mode_id": candidate_mode_id,
+                        "triggered": False,
+                        "reason": "head_on_overdeep_vp_lateral_bias_unavailable",
+                    }
+                if vp_lateral_bias_m < head_on_min_vp_lateral_bias_m:
+                    return {
+                        "effective_mode_id": candidate_mode_id,
+                        "triggered": False,
+                        "reason": "head_on_overdeep_vp_lateral_bias_too_negative",
+                    }
+        effective_mode_id = int(
+            cfg.get("head_on_forced_mode_id", cfg.get("forced_mode_id", 0))
+        )
+    else:
         return {
             "effective_mode_id": candidate_mode_id,
             "triggered": False,
             "reason": "non_crossing_mode",
         }
 
-    effective_mode_id = forced_mode_id
     if effective_mode_id not in mode_registry:
         effective_mode_id = candidate_mode_id
     return {

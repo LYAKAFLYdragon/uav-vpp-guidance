@@ -63,6 +63,8 @@ commander:
     task_name: head_on
     crossing_mode_id: 1
     forced_mode_id: 0
+    head_on_mode_id: 0
+    head_on_forced_mode_id: 2
     pre_threat_entry_guard_enabled: true
     pre_threat_require_no_attack_zone: true
     pre_threat_min_range_m: 4500.0

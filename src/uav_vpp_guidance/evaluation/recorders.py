@@ -338,6 +338,51 @@ class EpisodeRecorder:
                     False,
                 )
             ),
+            "commander_head_on_post_merge_recovery_hold_active": bool(
+                info.get("commander_head_on_post_merge_recovery_hold_active", False)
+            ),
+            "commander_head_on_post_merge_recovery_hold_reason": info.get(
+                "commander_head_on_post_merge_recovery_hold_reason"
+            ),
+            "commander_head_on_post_merge_recovery_hold_range_m": float(
+                info.get("commander_head_on_post_merge_recovery_hold_range_m", np.nan)
+            ),
+            "commander_head_on_post_merge_recovery_hold_vp_lateral_bias_m": float(
+                info.get(
+                    "commander_head_on_post_merge_recovery_hold_vp_lateral_bias_m",
+                    np.nan,
+                )
+            ),
+            "commander_head_on_post_merge_recovery_hold_vp_lateral_to_range_ratio": float(
+                info.get(
+                    "commander_head_on_post_merge_recovery_hold_vp_lateral_to_range_ratio",
+                    np.nan,
+                )
+            ),
+            "commander_head_on_post_merge_first_recovery_entry_hold_active": bool(
+                info.get(
+                    "commander_head_on_post_merge_first_recovery_entry_hold_active",
+                    False,
+                )
+            ),
+            "commander_head_on_post_merge_first_recovery_entry_hold_reason": info.get(
+                "commander_head_on_post_merge_first_recovery_entry_hold_reason"
+            ),
+            "commander_head_on_post_merge_first_recovery_entry_hold_original_reason": info.get(
+                "commander_head_on_post_merge_first_recovery_entry_hold_original_reason"
+            ),
+            "commander_head_on_post_merge_first_recovery_entry_hold_armed_this_step": bool(
+                info.get(
+                    "commander_head_on_post_merge_first_recovery_entry_hold_armed_this_step",
+                    False,
+                )
+            ),
+            "commander_head_on_post_merge_first_recovery_entry_hold_cooldown_steps_remaining": int(
+                info.get(
+                    "commander_head_on_post_merge_first_recovery_entry_hold_cooldown_steps_remaining",
+                    0,
+                )
+            ),
             "commander_mode_switched": info.get("commander_mode_switched"),
             "commander_macro_step_index": info.get("commander_macro_step_index"),
             "commander_first_switch_step": info.get("commander_first_switch_step"),

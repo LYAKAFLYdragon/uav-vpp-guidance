@@ -61,13 +61,13 @@ class TestOracleTaskGatePolicyUnit:
         from uav_vpp_guidance.evaluation.oracle_task_gate_policy import OracleTaskGatePolicy
 
         with patch(
-            "uav_vpp_guidance.evaluation.oracle_task_gate_policy.load_experiment_config",
+            "uav_vpp_guidance.hierarchy.specialist_policy.load_experiment_config",
             return_value={},
         ), patch(
-            "torch.load",
+            "uav_vpp_guidance.hierarchy.specialist_policy.torch.load",
             return_value={"obs_dim": 16, "action_dim": 3},
         ), patch(
-            "uav_vpp_guidance.evaluation.oracle_task_gate_policy.PPOAgent",
+            "uav_vpp_guidance.hierarchy.specialist_policy.PPOAgent",
             return_value=mock_specialist,
         ):
             agent = OracleTaskGatePolicy(
@@ -93,23 +93,21 @@ class TestOracleTaskGatePolicyUnit:
             gate_with_mock.get_deterministic_action(np.zeros(16, dtype=np.float32))
 
     def test_observation_truncation_when_current_dim_larger_than_target(self, gate_with_mock):
-        """Verify that obs is truncated when current_dim > target_dim."""
+        """Verify that the frozen specialist wrapper truncates like commander does."""
         gate_with_mock.set_task_name("head_on")
         obs = np.arange(19, dtype=np.float32)
-        result = gate_with_mock.get_deterministic_action(obs)
-        # The mock specialist returns [0.1, 0.2, 0.3] regardless, but we can verify
-        # that the mock was called with the truncated array.
-        specialist = gate_with_mock._specialists["head_on"]
+        gate_with_mock.get_deterministic_action(obs)
+        specialist = gate_with_mock._specialists["head_on"]["policy"].agent
         called_obs = specialist.get_deterministic_action.call_args[0][0]
         assert called_obs.shape == (16,)
         np.testing.assert_array_equal(called_obs, obs[:16])
 
     def test_observation_padding_when_current_dim_smaller_than_target(self, gate_with_mock):
-        """Verify that obs is padded with zeros when current_dim < target_dim."""
+        """Verify that the frozen specialist wrapper pads like commander does."""
         gate_with_mock.set_task_name("head_on")
         obs = np.arange(10, dtype=np.float32)
-        result = gate_with_mock.get_deterministic_action(obs)
-        specialist = gate_with_mock._specialists["head_on"]
+        gate_with_mock.get_deterministic_action(obs)
+        specialist = gate_with_mock._specialists["head_on"]["policy"].agent
         called_obs = specialist.get_deterministic_action.call_args[0][0]
         assert called_obs.shape == (16,)
         expected = np.concatenate([obs, np.zeros(6, dtype=np.float32)])
@@ -119,8 +117,8 @@ class TestOracleTaskGatePolicyUnit:
         """Verify fallback to first available specialist when task is unknown."""
         gate_with_mock.set_task_name("unknown_task")
         obs = np.arange(16, dtype=np.float32)
-        result = gate_with_mock.get_deterministic_action(obs)
-        specialist = gate_with_mock._specialists["head_on"]
+        gate_with_mock.get_deterministic_action(obs)
+        specialist = gate_with_mock._specialists["head_on"]["policy"].agent
         assert specialist.get_deterministic_action.called
 
     def test_no_specialists_loaded_raises(self):
@@ -137,21 +135,13 @@ class TestOracleTaskGatePolicyUnit:
         # Should not raise
         gate_with_mock.load("some_path")
 
-    def test_specialist_config_uses_include_resolved_loader(self, mock_specialist):
-        """Oracle gate should resolve includes like FrozenSpecialistPolicy does."""
+    def test_specialist_policy_uses_commander_frozen_specialist_loader(self):
+        """Oracle gate should reuse the commander-side frozen specialist wrapper."""
         from uav_vpp_guidance.evaluation.oracle_task_gate_policy import OracleTaskGatePolicy
 
-        resolved_config = {"virtual_point": {"action_semantics": "tactical_basis_v1"}}
         with patch(
-            "uav_vpp_guidance.evaluation.oracle_task_gate_policy.load_experiment_config",
-            return_value=resolved_config,
-        ) as load_cfg, patch(
-            "torch.load",
-            return_value={"obs_dim": 16, "action_dim": 3},
-        ), patch(
-            "uav_vpp_guidance.evaluation.oracle_task_gate_policy.PPOAgent",
-            return_value=mock_specialist,
-        ):
+            "uav_vpp_guidance.evaluation.oracle_task_gate_policy.FrozenSpecialistPolicy"
+        ) as frozen_loader:
             OracleTaskGatePolicy(
                 specialists_config={
                     "head_on": {
@@ -162,7 +152,11 @@ class TestOracleTaskGatePolicyUnit:
                 device="cpu",
             )
 
-        load_cfg.assert_called_once_with("dummy.yaml")
+        frozen_loader.assert_called_once_with(
+            checkpoint_path="dummy.pt",
+            config_path="dummy.yaml",
+            device="cpu",
+        )
 
     def test_specialist_config_matches_resolved_real_head_on_training_config(self, mock_specialist):
         """Real included specialist YAML should expose the full merged config surface."""
@@ -186,11 +180,14 @@ class TestOracleTaskGatePolicyUnit:
             return mock_specialist
 
         with patch(
-            "torch.load",
+            "uav_vpp_guidance.hierarchy.specialist_policy.torch.load",
             return_value={"obs_dim": 16, "action_dim": 3},
         ), patch(
-            "uav_vpp_guidance.evaluation.oracle_task_gate_policy.PPOAgent",
+            "uav_vpp_guidance.hierarchy.specialist_policy.PPOAgent",
             side_effect=_capture_agent,
+        ), patch(
+            "uav_vpp_guidance.hierarchy.specialist_policy.load_experiment_config",
+            return_value=expected,
         ):
             OracleTaskGatePolicy(
                 specialists_config={
@@ -208,6 +205,27 @@ class TestOracleTaskGatePolicyUnit:
         assert actual["trajectory_prediction"]["enabled"] is True
         assert actual["observation"]["include_task_type"] is True
         assert actual["attack_zone"]["enabled"] is True
+
+    def test_set_env_applies_runtime_specialist_context(self, gate_with_mock):
+        """Oracle gate should inject the same runtime specialist context as commander."""
+        env = MagicMock()
+        gate_with_mock.set_env(env)
+        gate_with_mock.set_task_name("head_on")
+        gate_with_mock.get_deterministic_action(np.zeros(16, dtype=np.float32))
+        env.set_runtime_specialist_context.assert_called_once_with(
+            specialist_key="head_on",
+            specialist_profile=None,
+            specialist_mode_name="head_on_specialist",
+        )
+
+    def test_get_last_step_metadata_exposes_selected_specialist(self, gate_with_mock):
+        """Oracle gate should expose the selected specialist for debug parity."""
+        gate_with_mock.set_task_name("head_on")
+        gate_with_mock.get_deterministic_action(np.zeros(16, dtype=np.float32))
+        metadata = gate_with_mock.get_last_step_metadata()
+        assert metadata["oracle_task_gate_selected_task_name"] == "head_on"
+        assert metadata["oracle_task_gate_selected_specialist"] == "head_on"
+        assert metadata["oracle_task_gate_selected_specialist_mode_name"] == "head_on_specialist"
 
 
 class TestOracleTaskGateRunnerPath:

@@ -99,10 +99,13 @@ def test_recovery_formal_heldout_keeps_disjoint_formal_scope():
     assert not heldout_tuples & pilot_tuples
 
 
-def test_recovery_formal_heldout_carries_current_commander_guards():
+def test_recovery_formal_heldout_keeps_minrange_only_commander_guard():
     resolved = _load_yaml_resolved(FORMAL_HELDOUT)
 
     assert resolved["commander"]["num_modes"] == 3
+    assert resolved["commander"][
+        "head_on_post_merge_reopened_crossing_overdeep_clamp"
+    ]["head_on_min_range_so_far_m"] == 180.0
     assert resolved["commander"]["modes"][2] == {
         "id": 2,
         "name": "post_merge_recovery_specialist",
@@ -128,12 +131,35 @@ def test_recovery_formal_heldout_carries_current_commander_guards():
         "task_name": "head_on",
         "crossing_mode_id": 1,
         "forced_mode_id": 0,
+        "head_on_mode_id": 0,
+        "head_on_forced_mode_id": 2,
         "pre_threat_entry_guard_enabled": True,
         "pre_threat_require_no_attack_zone": True,
         "pre_threat_min_range_m": 4500.0,
         "pre_threat_min_range_rate_mps": 50.0,
         "pre_threat_max_vp_forward_bias_m": -2500.0,
         "pre_threat_min_abs_vp_lateral_to_range_ratio": 1.5,
+    }
+    assert resolved["commander"]["head_on_post_merge_first_recovery_entry_hold"] == {
+        "enabled": True,
+        "task_name": "head_on",
+        "head_on_mode_id": 0,
+        "recovery_mode_id": 2,
+        "hold_window_steps": 8,
+        "allowed_reasons": [
+            "close_range_reengagement_crossing",
+            "overdeep_low_lateral_reopened_head_on",
+            "pre_threat_opening_overlateral_negative_forward_head_on",
+        ],
+    }
+    assert resolved["commander"]["head_on_post_merge_recovery_hold"] == {
+        "enabled": True,
+        "task_name": "head_on",
+        "recovery_mode_id": 2,
+        "min_range_m": 4500.0,
+        "require_no_attack_zone": True,
+        "min_abs_vp_lateral_bias_m": 6000.0,
+        "min_abs_vp_lateral_to_range_ratio": 1.4,
     }
     assert resolved["virtual_point"]["post_merge_tactical_basis_recovery_profile"][
         "predicted_target_forward_scale_override"

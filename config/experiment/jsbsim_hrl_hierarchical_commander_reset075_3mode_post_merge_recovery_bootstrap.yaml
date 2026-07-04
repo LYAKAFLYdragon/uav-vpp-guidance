@@ -54,9 +54,29 @@ commander:
   head_on_post_merge_reopened_crossing_secondary_clamp:
     forced_mode_id: 2
   head_on_post_merge_reopened_crossing_overdeep_clamp:
+    head_on_mode_id: 0
+    head_on_min_range_so_far_m: 180.0
     forced_mode_id: 2
   head_on_post_merge_reopened_crossing_geometry_quality_guard:
     forced_mode_id: 2
+  head_on_post_merge_first_recovery_entry_hold:
+    enabled: true
+    task_name: head_on
+    head_on_mode_id: 0
+    recovery_mode_id: 2
+    hold_window_steps: 8
+    allowed_reasons:
+      - close_range_reengagement_crossing
+      - overdeep_low_lateral_reopened_head_on
+      - pre_threat_opening_overlateral_negative_forward_head_on
+  head_on_post_merge_recovery_hold:
+    enabled: true
+    task_name: head_on
+    recovery_mode_id: 2
+    min_range_m: 4500.0
+    require_no_attack_zone: true
+    min_abs_vp_lateral_bias_m: 6000.0
+    min_abs_vp_lateral_to_range_ratio: 1.4
 
 methods:
   commander_post_merge_recovery3:

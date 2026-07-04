@@ -582,6 +582,7 @@ class EpisodeRecorder:
             "runtime_specialist_mode_name": info.get(
                 "runtime_specialist_mode_name"
             ),
+            "runtime_specialist_reason": info.get("runtime_specialist_reason"),
             "post_merge_tactical_basis_recovery_profile_active": bool(
                 info.get("post_merge_tactical_basis_recovery_profile_active", False)
             ),
@@ -593,6 +594,12 @@ class EpisodeRecorder:
             ),
             "post_merge_tactical_basis_recovery_profile_requested": info.get(
                 "post_merge_tactical_basis_recovery_profile_requested"
+            ),
+            "post_merge_tactical_basis_recovery_profile_runtime_reason": info.get(
+                "post_merge_tactical_basis_recovery_profile_runtime_reason"
+            ),
+            "post_merge_tactical_basis_recovery_profile_override_key": info.get(
+                "post_merge_tactical_basis_recovery_profile_override_key"
             ),
             "post_merge_tactical_basis_recovery_profile_specialist_profile_match": bool(
                 info.get(
@@ -639,6 +646,144 @@ class EpisodeRecorder:
             "post_merge_tactical_basis_recovery_profile_cd_post": float(
                 info.get(
                     "post_merge_tactical_basis_recovery_profile_cd_post",
+                    np.nan,
+                )
+            ),
+            "post_merge_tactical_basis_recovery_profile_io_entry_lateral_sign_hold_enabled": bool(
+                info.get(
+                    "post_merge_tactical_basis_recovery_profile_io_entry_lateral_sign_hold_enabled",
+                    False,
+                )
+            ),
+            "post_merge_tactical_basis_recovery_profile_io_entry_lateral_sign_hold_active": bool(
+                info.get(
+                    "post_merge_tactical_basis_recovery_profile_io_entry_lateral_sign_hold_active",
+                    False,
+                )
+            ),
+            "post_merge_tactical_basis_recovery_profile_io_entry_lateral_sign_hold_applied": bool(
+                info.get(
+                    "post_merge_tactical_basis_recovery_profile_io_entry_lateral_sign_hold_applied",
+                    False,
+                )
+            ),
+            "post_merge_tactical_basis_recovery_profile_io_entry_lateral_sign": float(
+                info.get(
+                    "post_merge_tactical_basis_recovery_profile_io_entry_lateral_sign",
+                    np.nan,
+                )
+            ),
+            "post_merge_tactical_basis_recovery_profile_io_entry_lateral_sign_hold_previous_vp_lateral_bias_m": float(
+                info.get(
+                    "post_merge_tactical_basis_recovery_profile_io_entry_lateral_sign_hold_previous_vp_lateral_bias_m",
+                    np.nan,
+                )
+            ),
+            "post_merge_tactical_basis_recovery_profile_io_entry_lateral_sign_hold_release_vp_lateral_bias_m": float(
+                info.get(
+                    "post_merge_tactical_basis_recovery_profile_io_entry_lateral_sign_hold_release_vp_lateral_bias_m",
+                    np.nan,
+                )
+            ),
+            "post_merge_tactical_basis_recovery_profile_entry_window_configured_steps": int(
+                info.get(
+                    "post_merge_tactical_basis_recovery_profile_entry_window_configured_steps",
+                    0,
+                )
+            ),
+            "post_merge_tactical_basis_recovery_profile_entry_window_armed": bool(
+                info.get(
+                    "post_merge_tactical_basis_recovery_profile_entry_window_armed",
+                    False,
+                )
+            ),
+            "post_merge_tactical_basis_recovery_profile_entry_window_active": bool(
+                info.get(
+                    "post_merge_tactical_basis_recovery_profile_entry_window_active",
+                    False,
+                )
+            ),
+            "post_merge_tactical_basis_recovery_profile_entry_window_steps_remaining": int(
+                info.get(
+                    "post_merge_tactical_basis_recovery_profile_entry_window_steps_remaining",
+                    0,
+                )
+            ),
+            "post_merge_tactical_basis_recovery_profile_entry_window_previous_vp_forward_bias_m": float(
+                info.get(
+                    "post_merge_tactical_basis_recovery_profile_entry_window_previous_vp_forward_bias_m",
+                    np.nan,
+                )
+            ),
+            "post_merge_tactical_basis_recovery_profile_entry_window_previous_altitude_delta_m": float(
+                info.get(
+                    "post_merge_tactical_basis_recovery_profile_entry_window_previous_altitude_delta_m",
+                    np.nan,
+                )
+            ),
+            "post_merge_tactical_basis_recovery_profile_entry_window_io_min_abs": float(
+                info.get(
+                    "post_merge_tactical_basis_recovery_profile_entry_window_io_min_abs",
+                    np.nan,
+                )
+            ),
+            "post_merge_tactical_basis_recovery_profile_entry_window_io_min_abs_applied": bool(
+                info.get(
+                    "post_merge_tactical_basis_recovery_profile_entry_window_io_min_abs_applied",
+                    False,
+                )
+            ),
+            "post_merge_tactical_basis_recovery_profile_entry_window_ll_floor": float(
+                info.get(
+                    "post_merge_tactical_basis_recovery_profile_entry_window_ll_floor",
+                    np.nan,
+                )
+            ),
+            "post_merge_tactical_basis_recovery_profile_entry_window_ll_floor_applied": bool(
+                info.get(
+                    "post_merge_tactical_basis_recovery_profile_entry_window_ll_floor_applied",
+                    False,
+                )
+            ),
+            "post_merge_tactical_basis_recovery_profile_entry_window_ll_overdeep_vp_forward_bias_m_max": float(
+                info.get(
+                    "post_merge_tactical_basis_recovery_profile_entry_window_ll_overdeep_vp_forward_bias_m_max",
+                    np.nan,
+                )
+            ),
+            "post_merge_tactical_basis_recovery_profile_entry_window_cd_min": float(
+                info.get(
+                    "post_merge_tactical_basis_recovery_profile_entry_window_cd_min",
+                    np.nan,
+                )
+            ),
+            "post_merge_tactical_basis_recovery_profile_entry_window_cd_min_applied": bool(
+                info.get(
+                    "post_merge_tactical_basis_recovery_profile_entry_window_cd_min_applied",
+                    False,
+                )
+            ),
+            "post_merge_tactical_basis_recovery_profile_entry_window_cd_descending_altitude_delta_m_min_abs": float(
+                info.get(
+                    "post_merge_tactical_basis_recovery_profile_entry_window_cd_descending_altitude_delta_m_min_abs",
+                    np.nan,
+                )
+            ),
+            "post_merge_tactical_basis_recovery_profile_entry_window_predicted_target_forward_scale_override": float(
+                info.get(
+                    "post_merge_tactical_basis_recovery_profile_entry_window_predicted_target_forward_scale_override",
+                    np.nan,
+                )
+            ),
+            "post_merge_tactical_basis_recovery_profile_entry_window_predicted_target_forward_scale_override_applied": bool(
+                info.get(
+                    "post_merge_tactical_basis_recovery_profile_entry_window_predicted_target_forward_scale_override_applied",
+                    False,
+                )
+            ),
+            "post_merge_tactical_basis_recovery_profile_entry_window_predicted_target_forward_scale_entry_window_overdeep_vp_forward_bias_m_max": float(
+                info.get(
+                    "post_merge_tactical_basis_recovery_profile_entry_window_predicted_target_forward_scale_entry_window_overdeep_vp_forward_bias_m_max",
                     np.nan,
                 )
             ),

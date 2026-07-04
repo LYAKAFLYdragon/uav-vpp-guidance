@@ -23,11 +23,34 @@ virtual_point:
     tactical_basis_action_ll_max: 0.35
     tactical_basis_action_io_scale: 0.55
     tactical_basis_action_io_abs_max: 0.60
+    tactical_basis_action_io_entry_lateral_sign_hold_enabled: true
+    tactical_basis_action_io_entry_lateral_sign_hold_release_vp_lateral_bias_m: 250.0
     tactical_basis_action_cd_scale: 0.50
     tactical_basis_action_cd_bias: 0.20
     tactical_basis_action_cd_min: 0.0
     tactical_basis_action_cd_max: 0.75
+    entry_window_steps: 8
+    tactical_basis_action_io_entry_window_min_abs: 0.18
+    tactical_basis_action_ll_entry_window_overdeep_vp_forward_bias_m_max: -1800.0
+    tactical_basis_action_ll_entry_window_floor: -0.05
+    tactical_basis_action_cd_entry_window_descending_altitude_delta_m_min_abs: 15.0
+    tactical_basis_action_cd_entry_window_min: 0.30
+    predicted_target_forward_scale_entry_window_override: 0.0
+    predicted_target_forward_scale_entry_window_overdeep_vp_forward_bias_m_max: 2000.0
     predicted_target_forward_scale_override: 0.25
+    reason_overrides:
+      close_range_reengagement_crossing:
+        conditions:
+          max_aa_deg: 129.0
+          max_previous_vp_forward_bias_m: 0.0
+          any:
+            - min_abs_previous_vp_lateral_bias_m: 145.0
+            - max_range_rate_mps: 275.0
+        overrides:
+          tactical_basis_action_io_entry_lateral_sign_hold_enabled: false
+          tactical_basis_action_io_entry_window_min_abs: 0.0
+          tactical_basis_action_cd_scale: 0.0
+          tactical_basis_action_cd_bias: 0.0
 
 commander:
   num_modes: 3
@@ -56,7 +79,11 @@ commander:
   head_on_post_merge_reopened_crossing_overdeep_clamp:
     head_on_mode_id: 0
     head_on_min_range_so_far_m: 180.0
+    head_on_min_vp_lateral_bias_m: -1000.0
     forced_mode_id: 2
+  head_on_post_merge_reopened_crossing_target_threat_clamp:
+    head_on_min_vp_lateral_bias_m: -7900.0
+    head_on_max_vp_forward_bias_m: 2000.0
   head_on_post_merge_reopened_crossing_geometry_quality_guard:
     forced_mode_id: 2
   head_on_post_merge_first_recovery_entry_hold:
@@ -65,6 +92,10 @@ commander:
     head_on_mode_id: 0
     recovery_mode_id: 2
     hold_window_steps: 8
+    hold_window_steps_by_reason:
+      close_range_reengagement_crossing: 0
+      overdeep_low_lateral_reopened_head_on: 0
+      pre_threat_opening_overlateral_negative_forward_head_on: 0
     allowed_reasons:
       - close_range_reengagement_crossing
       - overdeep_low_lateral_reopened_head_on

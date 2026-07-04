@@ -84,6 +84,129 @@ def _normalize_runtime_specialist_profile_names(value) -> Set[str]:
     return {str(value)}
 
 
+def _resolve_post_merge_tactical_basis_recovery_profile_effective_cfg(
+    cfg: dict,
+    *,
+    runtime_specialist_reason: Optional[str],
+    aa_deg: float = float("nan"),
+    range_rate_mps: float = float("nan"),
+    previous_vp_forward_bias_m: float = float("nan"),
+    previous_vp_lateral_bias_m: float = float("nan"),
+) -> Tuple[dict, Dict[str, Optional[str]]]:
+    def _is_finite_float(value) -> bool:
+        try:
+            return np.isfinite(float(value))
+        except (TypeError, ValueError):
+            return False
+
+    def _conditions_match(conditions: dict) -> bool:
+        if not isinstance(conditions, dict) or not conditions:
+            return True
+
+        def _match_single(single: dict) -> bool:
+            if not isinstance(single, dict):
+                return False
+            for key, expected in single.items():
+                if key == "any":
+                    if not isinstance(expected, (list, tuple)) or not any(
+                        _match_single(item) for item in expected
+                    ):
+                        return False
+                    continue
+                if key == "all":
+                    if not isinstance(expected, (list, tuple)) or not all(
+                        _match_single(item) for item in expected
+                    ):
+                        return False
+                    continue
+                if expected is None:
+                    continue
+                threshold = float(expected)
+                if key == "max_aa_deg":
+                    if not _is_finite_float(aa_deg) or float(aa_deg) > threshold:
+                        return False
+                    continue
+                if key == "min_aa_deg":
+                    if not _is_finite_float(aa_deg) or float(aa_deg) < threshold:
+                        return False
+                    continue
+                if key == "max_range_rate_mps":
+                    if (
+                        not _is_finite_float(range_rate_mps)
+                        or float(range_rate_mps) > threshold
+                    ):
+                        return False
+                    continue
+                if key == "min_range_rate_mps":
+                    if (
+                        not _is_finite_float(range_rate_mps)
+                        or float(range_rate_mps) < threshold
+                    ):
+                        return False
+                    continue
+                if key == "max_previous_vp_forward_bias_m":
+                    if (
+                        not _is_finite_float(previous_vp_forward_bias_m)
+                        or float(previous_vp_forward_bias_m) > threshold
+                    ):
+                        return False
+                    continue
+                if key == "min_previous_vp_forward_bias_m":
+                    if (
+                        not _is_finite_float(previous_vp_forward_bias_m)
+                        or float(previous_vp_forward_bias_m) < threshold
+                    ):
+                        return False
+                    continue
+                if key == "max_abs_previous_vp_lateral_bias_m":
+                    if (
+                        not _is_finite_float(previous_vp_lateral_bias_m)
+                        or abs(float(previous_vp_lateral_bias_m)) > threshold
+                    ):
+                        return False
+                    continue
+                if key == "min_abs_previous_vp_lateral_bias_m":
+                    if (
+                        not _is_finite_float(previous_vp_lateral_bias_m)
+                        or abs(float(previous_vp_lateral_bias_m)) < threshold
+                    ):
+                        return False
+                    continue
+                return False
+            return True
+
+        return _match_single(conditions)
+
+    effective_cfg = dict(cfg)
+    normalized_reason = (
+        None
+        if runtime_specialist_reason in (None, "")
+        else str(runtime_specialist_reason)
+    )
+    override_key = None
+    reason_overrides = cfg.get("reason_overrides", {}) or {}
+    if normalized_reason is not None and isinstance(reason_overrides, dict):
+        raw_override = reason_overrides.get(normalized_reason)
+        override_values = None
+        override_conditions = None
+        if isinstance(raw_override, dict):
+            override_conditions = raw_override.get("conditions")
+            nested_override_values = raw_override.get("overrides")
+            if isinstance(nested_override_values, dict):
+                override_values = nested_override_values
+            else:
+                override_values = raw_override
+        if isinstance(override_values, dict) and _conditions_match(
+            override_conditions
+        ):
+            effective_cfg.update(override_values)
+            override_key = normalized_reason
+    return effective_cfg, {
+        "runtime_reason": normalized_reason,
+        "override_key": override_key,
+    }
+
+
 def _shape_tactical_basis_action_with_post_merge_recovery_profile(
     action: np.ndarray,
     cfg: dict,
@@ -189,6 +312,153 @@ def _apply_post_merge_tactical_basis_recovery_profile_io_entry_lateral_sign_hold
     }
 
 
+def _compute_post_merge_tactical_basis_recovery_profile_entry_window_state(
+    cfg: dict,
+    *,
+    was_active: bool,
+    is_active: bool,
+    previous_steps_remaining: int,
+) -> Dict[str, float]:
+    configured_steps = max(int(cfg.get("entry_window_steps", 0) or 0), 0)
+    armed = bool(is_active and not was_active and configured_steps > 0)
+    steps_remaining = 0
+    next_steps_remaining = 0
+    active = False
+    if is_active and configured_steps > 0:
+        if armed:
+            steps_remaining = configured_steps
+        elif previous_steps_remaining > 0:
+            steps_remaining = int(previous_steps_remaining)
+        if steps_remaining > 0:
+            active = True
+            next_steps_remaining = max(int(steps_remaining) - 1, 0)
+    return {
+        "entry_window_configured_steps": configured_steps,
+        "entry_window_armed": armed,
+        "entry_window_active": active,
+        "entry_window_steps_remaining": int(steps_remaining),
+        "entry_window_next_steps_remaining": int(next_steps_remaining),
+    }
+
+
+def _apply_post_merge_tactical_basis_recovery_profile_entry_window(
+    action: np.ndarray,
+    cfg: dict,
+    *,
+    active: bool,
+    steps_remaining: int,
+    entry_lateral_sign: float,
+    previous_vp_forward_bias_m: float,
+    previous_altitude_delta_m: float,
+) -> Tuple[np.ndarray, Dict[str, float]]:
+    windowed_action = np.asarray(action, dtype=np.float64).copy()
+    normalized_entry_lateral_sign = float(np.sign(entry_lateral_sign))
+    io_min_abs = cfg.get("tactical_basis_action_io_entry_window_min_abs")
+    ll_floor = cfg.get("tactical_basis_action_ll_entry_window_floor")
+    ll_forward_bias_m_max = cfg.get(
+        "tactical_basis_action_ll_entry_window_overdeep_vp_forward_bias_m_max"
+    )
+    cd_min = cfg.get("tactical_basis_action_cd_entry_window_min")
+    cd_descending_altitude_delta_m_min_abs = cfg.get(
+        "tactical_basis_action_cd_entry_window_descending_altitude_delta_m_min_abs"
+    )
+    forward_scale_override = cfg.get(
+        "predicted_target_forward_scale_entry_window_override"
+    )
+    forward_scale_override_forward_bias_m_max = cfg.get(
+        "predicted_target_forward_scale_entry_window_overdeep_vp_forward_bias_m_max"
+    )
+    io_min_abs_applied = False
+    ll_floor_applied = False
+    cd_min_applied = False
+    forward_scale_override_applied = False
+    if active and steps_remaining > 0:
+        if (
+            windowed_action.shape[0] >= 2
+            and io_min_abs is not None
+            and normalized_entry_lateral_sign != 0.0
+            and float(io_min_abs) > 0.0
+        ):
+            desired_abs = max(abs(float(windowed_action[1])), abs(float(io_min_abs)))
+            desired_io = desired_abs * normalized_entry_lateral_sign
+            if not np.isclose(float(windowed_action[1]), desired_io):
+                windowed_action[1] = desired_io
+                io_min_abs_applied = True
+        if (
+            windowed_action.shape[0] >= 1
+            and ll_floor is not None
+            and ll_forward_bias_m_max is not None
+            and np.isfinite(previous_vp_forward_bias_m)
+            and previous_vp_forward_bias_m <= float(ll_forward_bias_m_max)
+        ):
+            clamped_ll = max(float(windowed_action[0]), float(ll_floor))
+            if not np.isclose(float(windowed_action[0]), clamped_ll):
+                windowed_action[0] = clamped_ll
+                ll_floor_applied = True
+        if (
+            windowed_action.shape[0] >= 3
+            and cd_min is not None
+            and cd_descending_altitude_delta_m_min_abs is not None
+            and np.isfinite(previous_altitude_delta_m)
+            and previous_altitude_delta_m
+            <= -abs(float(cd_descending_altitude_delta_m_min_abs))
+        ):
+            clamped_cd = max(float(windowed_action[2]), float(cd_min))
+            if not np.isclose(float(windowed_action[2]), clamped_cd):
+                windowed_action[2] = clamped_cd
+                cd_min_applied = True
+        if forward_scale_override is not None and (
+            forward_scale_override_forward_bias_m_max is None
+            or (
+                np.isfinite(previous_vp_forward_bias_m)
+                and previous_vp_forward_bias_m
+                <= float(forward_scale_override_forward_bias_m_max)
+            )
+        ):
+            forward_scale_override_applied = True
+    if windowed_action.shape[0] >= 3:
+        windowed_action[:3] = np.clip(windowed_action[:3], -1.0, 1.0)
+    return windowed_action, {
+        "entry_window_previous_vp_forward_bias_m": float(previous_vp_forward_bias_m),
+        "entry_window_previous_altitude_delta_m": float(previous_altitude_delta_m),
+        "entry_window_io_min_abs": (
+            float(io_min_abs) if io_min_abs is not None else float("nan")
+        ),
+        "entry_window_io_min_abs_applied": io_min_abs_applied,
+        "entry_window_ll_floor": (
+            float(ll_floor) if ll_floor is not None else float("nan")
+        ),
+        "entry_window_ll_floor_applied": ll_floor_applied,
+        "entry_window_ll_overdeep_vp_forward_bias_m_max": (
+            float(ll_forward_bias_m_max)
+            if ll_forward_bias_m_max is not None
+            else float("nan")
+        ),
+        "entry_window_cd_min": (
+            float(cd_min) if cd_min is not None else float("nan")
+        ),
+        "entry_window_cd_min_applied": cd_min_applied,
+        "entry_window_cd_descending_altitude_delta_m_min_abs": (
+            float(cd_descending_altitude_delta_m_min_abs)
+            if cd_descending_altitude_delta_m_min_abs is not None
+            else float("nan")
+        ),
+        "entry_window_predicted_target_forward_scale_override": (
+            float(forward_scale_override)
+            if forward_scale_override is not None
+            else float("nan")
+        ),
+        "entry_window_predicted_target_forward_scale_override_applied": (
+            forward_scale_override_applied
+        ),
+        "entry_window_predicted_target_forward_scale_entry_window_overdeep_vp_forward_bias_m_max": (
+            float(forward_scale_override_forward_bias_m_max)
+            if forward_scale_override_forward_bias_m_max is not None
+            else float("nan")
+        ),
+    }
+
+
 class CloseRangeTrackingEnv:
     """
     High-level close-range tracking environment.
@@ -230,6 +500,7 @@ class CloseRangeTrackingEnv:
         self._runtime_specialist_key: Optional[str] = None
         self._runtime_specialist_profile: Optional[str] = None
         self._runtime_specialist_mode_name: Optional[str] = None
+        self._runtime_specialist_reason: Optional[str] = None
         self.sim_freq = self.env_config.get("sim_freq", 60)
         self.decision_freq = self.env_config.get("decision_freq", 5)
         self.max_steps = self.env_config.get("max_high_level_steps", 512)
@@ -345,7 +616,14 @@ class CloseRangeTrackingEnv:
         self._post_merge_predicted_target_forward_scale_ego_only_streak_steps = 0
         self._post_merge_tactical_basis_recovery_profile_was_active = False
         self._post_merge_tactical_basis_recovery_profile_entry_lateral_sign = 0.0
+        self._post_merge_tactical_basis_recovery_profile_entry_window_steps_remaining = 0
         self._post_merge_tactical_basis_recovery_profile_previous_vp_lateral_bias_m = (
+            float("nan")
+        )
+        self._post_merge_tactical_basis_recovery_profile_previous_vp_forward_bias_m = (
+            float("nan")
+        )
+        self._post_merge_tactical_basis_recovery_profile_previous_altitude_m = (
             float("nan")
         )
 
@@ -2476,7 +2754,14 @@ class CloseRangeTrackingEnv:
         self._post_merge_predicted_target_forward_scale_ego_only_streak_steps = 0
         self._post_merge_tactical_basis_recovery_profile_was_active = False
         self._post_merge_tactical_basis_recovery_profile_entry_lateral_sign = 0.0
+        self._post_merge_tactical_basis_recovery_profile_entry_window_steps_remaining = 0
         self._post_merge_tactical_basis_recovery_profile_previous_vp_lateral_bias_m = (
+            float("nan")
+        )
+        self._post_merge_tactical_basis_recovery_profile_previous_vp_forward_bias_m = (
+            float("nan")
+        )
+        self._post_merge_tactical_basis_recovery_profile_previous_altitude_m = (
             float("nan")
         )
         self.clear_runtime_specialist_context()
@@ -2500,6 +2785,7 @@ class CloseRangeTrackingEnv:
         specialist_key=None,
         specialist_profile=None,
         specialist_mode_name=None,
+        specialist_reason=None,
     ) -> None:
         self._runtime_specialist_key = (
             None if specialist_key in (None, "") else str(specialist_key)
@@ -2510,11 +2796,15 @@ class CloseRangeTrackingEnv:
         self._runtime_specialist_mode_name = (
             None if specialist_mode_name in (None, "") else str(specialist_mode_name)
         )
+        self._runtime_specialist_reason = (
+            None if specialist_reason in (None, "") else str(specialist_reason)
+        )
 
     def clear_runtime_specialist_context(self) -> None:
         self._runtime_specialist_key = None
         self._runtime_specialist_profile = None
         self._runtime_specialist_mode_name = None
+        self._runtime_specialist_reason = None
 
     def set_domain_rand_scale(self, scale: float):
         """Set the current domain randomization scale (0.0 = off)."""
@@ -3977,6 +4267,26 @@ class CloseRangeTrackingEnv:
             "io_entry_lateral_sign": float("nan"),
             "io_entry_lateral_sign_hold_previous_vp_lateral_bias_m": float("nan"),
             "io_entry_lateral_sign_hold_release_vp_lateral_bias_m": float("nan"),
+            "entry_window_configured_steps": 0,
+            "entry_window_armed": False,
+            "entry_window_active": False,
+            "entry_window_steps_remaining": 0,
+            "entry_window_next_steps_remaining": 0,
+            "entry_window_previous_vp_forward_bias_m": float("nan"),
+            "entry_window_previous_altitude_delta_m": float("nan"),
+            "entry_window_io_min_abs": float("nan"),
+            "entry_window_io_min_abs_applied": False,
+            "entry_window_ll_floor": float("nan"),
+            "entry_window_ll_floor_applied": False,
+            "entry_window_ll_overdeep_vp_forward_bias_m_max": float("nan"),
+            "entry_window_cd_min": float("nan"),
+            "entry_window_cd_min_applied": False,
+            "entry_window_cd_descending_altitude_delta_m_min_abs": float("nan"),
+            "entry_window_predicted_target_forward_scale_override": float("nan"),
+            "entry_window_predicted_target_forward_scale_override_applied": False,
+            "entry_window_predicted_target_forward_scale_entry_window_overdeep_vp_forward_bias_m_max": float(
+                "nan"
+            ),
             "action": np.asarray(action, dtype=np.float64).copy(),
             "shaped_action": np.asarray(action, dtype=np.float64).copy(),
         }
@@ -4368,8 +4678,21 @@ class CloseRangeTrackingEnv:
         )
         if not self._post_merge_tactical_basis_recovery_profile_was_active:
             self._post_merge_tactical_basis_recovery_profile_entry_lateral_sign = 0.0
+            self._post_merge_tactical_basis_recovery_profile_entry_window_steps_remaining = 0
+        else:
+            self._post_merge_tactical_basis_recovery_profile_entry_window_steps_remaining = int(
+                post_merge_tactical_basis_recovery_profile_state.get(
+                    "entry_window_next_steps_remaining", 0
+                )
+            )
         self._post_merge_tactical_basis_recovery_profile_previous_vp_lateral_bias_m = (
             float(vpp_geometry_info["vp_lateral_bias_m"])
+        )
+        self._post_merge_tactical_basis_recovery_profile_previous_vp_forward_bias_m = (
+            float(vpp_geometry_info["vp_forward_bias_m"])
+        )
+        self._post_merge_tactical_basis_recovery_profile_previous_altitude_m = float(
+            own_state.get("altitude_m", np.nan)
         )
         merge_info = self._update_merge_diagnostics(rel_state_post)
         attack_zone_info = self._build_attack_zone_diagnostics(term_info)
@@ -4536,6 +4859,7 @@ class CloseRangeTrackingEnv:
             "runtime_specialist_key": self._runtime_specialist_key,
             "runtime_specialist_profile": self._runtime_specialist_profile,
             "runtime_specialist_mode_name": self._runtime_specialist_mode_name,
+            "runtime_specialist_reason": self._runtime_specialist_reason,
             "post_merge_tactical_basis_recovery_profile_active": bool(
                 post_merge_tactical_basis_recovery_profile_state.get("active", False)
             ),
@@ -4549,6 +4873,14 @@ class CloseRangeTrackingEnv:
                 post_merge_tactical_basis_recovery_profile_state.get(
                     "requested_profile"
                 )
+            ),
+            "post_merge_tactical_basis_recovery_profile_runtime_reason": (
+                post_merge_tactical_basis_recovery_profile_state.get(
+                    "runtime_reason"
+                )
+            ),
+            "post_merge_tactical_basis_recovery_profile_override_key": (
+                post_merge_tactical_basis_recovery_profile_state.get("override_key")
             ),
             "post_merge_tactical_basis_recovery_profile_specialist_profile_match": bool(
                 post_merge_tactical_basis_recovery_profile_state.get(
@@ -4619,6 +4951,98 @@ class CloseRangeTrackingEnv:
             "post_merge_tactical_basis_recovery_profile_io_entry_lateral_sign_hold_release_vp_lateral_bias_m": float(
                 post_merge_tactical_basis_recovery_profile_state.get(
                     "io_entry_lateral_sign_hold_release_vp_lateral_bias_m",
+                    np.nan,
+                )
+            ),
+            "post_merge_tactical_basis_recovery_profile_entry_window_configured_steps": int(
+                post_merge_tactical_basis_recovery_profile_state.get(
+                    "entry_window_configured_steps", 0
+                )
+            ),
+            "post_merge_tactical_basis_recovery_profile_entry_window_armed": bool(
+                post_merge_tactical_basis_recovery_profile_state.get(
+                    "entry_window_armed", False
+                )
+            ),
+            "post_merge_tactical_basis_recovery_profile_entry_window_active": bool(
+                post_merge_tactical_basis_recovery_profile_state.get(
+                    "entry_window_active", False
+                )
+            ),
+            "post_merge_tactical_basis_recovery_profile_entry_window_steps_remaining": int(
+                post_merge_tactical_basis_recovery_profile_state.get(
+                    "entry_window_steps_remaining", 0
+                )
+            ),
+            "post_merge_tactical_basis_recovery_profile_entry_window_previous_vp_forward_bias_m": float(
+                post_merge_tactical_basis_recovery_profile_state.get(
+                    "entry_window_previous_vp_forward_bias_m",
+                    np.nan,
+                )
+            ),
+            "post_merge_tactical_basis_recovery_profile_entry_window_previous_altitude_delta_m": float(
+                post_merge_tactical_basis_recovery_profile_state.get(
+                    "entry_window_previous_altitude_delta_m",
+                    np.nan,
+                )
+            ),
+            "post_merge_tactical_basis_recovery_profile_entry_window_io_min_abs": float(
+                post_merge_tactical_basis_recovery_profile_state.get(
+                    "entry_window_io_min_abs", np.nan
+                )
+            ),
+            "post_merge_tactical_basis_recovery_profile_entry_window_io_min_abs_applied": bool(
+                post_merge_tactical_basis_recovery_profile_state.get(
+                    "entry_window_io_min_abs_applied", False
+                )
+            ),
+            "post_merge_tactical_basis_recovery_profile_entry_window_ll_floor": float(
+                post_merge_tactical_basis_recovery_profile_state.get(
+                    "entry_window_ll_floor", np.nan
+                )
+            ),
+            "post_merge_tactical_basis_recovery_profile_entry_window_ll_floor_applied": bool(
+                post_merge_tactical_basis_recovery_profile_state.get(
+                    "entry_window_ll_floor_applied", False
+                )
+            ),
+            "post_merge_tactical_basis_recovery_profile_entry_window_ll_overdeep_vp_forward_bias_m_max": float(
+                post_merge_tactical_basis_recovery_profile_state.get(
+                    "entry_window_ll_overdeep_vp_forward_bias_m_max",
+                    np.nan,
+                )
+            ),
+            "post_merge_tactical_basis_recovery_profile_entry_window_cd_min": float(
+                post_merge_tactical_basis_recovery_profile_state.get(
+                    "entry_window_cd_min", np.nan
+                )
+            ),
+            "post_merge_tactical_basis_recovery_profile_entry_window_cd_min_applied": bool(
+                post_merge_tactical_basis_recovery_profile_state.get(
+                    "entry_window_cd_min_applied", False
+                )
+            ),
+            "post_merge_tactical_basis_recovery_profile_entry_window_cd_descending_altitude_delta_m_min_abs": float(
+                post_merge_tactical_basis_recovery_profile_state.get(
+                    "entry_window_cd_descending_altitude_delta_m_min_abs",
+                    np.nan,
+                )
+            ),
+            "post_merge_tactical_basis_recovery_profile_entry_window_predicted_target_forward_scale_override": float(
+                post_merge_tactical_basis_recovery_profile_state.get(
+                    "entry_window_predicted_target_forward_scale_override",
+                    np.nan,
+                )
+            ),
+            "post_merge_tactical_basis_recovery_profile_entry_window_predicted_target_forward_scale_override_applied": bool(
+                post_merge_tactical_basis_recovery_profile_state.get(
+                    "entry_window_predicted_target_forward_scale_override_applied",
+                    False,
+                )
+            ),
+            "post_merge_tactical_basis_recovery_profile_entry_window_predicted_target_forward_scale_entry_window_overdeep_vp_forward_bias_m_max": float(
+                post_merge_tactical_basis_recovery_profile_state.get(
+                    "entry_window_predicted_target_forward_scale_entry_window_overdeep_vp_forward_bias_m_max",
                     np.nan,
                 )
             ),
@@ -5446,6 +5870,8 @@ class CloseRangeTrackingEnv:
             "reason": "disabled" if not enabled else "inactive",
             "source": None,
             "requested_profile": current_profile,
+            "runtime_reason": self._runtime_specialist_reason,
+            "override_key": None,
             "specialist_profile_match": bool(active_via_specialist_profile),
             "blend_release_recovery_active": bool(
                 post_merge_offensive_anchor_blend_release_recovery_active
@@ -5463,6 +5889,26 @@ class CloseRangeTrackingEnv:
             "io_entry_lateral_sign": float("nan"),
             "io_entry_lateral_sign_hold_previous_vp_lateral_bias_m": float("nan"),
             "io_entry_lateral_sign_hold_release_vp_lateral_bias_m": float("nan"),
+            "entry_window_configured_steps": 0,
+            "entry_window_armed": False,
+            "entry_window_active": False,
+            "entry_window_steps_remaining": 0,
+            "entry_window_next_steps_remaining": 0,
+            "entry_window_previous_vp_forward_bias_m": float("nan"),
+            "entry_window_previous_altitude_delta_m": float("nan"),
+            "entry_window_io_min_abs": float("nan"),
+            "entry_window_io_min_abs_applied": False,
+            "entry_window_ll_floor": float("nan"),
+            "entry_window_ll_floor_applied": False,
+            "entry_window_ll_overdeep_vp_forward_bias_m_max": float("nan"),
+            "entry_window_cd_min": float("nan"),
+            "entry_window_cd_min_applied": False,
+            "entry_window_cd_descending_altitude_delta_m_min_abs": float("nan"),
+            "entry_window_predicted_target_forward_scale_override": float("nan"),
+            "entry_window_predicted_target_forward_scale_override_applied": False,
+            "entry_window_predicted_target_forward_scale_entry_window_overdeep_vp_forward_bias_m_max": float(
+                "nan"
+            ),
             "action": np.asarray(action, dtype=np.float64).copy(),
             "shaped_action": np.asarray(action, dtype=np.float64).copy(),
         }
@@ -5520,9 +5966,27 @@ class CloseRangeTrackingEnv:
             state["reason"] = "inactive_source"
             return state
 
+        effective_cfg, recovery_profile_override_diag = (
+            _resolve_post_merge_tactical_basis_recovery_profile_effective_cfg(
+                cfg,
+                runtime_specialist_reason=self._runtime_specialist_reason,
+                aa_deg=post_merge_offensive_anchor_gate.get("aa_deg", np.nan),
+                range_rate_mps=post_merge_offensive_anchor_gate.get(
+                    "range_rate_mps", np.nan
+                ),
+                previous_vp_forward_bias_m=(
+                    self._post_merge_tactical_basis_recovery_profile_previous_vp_forward_bias_m
+                ),
+                previous_vp_lateral_bias_m=(
+                    self._post_merge_tactical_basis_recovery_profile_previous_vp_lateral_bias_m
+                ),
+            )
+        )
+        state.update(recovery_profile_override_diag)
+
         shaped_action, action_diag = _shape_tactical_basis_action_with_post_merge_recovery_profile(
             action,
-            cfg,
+            effective_cfg,
         )
         if not self._post_merge_tactical_basis_recovery_profile_was_active:
             previous_vp_lateral_bias_m = (
@@ -5541,7 +6005,7 @@ class CloseRangeTrackingEnv:
             io_sign_hold_diag,
         ) = _apply_post_merge_tactical_basis_recovery_profile_io_entry_lateral_sign_hold(
             shaped_action,
-            cfg,
+            effective_cfg,
             previous_vp_lateral_bias_m=(
                 self._post_merge_tactical_basis_recovery_profile_previous_vp_lateral_bias_m
             ),
@@ -5549,15 +6013,65 @@ class CloseRangeTrackingEnv:
                 self._post_merge_tactical_basis_recovery_profile_entry_lateral_sign
             ),
         )
+        previous_altitude_delta_m = float("nan")
+        if (
+            np.isfinite(self._post_merge_tactical_basis_recovery_profile_previous_altitude_m)
+            and np.isfinite(own_altitude_m)
+        ):
+            previous_altitude_delta_m = float(
+                own_altitude_m
+                - self._post_merge_tactical_basis_recovery_profile_previous_altitude_m
+            )
+        entry_window_state = (
+            _compute_post_merge_tactical_basis_recovery_profile_entry_window_state(
+                effective_cfg,
+                was_active=self._post_merge_tactical_basis_recovery_profile_was_active,
+                is_active=True,
+                previous_steps_remaining=(
+                    self._post_merge_tactical_basis_recovery_profile_entry_window_steps_remaining
+                ),
+            )
+        )
+        shaped_action, entry_window_diag = (
+            _apply_post_merge_tactical_basis_recovery_profile_entry_window(
+                shaped_action,
+                effective_cfg,
+                active=bool(entry_window_state["entry_window_active"]),
+                steps_remaining=int(entry_window_state["entry_window_steps_remaining"]),
+                entry_lateral_sign=(
+                    self._post_merge_tactical_basis_recovery_profile_entry_lateral_sign
+                ),
+                previous_vp_forward_bias_m=(
+                    self._post_merge_tactical_basis_recovery_profile_previous_vp_forward_bias_m
+                ),
+                previous_altitude_delta_m=previous_altitude_delta_m,
+            )
+        )
+        action_diag["ll_post"] = float(shaped_action[0])
         action_diag["io_post"] = float(shaped_action[1])
+        action_diag["cd_post"] = float(shaped_action[2])
         state.update(action_diag)
         state.update(io_sign_hold_diag)
+        state.update(entry_window_state)
+        state.update(entry_window_diag)
         state["active"] = True
         state["reason"] = "active"
         state["shaped_action"] = shaped_action
-        predicted_target_forward_scale_override = cfg.get(
-            "predicted_target_forward_scale_override"
+        predicted_target_forward_scale_override = effective_cfg.get(
+            "predicted_target_forward_scale_override",
+            cfg.get("predicted_target_forward_scale_override"),
         )
+        if bool(
+            entry_window_diag.get(
+                "entry_window_predicted_target_forward_scale_override_applied",
+                False,
+            )
+        ):
+            predicted_target_forward_scale_override = float(
+                entry_window_diag[
+                    "entry_window_predicted_target_forward_scale_override"
+                ]
+            )
         if predicted_target_forward_scale_override is not None:
             state["predicted_target_forward_scale_override"] = float(
                 predicted_target_forward_scale_override

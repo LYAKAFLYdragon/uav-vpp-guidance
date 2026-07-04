@@ -709,9 +709,184 @@ def test_episode_recorder_persists_commander_telemetry():
         ]
         == 6
     )
+    assert point["runtime_specialist_reason"] is None
     assert point["commander_mode_switched"] is True
     assert point["commander_macro_step_index"] == 3
     assert point["commander_first_switch_step"] == 12
+
+
+def test_episode_recorder_persists_recovery_entry_window_telemetry():
+    recorder = EpisodeRecorder(
+        run_id="r3",
+        task="head_on",
+        controller="commander_post_merge_recovery3",
+        seed=2,
+        episode=1,
+        config={},
+        config_sha256="abc",
+        git_commit="def",
+        backend="jsbsim",
+        strict_backend=True,
+    )
+    own = np.array([0.0, 0.0, 5000.0])
+    tgt = np.array([1000.0, 0.0, 5000.0])
+    info = _make_info(own, tgt)
+    info.update(
+        {
+            "post_merge_tactical_basis_recovery_profile_active": True,
+            "post_merge_tactical_basis_recovery_profile_reason": "active",
+            "post_merge_tactical_basis_recovery_profile_source": "blend_release_recovery",
+            "runtime_specialist_reason": "close_range_reengagement_crossing",
+            "post_merge_tactical_basis_recovery_profile_runtime_reason": (
+                "close_range_reengagement_crossing"
+            ),
+            "post_merge_tactical_basis_recovery_profile_override_key": (
+                "close_range_reengagement_crossing"
+            ),
+            "post_merge_tactical_basis_recovery_profile_io_entry_lateral_sign_hold_enabled": True,
+            "post_merge_tactical_basis_recovery_profile_io_entry_lateral_sign_hold_active": True,
+            "post_merge_tactical_basis_recovery_profile_io_entry_lateral_sign_hold_applied": False,
+            "post_merge_tactical_basis_recovery_profile_io_entry_lateral_sign": -1.0,
+            "post_merge_tactical_basis_recovery_profile_io_entry_lateral_sign_hold_previous_vp_lateral_bias_m": -320.0,
+            "post_merge_tactical_basis_recovery_profile_io_entry_lateral_sign_hold_release_vp_lateral_bias_m": 250.0,
+            "post_merge_tactical_basis_recovery_profile_entry_window_configured_steps": 8,
+            "post_merge_tactical_basis_recovery_profile_entry_window_armed": True,
+            "post_merge_tactical_basis_recovery_profile_entry_window_active": True,
+            "post_merge_tactical_basis_recovery_profile_entry_window_steps_remaining": 8,
+            "post_merge_tactical_basis_recovery_profile_entry_window_previous_vp_forward_bias_m": -2400.0,
+            "post_merge_tactical_basis_recovery_profile_entry_window_previous_altitude_delta_m": -22.0,
+            "post_merge_tactical_basis_recovery_profile_entry_window_io_min_abs": 0.18,
+            "post_merge_tactical_basis_recovery_profile_entry_window_io_min_abs_applied": True,
+            "post_merge_tactical_basis_recovery_profile_entry_window_ll_floor": -0.05,
+            "post_merge_tactical_basis_recovery_profile_entry_window_ll_floor_applied": True,
+            "post_merge_tactical_basis_recovery_profile_entry_window_ll_overdeep_vp_forward_bias_m_max": -1800.0,
+            "post_merge_tactical_basis_recovery_profile_entry_window_cd_min": 0.30,
+            "post_merge_tactical_basis_recovery_profile_entry_window_cd_min_applied": True,
+            "post_merge_tactical_basis_recovery_profile_entry_window_cd_descending_altitude_delta_m_min_abs": 15.0,
+            "post_merge_tactical_basis_recovery_profile_entry_window_predicted_target_forward_scale_override": 0.0,
+            "post_merge_tactical_basis_recovery_profile_entry_window_predicted_target_forward_scale_override_applied": True,
+            "post_merge_tactical_basis_recovery_profile_entry_window_predicted_target_forward_scale_entry_window_overdeep_vp_forward_bias_m_max": 2000.0,
+        }
+    )
+    recorder.record_step(1, 0.2, info["own_state"], info["target_state"], info, 0.0)
+    point = recorder.trajectory[0]
+    assert (
+        point[
+            "post_merge_tactical_basis_recovery_profile_io_entry_lateral_sign_hold_enabled"
+        ]
+        is True
+    )
+    assert (
+        point[
+            "post_merge_tactical_basis_recovery_profile_io_entry_lateral_sign_hold_active"
+        ]
+        is True
+    )
+    assert (
+        point[
+            "post_merge_tactical_basis_recovery_profile_io_entry_lateral_sign_hold_applied"
+        ]
+        is False
+    )
+    assert point["post_merge_tactical_basis_recovery_profile_io_entry_lateral_sign"] == -1.0
+    assert (
+        point[
+            "post_merge_tactical_basis_recovery_profile_io_entry_lateral_sign_hold_previous_vp_lateral_bias_m"
+        ]
+        == -320.0
+    )
+    assert (
+        point[
+            "post_merge_tactical_basis_recovery_profile_io_entry_lateral_sign_hold_release_vp_lateral_bias_m"
+        ]
+        == 250.0
+    )
+    assert (
+        point[
+            "post_merge_tactical_basis_recovery_profile_entry_window_configured_steps"
+        ]
+        == 8
+    )
+    assert point["post_merge_tactical_basis_recovery_profile_entry_window_armed"] is True
+    assert point["post_merge_tactical_basis_recovery_profile_entry_window_active"] is True
+    assert (
+        point[
+            "post_merge_tactical_basis_recovery_profile_entry_window_steps_remaining"
+        ]
+        == 8
+    )
+    assert (
+        point[
+            "post_merge_tactical_basis_recovery_profile_entry_window_previous_vp_forward_bias_m"
+        ]
+        == -2400.0
+    )
+    assert (
+        point[
+            "post_merge_tactical_basis_recovery_profile_entry_window_previous_altitude_delta_m"
+        ]
+        == -22.0
+    )
+    assert point["post_merge_tactical_basis_recovery_profile_entry_window_io_min_abs"] == 0.18
+    assert (
+        point[
+            "post_merge_tactical_basis_recovery_profile_entry_window_io_min_abs_applied"
+        ]
+        is True
+    )
+    assert point["post_merge_tactical_basis_recovery_profile_entry_window_ll_floor"] == -0.05
+    assert (
+        point[
+            "post_merge_tactical_basis_recovery_profile_entry_window_ll_floor_applied"
+        ]
+        is True
+    )
+    assert (
+        point[
+            "post_merge_tactical_basis_recovery_profile_entry_window_ll_overdeep_vp_forward_bias_m_max"
+        ]
+        == -1800.0
+    )
+    assert point["post_merge_tactical_basis_recovery_profile_entry_window_cd_min"] == 0.30
+    assert (
+        point[
+            "post_merge_tactical_basis_recovery_profile_entry_window_cd_min_applied"
+        ]
+        is True
+    )
+    assert (
+        point[
+            "post_merge_tactical_basis_recovery_profile_entry_window_cd_descending_altitude_delta_m_min_abs"
+        ]
+        == 15.0
+    )
+    assert (
+        point[
+            "post_merge_tactical_basis_recovery_profile_entry_window_predicted_target_forward_scale_override"
+        ]
+        == 0.0
+    )
+    assert (
+        point[
+            "post_merge_tactical_basis_recovery_profile_entry_window_predicted_target_forward_scale_override_applied"
+        ]
+        is True
+    )
+    assert (
+        point[
+            "post_merge_tactical_basis_recovery_profile_entry_window_predicted_target_forward_scale_entry_window_overdeep_vp_forward_bias_m_max"
+        ]
+        == 2000.0
+    )
+    assert (
+        point["post_merge_tactical_basis_recovery_profile_runtime_reason"]
+        == "close_range_reengagement_crossing"
+    )
+    assert (
+        point["post_merge_tactical_basis_recovery_profile_override_key"]
+        == "close_range_reengagement_crossing"
+    )
+    assert point["runtime_specialist_reason"] == "close_range_reengagement_crossing"
 
 
 def test_run_recorder_writes_files():

@@ -105,7 +105,19 @@ def test_recovery_formal_heldout_keeps_minrange_only_commander_guard():
     assert resolved["commander"]["num_modes"] == 3
     assert resolved["commander"][
         "head_on_post_merge_reopened_crossing_overdeep_clamp"
-    ]["head_on_min_range_so_far_m"] == 180.0
+    ] == {
+        "enabled": True,
+        "task_name": "head_on",
+        "crossing_mode_id": 1,
+        "forced_mode_id": 2,
+        "close_range_max_range_m": 3000.0,
+        "min_range_m": 4500.0,
+        "min_negative_vp_forward_bias_m": 8000.0,
+        "max_abs_vp_lateral_to_range_ratio": 1.5,
+        "head_on_mode_id": 0,
+        "head_on_min_range_so_far_m": 180.0,
+        "head_on_min_vp_lateral_bias_m": -1000.0,
+    }
     assert resolved["commander"]["modes"][2] == {
         "id": 2,
         "name": "post_merge_recovery_specialist",
@@ -133,6 +145,8 @@ def test_recovery_formal_heldout_keeps_minrange_only_commander_guard():
         "forced_mode_id": 0,
         "head_on_mode_id": 0,
         "head_on_forced_mode_id": 2,
+        "head_on_min_vp_lateral_bias_m": -7900.0,
+        "head_on_max_vp_forward_bias_m": 2000.0,
         "pre_threat_entry_guard_enabled": True,
         "pre_threat_require_no_attack_zone": True,
         "pre_threat_min_range_m": 4500.0,
@@ -146,6 +160,11 @@ def test_recovery_formal_heldout_keeps_minrange_only_commander_guard():
         "head_on_mode_id": 0,
         "recovery_mode_id": 2,
         "hold_window_steps": 8,
+        "hold_window_steps_by_reason": {
+            "close_range_reengagement_crossing": 0,
+            "overdeep_low_lateral_reopened_head_on": 0,
+            "pre_threat_opening_overlateral_negative_forward_head_on": 0,
+        },
         "allowed_reasons": [
             "close_range_reengagement_crossing",
             "overdeep_low_lateral_reopened_head_on",
@@ -164,6 +183,56 @@ def test_recovery_formal_heldout_keeps_minrange_only_commander_guard():
     assert resolved["virtual_point"]["post_merge_tactical_basis_recovery_profile"][
         "predicted_target_forward_scale_override"
     ] == 0.25
+    assert resolved["virtual_point"]["post_merge_tactical_basis_recovery_profile"][
+        "tactical_basis_action_io_entry_lateral_sign_hold_enabled"
+    ] is True
+    assert resolved["virtual_point"]["post_merge_tactical_basis_recovery_profile"][
+        "tactical_basis_action_io_entry_lateral_sign_hold_release_vp_lateral_bias_m"
+    ] == 250.0
+    assert resolved["virtual_point"]["post_merge_tactical_basis_recovery_profile"][
+        "entry_window_steps"
+    ] == 8
+    assert resolved["virtual_point"]["post_merge_tactical_basis_recovery_profile"][
+        "tactical_basis_action_io_entry_window_min_abs"
+    ] == 0.18
+    assert resolved["virtual_point"]["post_merge_tactical_basis_recovery_profile"][
+        "tactical_basis_action_ll_entry_window_overdeep_vp_forward_bias_m_max"
+    ] == -1800.0
+    assert resolved["virtual_point"]["post_merge_tactical_basis_recovery_profile"][
+        "tactical_basis_action_ll_entry_window_floor"
+    ] == -0.05
+    assert resolved["virtual_point"]["post_merge_tactical_basis_recovery_profile"][
+        "tactical_basis_action_cd_entry_window_descending_altitude_delta_m_min_abs"
+    ] == 15.0
+    assert resolved["virtual_point"]["post_merge_tactical_basis_recovery_profile"][
+        "tactical_basis_action_cd_entry_window_min"
+    ] == 0.30
+    assert resolved["virtual_point"]["post_merge_tactical_basis_recovery_profile"][
+        "predicted_target_forward_scale_entry_window_override"
+    ] == 0.0
+    assert resolved["virtual_point"]["post_merge_tactical_basis_recovery_profile"][
+        "predicted_target_forward_scale_entry_window_overdeep_vp_forward_bias_m_max"
+    ] == 2000.0
+    assert resolved["virtual_point"]["post_merge_tactical_basis_recovery_profile"][
+        "reason_overrides"
+    ] == {
+        "close_range_reengagement_crossing": {
+            "conditions": {
+                "max_aa_deg": 129.0,
+                "max_previous_vp_forward_bias_m": 0.0,
+                "any": [
+                    {"min_abs_previous_vp_lateral_bias_m": 145.0},
+                    {"max_range_rate_mps": 275.0},
+                ],
+            },
+            "overrides": {
+                "tactical_basis_action_io_entry_lateral_sign_hold_enabled": False,
+                "tactical_basis_action_io_entry_window_min_abs": 0.0,
+                "tactical_basis_action_cd_scale": 0.0,
+                "tactical_basis_action_cd_bias": 0.0,
+            },
+        }
+    }
 
 
 def test_recovery_formal_oracle_only_audit_is_exact_five_scenario_subset():

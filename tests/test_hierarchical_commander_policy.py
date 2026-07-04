@@ -829,6 +829,142 @@ def test_hierarchical_commander_policy_holds_first_forced_head_on_recovery_entry
     )
 
 
+def test_hierarchical_commander_policy_first_recovery_entry_hold_can_be_disabled_per_reason():
+    head_on = MagicMock()
+    head_on.get_deterministic_action.return_value = np.array(
+        [1.0, 0.0, 0.0], dtype=np.float32
+    )
+    crossing = MagicMock()
+    crossing.get_deterministic_action.return_value = np.array(
+        [0.0, 1.0, 0.0], dtype=np.float32
+    )
+    recovery = MagicMock()
+    recovery.get_deterministic_action.return_value = np.array(
+        [0.2, 0.2, 0.2], dtype=np.float32
+    )
+    mock_registry = {
+        0: {
+            "id": 0,
+            "name": "head_on_specialist",
+            "specialist_key": "head_on",
+            "policy": head_on,
+        },
+        1: {
+            "id": 1,
+            "name": "crossing_specialist",
+            "specialist_key": "crossing_feasible",
+            "policy": crossing,
+        },
+        2: {
+            "id": 2,
+            "name": "post_merge_recovery_specialist",
+            "specialist_key": "post_merge_recovery",
+            "specialist_profile": "post_merge_recovery",
+            "source_specialist_key": "head_on",
+            "policy": recovery,
+        },
+    }
+    mock_commander = MagicMock()
+    mock_commander.get_deterministic_action.return_value = 0
+    cfg = _config()
+    cfg["commander"]["modes"].append(
+        {
+            "id": 2,
+            "name": "post_merge_recovery_specialist",
+            "specialist_key": "post_merge_recovery",
+            "specialist_profile": "post_merge_recovery",
+            "source_specialist_key": "head_on",
+            "checkpoint": "recovery.pt",
+            "config_path": "recovery.yaml",
+        }
+    )
+    cfg["commander"]["macro_action_repeat_steps"] = 1
+    cfg["commander"]["head_on_post_merge_reopened_crossing_target_threat_clamp"] = {
+        "enabled": True,
+        "task_name": "head_on",
+        "crossing_mode_id": 1,
+        "forced_mode_id": 0,
+        "head_on_mode_id": 0,
+        "head_on_forced_mode_id": 2,
+        "pre_threat_entry_guard_enabled": True,
+        "pre_threat_min_range_m": 4500.0,
+        "pre_threat_min_range_rate_mps": 50.0,
+        "pre_threat_max_vp_forward_bias_m": -2500.0,
+        "pre_threat_min_abs_vp_lateral_to_range_ratio": 1.5,
+    }
+    cfg["commander"]["head_on_post_merge_first_recovery_entry_hold"] = {
+        "enabled": True,
+        "task_name": "head_on",
+        "head_on_mode_id": 0,
+        "recovery_mode_id": 2,
+        "hold_window_steps": 3,
+        "hold_window_steps_by_reason": {
+            "pre_threat_opening_overlateral_negative_forward_head_on": 0
+        },
+        "allowed_reasons": [
+            "pre_threat_opening_overlateral_negative_forward_head_on"
+        ],
+    }
+
+    with patch(
+        "uav_vpp_guidance.evaluation.hierarchical_commander_policy.load_frozen_specialist_registry",
+        return_value=mock_registry,
+    ), patch(
+        "uav_vpp_guidance.evaluation.hierarchical_commander_policy.CommanderPPOAgent",
+        return_value=mock_commander,
+    ):
+        from uav_vpp_guidance.evaluation.hierarchical_commander_policy import (
+            HierarchicalCommanderPolicy,
+        )
+
+        policy = HierarchicalCommanderPolicy(
+            checkpoint_path="commander.pt",
+            config=cfg,
+            obs_dim=6,
+            device="cpu",
+        )
+        policy.set_task_name("head_on")
+        policy.set_env(
+            _GuardEnv(
+                range_m=5600.0,
+                min_range_so_far_m=120.0,
+                first_pass_complete=True,
+                vp_forward_bias_m=-3200.0,
+                vp_lateral_bias_m=9000.0,
+                target_in_attack_zone=False,
+                own_velocity_mps=250.0,
+                target_velocity_mps=360.0,
+            )
+        )
+        obs = np.zeros(6, dtype=np.float32)
+        action = policy.get_deterministic_action(obs)
+        metadata = policy.get_last_step_metadata()
+
+    np.testing.assert_allclose(action, np.array([0.2, 0.2, 0.2], dtype=np.float32))
+    assert metadata["commander_mode_id"] == 2
+    assert (
+        metadata["commander_head_on_post_merge_first_recovery_entry_hold_active"]
+        is False
+    )
+    assert (
+        metadata["commander_head_on_post_merge_first_recovery_entry_hold_reason"]
+        == "hold_window_disabled_for_reason"
+    )
+    assert (
+        metadata["commander_head_on_post_merge_first_recovery_entry_hold_original_reason"]
+        == "pre_threat_opening_overlateral_negative_forward_head_on"
+    )
+    assert (
+        metadata[
+            "commander_head_on_post_merge_first_recovery_entry_hold_cooldown_steps_remaining"
+        ]
+        == 0
+    )
+    assert metadata["commander_mode_constraint_reason"] == (
+        "pre_threat_opening_overlateral_negative_forward_head_on"
+    )
+
+
 def test_hierarchical_commander_policy_pre_threat_entry_guard_blocks_opening_overlateral_crossing():
     head_on = MagicMock()
     head_on.get_deterministic_action.return_value = np.array(
@@ -1222,6 +1358,430 @@ def test_hierarchical_commander_policy_pre_threat_entry_guard_promotes_positive_
     assert (
         metadata["commander_mode_constraint_reason"]
         == "pre_threat_opening_overlateral_negative_forward_head_on"
+    )
+
+
+def test_hierarchical_commander_policy_pre_threat_entry_guard_blocks_head_on_recovery_when_lateral_is_too_negative():
+    head_on = MagicMock()
+    head_on.get_deterministic_action.return_value = np.array(
+        [1.0, 0.0, 0.0], dtype=np.float32
+    )
+    crossing = MagicMock()
+    crossing.get_deterministic_action.return_value = np.array(
+        [0.0, 1.0, 0.0], dtype=np.float32
+    )
+    recovery = MagicMock()
+    recovery.get_deterministic_action.return_value = np.array(
+        [0.2, 0.2, 0.2], dtype=np.float32
+    )
+    mock_registry = {
+        0: {
+            "id": 0,
+            "name": "head_on_specialist",
+            "specialist_key": "head_on",
+            "policy": head_on,
+        },
+        1: {
+            "id": 1,
+            "name": "crossing_specialist",
+            "specialist_key": "crossing_feasible",
+            "policy": crossing,
+        },
+        2: {
+            "id": 2,
+            "name": "post_merge_recovery_specialist",
+            "specialist_key": "post_merge_recovery",
+            "specialist_profile": "post_merge_recovery",
+            "source_specialist_key": "head_on",
+            "policy": recovery,
+        },
+    }
+    mock_commander = MagicMock()
+    mock_commander.get_deterministic_action.return_value = 0
+    cfg = _config()
+    cfg["commander"]["modes"].append(
+        {
+            "id": 2,
+            "name": "post_merge_recovery_specialist",
+            "specialist_key": "post_merge_recovery",
+            "specialist_profile": "post_merge_recovery",
+            "source_specialist_key": "head_on",
+            "checkpoint": "recovery.pt",
+            "config_path": "recovery.yaml",
+        }
+    )
+    cfg["commander"]["macro_action_repeat_steps"] = 1
+    cfg["commander"]["head_on_post_merge_reopened_crossing_target_threat_clamp"] = {
+        "enabled": True,
+        "task_name": "head_on",
+        "crossing_mode_id": 1,
+        "forced_mode_id": 0,
+        "head_on_mode_id": 0,
+        "head_on_forced_mode_id": 2,
+        "head_on_min_vp_lateral_bias_m": -7900.0,
+        "pre_threat_entry_guard_enabled": True,
+        "pre_threat_min_range_m": 4500.0,
+        "pre_threat_min_range_rate_mps": 50.0,
+        "pre_threat_max_vp_forward_bias_m": -2500.0,
+        "pre_threat_min_abs_vp_lateral_to_range_ratio": 1.5,
+    }
+
+    with patch(
+        "uav_vpp_guidance.evaluation.hierarchical_commander_policy.load_frozen_specialist_registry",
+        return_value=mock_registry,
+    ), patch(
+        "uav_vpp_guidance.evaluation.hierarchical_commander_policy.CommanderPPOAgent",
+        return_value=mock_commander,
+    ):
+        from uav_vpp_guidance.evaluation.hierarchical_commander_policy import (
+            HierarchicalCommanderPolicy,
+        )
+
+        policy = HierarchicalCommanderPolicy(
+            checkpoint_path="commander.pt",
+            config=cfg,
+            obs_dim=6,
+            device="cpu",
+        )
+        policy.set_task_name("head_on")
+        policy.set_env(
+            _GuardEnv(
+                range_m=6000.0,
+                min_range_so_far_m=90.0,
+                first_pass_complete=True,
+                vp_forward_bias_m=-6400.0,
+                vp_lateral_bias_m=-9000.0,
+                target_in_attack_zone=False,
+                own_velocity_mps=250.0,
+                target_velocity_mps=360.0,
+            )
+        )
+        action = policy.get_deterministic_action(np.zeros(6, dtype=np.float32))
+        metadata = policy.get_last_step_metadata()
+
+    np.testing.assert_allclose(action, np.array([1.0, 0.0, 0.0], dtype=np.float32))
+    assert metadata["commander_requested_mode_id"] == 0
+    assert metadata["commander_mode_id"] == 0
+    assert metadata["commander_mode_constraint_triggered"] is False
+    assert (
+        metadata[
+            "commander_head_on_post_merge_reopened_crossing_target_threat_clamp_reason"
+        ]
+        == "pre_threat_opening_overlateral_negative_forward_head_on"
+    )
+
+
+def test_hierarchical_commander_policy_target_threat_clamp_blocks_head_on_recovery_when_forward_bias_is_already_positive():
+    head_on = MagicMock()
+    head_on.get_deterministic_action.return_value = np.array(
+        [1.0, 0.0, 0.0], dtype=np.float32
+    )
+    crossing = MagicMock()
+    crossing.get_deterministic_action.return_value = np.array(
+        [0.0, 1.0, 0.0], dtype=np.float32
+    )
+    recovery = MagicMock()
+    recovery.get_deterministic_action.return_value = np.array(
+        [0.2, 0.2, 0.2], dtype=np.float32
+    )
+    mock_registry = {
+        0: {
+            "id": 0,
+            "name": "head_on_specialist",
+            "specialist_key": "head_on",
+            "policy": head_on,
+        },
+        1: {
+            "id": 1,
+            "name": "crossing_specialist",
+            "specialist_key": "crossing_feasible",
+            "policy": crossing,
+        },
+        2: {
+            "id": 2,
+            "name": "post_merge_recovery_specialist",
+            "specialist_key": "post_merge_recovery",
+            "specialist_profile": "post_merge_recovery",
+            "source_specialist_key": "head_on",
+            "policy": recovery,
+        },
+    }
+    mock_commander = MagicMock()
+    mock_commander.get_deterministic_action.return_value = 0
+    cfg = _config()
+    cfg["commander"]["modes"].append(
+        {
+            "id": 2,
+            "name": "post_merge_recovery_specialist",
+            "specialist_key": "post_merge_recovery",
+            "specialist_profile": "post_merge_recovery",
+            "source_specialist_key": "head_on",
+            "checkpoint": "recovery.pt",
+            "config_path": "recovery.yaml",
+        }
+    )
+    cfg["commander"]["macro_action_repeat_steps"] = 1
+    cfg["commander"]["head_on_post_merge_reopened_crossing_target_threat_clamp"] = {
+        "enabled": True,
+        "task_name": "head_on",
+        "crossing_mode_id": 1,
+        "forced_mode_id": 0,
+        "head_on_mode_id": 0,
+        "head_on_forced_mode_id": 2,
+        "head_on_max_vp_forward_bias_m": 2000.0,
+    }
+
+    with patch(
+        "uav_vpp_guidance.evaluation.hierarchical_commander_policy.load_frozen_specialist_registry",
+        return_value=mock_registry,
+    ), patch(
+        "uav_vpp_guidance.evaluation.hierarchical_commander_policy.CommanderPPOAgent",
+        return_value=mock_commander,
+    ):
+        from uav_vpp_guidance.evaluation.hierarchical_commander_policy import (
+            HierarchicalCommanderPolicy,
+        )
+
+        policy = HierarchicalCommanderPolicy(
+            checkpoint_path="commander.pt",
+            config=cfg,
+            obs_dim=6,
+            device="cpu",
+        )
+        policy.set_task_name("head_on")
+        policy.set_env(
+            _GuardEnv(
+                range_m=5600.0,
+                first_pass_complete=True,
+                target_in_attack_zone=True,
+                vp_forward_bias_m=2800.0,
+                vp_lateral_bias_m=1800.0,
+            )
+        )
+        action = policy.get_deterministic_action(np.zeros(6, dtype=np.float32))
+        metadata = policy.get_last_step_metadata()
+
+    np.testing.assert_allclose(action, np.array([1.0, 0.0, 0.0], dtype=np.float32))
+    assert metadata["commander_requested_mode_id"] == 0
+    assert metadata["commander_mode_id"] == 0
+    assert metadata["commander_mode_constraint_triggered"] is False
+    assert (
+        metadata[
+            "commander_head_on_post_merge_reopened_crossing_target_threat_clamp_reason"
+        ]
+        == "target_attack_zone_reopened_head_on"
+    )
+
+
+def test_hierarchical_commander_policy_pre_threat_negative_lateral_filter_is_first_entry_only():
+    head_on = MagicMock()
+    head_on.get_deterministic_action.return_value = np.array(
+        [1.0, 0.0, 0.0], dtype=np.float32
+    )
+    crossing = MagicMock()
+    crossing.get_deterministic_action.return_value = np.array(
+        [0.0, 1.0, 0.0], dtype=np.float32
+    )
+    recovery = MagicMock()
+    recovery.get_deterministic_action.return_value = np.array(
+        [0.2, 0.2, 0.2], dtype=np.float32
+    )
+    mock_registry = {
+        0: {
+            "id": 0,
+            "name": "head_on_specialist",
+            "specialist_key": "head_on",
+            "policy": head_on,
+        },
+        1: {
+            "id": 1,
+            "name": "crossing_specialist",
+            "specialist_key": "crossing_feasible",
+            "policy": crossing,
+        },
+        2: {
+            "id": 2,
+            "name": "post_merge_recovery_specialist",
+            "specialist_key": "post_merge_recovery",
+            "specialist_profile": "post_merge_recovery",
+            "source_specialist_key": "head_on",
+            "policy": recovery,
+        },
+    }
+    mock_commander = MagicMock()
+    mock_commander.get_deterministic_action.return_value = 0
+    cfg = _config()
+    cfg["commander"]["modes"].append(
+        {
+            "id": 2,
+            "name": "post_merge_recovery_specialist",
+            "specialist_key": "post_merge_recovery",
+            "specialist_profile": "post_merge_recovery",
+            "source_specialist_key": "head_on",
+            "checkpoint": "recovery.pt",
+            "config_path": "recovery.yaml",
+        }
+    )
+    cfg["commander"]["macro_action_repeat_steps"] = 1
+    cfg["commander"]["head_on_post_merge_reopened_crossing_target_threat_clamp"] = {
+        "enabled": True,
+        "task_name": "head_on",
+        "crossing_mode_id": 1,
+        "forced_mode_id": 0,
+        "head_on_mode_id": 0,
+        "head_on_forced_mode_id": 2,
+        "head_on_min_vp_lateral_bias_m": -7900.0,
+        "pre_threat_entry_guard_enabled": True,
+        "pre_threat_min_range_m": 4500.0,
+        "pre_threat_min_range_rate_mps": 50.0,
+        "pre_threat_max_vp_forward_bias_m": -2500.0,
+        "pre_threat_min_abs_vp_lateral_to_range_ratio": 1.5,
+    }
+
+    with patch(
+        "uav_vpp_guidance.evaluation.hierarchical_commander_policy.load_frozen_specialist_registry",
+        return_value=mock_registry,
+    ), patch(
+        "uav_vpp_guidance.evaluation.hierarchical_commander_policy.CommanderPPOAgent",
+        return_value=mock_commander,
+    ):
+        from uav_vpp_guidance.evaluation.hierarchical_commander_policy import (
+            HierarchicalCommanderPolicy,
+        )
+
+        policy = HierarchicalCommanderPolicy(
+            checkpoint_path="commander.pt",
+            config=cfg,
+            obs_dim=6,
+            device="cpu",
+        )
+        policy.set_task_name("head_on")
+        policy.set_env(
+            _GuardEnv(
+                range_m=6000.0,
+                min_range_so_far_m=90.0,
+                first_pass_complete=True,
+                vp_forward_bias_m=-6400.0,
+                vp_lateral_bias_m=-9000.0,
+                target_in_attack_zone=False,
+                own_velocity_mps=250.0,
+                target_velocity_mps=360.0,
+            )
+        )
+        policy._head_on_post_merge_recovery_mode_seen = True
+        action = policy.get_deterministic_action(np.zeros(6, dtype=np.float32))
+        metadata = policy.get_last_step_metadata()
+
+    np.testing.assert_allclose(action, np.array([0.2, 0.2, 0.2], dtype=np.float32))
+    assert metadata["commander_requested_mode_id"] == 0
+    assert metadata["commander_mode_id"] == 2
+    assert metadata["commander_mode_constraint_triggered"] is True
+    assert (
+        metadata["commander_mode_constraint_reason"]
+        == "pre_threat_opening_overlateral_negative_forward_head_on"
+    )
+
+
+def test_hierarchical_commander_policy_overdeep_negative_lateral_filter_is_first_entry_only():
+    head_on = MagicMock()
+    head_on.get_deterministic_action.return_value = np.array(
+        [1.0, 0.0, 0.0], dtype=np.float32
+    )
+    crossing = MagicMock()
+    crossing.get_deterministic_action.return_value = np.array(
+        [0.0, 1.0, 0.0], dtype=np.float32
+    )
+    recovery = MagicMock()
+    recovery.get_deterministic_action.return_value = np.array(
+        [0.2, 0.2, 0.2], dtype=np.float32
+    )
+    mock_registry = {
+        0: {
+            "id": 0,
+            "name": "head_on_specialist",
+            "specialist_key": "head_on",
+            "policy": head_on,
+        },
+        1: {
+            "id": 1,
+            "name": "crossing_specialist",
+            "specialist_key": "crossing_feasible",
+            "policy": crossing,
+        },
+        2: {
+            "id": 2,
+            "name": "post_merge_recovery_specialist",
+            "specialist_key": "post_merge_recovery",
+            "specialist_profile": "post_merge_recovery",
+            "source_specialist_key": "head_on",
+            "policy": recovery,
+        },
+    }
+    mock_commander = MagicMock()
+    mock_commander.get_deterministic_action.return_value = 0
+    cfg = _config()
+    cfg["commander"]["modes"].append(
+        {
+            "id": 2,
+            "name": "post_merge_recovery_specialist",
+            "specialist_key": "post_merge_recovery",
+            "specialist_profile": "post_merge_recovery",
+            "source_specialist_key": "head_on",
+            "checkpoint": "recovery.pt",
+            "config_path": "recovery.yaml",
+        }
+    )
+    cfg["commander"]["macro_action_repeat_steps"] = 1
+    cfg["commander"]["head_on_post_merge_reopened_crossing_overdeep_clamp"] = {
+        "enabled": True,
+        "task_name": "head_on",
+        "crossing_mode_id": 1,
+        "forced_mode_id": 2,
+        "head_on_mode_id": 0,
+        "head_on_forced_mode_id": 2,
+        "head_on_min_vp_lateral_bias_m": -1000.0,
+        "min_range_m": 4500.0,
+        "min_negative_vp_forward_bias_m": 9000.0,
+        "max_abs_vp_lateral_to_range_ratio": 0.8,
+    }
+
+    with patch(
+        "uav_vpp_guidance.evaluation.hierarchical_commander_policy.load_frozen_specialist_registry",
+        return_value=mock_registry,
+    ), patch(
+        "uav_vpp_guidance.evaluation.hierarchical_commander_policy.CommanderPPOAgent",
+        return_value=mock_commander,
+    ):
+        from uav_vpp_guidance.evaluation.hierarchical_commander_policy import (
+            HierarchicalCommanderPolicy,
+        )
+
+        policy = HierarchicalCommanderPolicy(
+            checkpoint_path="commander.pt",
+            config=cfg,
+            obs_dim=6,
+            device="cpu",
+        )
+        policy.set_task_name("head_on")
+        policy.set_env(
+            _GuardEnv(
+                range_m=5000.0,
+                first_pass_complete=True,
+                vp_forward_bias_m=-10000.0,
+                vp_lateral_bias_m=-1500.0,
+            )
+        )
+        policy._head_on_post_merge_recovery_mode_seen = True
+        action = policy.get_deterministic_action(np.zeros(6, dtype=np.float32))
+        metadata = policy.get_last_step_metadata()
+
+    np.testing.assert_allclose(action, np.array([0.2, 0.2, 0.2], dtype=np.float32))
+    assert metadata["commander_requested_mode_id"] == 0
+    assert metadata["commander_mode_id"] == 2
+    assert metadata["commander_mode_constraint_triggered"] is True
+    assert (
+        metadata["commander_mode_constraint_reason"]
+        == "overdeep_low_lateral_reopened_head_on"
     )
 
 
@@ -2827,8 +3387,13 @@ def test_hierarchical_commander_policy_forced_recovery_mode_sets_runtime_special
         specialist_key="post_merge_recovery",
         specialist_profile="post_merge_recovery",
         specialist_mode_name="post_merge_recovery_specialist",
+        specialist_reason="max_consecutive_crossing_macro_steps_exceeded",
     )
     assert metadata["commander_mode_id"] == 2
     assert metadata["commander_selected_specialist"] == "post_merge_recovery"
     assert metadata["commander_selected_specialist_profile"] == "post_merge_recovery"
     assert metadata["commander_selected_source_specialist"] == "head_on"
+    assert (
+        metadata["commander_active_mode_entry_reason"]
+        == "max_consecutive_crossing_macro_steps_exceeded"
+    )

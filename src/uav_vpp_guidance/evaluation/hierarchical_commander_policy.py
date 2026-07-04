@@ -122,6 +122,7 @@ class HierarchicalCommanderPolicy:
 
     def reset_episode(self) -> None:
         self._active_mode_id: Optional[int] = None
+        self._active_mode_entry_reason: Optional[str] = None
         self._step_counter = 0
         self._switch_count = 0
         self._steps_since_switch = 0
@@ -179,6 +180,7 @@ class HierarchicalCommanderPolicy:
             specialist_key=mode.get("specialist_key"),
             specialist_profile=mode.get("specialist_profile"),
             specialist_mode_name=mode.get("name"),
+            specialist_reason=self._active_mode_entry_reason,
         )
 
     def _initial_task_bootstrap_mode_id(self) -> Optional[int]:
@@ -206,9 +208,15 @@ class HierarchicalCommanderPolicy:
         )
         return self._mode_id_for_specialist_key(forced_specialist_key)
 
-    def _update_active_mode(self, new_mode: int) -> bool:
+    def _update_active_mode(
+        self,
+        new_mode: int,
+        *,
+        entry_reason: Optional[str] = None,
+    ) -> bool:
         new_mode = int(new_mode)
-        switched = self._active_mode_id is not None and new_mode != self._active_mode_id
+        previous_mode_id = self._active_mode_id
+        switched = previous_mode_id is not None and new_mode != previous_mode_id
         if switched and self._hold_steps_remaining > 0:
             # Enforce minimum mode hold: ignore switch request
             return False
@@ -220,6 +228,10 @@ class HierarchicalCommanderPolicy:
             self._macro_steps_since_switch = 0
             self._hold_steps_remaining = self.min_mode_hold_steps
         self._active_mode_id = new_mode
+        if previous_mode_id is None or new_mode != previous_mode_id:
+            self._active_mode_entry_reason = (
+                None if entry_reason in (None, "") else str(entry_reason)
+            )
         return switched
 
     def _remember_secondary_clamp_altitude(self, altitude_m: float) -> None:
@@ -287,7 +299,6 @@ class HierarchicalCommanderPolicy:
             return state
         head_on_mode_id = int(cfg.get("head_on_mode_id", 0))
         recovery_mode_id = int(cfg.get("recovery_mode_id", 2))
-        hold_window_steps = max(1, int(cfg.get("hold_window_steps", 1)))
         if requested_mode_id is None or int(requested_mode_id) != head_on_mode_id:
             state["reason"] = "requested_mode_not_head_on"
             return state
@@ -314,6 +325,23 @@ class HierarchicalCommanderPolicy:
         )
         if allowed_reasons and normalized_original_reason not in allowed_reasons:
             state["reason"] = "constraint_reason_not_eligible"
+            return state
+        hold_window_steps = int(cfg.get("hold_window_steps", 1) or 0)
+        hold_window_steps_by_reason = (
+            cfg.get("hold_window_steps_by_reason", {}) or {}
+        )
+        if (
+            normalized_original_reason is not None
+            and isinstance(hold_window_steps_by_reason, dict)
+            and normalized_original_reason in hold_window_steps_by_reason
+        ):
+            hold_window_steps = int(
+                hold_window_steps_by_reason.get(normalized_original_reason) or 0
+            )
+        hold_window_steps = max(0, hold_window_steps)
+        if hold_window_steps <= 0:
+            state["reason"] = "hold_window_disabled_for_reason"
+            state["original_reason"] = normalized_original_reason
             return state
 
         if self._head_on_post_merge_first_recovery_entry_hold_steps_remaining > 0:
@@ -473,6 +501,9 @@ class HierarchicalCommanderPolicy:
                     target_threat_cfg=(
                         self.head_on_post_merge_reopened_crossing_target_threat_clamp
                     ),
+                    head_on_recovery_mode_seen=(
+                        self._head_on_post_merge_recovery_mode_seen
+                    ),
                 )
             )
             if bool(target_threat_result["triggered"]):
@@ -487,6 +518,9 @@ class HierarchicalCommanderPolicy:
                     overdeep_state=overdeep_clamp_state,
                     overdeep_cfg=(
                         self.head_on_post_merge_reopened_crossing_overdeep_clamp
+                    ),
+                    head_on_recovery_mode_seen=(
+                        self._head_on_post_merge_recovery_mode_seen
                     ),
                 )
             )
@@ -550,7 +584,10 @@ class HierarchicalCommanderPolicy:
                 constraint_triggered = True
                 constraint_reason = "head_on_first_recovery_entry_hold"
                 self._head_on_post_merge_reopened_crossing_consecutive_macro_steps = 0
-            switched = self._update_active_mode(new_mode)
+            switched = self._update_active_mode(
+                new_mode,
+                entry_reason=constraint_reason,
+            )
         else:
             active_mode_name = self._mode_name(self._active_mode_id)
             candidate_mode_id = (
@@ -564,6 +601,9 @@ class HierarchicalCommanderPolicy:
                     target_threat_cfg=(
                         self.head_on_post_merge_reopened_crossing_target_threat_clamp
                     ),
+                    head_on_recovery_mode_seen=(
+                        self._head_on_post_merge_recovery_mode_seen
+                    ),
                 )
             )
             overdeep_result = apply_head_on_post_merge_reopened_crossing_overdeep_clamp(
@@ -571,6 +611,7 @@ class HierarchicalCommanderPolicy:
                 mode_registry=self.mode_registry,
                 overdeep_state=overdeep_clamp_state,
                 overdeep_cfg=self.head_on_post_merge_reopened_crossing_overdeep_clamp,
+                head_on_recovery_mode_seen=self._head_on_post_merge_recovery_mode_seen,
             )
             secondary_result = apply_head_on_post_merge_reopened_crossing_secondary_clamp(
                 candidate_mode_id=self._active_mode_id,
@@ -626,7 +667,10 @@ class HierarchicalCommanderPolicy:
                         first_recovery_entry_hold_state["effective_mode_id"]
                     )
                     constraint_reason = "head_on_first_recovery_entry_hold"
-                switched = self._update_active_mode(candidate_mode_id)
+                switched = self._update_active_mode(
+                    candidate_mode_id,
+                    entry_reason=constraint_reason,
+                )
             elif (
                 not leash_state.get("active", False)
                 or active_mode_name != "crossing_specialist"
@@ -651,6 +695,7 @@ class HierarchicalCommanderPolicy:
             "commander_selected_source_specialist": mode.get(
                 "source_specialist_key"
             ),
+            "commander_active_mode_entry_reason": self._active_mode_entry_reason,
             "commander_switch_count": int(self._switch_count),
             "commander_steps_since_switch": int(self._steps_since_switch),
             "commander_macro_action_repeat_steps": int(self.macro_action_repeat_steps),

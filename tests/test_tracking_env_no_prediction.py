@@ -9,6 +9,7 @@ import pytest
 import numpy as np
 from uav_vpp_guidance.envs.tracking_env import (
     CloseRangeTrackingEnv,
+    _resolve_post_merge_tactical_basis_recovery_profile_effective_cfg,
     _shape_tactical_basis_action_with_post_merge_recovery_profile,
 )
 from uav_vpp_guidance.virtual_point.coordinate_transform import world_to_offset_frame
@@ -5814,6 +5815,98 @@ class TestObservationSchema:
             "cd_post": 0.0,
         }
 
+    def test_post_merge_tactical_basis_recovery_profile_reason_override_is_applied(
+        self,
+    ):
+        effective_cfg, diag = (
+            _resolve_post_merge_tactical_basis_recovery_profile_effective_cfg(
+                {
+                    "tactical_basis_action_io_entry_lateral_sign_hold_enabled": True,
+                    "tactical_basis_action_io_entry_window_min_abs": 0.18,
+                    "tactical_basis_action_cd_scale": 0.50,
+                    "tactical_basis_action_cd_bias": 0.20,
+                    "reason_overrides": {
+                        "close_range_reengagement_crossing": {
+                            "conditions": {
+                                "max_aa_deg": 129.0,
+                                "max_previous_vp_forward_bias_m": 0.0,
+                                "any": [
+                                    {"min_abs_previous_vp_lateral_bias_m": 145.0},
+                                    {"max_range_rate_mps": 275.0},
+                                ],
+                            },
+                            "overrides": {
+                                "tactical_basis_action_io_entry_lateral_sign_hold_enabled": False,
+                                "tactical_basis_action_io_entry_window_min_abs": 0.0,
+                                "tactical_basis_action_cd_scale": 0.0,
+                                "tactical_basis_action_cd_bias": 0.0,
+                            },
+                        }
+                    },
+                },
+                runtime_specialist_reason="close_range_reengagement_crossing",
+                aa_deg=127.6,
+                range_rate_mps=271.8,
+                previous_vp_forward_bias_m=-519.3,
+                previous_vp_lateral_bias_m=137.7,
+            )
+        )
+
+        assert diag == {
+            "runtime_reason": "close_range_reengagement_crossing",
+            "override_key": "close_range_reengagement_crossing",
+        }
+        assert effective_cfg["tactical_basis_action_io_entry_lateral_sign_hold_enabled"] is False
+        assert effective_cfg["tactical_basis_action_io_entry_window_min_abs"] == 0.0
+        assert effective_cfg["tactical_basis_action_cd_scale"] == 0.0
+        assert effective_cfg["tactical_basis_action_cd_bias"] == 0.0
+
+    def test_post_merge_tactical_basis_recovery_profile_reason_override_conditions_can_block_override(
+        self,
+    ):
+        effective_cfg, diag = (
+            _resolve_post_merge_tactical_basis_recovery_profile_effective_cfg(
+                {
+                    "tactical_basis_action_io_entry_lateral_sign_hold_enabled": True,
+                    "tactical_basis_action_io_entry_window_min_abs": 0.18,
+                    "tactical_basis_action_cd_scale": 0.50,
+                    "tactical_basis_action_cd_bias": 0.20,
+                    "reason_overrides": {
+                        "close_range_reengagement_crossing": {
+                            "conditions": {
+                                "max_aa_deg": 129.0,
+                                "max_previous_vp_forward_bias_m": 0.0,
+                                "any": [
+                                    {"min_abs_previous_vp_lateral_bias_m": 145.0},
+                                    {"max_range_rate_mps": 275.0},
+                                ],
+                            },
+                            "overrides": {
+                                "tactical_basis_action_io_entry_lateral_sign_hold_enabled": False,
+                                "tactical_basis_action_io_entry_window_min_abs": 0.0,
+                                "tactical_basis_action_cd_scale": 0.0,
+                                "tactical_basis_action_cd_bias": 0.0,
+                            },
+                        }
+                    },
+                },
+                runtime_specialist_reason="close_range_reengagement_crossing",
+                aa_deg=125.5,
+                range_rate_mps=-187.7,
+                previous_vp_forward_bias_m=117.8,
+                previous_vp_lateral_bias_m=-183.5,
+            )
+        )
+
+        assert diag == {
+            "runtime_reason": "close_range_reengagement_crossing",
+            "override_key": None,
+        }
+        assert effective_cfg["tactical_basis_action_io_entry_lateral_sign_hold_enabled"] is True
+        assert effective_cfg["tactical_basis_action_io_entry_window_min_abs"] == 0.18
+        assert effective_cfg["tactical_basis_action_cd_scale"] == 0.50
+        assert effective_cfg["tactical_basis_action_cd_bias"] == 0.20
+
     def test_post_merge_tactical_basis_recovery_profile_activates_from_specialist_profile(
         self,
         base_config,
@@ -5929,5 +6022,165 @@ class TestObservationSchema:
             state["shaped_action"],
             np.array([-0.25, 0.55, 0.0], dtype=np.float64),
         )
+
+        env.close()
+
+    def test_post_merge_tactical_basis_recovery_profile_entry_window_can_override_forward_scale_when_overdeep(
+        self,
+        base_config,
+    ):
+        config = copy.deepcopy(base_config)
+        config["task"] = {"name": "head_on", "env_class": "CloseRangeTrackingEnv"}
+        config["virtual_point"]["action_semantics"] = "tactical_basis_v1"
+        config["virtual_point"]["post_merge_tactical_basis_recovery_profile"] = {
+            "enabled": True,
+            "task_name": "head_on",
+            "anchor_mode": "predicted_target",
+            "specialist_profile_names": ["post_merge_recovery"],
+            "activate_on_blend_release_recovery": True,
+            "require_first_pass_complete": True,
+            "require_range_opening": True,
+            "require_range_opening_for_specialist_profile": False,
+            "require_no_attack_zone": True,
+            "max_altitude_m": 5200.0,
+            "tactical_basis_action_ll_scale": 0.35,
+            "tactical_basis_action_ll_min": -0.25,
+            "tactical_basis_action_io_scale": 0.55,
+            "tactical_basis_action_io_abs_max": 0.60,
+            "tactical_basis_action_cd_scale": 0.50,
+            "tactical_basis_action_cd_bias": 0.20,
+            "tactical_basis_action_cd_min": 0.0,
+            "predicted_target_forward_scale_override": 0.25,
+            "entry_window_steps": 8,
+            "predicted_target_forward_scale_entry_window_override": 0.0,
+            "predicted_target_forward_scale_entry_window_overdeep_vp_forward_bias_m_max": 2000.0,
+        }
+        env = CloseRangeTrackingEnv(config)
+        env._first_pass_complete = True
+        env.set_runtime_specialist_context(
+            specialist_key="post_merge_recovery",
+            specialist_profile="post_merge_recovery",
+            specialist_mode_name="post_merge_recovery_specialist",
+        )
+        env._post_merge_tactical_basis_recovery_profile_previous_vp_forward_bias_m = (
+            -3200.0
+        )
+        env._post_merge_tactical_basis_recovery_profile_previous_altitude_m = 5000.0
+
+        state = env._evaluate_post_merge_tactical_basis_recovery_profile_state(
+            action=np.array([-0.2, 0.1, -0.1], dtype=np.float64),
+            own_state={"altitude_m": 4975.0},
+            anchor_mode="predicted_target",
+            post_merge_offensive_anchor_gate={
+                "range_opening": True,
+                "ego_in_attack_zone": False,
+                "target_in_attack_zone": False,
+            },
+            post_merge_offensive_anchor_blend_release_recovery_active=False,
+        )
+
+        assert state["active"] is True
+        assert state["entry_window_armed"] is True
+        assert state["entry_window_active"] is True
+        assert (
+            state["entry_window_predicted_target_forward_scale_override_applied"]
+            is True
+        )
+        assert (
+            state["entry_window_predicted_target_forward_scale_override"] == 0.0
+        )
+        assert (
+            state[
+                "entry_window_predicted_target_forward_scale_entry_window_overdeep_vp_forward_bias_m_max"
+            ]
+            == 2000.0
+        )
+        assert state["predicted_target_forward_scale_override"] == 0.0
+
+        env.close()
+
+    def test_post_merge_tactical_basis_recovery_profile_exposes_runtime_reason_override_metadata(
+        self,
+        base_config,
+    ):
+        config = copy.deepcopy(base_config)
+        config["task"] = {"name": "head_on", "env_class": "CloseRangeTrackingEnv"}
+        config["virtual_point"]["action_semantics"] = "tactical_basis_v1"
+        config["virtual_point"]["post_merge_tactical_basis_recovery_profile"] = {
+            "enabled": True,
+            "task_name": "head_on",
+            "anchor_mode": "predicted_target",
+            "specialist_profile_names": ["post_merge_recovery"],
+            "activate_on_blend_release_recovery": True,
+            "require_first_pass_complete": True,
+            "require_range_opening": True,
+            "require_range_opening_for_specialist_profile": False,
+            "require_no_attack_zone": True,
+            "max_altitude_m": 5200.0,
+            "tactical_basis_action_ll_scale": 0.35,
+            "tactical_basis_action_ll_min": -0.25,
+            "tactical_basis_action_io_scale": 0.55,
+            "tactical_basis_action_io_abs_max": 0.60,
+            "tactical_basis_action_io_entry_lateral_sign_hold_enabled": True,
+            "tactical_basis_action_cd_scale": 0.50,
+            "tactical_basis_action_cd_bias": 0.20,
+            "tactical_basis_action_cd_min": 0.0,
+            "entry_window_steps": 8,
+            "tactical_basis_action_io_entry_window_min_abs": 0.18,
+            "reason_overrides": {
+                        "close_range_reengagement_crossing": {
+                            "conditions": {
+                                "max_aa_deg": 129.0,
+                                "max_previous_vp_forward_bias_m": 0.0,
+                                "any": [
+                                    {"min_abs_previous_vp_lateral_bias_m": 145.0},
+                                    {"max_range_rate_mps": 275.0},
+                                ],
+                            },
+                    "overrides": {
+                        "tactical_basis_action_io_entry_lateral_sign_hold_enabled": False,
+                        "tactical_basis_action_io_entry_window_min_abs": 0.0,
+                        "tactical_basis_action_cd_scale": 0.0,
+                        "tactical_basis_action_cd_bias": 0.0,
+                    },
+                }
+            },
+        }
+        env = CloseRangeTrackingEnv(config)
+        env._first_pass_complete = True
+        env.set_runtime_specialist_context(
+            specialist_key="post_merge_recovery",
+            specialist_profile="post_merge_recovery",
+            specialist_mode_name="post_merge_recovery_specialist",
+            specialist_reason="close_range_reengagement_crossing",
+        )
+        env._post_merge_tactical_basis_recovery_profile_previous_vp_forward_bias_m = (
+            -3200.0
+        )
+        env._post_merge_tactical_basis_recovery_profile_previous_vp_lateral_bias_m = (
+            160.0
+        )
+        env._post_merge_tactical_basis_recovery_profile_previous_altitude_m = 5000.0
+
+        state = env._evaluate_post_merge_tactical_basis_recovery_profile_state(
+            action=np.array([-0.2, -0.1, 0.4], dtype=np.float64),
+            own_state={"altitude_m": 4975.0},
+            anchor_mode="predicted_target",
+            post_merge_offensive_anchor_gate={
+                "range_opening": True,
+                "aa_deg": 127.6,
+                "range_rate_mps": 271.8,
+                "ego_in_attack_zone": False,
+                "target_in_attack_zone": False,
+            },
+            post_merge_offensive_anchor_blend_release_recovery_active=False,
+        )
+
+        assert state["active"] is True
+        assert state["runtime_reason"] == "close_range_reengagement_crossing"
+        assert state["override_key"] == "close_range_reengagement_crossing"
+        assert state["io_entry_lateral_sign_hold_enabled"] is False
+        assert state["entry_window_io_min_abs"] == 0.0
+        assert state["cd_post"] == pytest.approx(0.0)
 
         env.close()

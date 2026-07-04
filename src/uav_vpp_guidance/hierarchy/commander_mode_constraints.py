@@ -847,6 +847,7 @@ def apply_head_on_post_merge_reopened_crossing_target_threat_clamp(
     mode_registry: Dict[int, Dict[str, Any]],
     target_threat_state: Dict[str, Any],
     target_threat_cfg: Optional[Dict[str, Any]],
+    head_on_recovery_mode_seen: bool = False,
 ) -> Dict[str, Any]:
     """Force head_on when a head_on crossing detour reopens target threat."""
     cfg = target_threat_cfg or {}
@@ -875,6 +876,51 @@ def apply_head_on_post_merge_reopened_crossing_target_threat_clamp(
     if candidate_mode_id == crossing_mode_id:
         effective_mode_id = int(cfg.get("forced_mode_id", 0))
     elif head_on_mode_id is not None and candidate_mode_id == int(head_on_mode_id):
+        target_threat_reason = str(
+            target_threat_state.get("reason", "target_attack_zone_reopened_head_on")
+        )
+        if not bool(head_on_recovery_mode_seen):
+            head_on_min_vp_lateral_bias_m = _safe_float(
+                cfg.get("head_on_min_vp_lateral_bias_m")
+            )
+            vp_lateral_bias_m = _safe_float(target_threat_state.get("vp_lateral_bias_m"))
+            if np.isfinite(head_on_min_vp_lateral_bias_m):
+                if not np.isfinite(vp_lateral_bias_m):
+                    return {
+                        "effective_mode_id": candidate_mode_id,
+                        "triggered": False,
+                        "reason": "head_on_target_threat_vp_lateral_bias_unavailable",
+                    }
+                if vp_lateral_bias_m < head_on_min_vp_lateral_bias_m:
+                    lateral_reason = "head_on_target_threat_vp_lateral_bias_too_negative"
+                    if (
+                        target_threat_reason
+                        == "pre_threat_opening_overlateral_negative_forward_head_on"
+                    ):
+                        lateral_reason = "head_on_pre_threat_vp_lateral_bias_too_negative"
+                    return {
+                        "effective_mode_id": candidate_mode_id,
+                        "triggered": False,
+                        "reason": lateral_reason,
+                    }
+
+            head_on_max_vp_forward_bias_m = _safe_float(
+                cfg.get("head_on_max_vp_forward_bias_m")
+            )
+            vp_forward_bias_m = _safe_float(target_threat_state.get("vp_forward_bias_m"))
+            if np.isfinite(head_on_max_vp_forward_bias_m):
+                if not np.isfinite(vp_forward_bias_m):
+                    return {
+                        "effective_mode_id": candidate_mode_id,
+                        "triggered": False,
+                        "reason": "head_on_target_threat_vp_forward_bias_unavailable",
+                    }
+                if vp_forward_bias_m > head_on_max_vp_forward_bias_m:
+                    return {
+                        "effective_mode_id": candidate_mode_id,
+                        "triggered": False,
+                        "reason": "head_on_target_threat_vp_forward_bias_too_positive",
+                    }
         effective_mode_id = int(
             cfg.get("head_on_forced_mode_id", cfg.get("forced_mode_id", 0))
         )
@@ -953,6 +999,7 @@ def apply_head_on_post_merge_reopened_crossing_overdeep_clamp(
     mode_registry: Dict[int, Dict[str, Any]],
     overdeep_state: Dict[str, Any],
     overdeep_cfg: Optional[Dict[str, Any]],
+    head_on_recovery_mode_seen: bool = False,
 ) -> Dict[str, Any]:
     """Force head_on when reopened head_on is already overdeep with little lateral spread."""
     cfg = overdeep_cfg or {}
@@ -1003,20 +1050,21 @@ def apply_head_on_post_merge_reopened_crossing_overdeep_clamp(
             head_on_min_vp_lateral_bias_m = _safe_float(
                 cfg.get("head_on_min_vp_lateral_bias_m")
             )
-            vp_lateral_bias_m = _safe_float(overdeep_state.get("vp_lateral_bias_m"))
-            if np.isfinite(head_on_min_vp_lateral_bias_m):
-                if not np.isfinite(vp_lateral_bias_m):
-                    return {
-                        "effective_mode_id": candidate_mode_id,
-                        "triggered": False,
-                        "reason": "head_on_overdeep_vp_lateral_bias_unavailable",
-                    }
-                if vp_lateral_bias_m < head_on_min_vp_lateral_bias_m:
-                    return {
-                        "effective_mode_id": candidate_mode_id,
-                        "triggered": False,
-                        "reason": "head_on_overdeep_vp_lateral_bias_too_negative",
-                    }
+            if not bool(head_on_recovery_mode_seen):
+                vp_lateral_bias_m = _safe_float(overdeep_state.get("vp_lateral_bias_m"))
+                if np.isfinite(head_on_min_vp_lateral_bias_m):
+                    if not np.isfinite(vp_lateral_bias_m):
+                        return {
+                            "effective_mode_id": candidate_mode_id,
+                            "triggered": False,
+                            "reason": "head_on_overdeep_vp_lateral_bias_unavailable",
+                        }
+                    if vp_lateral_bias_m < head_on_min_vp_lateral_bias_m:
+                        return {
+                            "effective_mode_id": candidate_mode_id,
+                            "triggered": False,
+                            "reason": "head_on_overdeep_vp_lateral_bias_too_negative",
+                        }
         effective_mode_id = int(
             cfg.get("head_on_forced_mode_id", cfg.get("forced_mode_id", 0))
         )

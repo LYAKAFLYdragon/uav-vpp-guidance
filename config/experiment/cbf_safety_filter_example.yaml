@@ -1,0 +1,19 @@
+# CBF Safety Filter Configuration Example
+# Add this to your comparison config or experiment config to enable CBF
+
+safety_filter:
+  enabled: true
+  type: cbf
+  d_min_m: 150.0           # Minimum safe distance to target [m]
+  alpha_collision: 0.5    # CBF class-K gain for collision avoidance
+  h_min_m: 500.0           # Minimum safe altitude [m]
+  h_max_m: 12000.0         # Maximum safe altitude [m]
+  alpha_altitude: 0.3      # CBF class-K gain for altitude
+  v_min_mps: 80.0          # Minimum safe speed [m/s] (stall protection)
+  v_max_mps: 400.0         # Maximum safe speed [m/s] (overspeed protection)
+  alpha_speed: 0.2          # CBF class-K gain for speed
+  nz_max: 7.0              # Max normal overload [g]
+  alpha_overload: 0.5      # CBF class-K gain for overload
+  qp_penalty: 1.0          # Penalty on deviation from nominal
+  slack_weight: 1000.0     # Weight on slack variables
+  verbose: false           # Log CBF interventions

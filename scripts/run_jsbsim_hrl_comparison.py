@@ -514,6 +514,16 @@ def _apply_attack_zone_cli_overrides(
         _record_set(config, f"attack_zone.{key}", value, source)
 
 
+def _apply_safety_filter_overrides(
+    config: Dict[str, Any],
+    overrides: Dict[str, Any],
+) -> None:
+    if not overrides:
+        return
+    source = f"{SCRIPT_NAME}:safety_filter_cli"
+    config["safety_filter"] = overrides
+
+
 def _apply_prediction_cli_overrides(
     config: Dict[str, Any],
     method_def: Dict[str, Any],
@@ -1835,8 +1845,62 @@ def build_eval_config(
     _apply_prediction_cli_overrides(config, method_def, prediction_overrides or {})
     _apply_vpp_cli_overrides(config, method_def, vpp_overrides or {})
     _apply_opponent_stage(config, comparison_config, opponent_stage)
+def build_eval_config(
+    comparison_config: Dict[str, Any],
+    method_name: str,
+    task_name: str,
+    backend: str,
+    opponent_stage: str = "none",
+    max_steps_override: Optional[int] = None,
+    jsbsim_root: Optional[str] = None,
+    attack_zone_overrides: Optional[Dict[str, Any]] = None,
+    prediction_overrides: Optional[Dict[str, Any]] = None,
+    vpp_overrides: Optional[Dict[str, Any]] = None,
+    safety_filter_overrides: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    methods = comparison_config.get("methods", {})
+    tasks = comparison_config.get("tasks", {})
+    if method_name not in methods:
+        raise KeyError(f"Unknown method: {method_name}")
+    if task_name not in tasks:
+        raise KeyError(f"Unknown task: {task_name}")
+
+    method_def = methods[method_name]
+    task_def = _resolve_task_def(tasks[task_name])
+    agent_type = method_def.get("agent_type", "ppo")
+    if agent_type in {"oracle_task_gate", "random_task_gate", "hierarchical_commander"}:
+        # oracle/random gate and hierarchical commander use the comparison config
+        # as the evaluation environment base.
+        config = copy.deepcopy(comparison_config)
+    else:
+        checkpoint_path = _repo_path(method_def.get("checkpoint"))
+        fallback_config_path = _repo_path(method_def.get("config_path"))
+        config = _load_checkpoint_config(checkpoint_path, fallback_config_path)
+    _apply_task_and_common_overrides(
+        config,
+        comparison_config,
+        task_name,
+        task_def,
+        backend=backend,
+        max_steps_override=max_steps_override,
+        jsbsim_root=jsbsim_root,
+    )
+    _apply_prediction_variant(config, comparison_config, method_name, method_def)
+    _apply_prediction_cli_overrides(config, method_def, prediction_overrides or {})
+    _apply_vpp_cli_overrides(config, method_def, vpp_overrides or {})
+    _apply_opponent_stage(config, comparison_config, opponent_stage)
     _apply_attack_zone_cli_overrides(config, attack_zone_overrides or {})
+    _apply_safety_filter_overrides(config, safety_filter_overrides or {})
     method_config_overrides = method_def.get("config_overrides", {})
+    if method_config_overrides:
+        for key, value in method_config_overrides.items():
+            _record_set(
+                config,
+                key,
+                value,
+                f"{SCRIPT_NAME}:method_def_override",
+            )
+    return config
     if method_config_overrides:
         for key, value in method_config_overrides.items():
             _record_set(
@@ -4772,8 +4836,13 @@ def _parse_args() -> argparse.Namespace:
         action="store_true",
         help="Only for dry-run planning on machines without trained artifacts.",
     )
+    parser.add_argument(
+        "--safety-filter",
+        choices=["none", "cbf"],
+        default="none",
+        help="Enable safety filter (cbf=Control Barrier Function).",
+    )
     return parser.parse_args()
-
 
 def _collect_attack_zone_cli_overrides(args: argparse.Namespace) -> Dict[str, Any]:
     overrides: Dict[str, Any] = {}
@@ -6161,6 +6230,13 @@ def main() -> int:
     attack_zone_overrides = _collect_attack_zone_cli_overrides(args)
     prediction_overrides = _collect_prediction_cli_overrides(args)
     vpp_overrides = _collect_vpp_cli_overrides(args)
+    
+    # Safety filter CLI override
+    safety_filter_config = comparison_config.get("safety_filter", {})
+    if args.safety_filter != "none":
+        safety_filter_config = copy.deepcopy(safety_filter_config)
+        safety_filter_config["enabled"] = True
+        safety_filter_config["type"] = args.safety_filter
     jsbsim_root = args.jsbsim_root
     if jsbsim_root is None and str(backend).lower() == "jsbsim":
         jsbsim_root = os.environ.get("JSBSIM_ROOT") or str(REPO_ROOT)
@@ -6184,6 +6260,7 @@ def main() -> int:
         "attack_zone_overrides": attack_zone_overrides,
         "prediction_overrides": prediction_overrides,
         "vpp_overrides": vpp_overrides,
+        "safety_filter": safety_filter_config,
         "run_status": args.run_status,
         "dry_run": args.dry_run,
     }
@@ -6269,6 +6346,7 @@ def main() -> int:
                     attack_zone_overrides=attack_zone_overrides,
                     prediction_overrides=prediction_overrides,
                     vpp_overrides=vpp_overrides,
+                    safety_filter_overrides=safety_filter_config,
                 )
                 eval_configs[f"{method}/{task}"] = cfg
         config_snapshots = _write_config_snapshots(run_dir, eval_configs)

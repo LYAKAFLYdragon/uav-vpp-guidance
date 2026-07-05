@@ -1457,6 +1457,15 @@ class CloseRangeTrackingEnv:
         self._post_merge_predicted_target_forward_scale_released = False
         self._post_merge_predicted_target_forward_scale_ego_only_streak_steps = 0
 
+        # CBF Safety Filter (optional)
+        self._cbf_filter = None
+        cbf_config = config.get("safety_filter", {})
+        if cbf_config.get("enabled", False):
+            from ..safety.cbf_filter import create_cbf_filter
+            self._cbf_filter = create_cbf_filter(cbf_config)
+            if self._cbf_filter is not None:
+                print(f"[CBF] Safety filter enabled: {cbf_config}")
+
     # ------------------------------------------------------------------
     # Low-level controller factory
     # ------------------------------------------------------------------
@@ -4100,6 +4109,35 @@ class CloseRangeTrackingEnv:
                     return_info=True,
                 )
             virtual_point, vp_info = vp_result
+            # NON-CANONICAL MECHANISM EXTENSION v2:
+            # Recovery VPP geometry override — directly modifies the virtual point
+            # position when recovery profile is active and geometry is severely
+            # unfavorable (high ATA, post-merge). This is a mechanism extension
+            # intended for the non-canonical low-level recovery lane only.
+            recovery_vpp_geometry_override_cfg = self.config.get(
+                "virtual_point", {}
+            ).get("post_merge_tactical_basis_recovery_profile", {}).get(
+                "vpp_geometry_override", {}
+            )
+            if (
+                bool(recovery_vpp_geometry_override_cfg.get("enabled", False))
+            ):
+                virtual_point, vp_info, override_applied = (
+                    self._apply_recovery_vpp_geometry_override(
+                        virtual_point,
+                        vp_info,
+                        own_state,
+                        target_state,
+                        rel_state,
+                        cfg=recovery_vpp_geometry_override_cfg,
+                    )
+                )
+                post_merge_tactical_basis_recovery_profile_state[
+                    "vpp_geometry_override_applied"
+                ] = override_applied
+                if override_applied:
+                    virtual_point_source = "recovery_vpp_geometry_override"
+                    vp_info["virtual_point_source"] = virtual_point_source
             direct_track_mode_effective = False
             virtual_point_source = "vpp_policy"
         else:
@@ -4234,6 +4272,16 @@ class CloseRangeTrackingEnv:
                 or task_command_info.get("reset_command_filter", False)
             ),
         )
+
+        # 6a. CBF Safety Filter: minimally modify command to satisfy safety constraints
+        cbf_info = {}
+        if self._cbf_filter is not None and not use_command_override:
+            filtered_command, cbf_info = self._cbf_filter.filter_command(
+                nominal_command=filtered_command,
+                own_state=own_state,
+                target_state=target_state,
+                rel_state=rel_state,
+            )
 
         # 6b. 通信延迟：对滤波后的指令做一步滞后近似
         delayed_command = self._apply_communication_delay(filtered_command)
@@ -5226,6 +5274,8 @@ class CloseRangeTrackingEnv:
                 dtype=np.float64,
             ).tolist()
         info.update(actuator_info)
+        info.update(term_info)
+        info["cbf_info"] = cbf_info
         info.update(term_info)
 
         # 12. 任务钩子：允许子类覆盖 reward / done / info
@@ -6337,6 +6387,128 @@ class CloseRangeTrackingEnv:
                 float(pos[2]) if hasattr(pos, "__len__") and len(pos) > 2 else 5000.0
             ),
         }
+
+    def _apply_recovery_vpp_geometry_override(
+        self,
+        virtual_point: dict,
+        vp_info: dict,
+        own_state: dict,
+        target_state: dict,
+        rel_state: dict,
+        cfg: dict,
+    ):
+        """NON-CANONICAL: Apply a direct VPP position override during recovery.
+
+        When the post-merge recovery profile is active and the aircraft geometry
+        is severely unfavorable (high ATA, low range, post-merge), this method
+        directly shifts the virtual pursuit point to a more aggressive position
+        intended to force a turn back toward the target. This is a mechanism
+        extension for the non-canonical low-level recovery lane; it does not
+        replace the policy action but adds a geometric override on top of it.
+
+        Returns (virtual_point, vp_info, applied).
+        """
+        import numpy as np
+
+        # Geometry thresholds
+        min_ata_deg = float(cfg.get("min_ata_deg", 90.0))
+        max_ata_deg = float(cfg.get("max_ata_deg", 180.0))
+        min_range_m = float(cfg.get("min_range_m", 300.0))
+        max_range_m = float(cfg.get("max_range_m", 3000.0))
+        require_range_opening = bool(cfg.get("require_range_opening", True))
+        require_first_pass_complete = bool(cfg.get("require_first_pass_complete", True))
+        require_no_attack_zone = bool(cfg.get("require_no_attack_zone", True))
+
+        # Override parameters
+        forward_bias_m = float(cfg.get("forward_bias_m", 1500.0))
+        lateral_bias_scale = float(cfg.get("lateral_bias_scale", 0.0))
+        override_blend = float(cfg.get("override_blend", 0.7))
+
+        # Guard checks
+        if require_first_pass_complete and not self._first_pass_complete:
+            return virtual_point, vp_info, False
+        if require_no_attack_zone:
+            # Handle combat_hp as either dict-like or object with last_info attribute
+            combat_hp = getattr(self, "combat_hp", None)
+            if combat_hp is not None:
+                if hasattr(combat_hp, "last_info"):
+                    last_info = getattr(combat_hp, "last_info", {})
+                elif hasattr(combat_hp, "get"):
+                    last_info = combat_hp.get("last_info", {})
+                else:
+                    last_info = {}
+            else:
+                last_info = {}
+            if hasattr(last_info, "get"):
+                ego_in_az = bool(last_info.get("ego_in_attack_zone", False))
+                target_in_az = bool(last_info.get("target_in_attack_zone", False))
+            else:
+                ego_in_az = bool(getattr(last_info, "ego_in_attack_zone", False))
+                target_in_az = bool(getattr(last_info, "target_in_attack_zone", False))
+            if ego_in_az or target_in_az:
+                return virtual_point, vp_info, False
+
+        # Extract geometry
+        ata_deg = rel_state.get("ata_deg")
+        if ata_deg is None and rel_state.get("ata_rad") is not None:
+            ata_deg = np.rad2deg(float(rel_state.get("ata_rad")))
+        ata_deg = abs(float(ata_deg if ata_deg is not None else np.nan))
+        range_m = float(rel_state.get("range_m", np.nan))
+        range_rate_mps = float(rel_state.get("range_rate_mps", np.nan))
+
+        if not np.isfinite(ata_deg) or not np.isfinite(range_m):
+            return virtual_point, vp_info, False
+
+        if not (min_ata_deg <= ata_deg <= max_ata_deg):
+            return virtual_point, vp_info, False
+        if not (min_range_m <= range_m <= max_range_m):
+            return virtual_point, vp_info, False
+        if require_range_opening and range_rate_mps >= 0.0:
+            return virtual_point, vp_info, False
+
+        # Compute target-relative position of current VPP
+        target_pos = self._position_from_state(target_state)
+        vp_pos = self._as_neu_vector(
+            virtual_point.get("position_neu", virtual_point.get("position")),
+            default=target_pos,
+        )
+        # Compute override position: target + forward_bias in target-velocity frame
+        from uav_vpp_guidance.virtual_point.coordinate_transform import (
+            world_to_offset_frame,
+            offset_to_world,
+        )
+        target_rel_vp = world_to_offset_frame(
+            vp_pos - target_pos,
+            "target_velocity",
+            own_state=own_state,
+            target_state=target_state,
+        )
+        # Override: push VPP forward of target (more aggressive pursuit)
+        override_target_rel = np.array([
+            forward_bias_m,
+            target_rel_vp[1] * lateral_bias_scale,
+            target_rel_vp[2],
+        ], dtype=np.float64)
+        override_world_offset = offset_to_world(
+            override_target_rel,
+            "target_velocity",
+            own_state=own_state,
+            target_state=target_state,
+        )
+        override_vp_pos = target_pos + override_world_offset
+
+        # Blend original and override
+        new_vp_pos = (1.0 - override_blend) * vp_pos + override_blend * override_vp_pos
+
+        new_virtual_point = dict(virtual_point)
+        new_virtual_point["position_neu"] = new_vp_pos
+        new_vp_info = dict(vp_info)
+        new_vp_info["recovery_vpp_geometry_override_applied"] = True
+        new_vp_info["recovery_vpp_geometry_override_blend"] = override_blend
+        new_vp_info["recovery_vpp_geometry_override_forward_bias_m"] = forward_bias_m
+        new_vp_info["recovery_vpp_geometry_override_ata_deg"] = ata_deg
+        new_vp_info["recovery_vpp_geometry_override_range_m"] = range_m
+        return new_virtual_point, new_vp_info, True
 
     def close(self):
         """Clean up environment resources."""

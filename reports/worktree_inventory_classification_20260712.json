@@ -1,0 +1,1850 @@
+{
+  "generated_at_utc": "2026-07-12T11:59:43.757376+00:00",
+  "repo_root": "E:\\uav-vpp-guidance",
+  "policy": {
+    "canonical": {
+      "owner": "paper/reproducibility steward",
+      "lane": "CAN-20260705 and v5 submission package",
+      "retention": "preserve; merge only through a reviewed minimal change set"
+    },
+    "noncanonical": {
+      "owner": "research-lane owner",
+      "lane": "explicit non-canonical exploration",
+      "retention": "preserve in a separate worktree/output root; never promote silently"
+    },
+    "historical": {
+      "owner": "archive steward",
+      "lane": "historical or superseded material",
+      "retention": "retain read-only for traceability; exclude from current claims"
+    },
+    "build": {
+      "owner": "release/build steward",
+      "lane": "generated package, cache, or temporary artifact",
+      "retention": "regenerate from a manifest; do not treat as source evidence"
+    },
+    "review-required": {
+      "owner": "repository steward",
+      "lane": "unassigned",
+      "retention": "preserve unchanged until a human assigns a lane"
+    }
+  },
+  "categories": {
+    "canonical": [
+      {
+        "status": " M",
+        "path": "config/checkpoint_registry.yaml"
+      },
+      {
+        "status": " M",
+        "path": "config/experiment/jsbsim_hrl_hierarchical_commander_reset075_3mode_post_merge_recovery_bootstrap.yaml"
+      },
+      {
+        "status": " M",
+        "path": "config/experiment/jsbsim_hrl_oracle_vs_commander_post_merge_recovery_formal_heldout.yaml"
+      },
+      {
+        "status": " M",
+        "path": "config/experiment/jsbsim_hrl_oracle_vs_commander_post_merge_recovery_manifest60_pilot.yaml"
+      },
+      {
+        "status": " M",
+        "path": "config/experiment/jsbsim_hrl_oracle_vs_commander_post_merge_recovery_manifest90_pilot.yaml"
+      },
+      {
+        "status": " M",
+        "path": "config/experiment/jsbsim_hrl_reset075_no_mode_switch_longscale00_no_vpp_combat_best.yaml"
+      },
+      {
+        "status": " M",
+        "path": "config/experiment/jsbsim_hrl_reset075_no_mode_switch_longscale00_rule_los_zero_offset.yaml"
+      },
+      {
+        "status": " M",
+        "path": "config/experiment/train_end_to_end_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_combat.yaml"
+      },
+      {
+        "status": " M",
+        "path": "config/experiment/train_prediction_vpp_ppo_jsbsim_compare_long_lh1p0.yaml"
+      },
+      {
+        "status": " M",
+        "path": "docs/drones_comparison_mvp_execution_sheet.md"
+      },
+      {
+        "status": " M",
+        "path": "docs/drones_comparison_mvp_implementation_checklist.md"
+      },
+      {
+        "status": " M",
+        "path": "docs/hierarchical_commander_mvp_checklist_review.md"
+      },
+      {
+        "status": " M",
+        "path": "docs/oracle_task_gate_mvp_results.md"
+      },
+      {
+        "status": " M",
+        "path": "drones/self_review_checklist.md"
+      },
+      {
+        "status": " M",
+        "path": "run_formal_end_to_end_clean_worktree.bat"
+      },
+      {
+        "status": " M",
+        "path": "run_formal_expert_clean_worktree.bat"
+      },
+      {
+        "status": " M",
+        "path": "scripts/run_jsbsim_hrl_comparison.py"
+      },
+      {
+        "status": " M",
+        "path": "scripts/train_curriculum_ppo.py"
+      },
+      {
+        "status": " M",
+        "path": "src/uav_vpp_guidance/agents/commander_ppo_agent.py"
+      },
+      {
+        "status": " M",
+        "path": "src/uav_vpp_guidance/envs/hierarchical_commander_env.py"
+      },
+      {
+        "status": " M",
+        "path": "src/uav_vpp_guidance/envs/jsbsim_env.py"
+      },
+      {
+        "status": " M",
+        "path": "src/uav_vpp_guidance/envs/reward.py"
+      },
+      {
+        "status": " M",
+        "path": "src/uav_vpp_guidance/envs/tracking_env.py"
+      },
+      {
+        "status": " M",
+        "path": "src/uav_vpp_guidance/evaluation/combat_checkpoint_retrospective.py"
+      },
+      {
+        "status": " M",
+        "path": "src/uav_vpp_guidance/evaluation/hierarchical_commander_policy.py"
+      },
+      {
+        "status": " M",
+        "path": "src/uav_vpp_guidance/evaluation/recorders.py"
+      },
+      {
+        "status": " M",
+        "path": "src/uav_vpp_guidance/guidance/overload_rollrate.py"
+      },
+      {
+        "status": " M",
+        "path": "src/uav_vpp_guidance/hierarchy/commander_mode_constraints.py"
+      },
+      {
+        "status": " M",
+        "path": "src/uav_vpp_guidance/hierarchy/specialist_policy.py"
+      },
+      {
+        "status": " M",
+        "path": "src/uav_vpp_guidance/training/train_prediction_vpp_combat_finetune.py"
+      },
+      {
+        "status": " M",
+        "path": "src/uav_vpp_guidance/training/train_prediction_vpp_ppo.py"
+      },
+      {
+        "status": " M",
+        "path": "tests/conftest.py"
+      },
+      {
+        "status": " M",
+        "path": "tests/test_combat_checkpoint_retrospective.py"
+      },
+      {
+        "status": " M",
+        "path": "tests/test_curriculum_opponent_pool.py"
+      },
+      {
+        "status": " M",
+        "path": "tests/test_head_on_post_merge_recovery_manifest60.py"
+      },
+      {
+        "status": " M",
+        "path": "tests/test_head_on_post_merge_recovery_manifest90.py"
+      },
+      {
+        "status": " M",
+        "path": "tests/test_hierarchical_commander_policy.py"
+      },
+      {
+        "status": " M",
+        "path": "tests/test_jsbsim_env_p1.py"
+      },
+      {
+        "status": " M",
+        "path": "tests/test_jsbsim_hrl_comparison_runner.py"
+      },
+      {
+        "status": " M",
+        "path": "tests/test_overload_rollrate.py"
+      },
+      {
+        "status": " M",
+        "path": "tests/test_post_merge_recovery_formal_heldout.py"
+      },
+      {
+        "status": " M",
+        "path": "tests/test_prediction_combat_finetune.py"
+      },
+      {
+        "status": " M",
+        "path": "tests/test_prediction_jsbsim_compare_config.py"
+      },
+      {
+        "status": " M",
+        "path": "tests/test_recorder.py"
+      },
+      {
+        "status": " M",
+        "path": "tests/test_tracking_env_no_prediction.py"
+      },
+      {
+        "status": "??",
+        "path": "config/experiment/_temp_dqn_hold100.yaml"
+      },
+      {
+        "status": "??",
+        "path": "config/experiment/_temp_jsbsim_hrl_dqn_hold100.yaml"
+      },
+      {
+        "status": "??",
+        "path": "config/experiment/cbf_safety_filter_example.yaml"
+      },
+      {
+        "status": "??",
+        "path": "config/experiment/jsbsim_hrl_flight_envelope_manifest60_expert.yaml"
+      },
+      {
+        "status": "??",
+        "path": "config/experiment/jsbsim_hrl_oracle_task_gate_headon_weighted_best_vs_last_sanity3.yaml"
+      },
+      {
+        "status": "??",
+        "path": "config/experiment/jsbsim_hrl_oracle_vs_balanced_tail_eval10_geometry_quality_guard_oracle_only_headon_sanity.yaml"
+      },
+      {
+        "status": "??",
+        "path": "config/experiment/jsbsim_hrl_oracle_vs_balanced_tail_eval10_secondary_clamp_fresh_geometry_formal_heldout_sanity3.yaml"
+      },
+      {
+        "status": "??",
+        "path": "config/experiment/jsbsim_hrl_oracle_vs_commander_post_merge_recovery_ablation_formal_oracle_only_headon.yaml"
+      },
+      {
+        "status": "??",
+        "path": "config/experiment/jsbsim_hrl_oracle_vs_commander_post_merge_recovery_ablation_manifest60.yaml"
+      },
+      {
+        "status": "??",
+        "path": "config/experiment/jsbsim_hrl_oracle_vs_commander_post_merge_recovery_formal_heldout_overdeep_filter_only_tmp.yaml"
+      },
+      {
+        "status": "??",
+        "path": "config/experiment/jsbsim_hrl_oracle_vs_commander_post_merge_recovery_formal_heldout_prethreat_filter_only_tmp.yaml"
+      },
+      {
+        "status": "??",
+        "path": "config/experiment/jsbsim_hrl_oracle_vs_commander_post_merge_recovery_hardest_lane_counterexample_manifest60_gate.yaml"
+      },
+      {
+        "status": "??",
+        "path": "config/experiment/jsbsim_hrl_oracle_vs_commander_post_merge_recovery_hardest_lane_counterexample_merged_gate.yaml"
+      },
+      {
+        "status": "??",
+        "path": "config/experiment/jsbsim_hrl_oracle_vs_commander_post_merge_recovery_hardest_lane_counterexample_sanity.yaml"
+      },
+      {
+        "status": "??",
+        "path": "config/experiment/jsbsim_hrl_oracle_vs_commander_post_merge_recovery_sanity.yaml"
+      },
+      {
+        "status": "??",
+        "path": "config/experiment/jsbsim_hrl_oracle_vs_commander_post_merge_recovery_specialist_last_sanity.yaml"
+      },
+      {
+        "status": "??",
+        "path": "config/experiment/jsbsim_hrl_oracle_vs_commander_post_merge_recovery_specialist_manifest60_pilot.yaml"
+      },
+      {
+        "status": "??",
+        "path": "config/experiment/jsbsim_hrl_oracle_vs_commander_post_merge_recovery_specialist_sanity.yaml"
+      },
+      {
+        "status": "??",
+        "path": "config/experiment/jsbsim_hrl_oracle_vs_commander_post_merge_recovery_specialist_v2_manifest60_pilot.yaml"
+      },
+      {
+        "status": "??",
+        "path": "config/experiment/jsbsim_hrl_oracle_vs_commander_post_merge_recovery_specialist_v2_merged_gate.yaml"
+      },
+      {
+        "status": "??",
+        "path": "config/experiment/jsbsim_hrl_oracle_vs_commander_post_merge_recovery_specialist_v2_sanity.yaml"
+      },
+      {
+        "status": "??",
+        "path": "config/experiment/jsbsim_hrl_oracle_vs_commander_post_merge_recovery_specialist_v3_entry_window_manifest60_pilot.yaml"
+      },
+      {
+        "status": "??",
+        "path": "config/experiment/jsbsim_hrl_oracle_vs_commander_post_merge_recovery_specialist_v3_entry_window_merged_gate.yaml"
+      },
+      {
+        "status": "??",
+        "path": "config/experiment/jsbsim_hrl_oracle_vs_commander_prediction_guided_reward_v1_manifest60_pilot.yaml"
+      },
+      {
+        "status": "??",
+        "path": "config/experiment/jsbsim_hrl_oracle_vs_commander_prediction_guided_reward_v1_merged_gate.yaml"
+      },
+      {
+        "status": "??",
+        "path": "config/experiment/jsbsim_hrl_oracle_vs_commander_prediction_guided_reward_v1_sanity.yaml"
+      },
+      {
+        "status": "??",
+        "path": "config/experiment/train_prediction_vpp_hierarchical_commander_ppo_reset075_tactical_basis_3mode_post_merge_recovery_bootstrap_hardest_lane_counterexample_finetune.yaml"
+      },
+      {
+        "status": "??",
+        "path": "config/experiment/train_prediction_vpp_hierarchical_commander_ppo_reset075_tactical_basis_3mode_post_merge_recovery_bootstrap_prediction_guided_reward_v1.yaml"
+      },
+      {
+        "status": "??",
+        "path": "config/experiment/train_prediction_vpp_ppo_crossing_v10.yaml"
+      },
+      {
+        "status": "??",
+        "path": "config/experiment/train_prediction_vpp_ppo_crossing_v2_mini.yaml"
+      },
+      {
+        "status": "??",
+        "path": "config/experiment/train_prediction_vpp_ppo_crossing_v2_quick.yaml"
+      },
+      {
+        "status": "??",
+        "path": "config/experiment/train_prediction_vpp_ppo_crossing_v4.yaml"
+      },
+      {
+        "status": "??",
+        "path": "config/experiment/train_prediction_vpp_ppo_crossing_v5.yaml"
+      },
+      {
+        "status": "??",
+        "path": "config/experiment/train_prediction_vpp_ppo_crossing_v6.yaml"
+      },
+      {
+        "status": "??",
+        "path": "config/experiment/train_prediction_vpp_ppo_crossing_v7.yaml"
+      },
+      {
+        "status": "??",
+        "path": "config/experiment/train_prediction_vpp_ppo_crossing_v8.yaml"
+      },
+      {
+        "status": "??",
+        "path": "config/experiment/train_prediction_vpp_ppo_crossing_v9.yaml"
+      },
+      {
+        "status": "??",
+        "path": "config/experiment/train_prediction_vpp_ppo_reset075_tactical_basis_headon_post_merge_recovery_bootstrap.yaml"
+      },
+      {
+        "status": "??",
+        "path": "config/experiment/train_prediction_vpp_ppo_reset075_tactical_basis_headon_post_merge_recovery_bootstrap_v2.yaml"
+      },
+      {
+        "status": "??",
+        "path": "config/experiment/train_prediction_vpp_ppo_reset075_tactical_basis_headon_post_merge_recovery_bootstrap_v3_entry_window.yaml"
+      },
+      {
+        "status": "??",
+        "path": "docs/drones_comparison_mvp_cloud_handoff_20260630.md"
+      },
+      {
+        "status": "??",
+        "path": "docs/manifest60_base_geometry_reference.md"
+      },
+      {
+        "status": "??",
+        "path": "drones/AST_RETARGET_SPEC.md"
+      },
+      {
+        "status": "??",
+        "path": "drones/dfar_ast_final.tex"
+      },
+      {
+        "status": "??",
+        "path": "drones/dfar_ast_final_v2.tex"
+      },
+      {
+        "status": "??",
+        "path": "drones/dfar_ast_final_v3.pdf"
+      },
+      {
+        "status": "??",
+        "path": "drones/dfar_ast_final_v3.tex"
+      },
+      {
+        "status": "??",
+        "path": "drones/dfar_ast_final_v4.tex"
+      },
+      {
+        "status": "??",
+        "path": "drones/dfar_ast_final_v5.pdf"
+      },
+      {
+        "status": "??",
+        "path": "drones/dfar_ast_round_0.tex"
+      },
+      {
+        "status": "??",
+        "path": "drones/dfar_ast_round_1.tex"
+      },
+      {
+        "status": "??",
+        "path": "drones/dfar_ast_round_2.tex"
+      },
+      {
+        "status": "??",
+        "path": "drones/dfar_ast_round_3.tex"
+      },
+      {
+        "status": "??",
+        "path": "drones/dfar_ast_round_4.tex"
+      },
+      {
+        "status": "??",
+        "path": "drones/dfar_ast_round_5.tex"
+      },
+      {
+        "status": "??",
+        "path": "drones/dfar_ast_round_6.tex"
+      },
+      {
+        "status": "??",
+        "path": "drones/figures/build_rq1_crossing_evidence_synthesis.py"
+      },
+      {
+        "status": "??",
+        "path": "drones/figures/debug_image.py"
+      },
+      {
+        "status": "??",
+        "path": "drones/figures/debug_trace.py"
+      },
+      {
+        "status": "??",
+        "path": "drones/figures/draw_vector_airplane.py"
+      },
+      {
+        "status": "??",
+        "path": "drones/figures/extract_svg_images.py"
+      },
+      {
+        "status": "??",
+        "path": "drones/figures/figure1_air_combat_geometry.pdf"
+      },
+      {
+        "status": "??",
+        "path": "drones/figures/figure1_air_combat_geometry.py"
+      },
+      {
+        "status": "??",
+        "path": "drones/figures/figure1_air_combat_geometry.svg"
+      },
+      {
+        "status": "??",
+        "path": "drones/figures/figure1_air_combat_geometry_external.svg"
+      },
+      {
+        "status": "??",
+        "path": "drones/figures/figure1_air_combat_geometry_external_v2.svg"
+      },
+      {
+        "status": "??",
+        "path": "drones/figures/figure1_air_combat_geometry_fixed.svg"
+      },
+      {
+        "status": "??",
+        "path": "drones/figures/figure1_hierarchical_vpp_reference_v2.svg"
+      },
+      {
+        "status": "??",
+        "path": "drones/figures/figure1_hierarchical_vpp_reference_v3.pdf"
+      },
+      {
+        "status": "??",
+        "path": "drones/figures/figure1_hierarchical_vpp_reference_v3.svg"
+      },
+      {
+        "status": "??",
+        "path": "drones/figures/figure1_hierarchical_vpp_reference_v3_visio.svg"
+      },
+      {
+        "status": "??",
+        "path": "drones/figures/figure1_hierarchical_vpp_reference_v4.svg"
+      },
+      {
+        "status": "??",
+        "path": "drones/figures/figure1_hierarchical_vpp_reference_v4_visio.svg"
+      },
+      {
+        "status": "??",
+        "path": "drones/figures/figure1_v4.pdf"
+      },
+      {
+        "status": "??",
+        "path": "drones/figures/figure2_structured_scenario_envelope.pdf"
+      },
+      {
+        "status": "??",
+        "path": "drones/figures/figure2_structured_scenario_envelope.py"
+      },
+      {
+        "status": "??",
+        "path": "drones/figures/figure2_structured_scenario_envelope.svg"
+      },
+      {
+        "status": "??",
+        "path": "drones/figures/figure2_structured_scenario_envelope.tiff"
+      },
+      {
+        "status": "??",
+        "path": "drones/figures/figure2_three_initial_situations.pdf"
+      },
+      {
+        "status": "??",
+        "path": "drones/figures/figure2_three_initial_situations.py"
+      },
+      {
+        "status": "??",
+        "path": "drones/figures/figure2_three_initial_situations.svg"
+      },
+      {
+        "status": "??",
+        "path": "drones/figures/figure2_three_initial_situations_external.svg"
+      },
+      {
+        "status": "??",
+        "path": "drones/figures/figure2_three_initial_situations_external_v2.svg"
+      },
+      {
+        "status": "??",
+        "path": "drones/figures/figure2_three_initial_situations_fixed.svg"
+      },
+      {
+        "status": "??",
+        "path": "drones/figures/parse_stl_path.py"
+      },
+      {
+        "status": "??",
+        "path": "drones/figures/shot_result.json"
+      },
+      {
+        "status": "??",
+        "path": "drones/figures/svg_data_uri.txt"
+      },
+      {
+        "status": "??",
+        "path": "drones/figures/svg_preview.html"
+      },
+      {
+        "status": "??",
+        "path": "drones/figures/test_vector_plane.pdf"
+      },
+      {
+        "status": "??",
+        "path": "drones/figures/test_vector_plane.svg"
+      },
+      {
+        "status": "??",
+        "path": "drones/figures/test_vector_plane_v2.pdf"
+      },
+      {
+        "status": "??",
+        "path": "drones/figures/test_vector_plane_v2.svg"
+      },
+      {
+        "status": "??",
+        "path": "drones/figures/test_vector_plane_v3.pdf"
+      },
+      {
+        "status": "??",
+        "path": "drones/figures/test_vector_plane_v3.svg"
+      },
+      {
+        "status": "??",
+        "path": "drones/figures/test_vector_plane_v4.pdf"
+      },
+      {
+        "status": "??",
+        "path": "drones/figures/test_vector_plane_v4.svg"
+      },
+      {
+        "status": "??",
+        "path": "drones/figures/trace_airplane_icon.py"
+      },
+      {
+        "status": "??",
+        "path": "drones/figures_ast/Figure1_PostRevision_Review.md"
+      },
+      {
+        "status": "??",
+        "path": "drones/figures_ast/Figure1_Revision_Checklist.md"
+      },
+      {
+        "status": "??",
+        "path": "drones/figures_ast/edit_svg.py"
+      },
+      {
+        "status": "??",
+        "path": "drones/figures_ast/f16_stl_top_path.txt"
+      },
+      {
+        "status": "??",
+        "path": "drones/figures_ast/f16_stl_top_symbol_preview.svg"
+      },
+      {
+        "status": "??",
+        "path": "drones/figures_ast/figure1_for_latex.html"
+      },
+      {
+        "status": "??",
+        "path": "drones/figures_ast/figure1_hierarchical_vpp_reference.svg"
+      },
+      {
+        "status": "??",
+        "path": "drones/figures_ast/figure1_hierarchical_vpp_reference_submission_safe.svg"
+      },
+      {
+        "status": "??",
+        "path": "drones/figures_ast/figure1_preview.html"
+      },
+      {
+        "status": "??",
+        "path": "drones/figures_ast/figure1_preview_v3.html"
+      },
+      {
+        "status": "??",
+        "path": "drones/figures_ast/figure1_preview_wrapper.html"
+      },
+      {
+        "status": "??",
+        "path": "drones/figures_ast/figure7_expert_telemetry_flight_envelope_development.pdf"
+      },
+      {
+        "status": "??",
+        "path": "drones/figures_ast/figure7_expert_telemetry_flight_envelope_development.svg"
+      },
+      {
+        "status": "??",
+        "path": "drones/figures_ast/figure7_expert_telemetry_flight_envelope_development.tiff"
+      },
+      {
+        "status": "??",
+        "path": "drones/figures_ast/figure_s7_rq1_crossing_evidence_forest.pdf"
+      },
+      {
+        "status": "??",
+        "path": "drones/figures_ast/figure_s7_rq1_crossing_evidence_forest.svg"
+      },
+      {
+        "status": "??",
+        "path": "drones/figures_ast/figure_s7_rq1_crossing_evidence_forest.tiff"
+      },
+      {
+        "status": "??",
+        "path": "drones/modification_summary.md"
+      },
+      {
+        "status": "??",
+        "path": "drones/supplement_index.pdf"
+      },
+      {
+        "status": "??",
+        "path": "drones/supplementary_material.tex"
+      },
+      {
+        "status": "??",
+        "path": "drones/supplementary_material_v3.pdf"
+      },
+      {
+        "status": "??",
+        "path": "drones/supplementary_material_v3.tex"
+      },
+      {
+        "status": "??",
+        "path": "drones/title_page_ast.pdf"
+      },
+      {
+        "status": "??",
+        "path": "drones/translation/"
+      },
+      {
+        "status": "??",
+        "path": "drones/update_tex.py"
+      },
+      {
+        "status": "??",
+        "path": "loop-budget.md"
+      },
+      {
+        "status": "??",
+        "path": "loop-run-log.md"
+      },
+      {
+        "status": "??",
+        "path": "loop_audit_report.md"
+      },
+      {
+        "status": "??",
+        "path": "loop_audit_report_v2.md"
+      },
+      {
+        "status": "??",
+        "path": "reports/ast_final_v5_paper_code_sync_20260711.md"
+      },
+      {
+        "status": "??",
+        "path": "reports/author_self_review_report_20260705.md"
+      },
+      {
+        "status": "??",
+        "path": "reports/canonical_commander_mainline_freeze_20260705.md"
+      },
+      {
+        "status": "??",
+        "path": "reports/crossing_structural_analysis_conclusion.md"
+      },
+      {
+        "status": "??",
+        "path": "reports/crossing_v2_v3_v4_iteration_report.md"
+      },
+      {
+        "status": "??",
+        "path": "reports/crossing_v3_v10_final_report.md"
+      },
+      {
+        "status": "??",
+        "path": "reports/crossing_v3_v8_iteration_report.md"
+      },
+      {
+        "status": "??",
+        "path": "reports/crossing_v5_vpp_mechanism_report.md"
+      },
+      {
+        "status": "??",
+        "path": "reports/g4_end_to_end_three_method_ablation_20260711.md"
+      },
+      {
+        "status": "??",
+        "path": "reports/graduate_advisor_journal_targeting_strategy.md"
+      },
+      {
+        "status": "??",
+        "path": "reports/graduate_advisor_manuscript_roadmap.md"
+      },
+      {
+        "status": "??",
+        "path": "reports/graduate_advisor_narrative_framework.md"
+      },
+      {
+        "status": "??",
+        "path": "reports/hierarchical_commander_mvp.md"
+      },
+      {
+        "status": "??",
+        "path": "reports/journal_editor_review_narrative_framework_v2_20260705.md"
+      },
+      {
+        "status": "??",
+        "path": "reports/method_audit_and_positioning.md"
+      },
+      {
+        "status": "??",
+        "path": "reports/p0_submission_and_reproducibility_closure_20260712.md"
+      },
+      {
+        "status": "??",
+        "path": "reports/paper_narrative_framework.md"
+      },
+      {
+        "status": "??",
+        "path": "reports/paper_narrative_framework_domain_expert.md"
+      },
+      {
+        "status": "??",
+        "path": "reports/paper_narrative_framework_review.md"
+      },
+      {
+        "status": "??",
+        "path": "reports/paper_narrative_framework_v2.md"
+      },
+      {
+        "status": "??",
+        "path": "reports/paper_narrative_framework_v3.md"
+      },
+      {
+        "status": "??",
+        "path": "reports/paper_single_source_of_truth_audit_20260712.md"
+      },
+      {
+        "status": "??",
+        "path": "reports/paper_submission_action_checklist_20260705.md"
+      },
+      {
+        "status": "??",
+        "path": "reports/peer_reviewer_report_narrative_framework_20260705.md"
+      },
+      {
+        "status": "??",
+        "path": "reports/post_merge_recovery_route_b_asset_manifest.md"
+      },
+      {
+        "status": "??",
+        "path": "reports/post_merge_recovery_route_b_evidence_package.md"
+      },
+      {
+        "status": "??",
+        "path": "reports/post_merge_recovery_route_b_manuscript_package.md"
+      },
+      {
+        "status": "??",
+        "path": "reports/post_merge_recovery_route_b_mock_review.md"
+      },
+      {
+        "status": "??",
+        "path": "reports/post_merge_recovery_route_b_paper_sync_audit.md"
+      },
+      {
+        "status": "??",
+        "path": "reports/post_merge_recovery_route_b_repro_index.md"
+      },
+      {
+        "status": "??",
+        "path": "reports/post_merge_recovery_route_b_safety_report.md"
+      },
+      {
+        "status": "??",
+        "path": "reports/prediction_guided_commander_reward_v1_checklist_report_20260709.md"
+      },
+      {
+        "status": "??",
+        "path": "reports/six_perspective_integrated_review_20260705.md"
+      },
+      {
+        "status": "??",
+        "path": "reports/vpp_maneuver_interface_paper_draft_20260705.md"
+      },
+      {
+        "status": "??",
+        "path": "reports/vpp_maneuver_interface_paper_sync_audit_20260705.md"
+      },
+      {
+        "status": "??",
+        "path": "reports/vpp_maneuver_interface_supplement_appendix_20260705.md"
+      },
+      {
+        "status": "??",
+        "path": "run_formal_heldout_sanity3.bat"
+      },
+      {
+        "status": "??",
+        "path": "scripts/analyze_head_on_fresh_geometry_validation.py"
+      },
+      {
+        "status": "??",
+        "path": "scripts/build_flight_envelope_figure.py"
+      },
+      {
+        "status": "??",
+        "path": "scripts/build_post_merge_recovery_route_b_artifacts.py"
+      },
+      {
+        "status": "??",
+        "path": "scripts/build_post_merge_recovery_route_b_safety_report.py"
+      },
+      {
+        "status": "??",
+        "path": "scripts/build_post_merge_recovery_specialist_v2_report.py"
+      },
+      {
+        "status": "??",
+        "path": "scripts/diagnose_single_trajectory.py"
+      },
+      {
+        "status": "??",
+        "path": "scripts/run_drones_comparison_mvp_cloud_sequence.ps1"
+      },
+      {
+        "status": "??",
+        "path": "scripts/run_oracle_vs_commander_post_merge_recovery_specialist.ps1"
+      },
+      {
+        "status": "??",
+        "path": "scripts/run_post_merge_recovery_route_b_publication_bundle.ps1"
+      },
+      {
+        "status": "??",
+        "path": "scripts/run_reset075_no_mode_switch_longscale00_tactical_basis_hierarchical_commander_mvp_2mode.ps1"
+      },
+      {
+        "status": "??",
+        "path": "scripts/run_reset075_no_mode_switch_longscale00_tactical_basis_hierarchical_commander_mvp_2mode_10seed_pilot.ps1"
+      },
+      {
+        "status": "??",
+        "path": "scripts/run_reset075_no_mode_switch_longscale00_tactical_basis_hierarchical_commander_mvp_2mode_task_type_checkpoint_retrospective.ps1"
+      },
+      {
+        "status": "??",
+        "path": "scripts/run_reset075_no_mode_switch_longscale00_tactical_basis_hierarchical_commander_mvp_2mode_task_type_mode_dominance_gated_alignment_shaped_checkpoint_retrospective.ps1"
+      },
+      {
+        "status": "??",
+        "path": "scripts/run_reset075_no_mode_switch_longscale00_tactical_basis_hierarchical_commander_mvp_2mode_task_type_mode_dominance_gated_alignment_shaped_v2_checkpoint_retrospective.ps1"
+      },
+      {
+        "status": "??",
+        "path": "scripts/run_reset075_no_mode_switch_longscale00_tactical_basis_hierarchical_commander_mvp_2mode_task_type_mode_dominance_gated_alignment_shaped_v2_oracle_imitation_warmstart_balanced_tail_checkpoint_retrospective.ps1"
+      },
+      {
+        "status": "??",
+        "path": "scripts/run_reset075_no_mode_switch_longscale00_tactical_basis_hierarchical_commander_mvp_2mode_task_type_mode_dominance_gated_alignment_shaped_v2_oracle_imitation_warmstart_balanced_tail_eval10_checkpoint_retrospective.ps1"
+      },
+      {
+        "status": "??",
+        "path": "scripts/run_reset075_no_mode_switch_longscale00_tactical_basis_hierarchical_commander_mvp_2mode_task_type_mode_dominance_gated_alignment_shaped_v2_oracle_imitation_warmstart_checkpoint_retrospective.ps1"
+      },
+      {
+        "status": "??",
+        "path": "scripts/run_reset075_no_mode_switch_longscale00_tactical_basis_hierarchical_commander_mvp_2mode_task_type_mode_dominance_gated_alignment_shaped_v2_oracle_imitation_warmstart_crossing_tail_checkpoint_retrospective.ps1"
+      },
+      {
+        "status": "??",
+        "path": "scripts/run_reset075_no_mode_switch_longscale00_tactical_basis_hierarchical_commander_mvp_2mode_task_type_mode_dominance_gated_checkpoint_retrospective.ps1"
+      },
+      {
+        "status": "??",
+        "path": "scripts/run_reset075_tactical_basis_headon_post_merge_recovery_bootstrap.ps1"
+      },
+      {
+        "status": "??",
+        "path": "scripts/summarize_drones_comparison_runs.py"
+      },
+      {
+        "status": "??",
+        "path": "src/uav_vpp_guidance/agents/commander_discrete_ddpg_agent.py"
+      },
+      {
+        "status": "??",
+        "path": "src/uav_vpp_guidance/agents/commander_discrete_r2sp_ppo_agent.py"
+      },
+      {
+        "status": "??",
+        "path": "src/uav_vpp_guidance/agents/commander_discrete_td3_agent.py"
+      },
+      {
+        "status": "??",
+        "path": "src/uav_vpp_guidance/evaluation/random_task_gate_policy.py"
+      },
+      {
+        "status": "??",
+        "path": "src/uav_vpp_guidance/hierarchy/prediction_guided_reward.py"
+      },
+      {
+        "status": "??",
+        "path": "src/uav_vpp_guidance/training/train_hierarchical_commander.py"
+      },
+      {
+        "status": "??",
+        "path": "tests/test_agent_class_generalization.py"
+      },
+      {
+        "status": "??",
+        "path": "tests/test_build_flight_envelope_figure.py"
+      },
+      {
+        "status": "??",
+        "path": "tests/test_build_post_merge_recovery_route_b_safety_report.py"
+      },
+      {
+        "status": "??",
+        "path": "tests/test_build_post_merge_recovery_specialist_v2_report.py"
+      },
+      {
+        "status": "??",
+        "path": "tests/test_build_post_merge_recovery_specialist_v2_report_smoke.py"
+      },
+      {
+        "status": "??",
+        "path": "tests/test_build_rq1_crossing_evidence_synthesis.py"
+      },
+      {
+        "status": "??",
+        "path": "tests/test_commander_policy_network.py"
+      },
+      {
+        "status": "??",
+        "path": "tests/test_commander_ppo_agent.py"
+      },
+      {
+        "status": "??",
+        "path": "tests/test_crossing_v3_config_revert.py"
+      },
+      {
+        "status": "??",
+        "path": "tests/test_hardest_lane_counterexample_commander_configs.py"
+      },
+      {
+        "status": "??",
+        "path": "tests/test_head_on_fresh_geometry_validation.py"
+      },
+      {
+        "status": "??",
+        "path": "tests/test_hierarchical_commander_env.py"
+      },
+      {
+        "status": "??",
+        "path": "tests/test_post_merge_recovery_ablation_configs.py"
+      },
+      {
+        "status": "??",
+        "path": "tests/test_post_merge_recovery_specialist_bootstrap.py"
+      },
+      {
+        "status": "??",
+        "path": "tests/test_post_merge_recovery_specialist_v2_configs.py"
+      },
+      {
+        "status": "??",
+        "path": "tests/test_post_merge_recovery_specialist_v3_entry_window.py"
+      },
+      {
+        "status": "??",
+        "path": "tests/test_prediction_guided_commander_reward.py"
+      },
+      {
+        "status": "??",
+        "path": "tests/test_prediction_guided_commander_reward_config.py"
+      },
+      {
+        "status": "??",
+        "path": "tests/test_prediction_guided_commander_runner.py"
+      },
+      {
+        "status": "??",
+        "path": "tests/test_random_task_gate_policy.py"
+      },
+      {
+        "status": "??",
+        "path": "tests/test_specialist_policy_subpolicy_routing.py"
+      },
+      {
+        "status": "??",
+        "path": "tests/test_train_hierarchical_commander.py"
+      },
+      {
+        "status": "??",
+        "path": "tests/test_train_hierarchical_commander_algorithm_dispatch.py"
+      }
+    ],
+    "noncanonical": [
+      {
+        "status": "??",
+        "path": "config/experiment/jsbsim_hrl_noncanonical_future_geometry_prediction_reward_headon_routed_family_v14b_base.yaml"
+      },
+      {
+        "status": "??",
+        "path": "config/experiment/jsbsim_hrl_noncanonical_future_geometry_prediction_reward_headon_routed_family_v14b_manifest60_headon.yaml"
+      },
+      {
+        "status": "??",
+        "path": "config/experiment/jsbsim_hrl_noncanonical_future_geometry_prediction_reward_headon_routed_family_v14b_oracle_only2_end_to_end.yaml"
+      },
+      {
+        "status": "??",
+        "path": "config/experiment/jsbsim_hrl_noncanonical_future_geometry_prediction_reward_headon_v10_manifest60_headon_conditional_close_range_geometry_profiles.yaml"
+      },
+      {
+        "status": "??",
+        "path": "config/experiment/jsbsim_hrl_noncanonical_future_geometry_prediction_reward_headon_v10_oracle_only3_conditional_close_range_geometry_profiles.yaml"
+      },
+      {
+        "status": "??",
+        "path": "config/experiment/jsbsim_hrl_noncanonical_future_geometry_prediction_reward_headon_v11_close_range_hardest_merged_gate.yaml"
+      },
+      {
+        "status": "??",
+        "path": "config/experiment/jsbsim_hrl_noncanonical_future_geometry_prediction_reward_headon_v11_manifest60_headon_close_range_divergence_specialist.yaml"
+      },
+      {
+        "status": "??",
+        "path": "config/experiment/jsbsim_hrl_noncanonical_future_geometry_prediction_reward_headon_v12_close_range_selective_subpolicy_router.yaml"
+      },
+      {
+        "status": "??",
+        "path": "config/experiment/jsbsim_hrl_noncanonical_future_geometry_prediction_reward_headon_v12_manifest60_headon_selective_subpolicy_router.yaml"
+      },
+      {
+        "status": "??",
+        "path": "config/experiment/jsbsim_hrl_noncanonical_future_geometry_prediction_reward_headon_v13_expert_residual4_v8_conditional_selective_router.yaml"
+      },
+      {
+        "status": "??",
+        "path": "config/experiment/jsbsim_hrl_noncanonical_future_geometry_prediction_reward_headon_v13_manifest60_headon_v8_conditional_selective_router.yaml"
+      },
+      {
+        "status": "??",
+        "path": "config/experiment/jsbsim_hrl_noncanonical_future_geometry_prediction_reward_headon_v14_manifest60_headon_selective_v6_router.yaml"
+      },
+      {
+        "status": "??",
+        "path": "config/experiment/jsbsim_hrl_noncanonical_future_geometry_prediction_reward_headon_v14_residual3_end_to_end_selective_v6_router.yaml"
+      },
+      {
+        "status": "??",
+        "path": "config/experiment/jsbsim_hrl_noncanonical_future_geometry_prediction_reward_headon_v14b_manifest60_headon_selective_v8_v6_router.yaml"
+      },
+      {
+        "status": "??",
+        "path": "config/experiment/jsbsim_hrl_noncanonical_future_geometry_prediction_reward_headon_v14b_oracle_only2_end_to_end_selective_v8_v6_router.yaml"
+      },
+      {
+        "status": "??",
+        "path": "config/experiment/jsbsim_hrl_noncanonical_future_geometry_prediction_reward_headon_v1_manifest60_gate.yaml"
+      },
+      {
+        "status": "??",
+        "path": "config/experiment/jsbsim_hrl_noncanonical_future_geometry_prediction_reward_headon_v1_merged_gate.yaml"
+      },
+      {
+        "status": "??",
+        "path": "config/experiment/jsbsim_hrl_noncanonical_future_geometry_prediction_reward_headon_v1_sanity.yaml"
+      },
+      {
+        "status": "??",
+        "path": "config/experiment/jsbsim_hrl_noncanonical_future_geometry_prediction_reward_headon_v2_manifest60_headon_veto_bypass_mode2_swap.yaml"
+      },
+      {
+        "status": "??",
+        "path": "config/experiment/jsbsim_hrl_noncanonical_future_geometry_prediction_reward_headon_v2_residual1_gate.yaml"
+      },
+      {
+        "status": "??",
+        "path": "config/experiment/jsbsim_hrl_noncanonical_future_geometry_prediction_reward_headon_v2_residual1_gate_veto_bypass.yaml"
+      },
+      {
+        "status": "??",
+        "path": "config/experiment/jsbsim_hrl_noncanonical_future_geometry_prediction_reward_headon_v2_residual1_gate_veto_bypass_mode2_swap.yaml"
+      },
+      {
+        "status": "??",
+        "path": "config/experiment/jsbsim_hrl_noncanonical_future_geometry_prediction_reward_headon_v2_sanity.yaml"
+      },
+      {
+        "status": "??",
+        "path": "config/experiment/jsbsim_hrl_noncanonical_future_geometry_prediction_reward_headon_v2_sanity_veto_bypass_mode2_swap.yaml"
+      },
+      {
+        "status": "??",
+        "path": "config/experiment/jsbsim_hrl_noncanonical_future_geometry_prediction_reward_headon_v3_manifest60_headon_veto_bypass_mode2_swap.yaml"
+      },
+      {
+        "status": "??",
+        "path": "config/experiment/jsbsim_hrl_noncanonical_future_geometry_prediction_reward_headon_v3_manifest60_headon_veto_bypass_mode2_swap_step8192.yaml"
+      },
+      {
+        "status": "??",
+        "path": "config/experiment/jsbsim_hrl_noncanonical_future_geometry_prediction_reward_headon_v3_residual3_gate_veto_bypass_mode2_swap.yaml"
+      },
+      {
+        "status": "??",
+        "path": "config/experiment/jsbsim_hrl_noncanonical_future_geometry_prediction_reward_headon_v3_residual3_gate_veto_bypass_mode2_swap_step8192.yaml"
+      },
+      {
+        "status": "??",
+        "path": "config/experiment/jsbsim_hrl_noncanonical_future_geometry_prediction_reward_headon_v4_residual3_headon_taskkey_endgame_window.yaml"
+      },
+      {
+        "status": "??",
+        "path": "config/experiment/jsbsim_hrl_noncanonical_future_geometry_prediction_reward_headon_v5_residual3_headon_taskkey_loop_stabilization.yaml"
+      },
+      {
+        "status": "??",
+        "path": "config/experiment/jsbsim_hrl_noncanonical_future_geometry_prediction_reward_headon_v6_residual3_headon_taskkey_reopened_loop.yaml"
+      },
+      {
+        "status": "??",
+        "path": "config/experiment/jsbsim_hrl_noncanonical_future_geometry_prediction_reward_headon_v7_residual3_headon_taskkey_early_geometry_clamp.yaml"
+      },
+      {
+        "status": "??",
+        "path": "config/experiment/jsbsim_hrl_noncanonical_future_geometry_prediction_reward_headon_v8_manifest60_headon_close_range_only_geometry_clamp.yaml"
+      },
+      {
+        "status": "??",
+        "path": "config/experiment/jsbsim_hrl_noncanonical_future_geometry_prediction_reward_headon_v8_residual3_headon_taskkey_close_range_only_geometry_clamp.yaml"
+      },
+      {
+        "status": "??",
+        "path": "config/experiment/jsbsim_hrl_noncanonical_future_geometry_prediction_reward_headon_v9_manifest60_headon_effective_close_range_geometry_clamp.yaml"
+      },
+      {
+        "status": "??",
+        "path": "config/experiment/jsbsim_hrl_noncanonical_future_geometry_prediction_reward_headon_v9_oracle_only3_effective_close_range_geometry_clamp.yaml"
+      },
+      {
+        "status": "??",
+        "path": "config/experiment/jsbsim_hrl_noncanonical_post_merge_recovery_specialist_residual3_v1_crossing_guard.yaml"
+      },
+      {
+        "status": "??",
+        "path": "config/experiment/jsbsim_hrl_noncanonical_post_merge_recovery_specialist_residual3_v1_crossing_guard_cleanimport_20260705.yaml"
+      },
+      {
+        "status": "??",
+        "path": "config/experiment/jsbsim_hrl_noncanonical_post_merge_recovery_specialist_residual3_v1_headon_taskkey_audit_cleanimport_20260705.yaml"
+      },
+      {
+        "status": "??",
+        "path": "config/experiment/jsbsim_hrl_noncanonical_post_merge_recovery_specialist_residual3_v1_manifest60_gate.yaml"
+      },
+      {
+        "status": "??",
+        "path": "config/experiment/jsbsim_hrl_noncanonical_post_merge_recovery_specialist_residual3_v1_residual3_gate.yaml"
+      },
+      {
+        "status": "??",
+        "path": "config/experiment/jsbsim_hrl_noncanonical_post_merge_recovery_specialist_residual3_v1_residual3_gate_cleanimport_20260705.yaml"
+      },
+      {
+        "status": "??",
+        "path": "config/experiment/jsbsim_hrl_prediction_decision_bridge_v1.yaml"
+      },
+      {
+        "status": "??",
+        "path": "config/experiment/jsbsim_hrl_prediction_decision_bridge_v1_smoke.yaml"
+      },
+      {
+        "status": "??",
+        "path": "config/experiment/noncanonical_jsbsim_hrl_reset075_no_mode_switch_longscale00_sac_cartesian_best.yaml"
+      },
+      {
+        "status": "??",
+        "path": "config/experiment/noncanonical_jsbsim_hrl_reset075_no_mode_switch_longscale00_sac_mixed_best.yaml"
+      },
+      {
+        "status": "??",
+        "path": "config/experiment/noncanonical_train_prediction_vpp_sac_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_cartesian_combat.yaml"
+      },
+      {
+        "status": "??",
+        "path": "config/experiment/noncanonical_train_prediction_vpp_sac_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_mixed_combat.yaml"
+      },
+      {
+        "status": "??",
+        "path": "config/experiment/train_prediction_vpp_ppo_noncanonical_future_geometry_prediction_reward_headon_v1.yaml"
+      },
+      {
+        "status": "??",
+        "path": "config/experiment/train_prediction_vpp_ppo_noncanonical_future_geometry_prediction_reward_headon_v11_close_range_divergence_recovery.yaml"
+      },
+      {
+        "status": "??",
+        "path": "config/experiment/train_prediction_vpp_ppo_noncanonical_future_geometry_prediction_reward_headon_v2_prediction_aware_recovery.yaml"
+      },
+      {
+        "status": "??",
+        "path": "config/experiment/train_prediction_vpp_ppo_noncanonical_future_geometry_prediction_reward_headon_v3_entry_sign_refresh_recovery.yaml"
+      },
+      {
+        "status": "??",
+        "path": "config/experiment/train_prediction_vpp_ppo_noncanonical_future_geometry_prediction_reward_headon_v4_endgame_window_recovery.yaml"
+      },
+      {
+        "status": "??",
+        "path": "config/experiment/train_prediction_vpp_ppo_noncanonical_future_geometry_prediction_reward_headon_v5_loop_stabilization_recovery.yaml"
+      },
+      {
+        "status": "??",
+        "path": "config/experiment/train_prediction_vpp_ppo_noncanonical_future_geometry_prediction_reward_headon_v6_reopened_loop_recovery.yaml"
+      },
+      {
+        "status": "??",
+        "path": "config/experiment/train_prediction_vpp_ppo_noncanonical_future_geometry_prediction_reward_headon_v7_early_geometry_clamp_recovery.yaml"
+      },
+      {
+        "status": "??",
+        "path": "config/experiment/train_prediction_vpp_ppo_noncanonical_future_geometry_prediction_reward_headon_v8_close_range_only_geometry_clamp_recovery.yaml"
+      },
+      {
+        "status": "??",
+        "path": "config/experiment/train_prediction_vpp_ppo_noncanonical_post_merge_recovery_specialist_residual3_v1.yaml"
+      },
+      {
+        "status": "??",
+        "path": "reports/explore_rl_merge_checklist_20260705.md"
+      },
+      {
+        "status": "??",
+        "path": "reports/future_geometry_headon_v1_expert_headon_reward_term_audit_20260710.md"
+      },
+      {
+        "status": "??",
+        "path": "reports/future_geometry_headon_v1_expert_headon_single_scenario_audit_20260710.md"
+      },
+      {
+        "status": "??",
+        "path": "reports/future_geometry_headon_v1_mode0_specialist_reward_replay_20260710.md"
+      },
+      {
+        "status": "??",
+        "path": "reports/noncanonical_chapter4_future_geometry_prediction_reward_checklist_20260709.md"
+      },
+      {
+        "status": "??",
+        "path": "reports/noncanonical_future_geometry_prediction_reward_activation_diagnosis_20260710.md"
+      },
+      {
+        "status": "??",
+        "path": "reports/noncanonical_future_geometry_prediction_reward_activation_patch_validation_20260710.md"
+      },
+      {
+        "status": "??",
+        "path": "reports/noncanonical_future_geometry_prediction_reward_attempt_log_20260711.md"
+      },
+      {
+        "status": "??",
+        "path": "reports/noncanonical_future_geometry_prediction_reward_manifest60_headon_mode2_swap_pilot_20260710.md"
+      },
+      {
+        "status": "??",
+        "path": "reports/noncanonical_future_geometry_prediction_reward_manifest60_oracle_only_release_vs_lowlevel_audit_20260710.md"
+      },
+      {
+        "status": "??",
+        "path": "reports/noncanonical_future_geometry_prediction_reward_manifest60_oracle_only_residual3_audit_20260710.md"
+      },
+      {
+        "status": "??",
+        "path": "reports/noncanonical_future_geometry_prediction_reward_manifest60_v9_oracle_only_release_vs_lowlevel_audit_20260710.md"
+      },
+      {
+        "status": "??",
+        "path": "reports/noncanonical_future_geometry_prediction_reward_next_decision_table_20260711.md"
+      },
+      {
+        "status": "??",
+        "path": "reports/noncanonical_future_geometry_prediction_reward_recovery_exit_checklist_20260710.md"
+      },
+      {
+        "status": "??",
+        "path": "reports/noncanonical_future_geometry_prediction_reward_residual1_mode2_swap_audit_20260710.md"
+      },
+      {
+        "status": "??",
+        "path": "reports/noncanonical_future_geometry_prediction_reward_residual1_veto_bypass_checklist_20260710.md"
+      },
+      {
+        "status": "??",
+        "path": "reports/noncanonical_future_geometry_prediction_reward_routed_family_v14b_closure_checklist_20260711.md"
+      },
+      {
+        "status": "??",
+        "path": "reports/noncanonical_future_geometry_prediction_reward_routed_family_v14b_closure_run_20260711.md"
+      },
+      {
+        "status": "??",
+        "path": "reports/noncanonical_future_geometry_prediction_reward_routed_family_v14b_freeze_20260711.md"
+      },
+      {
+        "status": "??",
+        "path": "reports/noncanonical_future_geometry_prediction_reward_v10_conditional_close_range_geometry_profiles_manifest60_expert_20260710.md"
+      },
+      {
+        "status": "??",
+        "path": "reports/noncanonical_future_geometry_prediction_reward_v11_close_range_divergence_specialist_report_20260710.md"
+      },
+      {
+        "status": "??",
+        "path": "reports/noncanonical_future_geometry_prediction_reward_v12_selective_subpolicy_router_report_20260711.md"
+      },
+      {
+        "status": "??",
+        "path": "reports/noncanonical_future_geometry_prediction_reward_v3_entry_sign_refresh_lane_20260710.md"
+      },
+      {
+        "status": "??",
+        "path": "reports/noncanonical_future_geometry_prediction_reward_v3_manifest60_dual_split_audit_20260710.md"
+      },
+      {
+        "status": "??",
+        "path": "reports/noncanonical_future_geometry_prediction_reward_v4_endgame_window_residual3_audit_20260710.md"
+      },
+      {
+        "status": "??",
+        "path": "reports/noncanonical_low_level_recovery_lane_prompt_20260705.md"
+      },
+      {
+        "status": "??",
+        "path": "reports/noncanonical_post_merge_recovery_residual3_checklist_20260705.md"
+      },
+      {
+        "status": "??",
+        "path": "reports/prediction_decision_bridge_v1_completion_audit_20260709.md"
+      },
+      {
+        "status": "??",
+        "path": "reports/prediction_decision_bridge_v1_status_20260709.md"
+      },
+      {
+        "status": "??",
+        "path": "scripts/audit_prediction_decision_bridge_outputs.py"
+      },
+      {
+        "status": "??",
+        "path": "scripts/build_prediction_decision_bridge_report.py"
+      },
+      {
+        "status": "??",
+        "path": "scripts/merge_prediction_decision_bridge_shards.py"
+      },
+      {
+        "status": "??",
+        "path": "scripts/run_noncanonical_future_geometry_prediction_reward_headon_v1.ps1"
+      },
+      {
+        "status": "??",
+        "path": "scripts/run_noncanonical_future_geometry_prediction_reward_headon_v2_residual1.ps1"
+      },
+      {
+        "status": "??",
+        "path": "scripts/run_noncanonical_reset075_no_mode_switch_longscale00_sac_cartesian_10seed_pilot.ps1"
+      },
+      {
+        "status": "??",
+        "path": "scripts/run_noncanonical_reset075_no_mode_switch_longscale00_sac_cartesian_combat.ps1"
+      },
+      {
+        "status": "??",
+        "path": "scripts/run_noncanonical_reset075_no_mode_switch_longscale00_sac_mixed_10seed_pilot.ps1"
+      },
+      {
+        "status": "??",
+        "path": "scripts/run_noncanonical_reset075_no_mode_switch_longscale00_sac_mixed_combat.ps1"
+      },
+      {
+        "status": "??",
+        "path": "scripts/run_prediction_decision_bridge_v1.ps1"
+      },
+      {
+        "status": "??",
+        "path": "scripts/run_prediction_decision_bridge_v1_formal_after_smoke.ps1"
+      },
+      {
+        "status": "??",
+        "path": "scripts/run_prediction_decision_bridge_v1_parallel.ps1"
+      },
+      {
+        "status": "??",
+        "path": "scripts/run_prediction_decision_bridge_v1_rebuild_assets.ps1"
+      },
+      {
+        "status": "??",
+        "path": "scripts/run_prediction_decision_bridge_v1_smoke.ps1"
+      },
+      {
+        "status": "??",
+        "path": "scripts/run_prediction_decision_bridge_v1_smoke_after_assets.ps1"
+      },
+      {
+        "status": "??",
+        "path": "src/uav_vpp_guidance/envs/future_geometry_prediction_reward.py"
+      },
+      {
+        "status": "??",
+        "path": "tests/test_future_geometry_prediction_reward.py"
+      },
+      {
+        "status": "??",
+        "path": "tests/test_future_geometry_prediction_reward_config.py"
+      },
+      {
+        "status": "??",
+        "path": "tests/test_future_geometry_prediction_reward_runner.py"
+      },
+      {
+        "status": "??",
+        "path": "tests/test_noncanonical_post_merge_recovery_residual3_configs.py"
+      },
+      {
+        "status": "??",
+        "path": "tests/test_noncanonical_post_merge_recovery_residual3_runner.py"
+      },
+      {
+        "status": "??",
+        "path": "tests/test_prediction_decision_bridge_assets.py"
+      },
+      {
+        "status": "??",
+        "path": "tests/test_tracking_env_future_geometry_prediction_reward.py"
+      }
+    ],
+    "historical": [
+      {
+        "status": " M",
+        "path": "config/experiment/jsbsim_hrl_reset075_no_mode_switch_longscale00_legacy_hierarchical_bridge.yaml"
+      },
+      {
+        "status": " M",
+        "path": "drones/dfartv2_drones_mdpi.pdf"
+      },
+      {
+        "status": " M",
+        "path": "drones/dfartv2_drones_mdpi.tex"
+      },
+      {
+        "status": " M",
+        "path": "drones/dfartv2_drones_mdpi_v2.tex"
+      },
+      {
+        "status": " M",
+        "path": "src/uav_vpp_guidance/agents/commander_double_dqn_agent.py"
+      },
+      {
+        "status": " M",
+        "path": "src/uav_vpp_guidance/agents/sac_agent.py"
+      },
+      {
+        "status": "??",
+        "path": "config/experiment/jsbsim_hrl_historical_commander_double_dqn_reset075_2mode_oracle_specialists_coldstart_base.yaml"
+      },
+      {
+        "status": "??",
+        "path": "config/experiment/jsbsim_hrl_historical_random_task_gate_mvp.yaml"
+      },
+      {
+        "status": "??",
+        "path": "config/experiment/jsbsim_hrl_historical_random_task_gate_mvp_macro1.yaml"
+      },
+      {
+        "status": "??",
+        "path": "config/experiment/jsbsim_hrl_historical_random_task_gate_mvp_macro12.yaml"
+      },
+      {
+        "status": "??",
+        "path": "config/experiment/jsbsim_hrl_historical_random_task_gate_mvp_macro24.yaml"
+      },
+      {
+        "status": "??",
+        "path": "config/experiment/jsbsim_hrl_historical_random_task_gate_mvp_macro6.yaml"
+      },
+      {
+        "status": "??",
+        "path": "config/experiment/train_historical_commander_double_dqn_reset075_2mode_oracle_specialists_coldstart_base.yaml"
+      },
+      {
+        "status": "??",
+        "path": "drones/dfartv2_ast_anonymized.pdf"
+      },
+      {
+        "status": "??",
+        "path": "drones/dfartv2_ast_anonymized.tex"
+      },
+      {
+        "status": "??",
+        "path": "drones/dfartv2_drones_mdpi.fdb_latexmk"
+      },
+      {
+        "status": "??",
+        "path": "drones/dfartv2_drones_mdpi.fls"
+      },
+      {
+        "status": "??",
+        "path": "drones/dfartv2_drones_mdpi_geometry_basis_historical.tex"
+      },
+      {
+        "status": "??",
+        "path": "drones/dfartv2_drones_mdpi_routeb_frozen.tex"
+      },
+      {
+        "status": "??",
+        "path": "drones/reviews/"
+      },
+      {
+        "status": "??",
+        "path": "launch_e2e_eval.py"
+      },
+      {
+        "status": "??",
+        "path": "launch_eval.py"
+      },
+      {
+        "status": "??",
+        "path": "launch_eval_updated.py"
+      },
+      {
+        "status": "??",
+        "path": "launch_eval_v3.py"
+      },
+      {
+        "status": "??",
+        "path": "launch_eval_v4.py"
+      },
+      {
+        "status": "??",
+        "path": "launch_eval_v5.py"
+      },
+      {
+        "status": "??",
+        "path": "launch_expert_eval.py"
+      },
+      {
+        "status": "??",
+        "path": "launch_training.py"
+      },
+      {
+        "status": "??",
+        "path": "launch_training_v3.py"
+      },
+      {
+        "status": "??",
+        "path": "launch_training_v4.py"
+      },
+      {
+        "status": "??",
+        "path": "launch_training_v5.py"
+      },
+      {
+        "status": "??",
+        "path": "outputstrain_double_dqn_cmd_log.txt"
+      },
+      {
+        "status": "??",
+        "path": "paper_front20.txt"
+      },
+      {
+        "status": "??",
+        "path": "paper_full.txt"
+      },
+      {
+        "status": "??",
+        "path": "reviews/reconstruction_guide_v2.md"
+      },
+      {
+        "status": "??",
+        "path": "reviews/reviewer_report_major_v2.md"
+      },
+      {
+        "status": "??",
+        "path": "rl_algorithm_additions_report.md"
+      },
+      {
+        "status": "??",
+        "path": "run_manifest90_end_to_end.bat"
+      },
+      {
+        "status": "??",
+        "path": "scripts/analyze_historical_hierarchical_commander_rl_algo_pilot.py"
+      },
+      {
+        "status": "??",
+        "path": "scripts/run_historical_commander_double_dqn_reset075_no_mode_switch_longscale00.ps1"
+      },
+      {
+        "status": "??",
+        "path": "scripts/run_historical_commander_double_dqn_reset075_no_mode_switch_longscale00_10seed_pilot.ps1"
+      },
+      {
+        "status": "??",
+        "path": "scripts/run_historical_commander_double_dqn_reset075_no_mode_switch_longscale00_40seed_pilot.ps1"
+      },
+      {
+        "status": "??",
+        "path": "scripts/run_historical_double_dqn_eval10_and_analyze.ps1"
+      },
+      {
+        "status": "??",
+        "path": "scripts/run_historical_double_dqn_full_training.ps1"
+      },
+      {
+        "status": "??",
+        "path": "scripts/run_historical_double_dqn_train_and_eval.bat"
+      },
+      {
+        "status": "??",
+        "path": "scripts/run_historical_double_dqn_training.bat"
+      },
+      {
+        "status": "??",
+        "path": "scripts/run_historical_macro_step_sensitivity_mvp.sh"
+      },
+      {
+        "status": "??",
+        "path": "scripts/run_historical_random_task_gate_mvp_10seed_pilot.sh"
+      },
+      {
+        "status": "??",
+        "path": "scripts/verify_historical_commander_double_dqn_single_seed.py"
+      },
+      {
+        "status": "??",
+        "path": "src/uav_vpp_guidance/agents/commander_discrete_dsac_agent.py"
+      },
+      {
+        "status": "??",
+        "path": "src/uav_vpp_guidance/agents/commander_discrete_r2sp_sac_agent.py"
+      },
+      {
+        "status": "??",
+        "path": "src/uav_vpp_guidance/agents/commander_discrete_sac_agent.py"
+      },
+      {
+        "status": "??",
+        "path": "src/uav_vpp_guidance/agents/historical_baseline_commander_agents.py"
+      },
+      {
+        "status": "??",
+        "path": "src/uav_vpp_guidance/envs/historical_self_play_checkpoint_opponent.py"
+      },
+      {
+        "status": "??",
+        "path": "src/uav_vpp_guidance/training/historical_curriculum_self_play.py"
+      },
+      {
+        "status": "??",
+        "path": "src/uav_vpp_guidance/training/train_prediction_vpp_sac.py"
+      },
+      {
+        "status": "??",
+        "path": "tests/test_commander_double_dqn_agent.py"
+      },
+      {
+        "status": "??",
+        "path": "tests/test_historical_commander_agent_imports.py"
+      },
+      {
+        "status": "??",
+        "path": "tests/test_historical_curriculum_self_play_module.py"
+      },
+      {
+        "status": "??",
+        "path": "tests/test_train_prediction_vpp_sac.py"
+      }
+    ],
+    "build": [
+      {
+        "status": " M",
+        "path": "drones/dfartv2_drones_mdpi.aux"
+      },
+      {
+        "status": " D",
+        "path": "drones/dfartv2_drones_mdpi.synctex.gz"
+      },
+      {
+        "status": "??",
+        "path": ".agents/"
+      },
+      {
+        "status": "??",
+        "path": ".codex/"
+      },
+      {
+        "status": "??",
+        "path": ".codex_tmp_cui_docx_unpacked/"
+      },
+      {
+        "status": "??",
+        "path": "_temp_start_training.bat"
+      },
+      {
+        "status": "??",
+        "path": "drones/build_ast/"
+      },
+      {
+        "status": "??",
+        "path": "drones/build_b1b9/"
+      },
+      {
+        "status": "??",
+        "path": "drones/build_g1_supplement/"
+      },
+      {
+        "status": "??",
+        "path": "drones/build_main/"
+      },
+      {
+        "status": "??",
+        "path": "drones/build_routeb_frozen/"
+      },
+      {
+        "status": "??",
+        "path": "drones/build_rq1_main/"
+      },
+      {
+        "status": "??",
+        "path": "drones/build_rq1_supplement/"
+      },
+      {
+        "status": "??",
+        "path": "drones/build_supplement_index/"
+      },
+      {
+        "status": "??",
+        "path": "drones/build_v5_canonical/"
+      },
+      {
+        "status": "??",
+        "path": "drones/dfar_ast_final_v5.aux"
+      },
+      {
+        "status": "??",
+        "path": "drones/dfar_ast_final_v5.out"
+      },
+      {
+        "status": "??",
+        "path": "drones/dfar_ast_final_v5.spl"
+      },
+      {
+        "status": "??",
+        "path": "drones/dfartv2_ast_anonymized.aux"
+      },
+      {
+        "status": "??",
+        "path": "drones/dfartv2_ast_anonymized.out"
+      },
+      {
+        "status": "??",
+        "path": "drones/submission_dist/"
+      },
+      {
+        "status": "??",
+        "path": "drones/supplement_index.aux"
+      },
+      {
+        "status": "??",
+        "path": "drones/supplement_index.out"
+      },
+      {
+        "status": "??",
+        "path": "drones/title_page_ast.aux"
+      }
+    ],
+    "review-required": []
+  }
+}

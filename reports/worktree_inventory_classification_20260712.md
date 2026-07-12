@@ -1,14 +1,14 @@
 # Worktree Inventory Classification
 
-Generated: `2026-07-12T09:13:29.802068+00:00`
+Generated: `2026-07-12T11:59:43.757376+00:00`
 Repository: `E:\uav-vpp-guidance`
 
 ## Category Summary
 
 | Category | Files | Owner | Lane | Retention |
 |---|---:|---|---|---|
-| `canonical` | 223 | paper/reproducibility steward | CAN-20260705 and v5 submission package | preserve; merge only through a reviewed minimal change set |
-| `noncanonical` | 81 | research-lane owner | explicit non-canonical exploration | preserve in a separate worktree/output root; never promote silently |
+| `canonical` | 258 | paper/reproducibility steward | CAN-20260705 and v5 submission package | preserve; merge only through a reviewed minimal change set |
+| `noncanonical` | 110 | research-lane owner | explicit non-canonical exploration | preserve in a separate worktree/output root; never promote silently |
 | `historical` | 60 | archive steward | historical or superseded material | retain read-only for traceability; exclude from current claims |
 | `build` | 24 | release/build steward | generated package, cache, or temporary artifact | regenerate from a manifest; do not treat as source evidence |
 | `review-required` | 0 | repository steward | unassigned | preserve unchanged until a human assigns a lane |
@@ -17,9 +17,8 @@ Repository: `E:\uav-vpp-guidance`
 
 See `docs/worktree_lane_policy.md`. `review-required` files are deliberately retained and blocked from merge or paper citation until assigned.
 
-## `canonical` Entries (223)
+## `canonical` Entries (258)
 
-- ` M` `README.md`
 - ` M` `config/checkpoint_registry.yaml`
 - ` M` `config/experiment/jsbsim_hrl_hierarchical_commander_reset075_3mode_post_merge_recovery_bootstrap.yaml`
 - ` M` `config/experiment/jsbsim_hrl_oracle_vs_commander_post_merge_recovery_formal_heldout.yaml`
@@ -65,8 +64,6 @@ See `docs/worktree_lane_policy.md`. `review-required` files are deliberately ret
 - ` M` `tests/test_prediction_jsbsim_compare_config.py`
 - ` M` `tests/test_recorder.py`
 - ` M` `tests/test_tracking_env_no_prediction.py`
-- `??` `LOOP.md`
-- `??` `STATE.md`
 - `??` `config/experiment/_temp_dqn_hold100.yaml`
 - `??` `config/experiment/_temp_jsbsim_hrl_dqn_hold100.yaml`
 - `??` `config/experiment/cbf_safety_filter_example.yaml`
@@ -109,17 +106,13 @@ See `docs/worktree_lane_policy.md`. `review-required` files are deliberately ret
 - `??` `config/experiment/train_prediction_vpp_ppo_reset075_tactical_basis_headon_post_merge_recovery_bootstrap_v3_entry_window.yaml`
 - `??` `docs/drones_comparison_mvp_cloud_handoff_20260630.md`
 - `??` `docs/manifest60_base_geometry_reference.md`
-- `??` `docs/worktree_lane_policy.md`
 - `??` `drones/AST_RETARGET_SPEC.md`
-- `??` `drones/README_submission_ast.md`
-- `??` `drones/cover_letter_ast.md`
 - `??` `drones/dfar_ast_final.tex`
 - `??` `drones/dfar_ast_final_v2.tex`
 - `??` `drones/dfar_ast_final_v3.pdf`
 - `??` `drones/dfar_ast_final_v3.tex`
 - `??` `drones/dfar_ast_final_v4.tex`
 - `??` `drones/dfar_ast_final_v5.pdf`
-- `??` `drones/dfar_ast_final_v5.tex`
 - `??` `drones/dfar_ast_round_0.tex`
 - `??` `drones/dfar_ast_round_1.tex`
 - `??` `drones/dfar_ast_round_2.tex`
@@ -168,34 +161,77 @@ See `docs/worktree_lane_policy.md`. `review-required` files are deliberately ret
 - `??` `drones/figures/test_vector_plane_v4.pdf`
 - `??` `drones/figures/test_vector_plane_v4.svg`
 - `??` `drones/figures/trace_airplane_icon.py`
-- `??` `drones/figures_ast/`
-- `??` `drones/highlights.txt`
+- `??` `drones/figures_ast/Figure1_PostRevision_Review.md`
+- `??` `drones/figures_ast/Figure1_Revision_Checklist.md`
+- `??` `drones/figures_ast/edit_svg.py`
+- `??` `drones/figures_ast/f16_stl_top_path.txt`
+- `??` `drones/figures_ast/f16_stl_top_symbol_preview.svg`
+- `??` `drones/figures_ast/figure1_for_latex.html`
+- `??` `drones/figures_ast/figure1_hierarchical_vpp_reference.svg`
+- `??` `drones/figures_ast/figure1_hierarchical_vpp_reference_submission_safe.svg`
+- `??` `drones/figures_ast/figure1_preview.html`
+- `??` `drones/figures_ast/figure1_preview_v3.html`
+- `??` `drones/figures_ast/figure1_preview_wrapper.html`
+- `??` `drones/figures_ast/figure7_expert_telemetry_flight_envelope_development.pdf`
+- `??` `drones/figures_ast/figure7_expert_telemetry_flight_envelope_development.svg`
+- `??` `drones/figures_ast/figure7_expert_telemetry_flight_envelope_development.tiff`
+- `??` `drones/figures_ast/figure_s7_rq1_crossing_evidence_forest.pdf`
+- `??` `drones/figures_ast/figure_s7_rq1_crossing_evidence_forest.svg`
+- `??` `drones/figures_ast/figure_s7_rq1_crossing_evidence_forest.tiff`
 - `??` `drones/modification_summary.md`
-- `??` `drones/submission_manifest.yaml`
 - `??` `drones/supplement_index.pdf`
-- `??` `drones/supplement_index.tex`
 - `??` `drones/supplementary_material.tex`
 - `??` `drones/supplementary_material_v3.pdf`
 - `??` `drones/supplementary_material_v3.tex`
-- `??` `drones/supplementary_material_v4.tex`
 - `??` `drones/title_page_ast.pdf`
-- `??` `drones/title_page_ast.tex`
 - `??` `drones/translation/`
 - `??` `drones/update_tex.py`
 - `??` `loop-budget.md`
 - `??` `loop-run-log.md`
 - `??` `loop_audit_report.md`
 - `??` `loop_audit_report_v2.md`
-- `??` `reports/`
+- `??` `reports/ast_final_v5_paper_code_sync_20260711.md`
+- `??` `reports/author_self_review_report_20260705.md`
+- `??` `reports/canonical_commander_mainline_freeze_20260705.md`
+- `??` `reports/crossing_structural_analysis_conclusion.md`
+- `??` `reports/crossing_v2_v3_v4_iteration_report.md`
+- `??` `reports/crossing_v3_v10_final_report.md`
+- `??` `reports/crossing_v3_v8_iteration_report.md`
+- `??` `reports/crossing_v5_vpp_mechanism_report.md`
+- `??` `reports/g4_end_to_end_three_method_ablation_20260711.md`
+- `??` `reports/graduate_advisor_journal_targeting_strategy.md`
+- `??` `reports/graduate_advisor_manuscript_roadmap.md`
+- `??` `reports/graduate_advisor_narrative_framework.md`
+- `??` `reports/hierarchical_commander_mvp.md`
+- `??` `reports/journal_editor_review_narrative_framework_v2_20260705.md`
+- `??` `reports/method_audit_and_positioning.md`
+- `??` `reports/p0_submission_and_reproducibility_closure_20260712.md`
+- `??` `reports/paper_narrative_framework.md`
+- `??` `reports/paper_narrative_framework_domain_expert.md`
+- `??` `reports/paper_narrative_framework_review.md`
+- `??` `reports/paper_narrative_framework_v2.md`
+- `??` `reports/paper_narrative_framework_v3.md`
+- `??` `reports/paper_single_source_of_truth_audit_20260712.md`
+- `??` `reports/paper_submission_action_checklist_20260705.md`
+- `??` `reports/peer_reviewer_report_narrative_framework_20260705.md`
+- `??` `reports/post_merge_recovery_route_b_asset_manifest.md`
+- `??` `reports/post_merge_recovery_route_b_evidence_package.md`
+- `??` `reports/post_merge_recovery_route_b_manuscript_package.md`
+- `??` `reports/post_merge_recovery_route_b_mock_review.md`
+- `??` `reports/post_merge_recovery_route_b_paper_sync_audit.md`
+- `??` `reports/post_merge_recovery_route_b_repro_index.md`
+- `??` `reports/post_merge_recovery_route_b_safety_report.md`
+- `??` `reports/prediction_guided_commander_reward_v1_checklist_report_20260709.md`
+- `??` `reports/six_perspective_integrated_review_20260705.md`
+- `??` `reports/vpp_maneuver_interface_paper_draft_20260705.md`
+- `??` `reports/vpp_maneuver_interface_paper_sync_audit_20260705.md`
+- `??` `reports/vpp_maneuver_interface_supplement_appendix_20260705.md`
 - `??` `run_formal_heldout_sanity3.bat`
 - `??` `scripts/analyze_head_on_fresh_geometry_validation.py`
 - `??` `scripts/build_flight_envelope_figure.py`
 - `??` `scripts/build_post_merge_recovery_route_b_artifacts.py`
 - `??` `scripts/build_post_merge_recovery_route_b_safety_report.py`
 - `??` `scripts/build_post_merge_recovery_specialist_v2_report.py`
-- `??` `scripts/build_submission_bundle.py`
-- `??` `scripts/can20260705_artifact_bundle.py`
-- `??` `scripts/classify_worktree_inventory.py`
 - `??` `scripts/diagnose_single_trajectory.py`
 - `??` `scripts/run_drones_comparison_mvp_cloud_sequence.ps1`
 - `??` `scripts/run_oracle_vs_commander_post_merge_recovery_specialist.ps1`
@@ -239,11 +275,10 @@ See `docs/worktree_lane_policy.md`. `review-required` files are deliberately ret
 - `??` `tests/test_prediction_guided_commander_runner.py`
 - `??` `tests/test_random_task_gate_policy.py`
 - `??` `tests/test_specialist_policy_subpolicy_routing.py`
-- `??` `tests/test_submission_freeze_tools.py`
 - `??` `tests/test_train_hierarchical_commander.py`
 - `??` `tests/test_train_hierarchical_commander_algorithm_dispatch.py`
 
-## `noncanonical` Entries (81)
+## `noncanonical` Entries (110)
 
 - `??` `config/experiment/jsbsim_hrl_noncanonical_future_geometry_prediction_reward_headon_routed_family_v14b_base.yaml`
 - `??` `config/experiment/jsbsim_hrl_noncanonical_future_geometry_prediction_reward_headon_routed_family_v14b_manifest60_headon.yaml`
@@ -303,6 +338,35 @@ See `docs/worktree_lane_policy.md`. `review-required` files are deliberately ret
 - `??` `config/experiment/train_prediction_vpp_ppo_noncanonical_future_geometry_prediction_reward_headon_v7_early_geometry_clamp_recovery.yaml`
 - `??` `config/experiment/train_prediction_vpp_ppo_noncanonical_future_geometry_prediction_reward_headon_v8_close_range_only_geometry_clamp_recovery.yaml`
 - `??` `config/experiment/train_prediction_vpp_ppo_noncanonical_post_merge_recovery_specialist_residual3_v1.yaml`
+- `??` `reports/explore_rl_merge_checklist_20260705.md`
+- `??` `reports/future_geometry_headon_v1_expert_headon_reward_term_audit_20260710.md`
+- `??` `reports/future_geometry_headon_v1_expert_headon_single_scenario_audit_20260710.md`
+- `??` `reports/future_geometry_headon_v1_mode0_specialist_reward_replay_20260710.md`
+- `??` `reports/noncanonical_chapter4_future_geometry_prediction_reward_checklist_20260709.md`
+- `??` `reports/noncanonical_future_geometry_prediction_reward_activation_diagnosis_20260710.md`
+- `??` `reports/noncanonical_future_geometry_prediction_reward_activation_patch_validation_20260710.md`
+- `??` `reports/noncanonical_future_geometry_prediction_reward_attempt_log_20260711.md`
+- `??` `reports/noncanonical_future_geometry_prediction_reward_manifest60_headon_mode2_swap_pilot_20260710.md`
+- `??` `reports/noncanonical_future_geometry_prediction_reward_manifest60_oracle_only_release_vs_lowlevel_audit_20260710.md`
+- `??` `reports/noncanonical_future_geometry_prediction_reward_manifest60_oracle_only_residual3_audit_20260710.md`
+- `??` `reports/noncanonical_future_geometry_prediction_reward_manifest60_v9_oracle_only_release_vs_lowlevel_audit_20260710.md`
+- `??` `reports/noncanonical_future_geometry_prediction_reward_next_decision_table_20260711.md`
+- `??` `reports/noncanonical_future_geometry_prediction_reward_recovery_exit_checklist_20260710.md`
+- `??` `reports/noncanonical_future_geometry_prediction_reward_residual1_mode2_swap_audit_20260710.md`
+- `??` `reports/noncanonical_future_geometry_prediction_reward_residual1_veto_bypass_checklist_20260710.md`
+- `??` `reports/noncanonical_future_geometry_prediction_reward_routed_family_v14b_closure_checklist_20260711.md`
+- `??` `reports/noncanonical_future_geometry_prediction_reward_routed_family_v14b_closure_run_20260711.md`
+- `??` `reports/noncanonical_future_geometry_prediction_reward_routed_family_v14b_freeze_20260711.md`
+- `??` `reports/noncanonical_future_geometry_prediction_reward_v10_conditional_close_range_geometry_profiles_manifest60_expert_20260710.md`
+- `??` `reports/noncanonical_future_geometry_prediction_reward_v11_close_range_divergence_specialist_report_20260710.md`
+- `??` `reports/noncanonical_future_geometry_prediction_reward_v12_selective_subpolicy_router_report_20260711.md`
+- `??` `reports/noncanonical_future_geometry_prediction_reward_v3_entry_sign_refresh_lane_20260710.md`
+- `??` `reports/noncanonical_future_geometry_prediction_reward_v3_manifest60_dual_split_audit_20260710.md`
+- `??` `reports/noncanonical_future_geometry_prediction_reward_v4_endgame_window_residual3_audit_20260710.md`
+- `??` `reports/noncanonical_low_level_recovery_lane_prompt_20260705.md`
+- `??` `reports/noncanonical_post_merge_recovery_residual3_checklist_20260705.md`
+- `??` `reports/prediction_decision_bridge_v1_completion_audit_20260709.md`
+- `??` `reports/prediction_decision_bridge_v1_status_20260709.md`
 - `??` `scripts/audit_prediction_decision_bridge_outputs.py`
 - `??` `scripts/build_prediction_decision_bridge_report.py`
 - `??` `scripts/merge_prediction_decision_bridge_shards.py`

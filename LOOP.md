@@ -35,7 +35,7 @@ D:\Anaconda3\envs\jsbenv\python.exe E:\uav-vpp-guidance-can20260705\scripts\pref
   --config config/experiment/jsbsim_hrl_oracle_vs_commander_post_merge_recovery_manifest60_pilot.yaml
 
 # Build the only current AST upload package.
-D:\Anaconda3\envs\jsbenv\python.exe scripts\build_submission_bundle.py build
+D:\Anaconda3\envs\jsbenv\python.exe scripts\build_submission_bundle.py build --overwrite
 ```
 
 ## Claim Guardrails

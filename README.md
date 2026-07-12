@@ -37,7 +37,7 @@ D:\Anaconda3\envs\jsbenv\python.exe E:\uav-vpp-guidance-can20260705\scripts\pref
 ## AST Submission Package
 
 ```powershell
-D:\Anaconda3\envs\jsbenv\python.exe scripts\build_submission_bundle.py build
+D:\Anaconda3\envs\jsbenv\python.exe scripts\build_submission_bundle.py build --overwrite
 ```
 
 This command compiles the v5 manuscript, title page, Supplementary Table/Figure S3 material, copies only listed figures and reproducibility ledgers, verifies package checksums, and creates `drones/submission_dist/ast_vpp_can20260705.zip`.

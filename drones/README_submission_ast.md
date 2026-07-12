@@ -4,7 +4,7 @@
 **Build command:**
 
 ```powershell
-D:\Anaconda3\envs\jsbenv\python.exe scripts\build_submission_bundle.py build
+D:\Anaconda3\envs\jsbenv\python.exe scripts\build_submission_bundle.py build --overwrite
 ```
 
 The command reads `drones/submission_manifest.yaml`, recompiles all LaTeX sources twice, copies only manifest-listed files, writes checksums, verifies the unpacked package, and creates:

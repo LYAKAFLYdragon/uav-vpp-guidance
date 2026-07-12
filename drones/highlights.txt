@@ -1,0 +1,5 @@
+Hierarchical VPP maneuver interface preserves 3D low-level action head
+PPO commander routes among frozen low-level specialists per scenario
+Expert/head-on: learned commander no longer weaker than oracle gate
+Residual failure localized to only three end-to-end/head-on scenarios
+Advances VPP from point-chasing to combat-geometry shaping decision

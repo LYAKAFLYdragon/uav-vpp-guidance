@@ -1,0 +1,58 @@
+% Supplementary Material Index
+% Aerospace Science and Technology Submission
+\documentclass[11pt,a4paper]{article}
+\usepackage{geometry}
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{array}
+\geometry{margin=2.5cm}
+
+\title{Supplementary Material Index\\
+\large A Hierarchical Virtual-Pursuit-Point Maneuver Interface for Close-Range Air Combat}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+\noindent
+This document provides an index to the supplementary materials accompanying the manuscript. All files are organized in the submission bundle under the \texttt{supplementary/} directory.
+
+\section*{Supplementary Files}
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{@{}>{\raggedright\arraybackslash}p{4.2cm}>{\raggedright\arraybackslash}p{9.2cm}@{}}
+\toprule
+File/Directory & Description \\
+\midrule
+\url{supplementary/episode_records/} & Raw episode JSON records (zipped) for all evaluation snapshots \\
+\url{supplementary/aggregate_summaries/} & CSV aggregate summaries per task, opponent split, and method \\
+\url{supplementary/supplementary_material_v4.pdf} & Supplementary Tables S1--S3 and Figure S3: headline outcome accounting, representative excerpts, and RQ1 crossing evidence synthesis \\
+\url{supplementary/paper_authoritative_artifact_index_20260712.md} & Single-source evidence ledger: canonical headline run identifiers, supporting-evidence source IDs, and excluded historical sources \\
+\url{supplementary/rq1_crossing_evidence/} & RQ1 independent-manifest and three-seed outputs, paired-delta source data, bootstrap script, raw telemetry, and import-provenance exclusion record \\
+\url{supplementary/resolved_configs/} & YAML configuration snapshots used for each evaluation run \\
+\url{supplementary/figure_sources/} & High-resolution PNG source files for all manuscript figures \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section*{Software and Data Availability}
+
+The complete source code, training pipelines, and evaluation harness are available as a Git repository. Upon acceptance, the repository URL and commit hash will be disclosed in the final de-anonymized version. The repository includes:
+
+\begin{itemize}
+    \item UAV VPP Guidance environment (Python package with JSBSim backend)
+    \item Training scripts for PPO high-level policy and low-level specialist freezing
+    \item Evaluation pipeline with run manifest generation and artifact contract validation
+    \item Configuration templates for reproducible evaluation snapshots
+    \item Authoritative artifact index identifying the exclusive source of headline results and the scope of each supporting evidence stratum
+    \item RQ1 crossing evidence synthesis: independent geometry envelope, all three valid PPO seeds, and source data for Figure S3
+\end{itemize}
+
+\section*{Contact for Supplementary Materials}
+
+Upon acceptance, the corresponding author will provide access to the complete supplementary bundle including raw episode records, run manifests, and configuration snapshots.
+
+\end{document}

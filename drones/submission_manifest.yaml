@@ -1,0 +1,41 @@
+schema_version: 1
+submission_id: ast_vpp_can20260705
+target_journal: Aerospace Science and Technology
+canonical_evidence_id: CAN-20260705
+canonical_commit: 9a9f9bf6d68560afa81560f5260b78f318dcd9b1
+
+latex_documents:
+  - source: drones/dfar_ast_final_v5.tex
+    output: manuscript/dfar_ast_final_v5.pdf
+    jobname: dfar_ast_final_v5_submission
+  - source: drones/title_page_ast.tex
+    output: title_page/title_page_ast.pdf
+    jobname: title_page_ast_submission
+  - source: drones/supplementary_material_v4.tex
+    output: supplementary/supplementary_material_v4.pdf
+    jobname: supplementary_material_v4_submission
+  - source: drones/supplement_index.tex
+    output: supplementary/supplement_index.pdf
+    jobname: supplement_index_submission
+
+files:
+  - source: drones/highlights.txt
+    output: submission_metadata/highlights.txt
+  - source: drones/cover_letter_ast.md
+    output: submission_metadata/cover_letter_ast.md
+  - source: reports/paper_authoritative_artifact_index_20260712.md
+    output: reproducibility/paper_authoritative_artifact_index_20260712.md
+  - source: reports/paper_single_source_of_truth_reaudit_20260712.md
+    output: reproducibility/paper_single_source_of_truth_reaudit_20260712.md
+  - source: drones/figures/figure1_hierarchical_vpp_reference_submission_safe.png
+    output: figures/figure1_hierarchical_vpp_reference_submission_safe.png
+  - source: drones/figures/figure1_air_combat_geometry.png
+    output: figures/figure1_air_combat_geometry.png
+  - source: drones/figures/figure2_three_initial_situations.png
+    output: figures/figure2_three_initial_situations.png
+  - source: drones/figures_ast/fig1_formal_residual_r1600_topdown_oracle_vs_recovery.png
+    output: figures/fig1_formal_residual_r1600_topdown_oracle_vs_recovery.png
+  - source: drones/figures_ast/fig2_formal_residual_r1600_timeseries_oracle_vs_recovery.png
+    output: figures/fig2_formal_residual_r1600_timeseries_oracle_vs_recovery.png
+  - source: drones/figures_ast/figure_s3_rq1_crossing_evidence_forest.pdf
+    output: figures/figure_s3_rq1_crossing_evidence_forest.pdf

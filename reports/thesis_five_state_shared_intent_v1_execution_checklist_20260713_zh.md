@@ -363,4 +363,6 @@ primary formal methods 为：
 - [x] 已有 Taxonomy30 诊断证据支持“不应继续对双技能 canonical family 做 routing patch”，但它不构成新系统的训练证据。
 - [x] P0 的 clean worktree、[asset manifest](E:/uav-vpp-guidance-thesis-five-state-v1/reports/thesis_five_state_shared_intent_v1_asset_manifest.yaml)、[容量策略](E:/uav-vpp-guidance-thesis-five-state-v1/config/experiment/thesis_five_state_shared_intent_v1_output_retention.yaml) 和 [preflight 记录](E:/uav-vpp-guidance-thesis-five-state-v1/reports/thesis_five_state_shared_intent_v1_p0_preflight_20260713.json) 已完成；四个 baseline/predictor assets 的 SHA/shape 均通过。
 - [x] P0 第三 PPO/VPP opponent 审计已完成，结论详见 [capability audit](E:/uav-vpp-guidance-thesis-five-state-v1/reports/thesis_five_state_shared_intent_v1_third_opponent_capability_audit_20260713.md)：独立 `16-D -> 3-D` PPO/VPP checkpoint 已通过 fixed-horizon training gate 与 JSBSim target-side probe，并已冻结进 asset bundle。
-- [ ] P1--P7 尚未实施。下一步是运行 `--require-training-ready` 最终 preflight；通过后可启动 P1 observation contract，仍禁止启动四技能或高层训练。
+- [x] P0 的 `--require-training-ready` 最终 preflight 已通过：六个资产 SHA/shape、容量 policy 与第三 opponent readiness 均为 green。
+- [x] P1 的 observation-contract 子阶段已完成：`five_state_shared_intent_v1` 固定为 66-D，禁止 task/opponent bits 与隐式 padding/truncation，feature-name transplant 映射和 contract tests 已通过。
+- [ ] P1 的显式 history extractor、profile compiler 与 validity mask 尚未实施；P2--P7 也尚未开始。四技能或高层训练仍被禁止。

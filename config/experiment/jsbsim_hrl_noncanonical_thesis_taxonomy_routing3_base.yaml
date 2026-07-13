@@ -1,0 +1,69 @@
+includes:
+  - ./jsbsim_hrl_thesis_taxonomy_ablation30_base.yaml
+
+experiment:
+  name: jsbsim_hrl_noncanonical_thesis_taxonomy_routing3_base
+  description: >-
+    Non-canonical, evaluation-only routing intervention over three frozen
+    expert/head-on counterexamples. It forces crossing only for the first macro
+    decision, then returns to the unchanged frozen PPO high-level policy.
+
+noncanonical_routing_only_causal_validation:
+  source_id: THESIS-TAXONOMY-ROUTING3-V1
+  canonical_family_untouched: true
+  evaluation_only: true
+  training_permitted: false
+  tuning_permitted: false
+  intervention:
+    method: noncanonical_forced_first_crossing_then_ppo
+    task_name: head_on
+    mode_id: 1
+    macro_decisions: 1
+    resume_policy: frozen canonical PPO
+  preregistered_gate:
+    canonical_loss_to_forced_win_minimum: 2
+    added_ego_crash_or_oob_allowed: 0
+    gate_pass_next_action: expand unchanged intervention to six expert/head_on scenarios
+    gate_fail_next_action: freeze negative evidence; no routing patches or end-to-end run
+
+scenario_manifest:
+  path: ./manifests/thesis_taxonomy_routing3_v1.yaml
+  source_id: THESIS-TAXONOMY-ROUTING3-V1
+  payload_sha256: 4511eaacf07a5f0d0c05ebba7277d771ad8602a610a1acd8c7cdf4fc6d38e0f9
+  task_key_field: task_registry_key
+  active_task_groups:
+    - head_on
+  expected_task_counts:
+    head_on: 3
+  task_labels:
+    head_on: "Frozen expert/head-on initial-crossing-not-selected counterexamples"
+  use_scenario_seed: true
+
+methods:
+  noncanonical_forced_first_crossing_then_ppo:
+    label: "Non-canonical first-macro crossing then frozen PPO"
+    agent_type: hierarchical_commander
+    checkpoint: outputs/diagnostics/hierarchical_commander_mvp_2mode_task_type_mode_dominance_gated_alignment_shaped_v2_oracle_imitation_warmstart_balanced_tail_checkpoint_retrospective_expert_10seed_20260701_checkpoint_snapshots/best.pt
+    config_path: config/experiment/train_prediction_vpp_hierarchical_commander_ppo_reset075_tactical_basis_3mode_post_merge_recovery_bootstrap.yaml
+    prediction_variant: learned
+    config_overrides:
+      commander.initial_macro_mode_override.enabled: true
+      commander.initial_macro_mode_override.task_name: head_on
+      commander.initial_macro_mode_override.mode_id: 1
+      commander.initial_macro_mode_override.reason: noncanonical_forced_first_crossing_then_ppo
+
+run_defaults:
+  backend: jsbsim
+  tasks:
+    - head_on
+  main_methods:
+    - canonical_ppo_high_level_policy
+    - noncanonical_forced_first_crossing_then_ppo
+    - crossing_vpp_specialist_no_routing
+  ablation_methods:
+    - canonical_ppo_high_level_policy
+    - noncanonical_forced_first_crossing_then_ppo
+    - crossing_vpp_specialist_no_routing
+  seeds:
+    - 0
+  n_episodes: 1

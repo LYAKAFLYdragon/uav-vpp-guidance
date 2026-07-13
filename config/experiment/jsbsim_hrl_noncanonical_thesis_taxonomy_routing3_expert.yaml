@@ -1,0 +1,11 @@
+includes:
+  - ./jsbsim_hrl_noncanonical_thesis_taxonomy_routing3_base.yaml
+
+experiment:
+  name: jsbsim_hrl_noncanonical_thesis_taxonomy_routing3_expert
+  description: "THESIS-TAXONOMY-ROUTING3-V1 expert-opponent causal intervention."
+
+opponent_stage: expert
+
+run_defaults:
+  output_id: THESIS-TAXONOMY-ROUTING3-V1-expert

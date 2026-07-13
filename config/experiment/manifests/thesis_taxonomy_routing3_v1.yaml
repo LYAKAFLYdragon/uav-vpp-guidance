@@ -1,0 +1,118 @@
+source_id: THESIS-TAXONOMY-ROUTING3-V1
+manifest_version: 1
+status: preregistered_before_evaluation
+parent_evidence:
+  source_id: THESIS-TAXONOMY-ABLATION30-V1
+  followup_audit: THESIS-TAXONOMY-ABLATION30-V1-followup-audits-96fce9a-5b864be-3f2a563-20260713
+  selection_rule: expert/head_on + PPO loss + fixed-crossing win + initial crossing not selected
+protocol:
+  evaluation_only: true
+  training_permitted: false
+  tuning_permitted: false
+  opponent_stages:
+    - expert
+  methods:
+    - canonical_ppo_high_level_policy
+    - noncanonical_forced_first_crossing_then_ppo
+    - crossing_vpp_specialist_no_routing
+  episodes_per_scenario_method_opponent: 1
+  episodes_total: 9
+  intervention:
+    task_name: head_on
+    mode_id: 1
+    forced_specialist: crossing_specialist
+    duration: exactly one initial macro decision
+    resume_policy: exact frozen PPO after the initial macro decision
+  stop_rule: >-
+    If fewer than 2 of 3 canonical losses become forced-method wins, or if the
+    forced method adds any ego crash/OOB relative to canonical PPO, freeze this
+    as negative routing evidence. Do not tune routing, retrain, change the
+    scenario set, or run end-to-end. If the gate passes, expand this unchanged
+    intervention to all six expert/head_on scenarios before any end-to-end run.
+scenarios:
+  - name: taxonomy30_head_on_below400_pos
+    own_init:
+      position_m: [0.0, 0.0, 5000.0]
+      velocity_mps: 220.0
+      heading_deg: 353.992234808
+    target_init:
+      position_m: [2512.906685538, 534.134804876, 5400.0]
+      velocity_mps: 220.0
+      heading_deg: 210.007765192
+    metadata:
+      scenario_type: head_on
+      manifest_family: thesis_taxonomy_routing3_v1
+      parent_manifest_family: thesis_taxonomy_ablation30_v1
+      initial_class: head_on
+      height_condition: own_below
+      mirror_sign: positive
+      mirror_pair_id: head_on__own_below
+      task_registry_key: head_on
+      ppo_task_bit: 0
+      crossing_context: false
+      scenario_seed: 73007
+      initial_range_m: 2600.0
+      horizontal_range_m: 2569.046515733
+      altitude_diff_m: 400.0
+      lateral_offset_m: 534.134804876
+      own_to_target_los_angle_deg: 20.0
+      target_velocity_to_own_los_angle_deg: 20.0
+      taxonomy_geometry_state: head_on
+  - name: taxonomy30_head_on_level_neg
+    own_init:
+      position_m: [0.0, 0.0, 5000.0]
+      velocity_mps: 220.0
+      heading_deg: 8.0
+    target_init:
+      position_m: [2543.183761908, -540.570396126, 5000.0]
+      velocity_mps: 220.0
+      heading_deg: 148.0
+    metadata:
+      scenario_type: head_on
+      manifest_family: thesis_taxonomy_routing3_v1
+      parent_manifest_family: thesis_taxonomy_ablation30_v1
+      initial_class: head_on
+      height_condition: co_altitude
+      mirror_sign: negative
+      mirror_pair_id: head_on__co_altitude
+      task_registry_key: head_on
+      ppo_task_bit: 0
+      crossing_context: false
+      scenario_seed: 73008
+      initial_range_m: 2600.0
+      horizontal_range_m: 2600.0
+      altitude_diff_m: 0.0
+      lateral_offset_m: -540.570396126
+      own_to_target_los_angle_deg: 20.0
+      target_velocity_to_own_los_angle_deg: 20.0
+      taxonomy_geometry_state: head_on
+  - name: taxonomy30_head_on_above400_neg
+    own_init:
+      position_m: [0.0, 0.0, 5000.0]
+      velocity_mps: 220.0
+      heading_deg: 6.007765192
+    target_init:
+      position_m: [2512.906685538, -534.134804876, 4600.0]
+      velocity_mps: 220.0
+      heading_deg: 149.992234808
+    metadata:
+      scenario_type: head_on
+      manifest_family: thesis_taxonomy_routing3_v1
+      parent_manifest_family: thesis_taxonomy_ablation30_v1
+      initial_class: head_on
+      height_condition: own_above
+      mirror_sign: negative
+      mirror_pair_id: head_on__own_above
+      task_registry_key: head_on
+      ppo_task_bit: 0
+      crossing_context: false
+      scenario_seed: 73010
+      initial_range_m: 2600.0
+      horizontal_range_m: 2569.046515733
+      altitude_diff_m: -400.0
+      lateral_offset_m: -534.134804876
+      own_to_target_los_angle_deg: 20.0
+      target_velocity_to_own_los_angle_deg: 20.0
+      taxonomy_geometry_state: head_on
+integrity:
+  payload_sha256: 4511eaacf07a5f0d0c05ebba7277d771ad8602a610a1acd8c7cdf4fc6d38e0f9

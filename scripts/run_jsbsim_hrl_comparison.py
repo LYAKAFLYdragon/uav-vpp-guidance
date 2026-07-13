@@ -352,6 +352,22 @@ def _materialize_scenario_manifest(
 
     task_field = str(manifest_spec.get("task_key_field", "task_registry_key"))
     expected_task_counts = manifest_spec.get("expected_task_counts", {}) or {}
+    active_task_groups = manifest_spec.get("active_task_groups")
+    if active_task_groups is not None:
+        active_task_groups = {str(task_name) for task_name in active_task_groups}
+        if not active_task_groups:
+            raise ValueError("scenario_manifest.active_task_groups must not be empty")
+        unknown_task_groups = active_task_groups.difference(expected_task_counts)
+        if unknown_task_groups:
+            raise ValueError(
+                "scenario_manifest.active_task_groups are not declared in "
+                f"expected_task_counts: {sorted(unknown_task_groups)}"
+            )
+        expected_task_counts = {
+            task_name: count
+            for task_name, count in expected_task_counts.items()
+            if str(task_name) in active_task_groups
+        }
     grouped: Dict[str, List[Dict[str, Any]]] = {}
     for scenario in scenarios:
         if not isinstance(scenario, dict):

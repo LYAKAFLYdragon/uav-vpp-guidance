@@ -81,6 +81,11 @@ class HierarchicalCommanderPolicy:
         self.crossing_pre_merge_mode_lock = dict(
             commander_cfg.get("crossing_pre_merge_mode_lock", {}) or {}
         )
+        # This is an evaluation-only intervention.  It is inert unless an
+        # explicitly isolated comparison method enables it through YAML.
+        self.initial_macro_mode_override = dict(
+            commander_cfg.get("initial_macro_mode_override", {}) or {}
+        )
         self.mode_registry = load_frozen_specialist_registry(
             list(commander_cfg.get("modes", [])),
             device=device,
@@ -139,6 +144,8 @@ class HierarchicalCommanderPolicy:
             str
         ] = None
         self._head_on_post_merge_recovery_mode_seen = False
+        self._initial_macro_mode_override_applied = False
+        self._initial_macro_mode_override_last_applied_step: Optional[int] = None
         self._last_step_metadata: Dict[str, Any] = {}
 
     def _select_mode(self, obs_vec: np.ndarray) -> int:
@@ -207,6 +214,92 @@ class HierarchicalCommanderPolicy:
             cfg.get("forced_specialist_key", "crossing_feasible")
         )
         return self._mode_id_for_specialist_key(forced_specialist_key)
+
+    def _initial_macro_mode_override_state(self) -> Dict[str, Any]:
+        """Return the narrow, config-driven first-macro intervention state."""
+        cfg = self.initial_macro_mode_override
+        configured = bool(cfg.get("enabled", False))
+        state: Dict[str, Any] = {
+            "configured": configured,
+            "applies": False,
+            "reason": "disabled" if not configured else "inactive",
+            "mode_id": None,
+            "remaining_macro_decisions": 0,
+        }
+        if not configured:
+            return state
+        if str(self.current_task_name) != str(cfg.get("task_name", "")):
+            state["reason"] = "task_mismatch"
+            return state
+        try:
+            mode_id = int(cfg["mode_id"])
+        except (KeyError, TypeError, ValueError):
+            state["reason"] = "invalid_mode_id"
+            return state
+        if mode_id not in self.mode_registry:
+            state["reason"] = "mode_id_not_in_registry"
+            return state
+        state["mode_id"] = mode_id
+        if self._active_mode_id is not None:
+            state["reason"] = "initial_selection_complete"
+            return state
+        if self._initial_macro_mode_override_applied:
+            state["reason"] = "already_applied"
+            return state
+        state.update(
+            {
+                "applies": True,
+                "reason": str(
+                    cfg.get(
+                        "reason",
+                        "noncanonical_initial_macro_mode_override",
+                    )
+                ),
+                "remaining_macro_decisions": 1,
+            }
+        )
+        return state
+
+    def _initial_macro_mode_override_metadata(
+        self, *, applied_this_step: bool
+    ) -> Dict[str, Any]:
+        """Expose enough telemetry to verify the causal intervention post hoc."""
+        cfg = self.initial_macro_mode_override
+        configured = bool(cfg.get("enabled", False))
+        active = bool(
+            configured
+            and self._initial_macro_mode_override_last_applied_step is not None
+            and self._step_counter
+            <= (
+                self._initial_macro_mode_override_last_applied_step
+                + self.macro_action_repeat_steps
+            )
+        )
+        configured_task_name = str(cfg.get("task_name", ""))
+        if not configured:
+            reason = "disabled"
+        elif str(self.current_task_name) != configured_task_name:
+            reason = "task_mismatch"
+        elif active:
+            reason = str(
+                cfg.get(
+                    "reason",
+                    "noncanonical_initial_macro_mode_override",
+                )
+            )
+        elif not self._initial_macro_mode_override_applied:
+            reason = "not_applied"
+        else:
+            reason = "complete"
+        return {
+            "configured": configured,
+            "active": active,
+            "applied_this_step": bool(applied_this_step),
+            "reason": reason,
+            "remaining_macro_decisions": int(
+                0 if self._initial_macro_mode_override_applied else int(configured)
+            ),
+        }
 
     def _update_active_mode(
         self,
@@ -447,6 +540,7 @@ class HierarchicalCommanderPolicy:
         constraint_triggered = False
         constraint_reason = None
         crossing_pre_merge_mode_lock_active = False
+        initial_macro_mode_override_applied_this_step = False
         first_recovery_entry_hold_state = {
             "configured": bool(
                 self.head_on_post_merge_first_recovery_entry_hold.get("enabled", False)
@@ -464,18 +558,29 @@ class HierarchicalCommanderPolicy:
             self._macro_steps_since_switch += 1
             if self._hold_steps_remaining > 0:
                 self._hold_steps_remaining -= 1
-            bootstrap_mode_id = self._initial_task_bootstrap_mode_id()
-            if bootstrap_mode_id is not None:
-                requested_mode_id = bootstrap_mode_id
-            else:
-                crossing_pre_merge_lock_mode_id = self._crossing_pre_merge_mode_lock_id(
-                    commander_snapshot
+            initial_macro_mode_override_state = (
+                self._initial_macro_mode_override_state()
+            )
+            if bool(initial_macro_mode_override_state["applies"]):
+                requested_mode_id = int(initial_macro_mode_override_state["mode_id"])
+                self._initial_macro_mode_override_applied = True
+                self._initial_macro_mode_override_last_applied_step = (
+                    self._step_counter
                 )
-                if crossing_pre_merge_lock_mode_id is not None:
-                    requested_mode_id = crossing_pre_merge_lock_mode_id
-                    crossing_pre_merge_mode_lock_active = True
+                initial_macro_mode_override_applied_this_step = True
+            else:
+                bootstrap_mode_id = self._initial_task_bootstrap_mode_id()
+                if bootstrap_mode_id is not None:
+                    requested_mode_id = bootstrap_mode_id
                 else:
-                    requested_mode_id = self._select_mode(obs)
+                    crossing_pre_merge_lock_mode_id = self._crossing_pre_merge_mode_lock_id(
+                        commander_snapshot
+                    )
+                    if crossing_pre_merge_lock_mode_id is not None:
+                        requested_mode_id = crossing_pre_merge_lock_mode_id
+                        crossing_pre_merge_mode_lock_active = True
+                    else:
+                        requested_mode_id = self._select_mode(obs)
             requested_mode_name = self._mode_name(requested_mode_id)
             constraint_result = apply_head_on_post_merge_reopened_crossing_leash(
                 requested_mode_id=requested_mode_id,
@@ -687,6 +792,11 @@ class HierarchicalCommanderPolicy:
         action = mode["policy"].get_deterministic_action(obs)
         self._step_counter += 1
         self._steps_since_switch += 1
+        initial_macro_mode_override_metadata = (
+            self._initial_macro_mode_override_metadata(
+                applied_this_step=initial_macro_mode_override_applied_this_step,
+            )
+        )
         self._last_step_metadata = {
             "commander_mode_id": int(self._active_mode_id),
             "commander_mode_name": mode["name"],
@@ -706,6 +816,20 @@ class HierarchicalCommanderPolicy:
             "commander_requested_mode_name": requested_mode_name,
             "commander_crossing_pre_merge_mode_lock_active": bool(
                 crossing_pre_merge_mode_lock_active
+            ),
+            "commander_initial_macro_mode_override_active": bool(
+                initial_macro_mode_override_metadata["active"]
+            ),
+            "commander_initial_macro_mode_override_applied_this_step": bool(
+                initial_macro_mode_override_metadata["applied_this_step"]
+            ),
+            "commander_initial_macro_mode_override_reason": (
+                initial_macro_mode_override_metadata["reason"]
+            ),
+            "commander_initial_macro_mode_override_remaining_macro_decisions": int(
+                initial_macro_mode_override_metadata[
+                    "remaining_macro_decisions"
+                ]
             ),
             "commander_mode_constraint_triggered": bool(constraint_triggered),
             "commander_mode_constraint_reason": constraint_reason,

@@ -2012,6 +2012,120 @@ def test_hierarchical_commander_policy_crossing_pre_merge_lock_holds_until_first
     assert post_merge_metadata["commander_selected_specialist"] == "head_on"
 
 
+def test_initial_macro_mode_override_forces_only_the_first_macro_then_resumes_ppo():
+    head_on = MagicMock()
+    head_on.get_deterministic_action.return_value = np.array(
+        [1.0, 0.0, 0.0], dtype=np.float32
+    )
+    crossing = MagicMock()
+    crossing.get_deterministic_action.return_value = np.array(
+        [0.0, 1.0, 0.0], dtype=np.float32
+    )
+    mock_registry = {
+        0: {"id": 0, "name": "head_on_specialist", "specialist_key": "head_on", "policy": head_on},
+        1: {"id": 1, "name": "crossing_specialist", "specialist_key": "crossing_feasible", "policy": crossing},
+    }
+    mock_commander = MagicMock()
+    mock_commander.get_deterministic_action.return_value = 0
+    cfg = _config()
+    cfg["commander"]["macro_action_repeat_steps"] = 1
+    cfg["commander"]["initial_macro_mode_override"] = {
+        "enabled": True,
+        "task_name": "head_on",
+        "mode_id": 1,
+        "reason": "noncanonical_forced_first_crossing_then_ppo",
+    }
+
+    with patch(
+        "uav_vpp_guidance.evaluation.hierarchical_commander_policy.load_frozen_specialist_registry",
+        return_value=mock_registry,
+    ), patch(
+        "uav_vpp_guidance.evaluation.hierarchical_commander_policy.CommanderPPOAgent",
+        return_value=mock_commander,
+    ):
+        from uav_vpp_guidance.evaluation.hierarchical_commander_policy import (
+            HierarchicalCommanderPolicy,
+        )
+
+        policy = HierarchicalCommanderPolicy(
+            checkpoint_path="commander.pt", config=cfg, obs_dim=6, device="cpu"
+        )
+        policy.set_task_name("head_on")
+        obs = np.zeros(6, dtype=np.float32)
+        first_action = policy.get_deterministic_action(obs)
+        first_metadata = policy.get_last_step_metadata()
+        second_action = policy.get_deterministic_action(obs)
+        second_metadata = policy.get_last_step_metadata()
+
+    np.testing.assert_allclose(
+        first_action, np.array([0.0, 1.0, 0.0], dtype=np.float32)
+    )
+    np.testing.assert_allclose(
+        second_action, np.array([1.0, 0.0, 0.0], dtype=np.float32)
+    )
+    assert mock_commander.get_deterministic_action.call_count == 1
+    assert first_metadata["commander_requested_mode_id"] == 1
+    assert first_metadata["commander_mode_id"] == 1
+    assert first_metadata["commander_initial_macro_mode_override_active"] is True
+    assert (
+        first_metadata["commander_initial_macro_mode_override_applied_this_step"]
+        is True
+    )
+    assert second_metadata["commander_requested_mode_id"] == 0
+    assert second_metadata["commander_mode_id"] == 0
+    assert second_metadata["commander_initial_macro_mode_override_active"] is False
+    assert (
+        second_metadata["commander_initial_macro_mode_override_remaining_macro_decisions"]
+        == 0
+    )
+
+
+def test_initial_macro_mode_override_is_inert_on_a_nonmatching_task():
+    head_on = MagicMock()
+    head_on.get_deterministic_action.return_value = np.array(
+        [1.0, 0.0, 0.0], dtype=np.float32
+    )
+    crossing = MagicMock()
+    crossing.get_deterministic_action.return_value = np.array(
+        [0.0, 1.0, 0.0], dtype=np.float32
+    )
+    mock_registry = {
+        0: {"id": 0, "name": "head_on_specialist", "specialist_key": "head_on", "policy": head_on},
+        1: {"id": 1, "name": "crossing_specialist", "specialist_key": "crossing_feasible", "policy": crossing},
+    }
+    mock_commander = MagicMock()
+    mock_commander.get_deterministic_action.return_value = 0
+    cfg = _config()
+    cfg["commander"]["initial_macro_mode_override"] = {
+        "enabled": True,
+        "task_name": "head_on",
+        "mode_id": 1,
+    }
+
+    with patch(
+        "uav_vpp_guidance.evaluation.hierarchical_commander_policy.load_frozen_specialist_registry",
+        return_value=mock_registry,
+    ), patch(
+        "uav_vpp_guidance.evaluation.hierarchical_commander_policy.CommanderPPOAgent",
+        return_value=mock_commander,
+    ):
+        from uav_vpp_guidance.evaluation.hierarchical_commander_policy import (
+            HierarchicalCommanderPolicy,
+        )
+
+        policy = HierarchicalCommanderPolicy(
+            checkpoint_path="commander.pt", config=cfg, obs_dim=6, device="cpu"
+        )
+        policy.set_task_name("crossing_feasible")
+        policy.get_deterministic_action(np.zeros(6, dtype=np.float32))
+        metadata = policy.get_last_step_metadata()
+
+    assert mock_commander.get_deterministic_action.call_count == 0
+    assert metadata["commander_mode_id"] == 1
+    assert metadata["commander_initial_macro_mode_override_active"] is False
+    assert metadata["commander_initial_macro_mode_override_reason"] == "task_mismatch"
+
+
 def test_hierarchical_commander_policy_head_on_overdeep_clamp_blocks_requested_crossing():
     head_on = MagicMock()
     head_on.get_deterministic_action.return_value = np.array(

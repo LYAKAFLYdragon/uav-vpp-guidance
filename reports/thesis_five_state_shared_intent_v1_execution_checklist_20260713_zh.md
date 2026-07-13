@@ -221,7 +221,9 @@ base geometry + predicted-target VPP context + explicit short history
 - [x] 已以官方 JSBSim `v1.1.6` / commit `b477f6312bee2fd3af4c4e5ba1a3e732ed2b99d4` 运行 90 个 train-only rollout。三 opponent 均实际加载，90/90 为 JSBSim backend，产生 6,030 个紧凑 16-D 几何窗口；heldout60 未读取。
 - [x] P3 phase coverage gate **失败并停止在 encoder 训练之前**：Head-on 与 Crossing-entry 覆盖三阶段，但 Advantage、Disadvantage、Neutral 未形成充分 post-merge/re-entry。详见 [P3 stop report](E:/uav-vpp-guidance-thesis-five-state-v1/reports/thesis_five_state_shared_intent_v1_p3_collection_stop_20260713_zh.md) 和外部 [collection report](E:/uav-vpp-guidance-thesis-five-state-v1-results/p3_temporal_encoder_v1/collection_report.json)。
 - [x] 已遵守 stop rule：未启动 80-epoch encoder training，未创建 P3 encoder checkpoint，未运行 dev30/heldout60，也未启动四 skill 或高层 PPO 训练。P4/P5/P6/P7 继续关闭。
-- [ ] 若要重开 P3，必须先新增且冻结 phase-conditional physical sampler，并从新的空 P3 output root 重新采集；不得复用本轮缺相位的 train data、不得放松 coverage gate 或以增加 epoch 替代数据覆盖。
+- [x] 已在独立 `phaseconditional_v2` config 和全新 output root 冻结并运行 physical-marginal coverage contract：90 个五态势初始覆盖 rollout + 36 个独立 transition-provider rollout，未复用 v1 train data，未放松 physical coverage gate。126/126 train rollout 为 JSBSim；state x opponent、phase x opponent、provider post-merge/re-entry x opponent 均超过预注册下限。
+- [x] v2 encoder 实际训练 80 epochs，选择 epoch 74 的 `best.pt`（dev total loss `0.3238515537`，SHA-256 `385663281a9c48c0416ea4d1a1bb8dc08ed64a0cfebb0f01083cbbb8bcfbdc59`）。dev30 仅作 transform-only 诊断，heldout60 未使用；完整证据见 [P3 v2 report](E:/uav-vpp-guidance-thesis-five-state-v1/reports/thesis_five_state_shared_intent_v1_p3_phaseconditional_v2_20260713_zh.md)。
+- [x] P3 通过 representation-readiness gate：encoder 默认冻结；合成趋势/episode-reset tests、JSBSim coverage、train-only normalization 和 finite dev embedding 均已验证。P4/P5/P6/P7 仍未启动。
 
 ## 6. P4：四共享技能的两阶段训练与冻结
 

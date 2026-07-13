@@ -111,11 +111,16 @@ def _scenario_geometry(
     return _vector_angle_deg(own_velocity, los), _vector_angle_deg(target_velocity, reverse_los)
 
 
-def sample_train_scenarios(distribution: Mapping[str, Any]) -> list[dict[str, Any]]:
+def sample_train_scenarios(
+    distribution: Mapping[str, Any],
+    *,
+    seed_offset: int = 0,
+    sampling_role: str = "initial_state_coverage",
+) -> list[dict[str, Any]]:
     """Sample one deterministic continuous geometry per state-height-mirror cell."""
 
     contract = distribution["sampling_contract"]
-    rng = np.random.default_rng(int(contract["seed"]))
+    rng = np.random.default_rng(int(contract["seed"]) + int(seed_offset))
     support = contract["continuous_support"]
     scenarios: list[dict[str, Any]] = []
     for initial_class, initial_spec in contract["initial_states"].items():
@@ -159,7 +164,10 @@ def sample_train_scenarios(distribution: Mapping[str, Any]) -> list[dict[str, An
                 )
                 azimuth_rad = math.radians(los_azimuth)
                 scenario = {
-                    "name": f"p3_train_{initial_class}_{height_condition}_{mirror_sign}",
+                    "name": (
+                        f"p3_train_{sampling_role}_{initial_class}_"
+                        f"{height_condition}_{mirror_sign}"
+                    ),
                     "own_init": {
                         "position_m": [0.0, 0.0, own_altitude],
                         "velocity_mps": own_speed,
@@ -179,6 +187,7 @@ def sample_train_scenarios(distribution: Mapping[str, Any]) -> list[dict[str, An
                         "initial_class": initial_class,
                         "height_condition": height_condition,
                         "mirror_sign": mirror_sign,
+                        "sampling_role": sampling_role,
                         "initial_range_m": initial_range,
                         "own_speed_mps": own_speed,
                         "target_speed_mps": target_speed,
@@ -192,6 +201,29 @@ def sample_train_scenarios(distribution: Mapping[str, Any]) -> list[dict[str, An
                     }
                 )
                 scenarios.append(scenario)
+    return scenarios
+
+
+def build_train_scenarios(
+    distribution: Mapping[str, Any], config: Mapping[str, Any]
+) -> list[dict[str, Any]]:
+    """Build state coverage plus independent physical transition providers."""
+
+    scenarios = sample_train_scenarios(distribution)
+    provider = config["collector"].get("phase_transition_provider", {}) or {}
+    if not bool(provider.get("enabled", False)):
+        return scenarios
+    provider_states = set(provider["source_initial_classes"])
+    provider_scenarios = sample_train_scenarios(
+        distribution,
+        seed_offset=int(provider["seed_offset"]),
+        sampling_role="phase_transition_provider",
+    )
+    scenarios.extend(
+        scenario
+        for scenario in provider_scenarios
+        if scenario["metadata"]["initial_class"] in provider_states
+    )
     return scenarios
 
 
@@ -301,6 +333,7 @@ def collect_rollout(
         "height_condition": str(scenario["metadata"]["height_condition"]),
         "mirror_sign": str(scenario["metadata"]["mirror_sign"]),
         "opponent_id": opponent_id,
+        "sampling_role": str(scenario["metadata"].get("sampling_role", "manifest")),
         "termination": termination,
         "backend": env._backend,
     }
@@ -378,6 +411,7 @@ def build_samples(
                     "initial_class": str(episode["initial_class"]),
                     "phase": str(phases[end_index]),
                     "opponent_id": str(episode["opponent_id"]),
+                        "sampling_role": str(episode.get("sampling_role", "initial_state_coverage")),
                 }
             )
     if not histories:
@@ -414,6 +448,57 @@ def coverage_report(
     return {"rows": rows, "missing": missing, "all_cells_covered": not missing}
 
 
+def marginal_physical_coverage_report(
+    samples: Mapping[str, Any],
+    required_states: Iterable[str],
+    required_phases: Iterable[str],
+    required_opponents: Iterable[str],
+    *,
+    minimum_state_opponent: int,
+    minimum_phase_opponent: int,
+    minimum_provider_transition: int,
+) -> dict[str, Any]:
+    """Validate strict feasible marginals instead of impossible state×phase cells."""
+
+    metadata = samples["metadata"]
+    state_counts = Counter((item["initial_class"], item["opponent_id"]) for item in metadata)
+    phase_counts = Counter((item["phase"], item["opponent_id"]) for item in metadata)
+    provider_counts = Counter(
+        (item["phase"], item["opponent_id"])
+        for item in metadata
+        if item["sampling_role"] == "phase_transition_provider"
+    )
+    rows: list[dict[str, Any]] = []
+    missing: list[dict[str, Any]] = []
+    for state in required_states:
+        for opponent in required_opponents:
+            count = int(state_counts[(state, opponent)])
+            row = {"kind": "initial_state_opponent", "initial_class": state, "opponent_id": opponent, "sample_count": count, "minimum": minimum_state_opponent}
+            rows.append(row)
+            if count < minimum_state_opponent:
+                missing.append(row)
+    for phase in required_phases:
+        for opponent in required_opponents:
+            count = int(phase_counts[(phase, opponent)])
+            row = {"kind": "phase_opponent", "phase": phase, "opponent_id": opponent, "sample_count": count, "minimum": minimum_phase_opponent}
+            rows.append(row)
+            if count < minimum_phase_opponent:
+                missing.append(row)
+    for phase in ("post_merge", "re_entry"):
+        for opponent in required_opponents:
+            count = int(provider_counts[(phase, opponent)])
+            row = {"kind": "provider_transition", "phase": phase, "opponent_id": opponent, "sample_count": count, "minimum": minimum_provider_transition}
+            rows.append(row)
+            if count < minimum_provider_transition:
+                missing.append(row)
+    return {
+        "coverage_mode": "marginal_physical_validity_v2",
+        "rows": rows,
+        "missing": missing,
+        "all_cells_covered": not missing,
+    }
+
+
 def balance_samples(samples: Mapping[str, Any], *, minimum_per_cell: int, coverage: Mapping[str, Any]) -> dict[str, Any]:
     if not coverage["all_cells_covered"]:
         raise ValueError("Cannot balance samples with uncovered state/phase/opponent cells")
@@ -431,6 +516,34 @@ def balance_samples(samples: Mapping[str, Any], *, minimum_per_cell: int, covera
         "future_deltas": {horizon: values[selected] for horizon, values in samples["future_deltas"].items()},
         "metadata": [samples["metadata"][index] for index in selected],
         "samples_per_cell": selected_count,
+    }
+
+
+def balance_marginal_samples(
+    samples: Mapping[str, Any], *, cap_per_marginal_cell: int, coverage: Mapping[str, Any]
+) -> dict[str, Any]:
+    """Select a deterministic union of state, phase, and provider strata."""
+
+    if not coverage["all_cells_covered"]:
+        raise ValueError("Cannot balance samples with failed marginal coverage")
+    groups: dict[tuple[str, ...], list[int]] = defaultdict(list)
+    for index, item in enumerate(samples["metadata"]):
+        groups[("state", item["initial_class"], item["opponent_id"])].append(index)
+        groups[("phase", item["phase"], item["opponent_id"])].append(index)
+        if item["sampling_role"] == "phase_transition_provider" and item["phase"] in {"post_merge", "re_entry"}:
+            groups[("provider", item["phase"], item["opponent_id"])].append(index)
+    selected = sorted(
+        {
+            index
+            for indices in groups.values()
+            for index in indices[: int(cap_per_marginal_cell)]
+        }
+    )
+    return {
+        "history": samples["history"][selected],
+        "future_deltas": {horizon: values[selected] for horizon, values in samples["future_deltas"].items()},
+        "metadata": [samples["metadata"][index] for index in selected],
+        "selection_contract": "union_of_capped_state_phase_and_provider_marginals",
     }
 
 
@@ -552,7 +665,8 @@ def run(config: Mapping[str, Any], *, output_root: Path, dry_run: bool = False) 
         raise ValueError("dev30 provenance hash mismatch")
     if provenance["provenance_sources"]["heldout60_payload_sha256"] != heldout_manifest["integrity"]["payload_sha256"]:
         raise ValueError("heldout60 provenance hash mismatch")
-    planned_train = len(sample_train_scenarios(distribution)) * len(config["collector"]["required_opponents"])
+    train_scenarios = build_train_scenarios(distribution, config)
+    planned_train = len(train_scenarios) * len(config["collector"]["required_opponents"])
     planned_dev = len(dev_manifest["scenarios"]) * len(config["collector"]["required_opponents"])
     if dry_run:
         print(json.dumps({"planned_train_rollouts": planned_train, "planned_dev_rollouts": planned_dev, "heldout60_used": False}, indent=2))
@@ -572,7 +686,7 @@ def run(config: Mapping[str, Any], *, output_root: Path, dry_run: bool = False) 
             "provenance_sha256": _sha256_file(_resolve_repo_path(sources["trajectory_provenance"])),
         },
     )
-    train_episodes = collect_split(config, sample_train_scenarios(distribution), registry, split="train")
+    train_episodes = collect_split(config, train_scenarios, registry, split="train")
     statistics = fit_normalization(train_episodes)
     _write_json(output_root / "dataset" / "normalization_train_only.json", statistics)
     train_samples = build_samples(
@@ -581,18 +695,30 @@ def run(config: Mapping[str, Any], *, output_root: Path, dry_run: bool = False) 
         history_steps=int(config["dataset"]["history_steps"]),
         horizons=config["dataset"]["prediction_horizons_steps"],
     )
-    coverage = coverage_report(
-        train_samples,
-        config["collector"]["required_initial_states"],
-        config["collector"]["required_phases"],
-        config["collector"]["required_opponents"],
-    )
+    if config["collector"].get("coverage_mode", "joint_state_phase_v1") == "marginal_physical_validity_v2":
+        coverage = marginal_physical_coverage_report(
+            train_samples,
+            config["collector"]["required_initial_states"],
+            config["collector"]["required_phases"],
+            config["collector"]["required_opponents"],
+            minimum_state_opponent=int(config["collector"]["minimum_windows_per_state_opponent"]),
+            minimum_phase_opponent=int(config["collector"]["minimum_windows_per_phase_opponent"]),
+            minimum_provider_transition=int(config["collector"]["minimum_windows_per_provider_transition"]),
+        )
+    else:
+        coverage = coverage_report(
+            train_samples,
+            config["collector"]["required_initial_states"],
+            config["collector"]["required_phases"],
+            config["collector"]["required_opponents"],
+        )
     collection_report = {
         "planned_train_rollouts": planned_train,
         "completed_train_rollouts": len(train_episodes),
         "backend_counts": dict(Counter(item["backend"] for item in train_episodes)),
         "termination_counts": dict(Counter(item["termination"] for item in train_episodes)),
         "train_sample_count_before_balance": len(train_samples["metadata"]),
+        "sampling_role_counts": dict(Counter(item["sampling_role"] for item in train_episodes)),
         "coverage": coverage,
         "heldout60_used": False,
     }
@@ -604,11 +730,18 @@ def run(config: Mapping[str, Any], *, output_root: Path, dry_run: bool = False) 
             {"status": "failed_missing_phase_coverage", "stop_rule": config["stop_rule"], "coverage": coverage},
         )
         return 2
-    balanced = balance_samples(
-        train_samples,
-        minimum_per_cell=int(config["collector"]["minimum_windows_per_state_phase_opponent"]),
-        coverage=coverage,
-    )
+    if config["collector"].get("coverage_mode", "joint_state_phase_v1") == "marginal_physical_validity_v2":
+        balanced = balance_marginal_samples(
+            train_samples,
+            cap_per_marginal_cell=int(config["collector"]["cap_training_samples_per_marginal_cell"]),
+            coverage=coverage,
+        )
+    else:
+        balanced = balance_samples(
+            train_samples,
+            minimum_per_cell=int(config["collector"]["minimum_windows_per_state_phase_opponent"]),
+            coverage=coverage,
+        )
     dev_episodes = collect_split(config, dev_manifest["scenarios"], registry, split="dev30")
     dev_samples = build_samples(
         dev_episodes,
@@ -690,7 +823,7 @@ def run(config: Mapping[str, Any], *, output_root: Path, dry_run: bool = False) 
         {
             "status": "passed",
             "balanced_train_sample_count": len(balanced["metadata"]),
-            "balanced_samples_per_cell": balanced["samples_per_cell"],
+            "balanced_sampling": balanced.get("selection_contract", "joint_state_phase_equal_cells"),
             "dev_sample_count": len(dev_samples["metadata"]),
             "dev_metrics": dev_metrics,
             "dev_group_metrics": _group_metrics(dev_per_sample, dev_samples["metadata"]),

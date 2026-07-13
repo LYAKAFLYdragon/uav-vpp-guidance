@@ -18,6 +18,7 @@ from uav_vpp_guidance.training.thesis_temporal_geometry_encoder import (
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPT = REPO_ROOT / "scripts" / "train_thesis_five_state_temporal_encoder.py"
 CONFIG = REPO_ROOT / "config" / "experiment" / "train_thesis_five_state_temporal_encoder_v1.yaml"
+V2_CONFIG = REPO_ROOT / "config" / "experiment" / "train_thesis_five_state_temporal_encoder_phaseconditional_v2.yaml"
 
 
 def _collector_module():
@@ -50,6 +51,32 @@ def test_encoder_shapes_masked_loss_and_episode_independent_encoding():
     _ = model.encode_history(torch.randn(1, 10, 16))
     second = model.encode_history(window)
     np.testing.assert_allclose(first, second, atol=1e-6)
+
+
+def test_synthetic_range_angle_and_energy_trends_are_recoverable_from_past_windows():
+    torch.manual_seed(19)
+    model = TemporalGeometryEncoder(input_dim=16, hidden_dim=24, embedding_dim=16, horizons=(1, 5))
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
+    time = torch.arange(10, dtype=torch.float32)
+    history = torch.zeros(48, 10, 16)
+    history[:, :, 1] = -0.10 * time  # Range-rate trend.
+    history[:, :, 8] = 0.04 * time   # Angle proxy trend.
+    history[:, :, 14] = 0.02 * time  # Energy/altitude proxy trend.
+    target_one = torch.zeros(48, 16)
+    target_five = torch.zeros(48, 16)
+    target_one[:, [1, 8, 14]] = torch.tensor([-0.10, 0.04, 0.02])
+    target_five[:, [1, 8, 14]] = torch.tensor([-0.50, 0.20, 0.10])
+    for _ in range(120):
+        output = model(history)
+        loss = ((output["future_deltas"][1] - target_one) ** 2).mean()
+        loss = loss + ((output["future_deltas"][5] - target_five) ** 2).mean()
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+    prediction = model(history[:1])["future_deltas"]
+    assert prediction[1][0, 1] < 0.0
+    assert prediction[1][0, 8] > 0.0
+    assert prediction[5][0, 14] > 0.0
 
 
 def test_phase_tracker_requires_real_post_merge_then_negative_reentry_rate():
@@ -106,3 +133,44 @@ def test_p3_config_prevents_policy_training_and_heldout_use():
     assert config["dataset"]["normalization_fit_split"] == "train_only"
     assert config["retention"]["heldout60_use"] == "prohibited"
     assert config["model"]["frozen_for_high_level_ppo_by_default"] is True
+
+
+def test_phaseconditional_v2_uses_new_transition_providers_and_physical_marginal_gate():
+    module = _collector_module()
+    distribution = yaml.safe_load(
+        (REPO_ROOT / "config" / "experiment" / "thesis_five_state_shared_intent_v1_train_distribution.yaml").read_text(encoding="utf-8")
+    )
+    config = yaml.safe_load(V2_CONFIG.read_text(encoding="utf-8"))
+    scenarios = module.build_train_scenarios(distribution, config)
+
+    assert len(scenarios) == 42
+    assert sum(item["metadata"]["sampling_role"] == "initial_state_coverage" for item in scenarios) == 30
+    assert sum(item["metadata"]["sampling_role"] == "phase_transition_provider" for item in scenarios) == 12
+    assert config["collector"]["coverage_mode"] == "marginal_physical_validity_v2"
+    assert config["collector"]["phase_transition_provider"]["semantics"].endswith("no_snapshot_or_trajectory_reuse")
+    assert "p3_temporal_encoder_v1" not in config["training"]["output_root"]
+
+    metadata = []
+    opponents = config["collector"]["required_opponents"]
+    for state in config["collector"]["required_initial_states"]:
+        for opponent in opponents:
+            metadata.extend(
+                {"initial_class": state, "phase": "pre_merge", "opponent_id": opponent, "sampling_role": "initial_state_coverage"}
+                for _ in range(16)
+            )
+    for phase in config["collector"]["required_phases"]:
+        for opponent in opponents:
+            metadata.extend(
+                {"initial_class": "head_on", "phase": phase, "opponent_id": opponent, "sampling_role": "phase_transition_provider"}
+                for _ in range(12)
+            )
+    report = module.marginal_physical_coverage_report(
+        {"metadata": metadata},
+        config["collector"]["required_initial_states"],
+        config["collector"]["required_phases"],
+        opponents,
+        minimum_state_opponent=16,
+        minimum_phase_opponent=12,
+        minimum_provider_transition=12,
+    )
+    assert report["all_cells_covered"] is True

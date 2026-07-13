@@ -1,0 +1,30 @@
+schema_version: 1
+lane: noncanonical_thesis_extension
+family: thesis_five_state_shared_intent_v1
+output_root: E:/uav-vpp-guidance-thesis-five-state-v1-results
+minimum_free_gb_before_run: 120
+budgets_gb:
+  training: 80
+  dev_and_ablation: 40
+  heldout_and_bundle: 70
+  total: 190
+checkpoint_retention:
+  top_k: 3
+  retain_last: true
+  retain_every_n_steps: null
+raw_telemetry:
+  full_allowed_splits:
+    - dev30
+    - opponent_capability_card
+    - ablation
+    - heldout60
+  prohibited_splits:
+    - train
+  training_metrics_only: true
+output_safety:
+  refuse_nonempty_output_root: true
+  write_size_manifest_after_each_stage: true
+  auto_delete: false
+  protected_output_roots:
+    - E:/uav-vpp-guidance/outputs/jsbsim_hrl_comparison
+    - E:/uav-vpp-guidance-evidence-results

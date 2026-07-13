@@ -1,0 +1,86 @@
+{
+  "asset_integrity_pass": true,
+  "asset_manifest": "E:\\uav-vpp-guidance-thesis-five-state-v1\\reports\\thesis_five_state_shared_intent_v1_asset_manifest.yaml",
+  "assets": [
+    {
+      "action_dim": 2,
+      "actual_sha256": "26280e0ccc40f9db51995ed5f90491cc0c91217337f291d7136cc28f5ed66694",
+      "errors": [],
+      "exists": true,
+      "expected_action_dim": 2,
+      "expected_obs_dim": 19,
+      "expected_sha256": "26280e0ccc40f9db51995ed5f90491cc0c91217337f291d7136cc28f5ed66694",
+      "id": "canonical_two_skill_commander",
+      "obs_dim": 19,
+      "path": "E:\\uav-vpp-guidance-thesis-five-state-v1-assets\\canonical_two_skill_commander_best.pt"
+    },
+    {
+      "action_dim": 3,
+      "actual_sha256": "0aeadd11cd8c7723c8963bcc5da21dd97c365e64f234d07b86c2b8f0d7ec5fb6",
+      "errors": [],
+      "exists": true,
+      "expected_action_dim": 3,
+      "expected_obs_dim": 19,
+      "expected_sha256": "0aeadd11cd8c7723c8963bcc5da21dd97c365e64f234d07b86c2b8f0d7ec5fb6",
+      "id": "canonical_head_on_specialist",
+      "obs_dim": 19,
+      "path": "E:\\uav-vpp-guidance-thesis-five-state-v1-assets\\canonical_head_on_specialist_best.pt"
+    },
+    {
+      "action_dim": 3,
+      "actual_sha256": "5eddc138bff55a5466da1129e840ef7dfb3677347a05276c3877746c8e89148b",
+      "errors": [],
+      "exists": true,
+      "expected_action_dim": 3,
+      "expected_obs_dim": 18,
+      "expected_sha256": "5eddc138bff55a5466da1129e840ef7dfb3677347a05276c3877746c8e89148b",
+      "id": "canonical_crossing_specialist",
+      "obs_dim": 18,
+      "path": "E:\\uav-vpp-guidance-thesis-five-state-v1-assets\\canonical_crossing_specialist_last.pt"
+    },
+    {
+      "action_dim": null,
+      "actual_sha256": "96bc8e5e1aebd32ca6a528fb3149cfd58aeff276c18bca66388d650f00495931",
+      "errors": [],
+      "exists": true,
+      "expected_action_dim": null,
+      "expected_obs_dim": null,
+      "expected_sha256": "96bc8e5e1aebd32ca6a528fb3149cfd58aeff276c18bca66388d650f00495931",
+      "id": "frozen_trajectory_predictor",
+      "obs_dim": null,
+      "path": "E:\\uav-vpp-guidance-thesis-five-state-v1-assets\\frozen_trajectory_predictor_best_model.pt"
+    }
+  ],
+  "blockers": [
+    "blocked_no_independent_ppo_vpp_checkpoint"
+  ],
+  "errors": [],
+  "lane": {
+    "baseline_commit": "9a9f9bf6d68560afa81560f5260b78f318dcd9b1",
+    "branch": "research/thesis-five-state-shared-intent-v1",
+    "family": "thesis_five_state_shared_intent_v1",
+    "id": "noncanonical_thesis_extension",
+    "taxonomy_base_commit": "56782b0ee2b73d8cd6d61f8bbbf0b9dff4967082",
+    "worktree": "E:/uav-vpp-guidance-thesis-five-state-v1"
+  },
+  "retention": {
+    "actual_free_gb": 297.56,
+    "checkpoint_top_k": 3,
+    "errors": [],
+    "full_raw_telemetry_allowed_splits": [
+      "ablation",
+      "dev30",
+      "heldout60",
+      "opponent_capability_card"
+    ],
+    "full_raw_telemetry_prohibited_splits": [
+      "train"
+    ],
+    "minimum_free_gb": 120.0,
+    "output_root": "E:\\uav-vpp-guidance-thesis-five-state-v1-results",
+    "output_root_exists": false
+  },
+  "retention_policy": "E:\\uav-vpp-guidance-thesis-five-state-v1\\config\\experiment\\thesis_five_state_shared_intent_v1_output_retention.yaml",
+  "third_opponent_ready": false,
+  "training_ready": false
+}

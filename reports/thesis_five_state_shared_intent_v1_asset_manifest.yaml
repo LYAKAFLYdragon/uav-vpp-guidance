@@ -1,0 +1,55 @@
+schema_version: 1
+lane:
+  id: noncanonical_thesis_extension
+  family: thesis_five_state_shared_intent_v1
+  branch: research/thesis-five-state-shared-intent-v1
+  taxonomy_base_commit: 56782b0ee2b73d8cd6d61f8bbbf0b9dff4967082
+  baseline_commit: 9a9f9bf6d68560afa81560f5260b78f318dcd9b1
+  worktree: E:/uav-vpp-guidance-thesis-five-state-v1
+frozen_asset_bundle_root: E:/uav-vpp-guidance-thesis-five-state-v1-assets
+assets:
+  - id: canonical_two_skill_commander
+    role: read_only_baseline_high_level_policy
+    source_path: E:/uav-vpp-guidance-explore-rl/outputs/diagnostics/hierarchical_commander_mvp_2mode_task_type_mode_dominance_gated_alignment_shaped_v2_oracle_imitation_warmstart_balanced_tail_checkpoint_retrospective_expert_10seed_20260701_checkpoint_snapshots/best.pt
+    frozen_path: E:/uav-vpp-guidance-thesis-five-state-v1-assets/canonical_two_skill_commander_best.pt
+    sha256: 26280e0ccc40f9db51995ed5f90491cc0c91217337f291d7136cc28f5ed66694
+    expected_obs_dim: 19
+    expected_action_dim: 2
+  - id: canonical_head_on_specialist
+    role: read_only_baseline_low_level_specialist
+    source_path: E:/uav-vpp-guidance-explore-rl/outputs/experiments/prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp_combat_finetune_mixed_opponent_aware_32k_task_type_headon_weighted/checkpoints/best.pt
+    frozen_path: E:/uav-vpp-guidance-thesis-five-state-v1-assets/canonical_head_on_specialist_best.pt
+    sha256: 0aeadd11cd8c7723c8963bcc5da21dd97c365e64f234d07b86c2b8f0d7ec5fb6
+    expected_obs_dim: 19
+    expected_action_dim: 3
+  - id: canonical_crossing_specialist
+    role: read_only_baseline_low_level_specialist
+    source_path: E:/uav-vpp-guidance-explore-rl/outputs/experiments/prediction_vpp_ppo_crossing_v3/checkpoints/last.pt
+    frozen_path: E:/uav-vpp-guidance-thesis-five-state-v1-assets/canonical_crossing_specialist_last.pt
+    sha256: 5eddc138bff55a5466da1129e840ef7dfb3677347a05276c3877746c8e89148b
+    expected_obs_dim: 18
+    expected_action_dim: 3
+  - id: frozen_trajectory_predictor
+    role: predicted_target_vpp_input_only
+    source_path: E:/uav-vpp-guidance-explore-rl/outputs/trajectory_prediction/best_model.pt
+    frozen_path: E:/uav-vpp-guidance-thesis-five-state-v1-assets/frozen_trajectory_predictor_best_model.pt
+    sha256: 96bc8e5e1aebd32ca6a528fb3149cfd58aeff276c18bca66388d650f00495931
+    expected_obs_dim: null
+    expected_action_dim: null
+third_ppo_vpp_opponent:
+  required_before_training: true
+  eligible: false
+  status: blocked_no_independent_ppo_vpp_checkpoint
+  audit_report: reports/thesis_five_state_shared_intent_v1_third_opponent_capability_audit_20260713.md
+  rejected_candidate:
+    path: E:/uav-vpp-guidance-explore-rl/outputs_exploratory/experiments/exploratory_ppo_commander_self_play_test/checkpoints/best.pt
+    sha256: 47690eb0fc3b5e859abe6868d236470cfd17f2afdfebbf730cbdaefabc24f53c
+    reason: historical 19-D to 2-mode CommanderPPOAgent at 64 steps; not an independently audited continuous 3-D VPP opponent
+runtime_contract:
+  trajectory_predictor: frozen_predicted_target_interface
+  prediction_reward: prohibited
+  vpp_action_dim: 3
+  simulator: JSBSim
+  canonical_output_roots_read_only:
+    - E:/uav-vpp-guidance/outputs/jsbsim_hrl_comparison
+    - E:/uav-vpp-guidance-evidence-results

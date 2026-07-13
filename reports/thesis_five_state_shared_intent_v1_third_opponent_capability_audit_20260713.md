@@ -1,8 +1,8 @@
 # Third PPO/VPP Opponent Capability Audit
 
-**Lane:** `noncanonical_thesis_extension` / `thesis_five_state_shared_intent_v1`  
-**Date:** 2026-07-13  
-**Decision:** `BLOCKED_NO_ELIGIBLE_INDEPENDENT_PPO_VPP_OPPONENT`  
+**Lane:** `noncanonical_thesis_extension` / `thesis_five_state_shared_intent_v1`
+**Date:** 2026-07-13
+**Decision:** `BLOCKED_NO_ELIGIBLE_INDEPENDENT_PPO_VPP_OPPONENT`
 
 ## Acceptance contract
 

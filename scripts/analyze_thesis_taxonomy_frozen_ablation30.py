@@ -903,9 +903,9 @@ def _mean_record_field(records: Sequence[Mapping[str, Any]], field: str) -> floa
 
 def _mean_mode_fraction(records: Sequence[Mapping[str, Any]], field: str, mode: str) -> float | None:
     values = [
-        record[field].get(mode)
+        record[field].get(mode, 0.0)
         for record in records
-        if isinstance(record.get(field), Mapping) and mode in record[field]
+        if isinstance(record.get(field), Mapping) and record[field]
     ]
     return _mean_finite(values)
 
@@ -1123,11 +1123,11 @@ def _opponent_capability_card(
 
 def _build_opponent_capability_markdown(card: Mapping[str, Any]) -> str:
     lines = [
-        "# Opponent Capability Card: THESIS-TAXONOMY-ABLATION30-V1",
+        "# 对手能力卡：THESIS-TAXONOMY-ABLATION30-V1",
         "",
-        "## Scope",
+        "## 范围",
         "",
-        "This is a read-only, interaction-conditioned profile over the same 30 frozen initial states and three non-PPO ego references (static Oracle, always-head-on, always-crossing). It is not an Elo ranking or a claim of absolute opponent strength.",
+        "本卡基于同一组 30 个冻结初始状态和三个非 PPO 我方参考方法（static Oracle、always-head-on、always-crossing）构建，只读且依赖交互条件。它不是 Elo 排名，也不声称对手具有绝对强弱次序。",
     ]
     for item in card["cards"]:
         identity = item["identity_and_provenance"]
@@ -1137,38 +1137,38 @@ def _build_opponent_capability_markdown(card: Mapping[str, Any]) -> str:
                 "",
                 f"## {item['opponent_stage']}",
                 "",
-                "**Identity and provenance**",
+                "**身份与溯源**",
                 "",
-                f"- Frozen interaction episodes: {identity['interaction_episode_count']}.",
-                f"- Raw config: `{json.dumps(identity['raw_opponent_configs'], ensure_ascii=True)}`.",
-                "- Internal observation/action interface and learned training metadata are reported only when present in raw provenance; unlogged details are unavailable.",
+                f"- 冻结交互回合：{identity['interaction_episode_count']}。",
+                f"- Raw config：`{json.dumps(identity['raw_opponent_configs'], ensure_ascii=True)}`。",
+                "- 对手内部 observation/action 接口及训练元数据只在 raw provenance 可见时报告；未记录的信息明确标为不可得。",
                 "",
-                "**Interaction-conditioned behavior**",
+                "**交互条件下的行为画像**",
                 "",
                 _markdown_table(
                     [behavior],
                     (
-                        ("mean_target_speed_mps", "Target speed (m/s)"),
-                        ("mean_target_altitude_m", "Target altitude (m)"),
-                        ("mean_target_attack_zone_step_fraction", "Target attack-zone step fraction"),
-                        ("target_attack_zone_episode_entry_rate", "Target attack-zone entry rate"),
-                        ("mean_first_target_attack_zone_entry_time_s", "First target attack-zone time (s)"),
-                        ("mean_post_merge_step_fraction", "Post-merge fraction"),
-                        ("mean_re_entry_step_fraction", "Re-entry fraction"),
+                        ("mean_target_speed_mps", "目标平均速度 (m/s)"),
+                        ("mean_target_altitude_m", "目标平均高度 (m)"),
+                        ("mean_target_attack_zone_step_fraction", "目标攻击区步占比"),
+                        ("target_attack_zone_episode_entry_rate", "目标攻击区进入率"),
+                        ("mean_first_target_attack_zone_entry_time_s", "首次目标攻击区时间 (s)"),
+                        ("mean_post_merge_step_fraction", "Post-merge 占比"),
+                        ("mean_re_entry_step_fraction", "Re-entry 占比"),
                     ),
                 ),
                 "",
-                "**Frozen reference pressure**",
+                "**冻结参考方法下的压力**",
                 "",
                 _markdown_table(
                     item["reference_pressure_rows"],
                     (
-                        ("ego_reference_method", "Ego reference"),
-                        ("n_resolved", "Resolved N"),
-                        ("ego_loss_rate_resolved", "Ego loss rate"),
-                        ("mean_ego_hp_advantage", "Mean ego HP advantage"),
-                        ("mean_target_attack_zone_step_fraction", "Target AZ fraction"),
-                        ("ego_crash_or_oob", "Ego crash/OOB"),
+                        ("ego_reference_method", "我方参考方法"),
+                        ("n_resolved", "判定 N"),
+                        ("ego_loss_rate_resolved", "我方负率"),
+                        ("mean_ego_hp_advantage", "我方平均 HP 优势"),
+                        ("mean_target_attack_zone_step_fraction", "目标攻击区占比"),
+                        ("ego_crash_or_oob", "我方 crash/OOB"),
                     ),
                 ),
             ]
@@ -1176,11 +1176,11 @@ def _build_opponent_capability_markdown(card: Mapping[str, Any]) -> str:
     lines.extend(
         [
             "",
-            "## Boundaries",
+            "## 声明边界",
             "",
-            "- The two opponents must not be called universally stronger or weaker from these results.",
-            "- All comparisons remain conditional on this JSBSim asset set, AoA60 terminal protocol, 30-scenario envelope, and frozen ego references.",
-            "- A future Elo or Bradley-Terry claim would require a larger fixed opponent pool and a separate rating protocol.",
+            "- 不得依据本卡把任一对手称为普遍更强或更弱。",
+            "- 所有比较受限于当前 JSBSim 资产、AoA60 终端协议、30 场景包线和冻结我方参考方法。",
+            "- 后续若要使用 Elo 或 Bradley-Terry，必须增加固定对手池并独立冻结 rating protocol。",
         ]
     )
     return "\n".join(lines) + "\n"
@@ -1306,39 +1306,39 @@ def _expert_disadvantage_feasibility_audit(
 def _build_feasibility_markdown(audit: Mapping[str, Any]) -> str:
     rows = audit["candidate_scenarios"]
     lines = [
-        "# Expert/Disadvantage Low-Level Feasibility Audit",
+        "# Expert/Disadvantage 低层 Feasibility 审计",
         "",
-        "## Scope",
+        "## 范围",
         "",
-        "This read-only audit examines only `expert/disadvantage` cells tagged both `library_gap_candidate` and `all_method_failure`. It does not train, tune, or diagnose a causal controller defect from a single terminal event.",
+        "本只读审计仅检查同时带有 `library_gap_candidate` 与 `all_method_failure` 标签的 `expert/disadvantage` 单元。它不训练、不调参，也不从单个终端事件推断控制器的因果缺陷。",
         "",
-        "## Candidate Scenarios",
+        "## 候选场景",
         "",
         _markdown_table(
             rows,
             (
-                ("scenario", "Scenario"),
-                ("height_condition", "Height"),
-                ("mirror_sign", "Mirror"),
-                ("expert_terminal_categories", "Expert terminal categories"),
-                ("expert_ego_crash_or_oob_method_count", "Ego crash/OOB methods"),
-                ("expert_any_control_saturation", "Any logged saturation"),
-                ("end_to_end_same_scenario_fixed_any_win", "E2E fixed any win"),
+                ("scenario", "场景"),
+                ("height_condition", "高度"),
+                ("mirror_sign", "镜像"),
+                ("expert_terminal_categories", "expert 终端类别"),
+                ("expert_ego_crash_or_oob_method_count", "我方 crash/OOB 方法数"),
+                ("expert_any_control_saturation", "任一记录饱和"),
+                ("end_to_end_same_scenario_fixed_any_win", "E2E 固定技能任一胜"),
             ),
         ),
         "",
-        "## Exclusion Logic",
+        "## 排除逻辑",
         "",
-        f"- Candidate count: {audit['candidate_scenario_count']}.",
-        f"- The same physical scenarios have at least one end-to-end fixed-specialist win in {audit['counterpart_end_to_end_fixed_any_win_count']}/{audit['candidate_scenario_count']} cases.",
-        f"- Logged command/response saturation is present in {audit['candidate_scenarios_with_any_logged_control_saturation']}/{audit['candidate_scenario_count']} candidate scenarios.",
-        "- Mixed terminal categories and split-dependent counterpart outcomes prevent attributing the failures solely to a missing specialist or solely to the shared guidance/PID chain.",
+        f"- 候选数：{audit['candidate_scenario_count']}。",
+        f"- 同一物理场景在 end-to-end 下至少有一个固定 specialist 胜的数量：{audit['counterpart_end_to_end_fixed_any_win_count']}/{audit['candidate_scenario_count']}。",
+        f"- 存在记录到的 command/response saturation 的候选数：{audit['candidate_scenarios_with_any_logged_control_saturation']}/{audit['candidate_scenario_count']}。",
+        "- 终端类别混合且对应 end-to-end 胜负不同，因此不能把失败唯一归因为缺少 specialist，也不能唯一归因为共享 guidance/PID 链。",
         "",
-        "## Decision",
+        "## 决策",
         "",
-        "- Shared-skill-library training is **not approved** by this audit.",
-        "- Preserve the five scenarios as negative evidence. Use the detailed CSV to inspect VPP forward/lateral/vertical geometry, range evolution, attack-zone timing, and command-vs-response error before defining any low-level feasibility experiment.",
-        "- A zero saturation fraction is not a flight-safety certification and does not exclude every shared-execution limitation.",
+        "- 本审计**不批准**启动共享技能库训练。",
+        "- 五个场景应保留为负证据；在定义任何低层 feasibility 实验前，先依据详细 CSV 检查 VPP 前/侧/垂向几何、距离演化、攻击区时序以及 command-vs-response 误差。",
+        "- 饱和比例为零不构成飞行安全认证，也不排除所有共享执行链限制。",
     ]
     return "\n".join(lines) + "\n"
 

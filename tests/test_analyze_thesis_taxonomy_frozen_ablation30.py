@@ -288,3 +288,18 @@ def test_trajectory_telemetry_keeps_units_and_attack_zone_semantics():
     assert telemetry["mean_vp_vertical_offset_m"] == pytest.approx(110.0)
     assert telemetry["mean_abs_nz_tracking_error_g"] == pytest.approx(0.5)
     assert telemetry["nz_saturation_step_fraction"] == pytest.approx(0.0)
+
+
+def test_mode_fraction_aggregation_uses_zero_for_absent_modes():
+    module = _load_module()
+    records = [
+        {"effective_mode_step_fractions": {"head_on_specialist": 1.0}},
+        {"effective_mode_step_fractions": {"crossing_specialist": 1.0}},
+    ]
+
+    assert module._mean_mode_fraction(
+        records, "effective_mode_step_fractions", "head_on_specialist"
+    ) == pytest.approx(0.5)
+    assert module._mean_mode_fraction(
+        records, "effective_mode_step_fractions", "crossing_specialist"
+    ) == pytest.approx(0.5)

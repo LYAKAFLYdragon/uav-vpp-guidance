@@ -1,7 +1,7 @@
 # P3 受控轨迹采集与 Stop Rule 记录
 
-**日期：** 2026-07-13  
-**lane：** `noncanonical_thesis_extension` / `thesis_five_state_shared_intent_v1`  
+**日期：** 2026-07-13
+**lane：** `noncanonical_thesis_extension` / `thesis_five_state_shared_intent_v1`
 **状态：** `stopped_before_encoder_training_missing_phase_coverage`
 
 ## 已执行内容

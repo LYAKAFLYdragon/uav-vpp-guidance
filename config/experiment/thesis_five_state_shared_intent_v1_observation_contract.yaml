@@ -1,0 +1,52 @@
+schema_version: 1
+contract_version: five_state_shared_intent_v1
+base_geometry_feature_names:
+  - range_m
+  - range_rate_mps
+  - altitude_diff_m
+  - speed_diff_mps
+  - los_azimuth_sin
+  - los_azimuth_cos
+  - los_elevation_sin
+  - los_elevation_cos
+  - ata_sin
+  - ata_cos
+  - aa_sin
+  - aa_cos
+  - own_speed
+  - target_speed
+  - own_altitude
+  - target_altitude
+explicit_history:
+  window_steps: 10
+  feature_names:
+    - range_rate_mean_10
+    - range_rate_slope_per_step_10
+    - aa_delta_deg_10
+    - ata_delta_deg_10
+    - specific_energy_height_delta_m_10
+    - altitude_delta_m_10
+intent_conditioning:
+  target_feature_names:
+    - intent_aa_target
+    - intent_ata_target
+    - intent_range_target
+    - intent_closure_target
+    - intent_specific_energy_target
+    - intent_altitude_target
+  weight_feature_names:
+    - intent_aa_weight
+    - intent_ata_weight
+    - intent_range_weight
+    - intent_closure_weight
+    - intent_specific_energy_weight
+    - intent_altitude_weight
+temporal_embedding:
+  dimension: 32
+  training_mode: frozen_after_self_supervision
+contract_rules:
+  task_id_input: prohibited
+  opponent_stage_input: prohibited
+  implicit_padding_or_truncation: prohibited
+  future_target_state_input: prohibited
+  legacy_weight_transfer: feature_name_match_only

@@ -13,9 +13,13 @@ Stage 6G.5D-R: All legacy xfail markers cleared.
 
 import os
 import sys
+from pathlib import Path
 
-# Allow `from scripts.xxx import ...` in tests
-sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+# Prefer this worktree's source over any globally installed editable checkout.
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(PROJECT_ROOT / "src"))
+# Allow `from scripts.xxx import ...` in tests when scripts/ lacks __init__.py.
+sys.path.insert(1, str(PROJECT_ROOT))
 
 import pytest
 

@@ -199,7 +199,8 @@ def analyze(*, run_dir: Path, output_dir: Path) -> dict[str, Any]:
         raise ValueError("Scenario/method pairing does not match the preregistered design")
 
     rows: list[dict[str, Any]] = []
-    violations: list[str] = []
+    execution_violations: list[str] = []
+    candidate_reproduction_mismatches: list[str] = []
     conversions = 0
     added_ego_crash_or_oob = 0
     for scenario in SCENARIOS:
@@ -210,17 +211,27 @@ def analyze(*, run_dir: Path, output_dir: Path) -> dict[str, Any]:
         forced_summary = _trajectory_summary(forced)
         fixed_summary = _trajectory_summary(fixed_crossing)
         if _outcome(canonical) != "loss":
-            violations.append(f"{scenario}: canonical PPO is not the preregistered loss")
+            candidate_reproduction_mismatches.append(
+                f"{scenario}: canonical PPO is not the historical loss"
+            )
         if _outcome(fixed_crossing) != "win":
-            violations.append(f"{scenario}: fixed crossing is not the preregistered win")
+            candidate_reproduction_mismatches.append(
+                f"{scenario}: fixed crossing is not the historical win"
+            )
         if forced_summary["first_effective_mode"] != "crossing_specialist":
-            violations.append(f"{scenario}: forced first effective mode is not crossing")
+            execution_violations.append(
+                f"{scenario}: forced first effective mode is not crossing"
+            )
         if forced_summary["override_applied_steps"] != 1:
-            violations.append(f"{scenario}: override was not applied exactly once")
+            execution_violations.append(
+                f"{scenario}: override was not applied exactly once"
+            )
         if forced_summary["override_active_steps"] <= 0:
-            violations.append(f"{scenario}: no active override telemetry")
+            execution_violations.append(f"{scenario}: no active override telemetry")
         if forced_summary["override_active_effective_modes"] != ["crossing_specialist"]:
-            violations.append(f"{scenario}: a guard altered the initial forced mode")
+            execution_violations.append(
+                f"{scenario}: a guard altered the initial forced mode"
+            )
 
         converted = _outcome(canonical) == "loss" and _outcome(forced) == "win"
         added_terminal = _is_ego_crash_or_oob(forced) and not _is_ego_crash_or_oob(
@@ -267,7 +278,12 @@ def analyze(*, run_dir: Path, output_dir: Path) -> dict[str, Any]:
             }
         )
 
-    gate_passed = not violations and conversions >= 2 and added_ego_crash_or_oob == 0
+    gate_passed = (
+        not execution_violations
+        and not candidate_reproduction_mismatches
+        and conversions >= 2
+        and added_ego_crash_or_oob == 0
+    )
     result = {
         "source_id": SOURCE_ID,
         "run_dir": str(run_dir),
@@ -275,7 +291,8 @@ def analyze(*, run_dir: Path, output_dir: Path) -> dict[str, Any]:
         "observed_episodes": len(episodes),
         "canonical_loss_to_forced_win": conversions,
         "added_ego_crash_or_oob": added_ego_crash_or_oob,
-        "execution_violations": violations,
+        "execution_violations": execution_violations,
+        "candidate_reproduction_mismatches": candidate_reproduction_mismatches,
         "gate_passed": gate_passed,
         "next_action": (
             "Expand the unchanged intervention to all six expert/head_on scenarios."
@@ -295,30 +312,40 @@ def analyze(*, run_dir: Path, output_dir: Path) -> dict[str, Any]:
         },
     )
     report_lines = [
-        "# Non-canonical Routing-Only Causal Validation",
+        "# 非 Canonical Routing-Only 因果验证",
         "",
-        "## Frozen Boundary",
+        "## 冻结边界",
         "",
-        "This evaluation changes only the first head-on macro routing request to crossing, then resumes the identical frozen canonical PPO. No training, reward, VPP, guidance, PID, checkpoint, or canonical configuration changed.",
+        "本评估只将 head-on 的首个宏决策请求改为 crossing，随后恢复同一冻结 canonical PPO。没有改变训练、奖励、VPP、制导律、PID、checkpoint 或 canonical 配置。",
         "",
-        "## Preregistered Gate",
+        "## 预注册 Gate",
         "",
-        f"- Canonical-loss to forced-win conversions: `{conversions}/3` (required: `>=2`).",
-        f"- Added ego crash/OOB: `{added_ego_crash_or_oob}` (required: `0`).",
-        f"- Execution violations: `{len(violations)}`.",
-        f"- Gate: **{'PASS' if gate_passed else 'FAIL'}**.",
+        f"- canonical loss 转 forced-method win：`{conversions}/3`（要求：`>=2`）。",
+        f"- 新增 ego crash/OOB：`{added_ego_crash_or_oob}`（要求：`0`）。",
+        f"- 干预执行违例：`{len(execution_violations)}`。",
+        f"- 历史反例复现不一致：`{len(candidate_reproduction_mismatches)}`。",
+        f"- Gate：**{'通过' if gate_passed else '不通过'}**。",
         "",
-        "## Decision",
+        "## 决策",
         "",
-        result["next_action"],
+        (
+            "保持该干预不变并扩展到全部六个 expert/head_on 场景。"
+            if gate_passed
+            else "冻结为负路由证据；不再添加 routing patch，也不运行 end-to-end。"
+        ),
         "",
-        "## Interpretation Boundary",
+        "## 解释边界",
         "",
-        "A pass identifies a limited initial-routing contribution in these three preselected counterexamples only. It does not establish crossing-first as a globally deployable policy or change the canonical family.",
+        "即使 gate 通过，也只能说明在这三个预先选定的反例中，首拍路由具有有限贡献；它不能证明 crossing-first 可全局部署，也不能改变 canonical family。",
     ]
-    if violations:
-        report_lines.extend(["", "## Execution Violations", ""])
-        report_lines.extend(f"- {violation}" for violation in violations)
+    if execution_violations:
+        report_lines.extend(["", "## 干预执行违例", ""])
+        report_lines.extend(f"- {violation}" for violation in execution_violations)
+    if candidate_reproduction_mismatches:
+        report_lines.extend(["", "## 历史反例复现不一致", ""])
+        report_lines.extend(
+            f"- {mismatch}" for mismatch in candidate_reproduction_mismatches
+        )
     (output_dir / "routing3_causal_report_zh.md").write_text(
         "\n".join(report_lines) + "\n", encoding="utf-8"
     )

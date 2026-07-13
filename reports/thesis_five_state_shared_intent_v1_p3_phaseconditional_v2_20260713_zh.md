@@ -1,6 +1,6 @@
 # P3 Phase-Conditional v2 Temporal Encoder Report
 
-**状态：** `passed_representation_readiness_only`  
+**状态：** `passed_representation_readiness_only`
 **family：** `thesis_five_state_shared_intent_v1` / `noncanonical_thesis_extension`
 
 ## 目的与边界

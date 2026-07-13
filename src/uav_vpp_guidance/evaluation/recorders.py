@@ -152,6 +152,24 @@ class EpisodeRecorder:
             "commander_crossing_pre_merge_mode_lock_active": bool(
                 info.get("commander_crossing_pre_merge_mode_lock_active", False)
             ),
+            "commander_initial_macro_mode_override_active": bool(
+                info.get("commander_initial_macro_mode_override_active", False)
+            ),
+            "commander_initial_macro_mode_override_applied_this_step": bool(
+                info.get(
+                    "commander_initial_macro_mode_override_applied_this_step",
+                    False,
+                )
+            ),
+            "commander_initial_macro_mode_override_reason": info.get(
+                "commander_initial_macro_mode_override_reason"
+            ),
+            "commander_initial_macro_mode_override_remaining_macro_decisions": int(
+                info.get(
+                    "commander_initial_macro_mode_override_remaining_macro_decisions",
+                    0,
+                )
+            ),
             "commander_mode_constraint_triggered": bool(
                 info.get("commander_mode_constraint_triggered", False)
             ),

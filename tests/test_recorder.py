@@ -447,6 +447,12 @@ def test_episode_recorder_persists_commander_telemetry():
             "commander_requested_mode_id": 1,
             "commander_requested_mode_name": "crossing_specialist",
             "commander_crossing_pre_merge_mode_lock_active": True,
+            "commander_initial_macro_mode_override_active": True,
+            "commander_initial_macro_mode_override_applied_this_step": True,
+            "commander_initial_macro_mode_override_reason": (
+                "noncanonical_forced_first_crossing_then_ppo"
+            ),
+            "commander_initial_macro_mode_override_remaining_macro_decisions": 0,
             "commander_mode_constraint_triggered": True,
             "commander_mode_constraint_reason": "max_consecutive_crossing_macro_steps_exceeded",
             "commander_head_on_post_merge_reopened_crossing_leash_active": True,
@@ -524,6 +530,18 @@ def test_episode_recorder_persists_commander_telemetry():
     assert point["commander_requested_mode_id"] == 1
     assert point["commander_requested_mode_name"] == "crossing_specialist"
     assert point["commander_crossing_pre_merge_mode_lock_active"] is True
+    assert point["commander_initial_macro_mode_override_active"] is True
+    assert point["commander_initial_macro_mode_override_applied_this_step"] is True
+    assert (
+        point["commander_initial_macro_mode_override_reason"]
+        == "noncanonical_forced_first_crossing_then_ppo"
+    )
+    assert (
+        point[
+            "commander_initial_macro_mode_override_remaining_macro_decisions"
+        ]
+        == 0
+    )
     assert point["commander_mode_constraint_triggered"] is True
     assert (
         point["commander_mode_constraint_reason"]

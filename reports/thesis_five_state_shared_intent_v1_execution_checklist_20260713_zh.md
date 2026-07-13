@@ -215,6 +215,14 @@ base geometry + predicted-target VPP context + explicit short history
 
 若 encoder 不能通过无泄漏/稳定性检查，使用“显式短时统计 only”继续后续 pipeline，并将 encoder 标记为未通过的 optional representation；不得改为端到端 GRU/LSTM 来绕过此 stop rule。端到端 recurrent PPO 只属于后续独立 ablation。
 
+### P3 执行记录（2026-07-13）
+
+- [x] 已实现 `src/uav_vpp_guidance/training/thesis_temporal_geometry_encoder.py`、[P3 config](E:/uav-vpp-guidance-thesis-five-state-v1/config/experiment/train_thesis_five_state_temporal_encoder_v1.yaml) 和 `scripts/train_thesis_five_state_temporal_encoder.py`：目标固定为 masked-history reconstruction + horizon `1/5` relative-geometry deltas，encoder 默认冻结，明确禁止 shared-skill / high-level PPO training。
+- [x] 已以官方 JSBSim `v1.1.6` / commit `b477f6312bee2fd3af4c4e5ba1a3e732ed2b99d4` 运行 90 个 train-only rollout。三 opponent 均实际加载，90/90 为 JSBSim backend，产生 6,030 个紧凑 16-D 几何窗口；heldout60 未读取。
+- [x] P3 phase coverage gate **失败并停止在 encoder 训练之前**：Head-on 与 Crossing-entry 覆盖三阶段，但 Advantage、Disadvantage、Neutral 未形成充分 post-merge/re-entry。详见 [P3 stop report](E:/uav-vpp-guidance-thesis-five-state-v1/reports/thesis_five_state_shared_intent_v1_p3_collection_stop_20260713_zh.md) 和外部 [collection report](E:/uav-vpp-guidance-thesis-five-state-v1-results/p3_temporal_encoder_v1/collection_report.json)。
+- [x] 已遵守 stop rule：未启动 80-epoch encoder training，未创建 P3 encoder checkpoint，未运行 dev30/heldout60，也未启动四 skill 或高层 PPO 训练。P4/P5/P6/P7 继续关闭。
+- [ ] 若要重开 P3，必须先新增且冻结 phase-conditional physical sampler，并从新的空 P3 output root 重新采集；不得复用本轮缺相位的 train data、不得放松 coverage gate 或以增加 epoch 替代数据覆盖。
+
 ## 6. P4：四共享技能的两阶段训练与冻结
 
 ### 6.1 必须新增的配置/脚本
@@ -375,4 +383,5 @@ primary formal methods 为：
 - [x] P0 的 `--require-training-ready` 最终 preflight 已通过：六个资产 SHA/shape、容量 policy 与第三 opponent readiness 均为 green。
 - [x] P1 的 observation contract、显式 10-step history extractor、七个 profile compiler 与 `(skill, profile)` validity mask 已完成：`five_state_shared_intent_v1` 固定为 66-D，禁止 task/opponent bits、future state 和隐式 padding/truncation；profile YAML target/weight 已冻结并与代码一致性测试通过。
 - [x] P2 已完成：连续 train distribution、dev30/heldout60、三 opponent registry、capability cards 与 train-only trajectory provenance 已冻结并通过 10 项测试；四技能和高层 PPO 训练仍未启动。
-- [ ] 下一步仅可进入 P3：基于 train-only provenance 收集受控轨迹并做 temporal encoder 自监督预训练；不得使用 dev30/heldout60/Taxonomy30 轨迹，也不得开始四技能或高层 PPO 训练。
+- [x] P3 已执行并按缺相位 coverage stop rule 停止，详见 [P3 stop report](E:/uav-vpp-guidance-thesis-five-state-v1/reports/thesis_five_state_shared_intent_v1_p3_collection_stop_20260713_zh.md)；当前仍不得进入 P4--P7。
+- [ ] 下一步只能先设计并冻结 phase-conditional train sampler，再重新执行 P3；不得使用本轮缺相位数据训练 encoder，也不得开始四技能或高层 PPO 训练。

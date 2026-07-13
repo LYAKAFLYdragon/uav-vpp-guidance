@@ -1,0 +1,74 @@
+schema_version: 1
+experiment:
+  name: thesis_five_state_temporal_encoder_v1
+  lane: noncanonical_thesis_extension
+  family: thesis_five_state_shared_intent_v1
+  training_scope: temporal_encoder_self_supervision_only
+  high_level_ppo_training: prohibited
+  shared_skill_training: prohibited
+sources:
+  train_distribution: config/experiment/thesis_five_state_shared_intent_v1_train_distribution.yaml
+  dev30_manifest: config/experiment/manifests/thesis_five_state_shared_intent_v1_dev30.yaml
+  heldout60_manifest: config/experiment/manifests/thesis_five_state_shared_intent_v1_heldout60.yaml
+  opponent_registry: config/experiment/thesis_five_state_shared_intent_v1_opponent_registry.yaml
+  trajectory_provenance: reports/thesis_five_state_shared_intent_v1_trajectory_dataset_provenance.yaml
+simulator:
+  backend: jsbsim
+  strict_backend: true
+  legacy_project_root: E:/uav-vpp-guidance-thesis-five-state-v1-jsbsim-v1.1.6
+  jsbsim_version: v1.1.6
+  jsbsim_commit: b477f6312bee2fd3af4c4e5ba1a3e732ed2b99d4
+  aircraft_model: f16
+  high_level_dt_s: 0.2
+  max_high_level_steps: 80
+  tracking_success_disabled_for_collection: true
+collector:
+  ego_action_source: frozen_rule_based_expert_vpp
+  learnable_ego_policy: prohibited
+  infeasible_3d_los_draw: reject_and_resample_never_clip
+  train_rollouts_per_state_height_mirror_opponent: 1
+  dev_rollouts_per_scenario_opponent: 1
+  compact_train_features_only: true
+  persist_dev_raw_telemetry: false
+  phase_definition:
+    merge_range_m: 1000.0
+    reentry_negative_range_rate_mps: -25.0
+    reentry_min_post_merge_steps: 5
+  required_initial_states: [advantage, head_on, disadvantage, neutral, crossing_entry]
+  required_phases: [pre_merge, post_merge, re_entry]
+  required_opponents: [expert_rule_based, end_to_end_neural, independent_ppo_vpp]
+  minimum_windows_per_state_phase_opponent: 4
+dataset:
+  base_geometry_dim: 16
+  history_steps: 10
+  prediction_horizons_steps: [1, 5]
+  normalization_fit_split: train_only
+  split_random_seed: 20260713
+model:
+  input_dim: 16
+  hidden_dim: 64
+  embedding_dim: 32
+  architecture: gru_self_supervised_only
+  frozen_for_high_level_ppo_by_default: true
+objective:
+  masked_history_reconstruction: true
+  multi_horizon_relative_geometry_delta_prediction: true
+  mask_ratio: 0.25
+  reconstruction_weight: 1.0
+  prediction_weight: 1.0
+training:
+  seed: 20260713
+  epochs: 80
+  batch_size: 128
+  learning_rate: 0.001
+  weight_decay: 0.00001
+  device: cpu
+  checkpoint_selection_metric: dev_total_loss
+  output_root: E:/uav-vpp-guidance-thesis-five-state-v1-results/p3_temporal_encoder_v1
+retention:
+  checkpoints_to_keep: 2
+  train_full_raw_telemetry: prohibited
+  heldout60_use: prohibited
+stop_rule:
+  on_missing_phase_or_opponent_coverage: do_not_train_encoder_use_explicit_stats_only
+  on_nonfinite_embedding_or_normalization_leakage: do_not_train_encoder_use_explicit_stats_only

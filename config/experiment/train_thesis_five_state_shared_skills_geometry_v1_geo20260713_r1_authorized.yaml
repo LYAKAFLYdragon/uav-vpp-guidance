@@ -1,0 +1,23 @@
+schema_version: 1
+base_config: train_thesis_five_state_shared_skills_geometry_v1.yaml
+authorization:
+  run_id: GEO-20260713-R1
+  authorized_by: user_direct_request_20260713
+  scope: geometry_pretrain_only
+  base_config_sha256: 2a9fb82721d82cd67e13e08157d5cc9d9eac3deafa04b12e253c8b6098c38806
+  p3_encoder_sha256: 385663281a9c48c0416ea4d1a1bb8dc08ed64a0cfebb0f01083cbbb8bcfbdc59
+  resume: prohibited
+  combat_finetune_permitted: false
+  high_level_ppo_permitted: false
+  heldout60_permitted: false
+experiment:
+  name: thesis_five_state_shared_skills_geometry_v1_geo20260713_r1
+  execution_mode: authorized_training
+  training_permitted: true
+  high_level_ppo_training: prohibited
+outputs:
+  root: E:/uav-vpp-guidance-thesis-five-state-v1-results/p4_shared_skills_geometry_v1_geo20260713_r1
+  must_be_fresh_and_empty: true
+  checkpoint_retention_top_k: 3
+  train_full_raw_telemetry: prohibited
+  heldout60_use: prohibited

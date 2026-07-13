@@ -1,0 +1,417 @@
+{
+  "checks": [
+    {
+      "detail": {
+        "actual_sha256": "6a6ca39f51c6af8b9b58df97858c912195d5d1afd91dbc9e80a4a253e0adfa61",
+        "expected_sha256": "6a6ca39f51c6af8b9b58df97858c912195d5d1afd91dbc9e80a4a253e0adfa61",
+        "path": "E:\\uav-vpp-guidance-thesis-five-state-v1\\config\\experiment\\thesis_five_state_shared_intent_v1_observation_contract.yaml"
+      },
+      "name": "frozen_input:observation_contract",
+      "passed": true
+    },
+    {
+      "detail": {
+        "actual_sha256": "20b620377365a3309a2f9499dc1c380472ae213b22a9ce948577223450fa5fb1",
+        "expected_sha256": "20b620377365a3309a2f9499dc1c380472ae213b22a9ce948577223450fa5fb1",
+        "path": "E:\\uav-vpp-guidance-thesis-five-state-v1\\config\\experiment\\thesis_five_state_shared_intent_v1_profiles.yaml"
+      },
+      "name": "frozen_input:global_intent_profiles",
+      "passed": true
+    },
+    {
+      "detail": {
+        "actual_sha256": "06fadde7d9a286f6ee5f7c47e5218361fa1abb7e30c26af266b814d211b3b647",
+        "expected_sha256": "06fadde7d9a286f6ee5f7c47e5218361fa1abb7e30c26af266b814d211b3b647",
+        "path": "E:\\uav-vpp-guidance-thesis-five-state-v1\\src\\uav_vpp_guidance\\hierarchy\\shared_intent_validity.py"
+      },
+      "name": "frozen_input:validity_mask",
+      "passed": true
+    },
+    {
+      "detail": {
+        "actual_sha256": "57bdb617f9360f7821fc0e0a9b6b7ec1661da7a024b15bb5b9ccc11428b72302",
+        "expected_sha256": "57bdb617f9360f7821fc0e0a9b6b7ec1661da7a024b15bb5b9ccc11428b72302",
+        "path": "E:\\uav-vpp-guidance-thesis-five-state-v1\\config\\experiment\\thesis_five_state_shared_intent_v1_opponent_registry.yaml"
+      },
+      "name": "frozen_input:opponent_registry",
+      "passed": true
+    },
+    {
+      "detail": {
+        "actual_sha256": "abf2158737a89ea7662df45ff6fb50406fac1b4961ff414d4cc62bbdbab648d6",
+        "expected_sha256": "abf2158737a89ea7662df45ff6fb50406fac1b4961ff414d4cc62bbdbab648d6",
+        "path": "E:\\uav-vpp-guidance-thesis-five-state-v1\\reports\\thesis_five_state_shared_intent_v1_asset_manifest.yaml"
+      },
+      "name": "frozen_input:asset_manifest",
+      "passed": true
+    },
+    {
+      "detail": {
+        "actual_sha256": "f906bc980a0627b7c2aa7a1b655067823aed373861a9aec0f26f212e41b17196",
+        "expected_sha256": "f906bc980a0627b7c2aa7a1b655067823aed373861a9aec0f26f212e41b17196",
+        "path": "E:\\uav-vpp-guidance-thesis-five-state-v1\\config\\experiment\\thesis_five_state_shared_intent_v1_output_retention.yaml"
+      },
+      "name": "frozen_input:output_retention_policy",
+      "passed": true
+    },
+    {
+      "detail": {
+        "actual_sha256": "385663281a9c48c0416ea4d1a1bb8dc08ed64a0cfebb0f01083cbbb8bcfbdc59",
+        "expected_sha256": "385663281a9c48c0416ea4d1a1bb8dc08ed64a0cfebb0f01083cbbb8bcfbdc59",
+        "path": "E:\\uav-vpp-guidance-thesis-five-state-v1-results\\p3_temporal_encoder_phaseconditional_v2\\checkpoints\\best.pt"
+      },
+      "name": "frozen_input:p3_checkpoint_sha256",
+      "passed": true
+    },
+    {
+      "detail": {
+        "actual_sha256": "b124c0bfcbd852c7f4698c1d7e6fcc3feca27b92b3509e6711187f8df7f0f692",
+        "expected_sha256": "b124c0bfcbd852c7f4698c1d7e6fcc3feca27b92b3509e6711187f8df7f0f692",
+        "path": "E:\\uav-vpp-guidance-thesis-five-state-v1\\config\\experiment\\train_thesis_five_state_temporal_encoder_phaseconditional_v2.yaml"
+      },
+      "name": "frozen_input:p3_source_config_sha256",
+      "passed": true
+    },
+    {
+      "detail": {
+        "feature_names": [
+          "range_m",
+          "range_rate_mps",
+          "altitude_diff_m",
+          "speed_diff_mps",
+          "los_azimuth_sin",
+          "los_azimuth_cos",
+          "los_elevation_sin",
+          "los_elevation_cos",
+          "ata_sin",
+          "ata_cos",
+          "aa_sin",
+          "aa_cos",
+          "own_speed",
+          "target_speed",
+          "own_altitude",
+          "target_altitude",
+          "range_rate_mean_10",
+          "range_rate_slope_per_step_10",
+          "aa_delta_deg_10",
+          "ata_delta_deg_10",
+          "specific_energy_height_delta_m_10",
+          "altitude_delta_m_10",
+          "intent_aa_target",
+          "intent_ata_target",
+          "intent_range_target",
+          "intent_closure_target",
+          "intent_specific_energy_target",
+          "intent_altitude_target",
+          "intent_aa_weight",
+          "intent_ata_weight",
+          "intent_range_weight",
+          "intent_closure_weight",
+          "intent_specific_energy_weight",
+          "intent_altitude_weight",
+          "temporal_embedding_00",
+          "temporal_embedding_01",
+          "temporal_embedding_02",
+          "temporal_embedding_03",
+          "temporal_embedding_04",
+          "temporal_embedding_05",
+          "temporal_embedding_06",
+          "temporal_embedding_07",
+          "temporal_embedding_08",
+          "temporal_embedding_09",
+          "temporal_embedding_10",
+          "temporal_embedding_11",
+          "temporal_embedding_12",
+          "temporal_embedding_13",
+          "temporal_embedding_14",
+          "temporal_embedding_15",
+          "temporal_embedding_16",
+          "temporal_embedding_17",
+          "temporal_embedding_18",
+          "temporal_embedding_19",
+          "temporal_embedding_20",
+          "temporal_embedding_21",
+          "temporal_embedding_22",
+          "temporal_embedding_23",
+          "temporal_embedding_24",
+          "temporal_embedding_25",
+          "temporal_embedding_26",
+          "temporal_embedding_27",
+          "temporal_embedding_28",
+          "temporal_embedding_29",
+          "temporal_embedding_30",
+          "temporal_embedding_31"
+        ],
+        "observation_dim": 66
+      },
+      "name": "observation_contract:strict_66d",
+      "passed": true
+    },
+    {
+      "detail": {
+        "profile_count": 7,
+        "profiles": [
+          "front_intercept",
+          "rear_quarter_alignment",
+          "lateral_displacement",
+          "defensive_break",
+          "range_extension",
+          "energy_altitude_recovery",
+          "reentry_preparation"
+        ]
+      },
+      "name": "profiles:seven_global_profile_contract",
+      "passed": true
+    },
+    {
+      "detail": {
+        "defensive_extension": {
+          "allowed_profiles": [
+            "lateral_displacement",
+            "defensive_break",
+            "range_extension",
+            "energy_altitude_recovery",
+            "reentry_preparation"
+          ],
+          "declared_geometry_phase_coverage": {
+            "geometry_states": [
+              "disadvantage",
+              "neutral"
+            ],
+            "phases": [
+              "pre_merge",
+              "post_merge",
+              "re_entry"
+            ]
+          },
+          "profile_usable": {
+            "defensive_break": true,
+            "energy_altitude_recovery": true,
+            "lateral_displacement": true,
+            "range_extension": true,
+            "reentry_preparation": true
+          },
+          "readiness_gate": {
+            "checkpoint_fallback": "prohibited",
+            "coverage": "declared_geometry_phase_coverage_must_be_observed",
+            "profile_conditioning": "every_allowed_profile_must_be_present",
+            "safety": "ego_crash_oob_rate_must_not_exceed_two_skill_baseline_plus_0.05_per_opponent",
+            "simulator": "JSBSim_strict_backend_only",
+            "status_before_training": "not_evaluated",
+            "strict_interface": "66d_profile_conditioned_to_3d_normalized_vpp"
+          }
+        },
+        "lead_intercept": {
+          "allowed_profiles": [
+            "front_intercept",
+            "rear_quarter_alignment",
+            "lateral_displacement"
+          ],
+          "declared_geometry_phase_coverage": {
+            "geometry_states": [
+              "advantage",
+              "neutral",
+              "crossing_entry"
+            ],
+            "phases": [
+              "pre_merge",
+              "post_merge"
+            ]
+          },
+          "profile_usable": {
+            "front_intercept": true,
+            "lateral_displacement": true,
+            "rear_quarter_alignment": true
+          },
+          "readiness_gate": {
+            "checkpoint_fallback": "prohibited",
+            "coverage": "declared_geometry_phase_coverage_must_be_observed",
+            "profile_conditioning": "every_allowed_profile_must_be_present",
+            "safety": "ego_crash_oob_rate_must_not_exceed_two_skill_baseline_plus_0.05_per_opponent",
+            "simulator": "JSBSim_strict_backend_only",
+            "status_before_training": "not_evaluated",
+            "strict_interface": "66d_profile_conditioned_to_3d_normalized_vpp"
+          }
+        },
+        "pursuit_conversion": {
+          "allowed_profiles": [
+            "front_intercept",
+            "rear_quarter_alignment",
+            "lateral_displacement",
+            "reentry_preparation"
+          ],
+          "declared_geometry_phase_coverage": {
+            "geometry_states": [
+              "advantage",
+              "head_on",
+              "neutral"
+            ],
+            "phases": [
+              "pre_merge",
+              "post_merge"
+            ]
+          },
+          "profile_usable": {
+            "front_intercept": true,
+            "lateral_displacement": true,
+            "rear_quarter_alignment": true,
+            "reentry_preparation": true
+          },
+          "readiness_gate": {
+            "checkpoint_fallback": "prohibited",
+            "coverage": "declared_geometry_phase_coverage_must_be_observed",
+            "profile_conditioning": "every_allowed_profile_must_be_present",
+            "safety": "ego_crash_oob_rate_must_not_exceed_two_skill_baseline_plus_0.05_per_opponent",
+            "simulator": "JSBSim_strict_backend_only",
+            "status_before_training": "not_evaluated",
+            "strict_interface": "66d_profile_conditioned_to_3d_normalized_vpp"
+          }
+        },
+        "reentry_recovery": {
+          "allowed_profiles": [
+            "lateral_displacement",
+            "range_extension",
+            "energy_altitude_recovery",
+            "reentry_preparation"
+          ],
+          "declared_geometry_phase_coverage": {
+            "geometry_states": [
+              "advantage",
+              "head_on",
+              "neutral",
+              "crossing_entry"
+            ],
+            "phases": [
+              "post_merge",
+              "re_entry"
+            ]
+          },
+          "profile_usable": {
+            "energy_altitude_recovery": true,
+            "lateral_displacement": true,
+            "range_extension": true,
+            "reentry_preparation": true
+          },
+          "readiness_gate": {
+            "checkpoint_fallback": "prohibited",
+            "coverage": "declared_geometry_phase_coverage_must_be_observed",
+            "profile_conditioning": "every_allowed_profile_must_be_present",
+            "safety": "ego_crash_oob_rate_must_not_exceed_two_skill_baseline_plus_0.05_per_opponent",
+            "simulator": "JSBSim_strict_backend_only",
+            "status_before_training": "not_evaluated",
+            "strict_interface": "66d_profile_conditioned_to_3d_normalized_vpp"
+          }
+        }
+      },
+      "name": "skill_registry:declared_profiles_and_coverage",
+      "passed": true
+    },
+    {
+      "detail": {
+        "checkpoint_frozen_flag": true,
+        "deterministic": true,
+        "embedding_shape": [
+          1,
+          32
+        ],
+        "model_config": {
+          "architecture": "gru_self_supervised_only",
+          "embedding_dim": 32,
+          "frozen_for_high_level_ppo_by_default": true,
+          "hidden_dim": 64,
+          "input_dim": 16
+        }
+      },
+      "name": "p3_encoder:frozen_load_and_determinism",
+      "passed": true
+    },
+    {
+      "detail": {
+        "action_components": [
+          "forward_bias_normalized",
+          "lateral_bias_normalized",
+          "vertical_bias_normalized"
+        ],
+        "deterministic": true,
+        "input_shape": [
+          4,
+          66
+        ],
+        "output_shape": [
+          4,
+          3
+        ]
+      },
+      "name": "shared_skill_interface:profile_conditioned_66d_to_normalized_3d",
+      "passed": true
+    },
+    {
+      "detail": {
+        "ids": [
+          "expert_rule_based",
+          "end_to_end_neural",
+          "independent_ppo_vpp"
+        ],
+        "instances": {
+          "end_to_end_neural": "EndToEndOpponent",
+          "expert_rule_based": "ExpertOpponent",
+          "independent_ppo_vpp": "VPPPPOOpponent"
+        },
+        "weights": {
+          "end_to_end_neural": 1.0,
+          "expert_rule_based": 1.0,
+          "independent_ppo_vpp": 1.0
+        }
+      },
+      "name": "opponents:three_way_balanced_loadable",
+      "passed": true
+    },
+    {
+      "detail": {
+        "config": "E:\\uav-vpp-guidance-thesis-five-state-v1\\config\\experiment\\train_thesis_five_state_shared_skills_geometry_v1.yaml",
+        "free_gb": 297.51,
+        "output_root": "E:\\uav-vpp-guidance-thesis-five-state-v1-results\\p4_shared_skills_geometry_v1",
+        "output_root_fresh": true,
+        "sources_exist": true
+      },
+      "name": "geometry_config:readiness_only_and_isolated_output",
+      "passed": true
+    },
+    {
+      "detail": {
+        "config": "E:\\uav-vpp-guidance-thesis-five-state-v1\\config\\experiment\\train_thesis_five_state_shared_skills_combat_v1.yaml",
+        "free_gb": 297.51,
+        "output_root": "E:\\uav-vpp-guidance-thesis-five-state-v1-results\\p4_shared_skills_combat_v1",
+        "output_root_fresh": true,
+        "sources_exist": true
+      },
+      "name": "combat_config:readiness_only_and_isolated_output",
+      "passed": true
+    },
+    {
+      "detail": {
+        "backend": "jsbsim",
+        "base_observation_dim": 16,
+        "profile_conditioned_observation_dim": 66,
+        "step_reason": null,
+        "vpp_action_dim": 3
+      },
+      "name": "jsbsim:strict_66d_to_3d_vpp_interface_probe",
+      "passed": true
+    }
+  ],
+  "errors": [],
+  "family": "thesis_five_state_shared_intent_v1",
+  "schema_version": 1,
+  "skill_readiness_status": {
+    "defensive_extension": "not_evaluated_untrained",
+    "lead_intercept": "not_evaluated_untrained",
+    "pursuit_conversion": "not_evaluated_untrained",
+    "reentry_recovery": "not_evaluated_untrained"
+  },
+  "stage": "p4_readiness_only",
+  "static_readiness_pass": true,
+  "status": "passed_ready_for_explicit_future_authorization_only",
+  "training_launch_allowed_by_configs": false,
+  "training_launched": false
+}

@@ -1,0 +1,164 @@
+schema_version: 1
+registry_version: thesis_five_state_shared_skill_registry_v1
+lane:
+  id: noncanonical_thesis_extension
+  family: thesis_five_state_shared_intent_v1
+  status: p4_readiness_only_training_prohibited
+frozen_inputs:
+  observation_contract:
+    path: config/experiment/thesis_five_state_shared_intent_v1_observation_contract.yaml
+    sha256: 6a6ca39f51c6af8b9b58df97858c912195d5d1afd91dbc9e80a4a253e0adfa61
+    contract_version: five_state_shared_intent_v1
+    observation_dim: 66
+    feature_partition:
+      base_geometry: 16
+      explicit_history: 6
+      intent_targets: 6
+      intent_weights: 6
+      temporal_embedding: 32
+    task_id_input: prohibited
+    opponent_stage_input: prohibited
+    implicit_padding_or_truncation: prohibited
+  global_intent_profiles:
+    path: config/experiment/thesis_five_state_shared_intent_v1_profiles.yaml
+    sha256: 20b620377365a3309a2f9499dc1c380472ae213b22a9ce948577223450fa5fb1
+    profile_version: global_tactical_intent_v1
+    profile_count: 7
+  validity_mask:
+    path: src/uav_vpp_guidance/hierarchy/shared_intent_validity.py
+    sha256: 06fadde7d9a286f6ee5f7c47e5218361fa1abb7e30c26af266b814d211b3b647
+    taxonomy_states: [advantage, head_on, disadvantage, neutral, crossing_entry]
+    phases: [pre_merge, post_merge, re_entry]
+  opponent_registry:
+    path: config/experiment/thesis_five_state_shared_intent_v1_opponent_registry.yaml
+    sha256: 57bdb617f9360f7821fc0e0a9b6b7ec1661da7a024b15bb5b9ccc11428b72302
+    ids: [expert_rule_based, end_to_end_neural, independent_ppo_vpp]
+    training_sampling: balanced_round_robin
+    missing_or_failed_opponent: fail_closed
+  asset_manifest:
+    path: reports/thesis_five_state_shared_intent_v1_asset_manifest.yaml
+    sha256: abf2158737a89ea7662df45ff6fb50406fac1b4961ff414d4cc62bbdbab648d6
+  output_retention_policy:
+    path: config/experiment/thesis_five_state_shared_intent_v1_output_retention.yaml
+    sha256: f906bc980a0627b7c2aa7a1b655067823aed373861a9aec0f26f212e41b17196
+  p3_temporal_encoder:
+    checkpoint: E:/uav-vpp-guidance-thesis-five-state-v1-results/p3_temporal_encoder_phaseconditional_v2/checkpoints/best.pt
+    sha256: 385663281a9c48c0416ea4d1a1bb8dc08ed64a0cfebb0f01083cbbb8bcfbdc59
+    source_config: config/experiment/train_thesis_five_state_temporal_encoder_phaseconditional_v2.yaml
+    source_config_sha256: b124c0bfcbd852c7f4698c1d7e6fcc3feca27b92b3509e6711187f8df7f0f692
+    source_report: reports/thesis_five_state_shared_intent_v1_p3_phaseconditional_v2_20260713_zh.md
+    history_window_steps: 10
+    base_geometry_dim: 16
+    embedding_dim: 32
+    selected_epoch: 74
+    selection_metric: dev_total_loss
+    selection_value: 0.3238515537
+    frozen: true
+    finetune_in_p4: prohibited
+  runtime_chain:
+    simulator: JSBSim
+    strict_backend: true
+    jsbsim_version: v1.1.6
+    jsbsim_commit: b477f6312bee2fd3af4c4e5ba1a3e732ed2b99d4
+    predicted_target_vpp_interface: frozen
+    trajectory_predictor_asset_id: frozen_trajectory_predictor
+    guidance_pid_source_config: config/experiment/jsbsim_hrl_comparison.yaml
+    prediction_reward: prohibited
+    action_semantics: normalized_3d_vpp_bias
+skills:
+  pursuit_conversion:
+    skill_id: 0
+    status: untrained_not_ready
+    checkpoint: null
+    checkpoint_fallback: prohibited
+    policy_class: uav_vpp_guidance.training.thesis_shared_skill_policy.ThesisSharedSkillPolicy
+    observation_dim: 66
+    action_dim: 3
+    action_components: [forward_bias_normalized, lateral_bias_normalized, vertical_bias_normalized]
+    allowed_profiles: [front_intercept, rear_quarter_alignment, lateral_displacement, reentry_preparation]
+    geometry_phase_coverage:
+      geometry_states: [advantage, head_on, neutral]
+      phases: [pre_merge, post_merge]
+    readiness_gate:
+      status_before_training: not_evaluated
+      strict_interface: 66d_profile_conditioned_to_3d_normalized_vpp
+      profile_conditioning: every_allowed_profile_must_be_present
+      checkpoint_fallback: prohibited
+      simulator: JSBSim_strict_backend_only
+      coverage: declared_geometry_phase_coverage_must_be_observed
+      safety: ego_crash_oob_rate_must_not_exceed_two_skill_baseline_plus_0.05_per_opponent
+  lead_intercept:
+    skill_id: 1
+    status: untrained_not_ready
+    checkpoint: null
+    checkpoint_fallback: prohibited
+    policy_class: uav_vpp_guidance.training.thesis_shared_skill_policy.ThesisSharedSkillPolicy
+    observation_dim: 66
+    action_dim: 3
+    action_components: [forward_bias_normalized, lateral_bias_normalized, vertical_bias_normalized]
+    allowed_profiles: [front_intercept, rear_quarter_alignment, lateral_displacement]
+    geometry_phase_coverage:
+      geometry_states: [advantage, neutral, crossing_entry]
+      phases: [pre_merge, post_merge]
+    readiness_gate:
+      status_before_training: not_evaluated
+      strict_interface: 66d_profile_conditioned_to_3d_normalized_vpp
+      profile_conditioning: every_allowed_profile_must_be_present
+      checkpoint_fallback: prohibited
+      simulator: JSBSim_strict_backend_only
+      coverage: declared_geometry_phase_coverage_must_be_observed
+      safety: ego_crash_oob_rate_must_not_exceed_two_skill_baseline_plus_0.05_per_opponent
+  defensive_extension:
+    skill_id: 2
+    status: untrained_not_ready
+    checkpoint: null
+    checkpoint_fallback: prohibited
+    policy_class: uav_vpp_guidance.training.thesis_shared_skill_policy.ThesisSharedSkillPolicy
+    observation_dim: 66
+    action_dim: 3
+    action_components: [forward_bias_normalized, lateral_bias_normalized, vertical_bias_normalized]
+    allowed_profiles: [lateral_displacement, defensive_break, range_extension, energy_altitude_recovery, reentry_preparation]
+    geometry_phase_coverage:
+      geometry_states: [disadvantage, neutral]
+      phases: [pre_merge, post_merge, re_entry]
+    readiness_gate:
+      status_before_training: not_evaluated
+      strict_interface: 66d_profile_conditioned_to_3d_normalized_vpp
+      profile_conditioning: every_allowed_profile_must_be_present
+      checkpoint_fallback: prohibited
+      simulator: JSBSim_strict_backend_only
+      coverage: declared_geometry_phase_coverage_must_be_observed
+      safety: ego_crash_oob_rate_must_not_exceed_two_skill_baseline_plus_0.05_per_opponent
+  reentry_recovery:
+    skill_id: 3
+    status: untrained_not_ready
+    checkpoint: null
+    checkpoint_fallback: prohibited
+    policy_class: uav_vpp_guidance.training.thesis_shared_skill_policy.ThesisSharedSkillPolicy
+    observation_dim: 66
+    action_dim: 3
+    action_components: [forward_bias_normalized, lateral_bias_normalized, vertical_bias_normalized]
+    allowed_profiles: [lateral_displacement, range_extension, energy_altitude_recovery, reentry_preparation]
+    geometry_phase_coverage:
+      geometry_states: [advantage, head_on, neutral, crossing_entry]
+      phases: [post_merge, re_entry]
+    readiness_gate:
+      status_before_training: not_evaluated
+      strict_interface: 66d_profile_conditioned_to_3d_normalized_vpp
+      profile_conditioning: every_allowed_profile_must_be_present
+      checkpoint_fallback: prohibited
+      simulator: JSBSim_strict_backend_only
+      coverage: declared_geometry_phase_coverage_must_be_observed
+      safety: ego_crash_oob_rate_must_not_exceed_two_skill_baseline_plus_0.05_per_opponent
+readiness_contract:
+  geometry_pretrain_authorized: false
+  combat_finetune_authorized: false
+  high_level_ppo_authorized: false
+  required_before_any_training:
+    - p4_readiness_verifier_passes
+    - fresh_phase_specific_output_root
+    - explicit_human_authorization
+  skill_readiness_gate:
+    status_before_training: not_evaluated
+    require_all_skills_ready_before_high_level_ppo: true
+    no_checkpoint_fallback: true

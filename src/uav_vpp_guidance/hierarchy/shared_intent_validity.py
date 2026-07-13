@@ -38,6 +38,25 @@ _BASE_ALLOWED = {
 }
 
 
+def base_allowed_profiles(skill_name: str) -> Tuple[str, ...]:
+    """Return the frozen global profiles assigned to one shared skill.
+
+    This is deliberately independent of the state-dependent validity mask.
+    The registry uses it to prove that every trained skill is conditioned on
+    the same global profile library rather than on hidden task-specific ids.
+    """
+
+    try:
+        indices = _BASE_ALLOWED[str(skill_name)]
+    except KeyError as exc:
+        raise KeyError(f"Unknown shared skill: {skill_name}") from exc
+    return tuple(
+        profile
+        for index, profile in enumerate(PROFILE_NAMES)
+        if index in indices
+    )
+
+
 def build_validity_mask(context: TacticalContext) -> Dict[str, object]:
     """Return an allowed skill/profile matrix and reasons for excluded pairs."""
 

@@ -1,0 +1,158 @@
+schema_version: 1
+experiment:
+  name: thesis_five_state_shared_skills_geometry_v1
+  lane: noncanonical_thesis_extension
+  family: thesis_five_state_shared_intent_v1
+  stage: p4_geometry_pretrain
+  execution_mode: readiness_only
+  training_permitted: false
+  high_level_ppo_training: prohibited
+  reason: P4_readiness_patch_must_not_launch_training
+sources:
+  skill_registry: config/experiment/thesis_five_state_shared_skill_registry_v1.yaml
+  observation_contract: config/experiment/thesis_five_state_shared_intent_v1_observation_contract.yaml
+  profiles: config/experiment/thesis_five_state_shared_intent_v1_profiles.yaml
+  opponent_registry: config/experiment/thesis_five_state_shared_intent_v1_opponent_registry.yaml
+  asset_manifest: reports/thesis_five_state_shared_intent_v1_asset_manifest.yaml
+  output_retention: config/experiment/thesis_five_state_shared_intent_v1_output_retention.yaml
+  train_distribution: config/experiment/thesis_five_state_shared_intent_v1_train_distribution.yaml
+  dev30_manifest: config/experiment/manifests/thesis_five_state_shared_intent_v1_dev30.yaml
+  heldout60_manifest: config/experiment/manifests/thesis_five_state_shared_intent_v1_heldout60.yaml
+encoder:
+  checkpoint: E:/uav-vpp-guidance-thesis-five-state-v1-results/p3_temporal_encoder_phaseconditional_v2/checkpoints/best.pt
+  sha256: 385663281a9c48c0416ea4d1a1bb8dc08ed64a0cfebb0f01083cbbb8bcfbdc59
+  input_base_geometry_dim: 16
+  history_window_steps: 10
+  embedding_dim: 32
+  trainable: false
+  fallback: prohibited
+observation_action_contract:
+  observation_dim: 66
+  profile_conditioned_segments: [intent_targets, intent_weights]
+  action_dim: 3
+  action_components: [forward_bias_normalized, lateral_bias_normalized, vertical_bias_normalized]
+  implicit_padding_or_truncation: prohibited
+  checkpoint_fallback: prohibited
+runtime:
+  simulator: JSBSim
+  strict_backend: true
+  legacy_project_root: E:/uav-vpp-guidance-thesis-five-state-v1-jsbsim-v1.1.6
+  aircraft_model: f16
+  high_level_dt_s: 0.2
+  predicted_target_vpp_interface: frozen
+  guidance_pid: frozen_existing_chain
+  prediction_reward: prohibited
+  trajectory_prediction:
+    enabled: true
+    predictor_type: lstm
+    checkpoint_path: E:/uav-vpp-guidance-thesis-five-state-v1-assets/frozen_trajectory_predictor_best_model.pt
+    strict_predictor_init: true
+    checkpoint_strict: true
+    freeze_predictor_during_rl: true
+    device: cpu
+    model:
+      type: lstm
+      input_dim: 16
+      hidden_dim: 128
+      num_layers: 2
+      dropout: 0.1
+      predict_variance: false
+    history:
+      history_len: 10
+      sample_rate_hz: 5
+      padding_mode: repeat_first
+      padding_scope: frozen_predictor_interface_only_not_p4_policy_contract
+    prediction:
+      lookahead_time_s: 1.0
+      output_mode: relative_displacement
+      fallback_mode: constant_velocity
+    integration:
+      anchor_mode: predicted_target
+      add_prediction_to_observation: false
+      add_uncertainty_to_observation: false
+    normalization:
+      position_scale_m: 1000.0
+      velocity_scale_mps: 300.0
+      angle_mode: sin_cos
+      overload_scale: 9.0
+  virtual_point:
+    anchor_mode: predicted_target
+    action_dim: 3
+    d_long_range: [-1500.0, 1500.0]
+    d_lat_range: [-800.0, 800.0]
+    d_vert_range: [-500.0, 500.0]
+    smoothing_alpha: 0.3
+history_bootstrap:
+  policy_action_start_after_observed_steps: 10
+  bootstrap_action: [0.0, 0.0, 0.0]
+  bootstrap_action_semantics: fixed_zero_vpp_real_environment_steps
+  bootstrap_transitions_stored_for_ppo: false
+  implicit_padding_or_truncation: prohibited
+skills:
+  registry_source: thesis_five_state_shared_skill_registry_v1
+  train_all: [pursuit_conversion, lead_intercept, defensive_extension, reentry_recovery]
+  sampling: geometry_phase_profile_balanced
+  require_declared_geometry_phase_coverage: true
+  require_profile_conditioning: true
+training:
+  device: cpu
+  seed: 20260715
+  total_timesteps_per_skill: 200000
+  max_high_level_steps_per_episode: 80
+  ppo:
+    rollout_steps: 2048
+    learning_rate: 0.0003
+    gamma: 0.99
+    gae_lambda: 0.95
+    clip_coef: 0.2
+    value_coef: 0.5
+    entropy_coef: 0.005
+    max_grad_norm: 0.5
+    update_epochs: 10
+    minibatch_size: 256
+  policy:
+    hidden_dim: 128
+  train_scenario_resample_cycle: 30
+  train_profile_sampling: round_robin_over_skill_allowed_profiles
+  train_opponent: expert_rule_based
+  raw_train_trajectory_persistence: prohibited
+  future_checkpoint_metadata:
+    checkpoint_schema: thesis_five_state_shared_skill_ppo_v1
+    encoder_finetune: prohibited
+    action_semantics: normalized_3d_vpp_bias
+geometry_reward:
+  source: profile_weighted_geometry_progress_v1
+  progress_weight: 2.0
+  alignment_weight: 0.1
+  terminal_ego_crash_oob_penalty: 2.0
+  terminal_target_event_bonus: 0.0
+  physical_command_saturation_penalty: 0.05
+  intent_error_clip: 2.0
+selection:
+  split: dev30
+  selection_prohibited_until_training_authorized: true
+  required_metrics_after_authorization:
+    - intent_direction_agreement
+    - jsbsim_crash_oob_delta_vs_two_skill_baseline
+    - responsibility_aligned_geometry_progress
+    - actual_nz_aoa_response
+  evaluation_interval_steps: 25000
+  dev30_opponents: [expert_rule_based, end_to_end_neural, independent_ppo_vpp]
+  raw_dev_telemetry: allowed_aggregated_metrics_only
+  per_skill_gate:
+    minimum_profile_conditioning_coverage_per_allowed_profile: 4
+    minimum_geometry_phase_coverage_per_declared_cell: 2
+    minimum_intent_progress_fraction: 0.55
+    max_ego_crash_oob_delta_vs_zero_vpp_reference: 0.05
+    strict_backend_required: JSBSim
+    no_checkpoint_fallback: true
+    status_before_training: not_evaluated
+outputs:
+  root: E:/uav-vpp-guidance-thesis-five-state-v1-results/p4_shared_skills_geometry_v1
+  must_be_fresh_and_empty: true
+  checkpoint_retention_top_k: 3
+  train_full_raw_telemetry: prohibited
+  heldout60_use: prohibited
+stop_rule:
+  on_readiness_failure: do_not_train_fix_only_named_contract_layer
+  on_two_or_more_skill_readiness_failures: do_not_start_high_level_ppo

@@ -256,6 +256,19 @@ base geometry + predicted-target VPP context + explicit short history
 
 若两个或更多 skills 未通过 readiness gate，不启动高层 PPO。先将失败归为 observation/profile/compiler/low-level capability 的哪一层，并只修复这一层；不得通过扩充 profile 数量、添加 prediction reward 或调整 held-out 场景掩盖失败。
 
+### P4 readiness 执行记录（2026-07-13）
+
+- [x] 已冻结 [P3 v2 `best.pt`](E:/uav-vpp-guidance-thesis-five-state-v1-results/p3_temporal_encoder_phaseconditional_v2/checkpoints/best.pt) 的 SHA-256 `385663281a9c48c0416ea4d1a1bb8dc08ed64a0cfebb0f01083cbbb8bcfbdc59`、`16-D x K=10 -> 32-D` encoder contract、66-D observation contract、七个 global profiles 和三 opponent registry。
+- [x] 已建立 [四共享技能 registry](E:/uav-vpp-guidance-thesis-five-state-v1/config/experiment/thesis_five_state_shared_skill_registry_v1.yaml)：四个 skill 均为 `untrained_not_ready`，无 checkpoint、无 fallback；每个 skill 分别声明允许 profile、几何/阶段覆盖和独立 readiness gate。
+- [x] 已建立 [geometry pretrain](E:/uav-vpp-guidance-thesis-five-state-v1/config/experiment/train_thesis_five_state_shared_skills_geometry_v1.yaml) 与 [combat finetune](E:/uav-vpp-guidance-thesis-five-state-v1/config/experiment/train_thesis_five_state_shared_skills_combat_v1.yaml) 配置；两者均固定为 `execution_mode: readiness_only` 及 `training_permitted: false`，使用新的 P4 空输出根。
+- [x] P4 verifier 已通过：P3 SHA/load/determinism、66-D profile-conditioned -> 3-D normalized VPP interface、三 opponent 实际加载、fresh-output/retention guard 和一条 strict JSBSim reset/step probe 均通过。详见 [machine-readable report](E:/uav-vpp-guidance-thesis-five-state-v1/reports/thesis_five_state_shared_intent_v1_p4_readiness_20260713.json) 与 [readiness report](E:/uav-vpp-guidance-thesis-five-state-v1/reports/thesis_five_state_shared_intent_v1_p4_readiness_20260713_zh.md)。
+- [x] 已实现真实 geometry-pretrain runner：每个 skill 使用独立 PPO actor-critic，固定 P3 `eval()` encoder、显式 9-step zero-VPP real-environment history bootstrap、profile round-robin、连续 train distribution、train-only 聚合 telemetry、dev30 三 opponent 分开评估和 strict checkpoint schema；完整训练 loop 仅在未来授权后运行。
+- [x] 已实现逐 skill gate：检查允许 profile 覆盖、声明的 geometry/phase 覆盖、intent-progress fraction、相对同场景 zero-VPP reference 的每 opponent crash/OOB delta，以及 VPP/n_z command/JSBSim actual `n_z` 和 AoA response 摘要。若任一 skill 不通过，输出 `not_ready_do_not_start_combat_finetune`。
+- [x] 当前 `--geometry-plan` 已证明 4 个技能分别有 `18/18/12/24` 个连续训练分布候选；`--run-geometry-pretrain` 在 `training_permitted: false` 时于创建 output root 前 fail-closed。frozen learned predictor 与 `predicted_target` VPP interface 已由 strict JSBSim probe 再次验证。
+- [x] P4 implementation/readiness tests：`tests/test_thesis_five_state_shared_skill_geometry.py`、`test_thesis_five_state_skill_checkpoints.py`、`test_thesis_five_state_skill_readiness_configs.py` 与 P1/P3 关联测试共 `25 passed`。
+- [>] 已在一次性授权 overlay `GEO-20260713-R1` 下启动 non-smoke geometry pretrain：输出根为 `E:/uav-vpp-guidance-thesis-five-state-v1-results/p4_shared_skills_geometry_v1_geo20260713_r1`。启动 preflight 已验证 P3/predictor SHA、`297.5 GiB` 可用空间、空 output root；当前仅可声明“正在训练”，不得将任何 skill 标记为 ready 或启动 combat/P5。
+- [ ] **明确边界：** P4 readiness 仅证明接口与资产可开始接受后续人工授权；四个技能尚未训练、尚未通过 intent-direction、JSBSim safety 或 dev30 geometry-progress gate，故不能冻结为 ready，也不能进入 P5。
+
 ## 7. P5：高层 PPO 的三阶段训练
 
 ### 7.1 配置与代码
@@ -385,5 +398,6 @@ primary formal methods 为：
 - [x] P0 的 `--require-training-ready` 最终 preflight 已通过：六个资产 SHA/shape、容量 policy 与第三 opponent readiness 均为 green。
 - [x] P1 的 observation contract、显式 10-step history extractor、七个 profile compiler 与 `(skill, profile)` validity mask 已完成：`five_state_shared_intent_v1` 固定为 66-D，禁止 task/opponent bits、future state 和隐式 padding/truncation；profile YAML target/weight 已冻结并与代码一致性测试通过。
 - [x] P2 已完成：连续 train distribution、dev30/heldout60、三 opponent registry、capability cards 与 train-only trajectory provenance 已冻结并通过 10 项测试；四技能和高层 PPO 训练仍未启动。
-- [x] P3 已执行并按缺相位 coverage stop rule 停止，详见 [P3 stop report](E:/uav-vpp-guidance-thesis-five-state-v1/reports/thesis_five_state_shared_intent_v1_p3_collection_stop_20260713_zh.md)；当前仍不得进入 P4--P7。
-- [ ] 下一步只能先设计并冻结 phase-conditional train sampler，再重新执行 P3；不得使用本轮缺相位数据训练 encoder，也不得开始四技能或高层 PPO 训练。
+- [x] P3 v1 已作为缺相位 coverage 的负证据保留；P3 v2 已在全新物理 marginal sampler 上通过 representation-readiness gate，P3 encoder 仍冻结，详见 [P3 v2 report](E:/uav-vpp-guidance-thesis-five-state-v1/reports/thesis_five_state_shared_intent_v1_p3_phaseconditional_v2_20260713_zh.md)。
+- [x] P4 geometry-pretrain implementation/readiness 已完成；四技能的几何预训练、三 opponent 对抗微调、checkpoint selection、dev30 safety/geometry gate 与高层 PPO 均尚未启动。
+- [ ] 下一步只能在人工明确授权后解除 P4 的训练禁令，先执行 geometry pretrain；在 4/4 skills 的独立 readiness gate 未通过前，禁止 combat finetune、P5 高层 PPO 和 heldout60。

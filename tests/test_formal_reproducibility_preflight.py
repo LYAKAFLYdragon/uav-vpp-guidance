@@ -313,6 +313,7 @@ def test_collect_frozen_assets_records_hash_and_checkpoint_shape(tmp_path):
     assert report["artifacts"] == [
         {
             "id": "crossing",
+            "kind": "file",
             "path": str(checkpoint.resolve()),
             "exists": True,
             "expected_sha256": expected_hash,
@@ -324,6 +325,34 @@ def test_collect_frozen_assets_records_hash_and_checkpoint_shape(tmp_path):
             "checkpoint_load_error": None,
         }
     ]
+
+
+def test_collect_frozen_assets_hashes_directory_manifests(tmp_path):
+    data_dir = tmp_path / "data"
+    (data_dir / "aircraft").mkdir(parents=True)
+    (data_dir / "aircraft" / "f16.xml").write_text("f16", encoding="utf-8")
+    (data_dir / "systems.xml").write_text("systems", encoding="utf-8")
+    expected_hash = _MODULE._directory_manifest_sha256(data_dir)
+
+    report = _MODULE._collect_frozen_assets(
+        repo_root=tmp_path,
+        config={
+            "frozen_assets": {
+                "artifacts": [
+                    {
+                        "id": "jsbsim_data",
+                        "kind": "directory",
+                        "path": "data",
+                        "sha256": expected_hash,
+                    }
+                ]
+            }
+        },
+    )
+
+    assert report["artifacts"][0]["kind"] == "directory"
+    assert report["artifacts"][0]["actual_sha256"] == expected_hash
+    assert report["artifacts"][0]["checkpoint_obs_dim"] is None
 
 
 def test_collect_scenario_manifest_records_hash_and_task_groups(tmp_path):

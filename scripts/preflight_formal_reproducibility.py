@@ -126,6 +126,19 @@ def _sha256_file(path: Path) -> str:
     return digest.hexdigest()
 
 
+def _directory_manifest_sha256(path: Path) -> str:
+    """Hash a directory from sorted relative paths and per-file SHA-256 values."""
+
+    digest = hashlib.sha256()
+    for candidate in sorted(item for item in path.rglob("*") if item.is_file()):
+        relative_path = candidate.relative_to(path).as_posix()
+        digest.update(relative_path.encode("utf-8"))
+        digest.update(b"\0")
+        digest.update(_sha256_file(candidate).encode("ascii"))
+        digest.update(b"\n")
+    return digest.hexdigest()
+
+
 def _collect_frozen_assets(
     *,
     repo_root: Path,
@@ -155,8 +168,11 @@ def _collect_frozen_assets(
         resolved_path = _resolve_repo_relative_path(repo_root, path_value)
         if resolved_path is None:
             raise ValueError("frozen asset is missing path")
+        kind = str(declared.get("kind", "file"))
+        if kind not in {"file", "directory"}:
+            raise ValueError(f"Unsupported frozen asset kind: {kind}")
         exists = resolved_path.exists()
-        dimensions = _checkpoint_dimension_info(resolved_path) if exists else {
+        dimensions = _checkpoint_dimension_info(resolved_path) if exists and kind == "file" else {
             "checkpoint_obs_dim": None,
             "checkpoint_action_dim": None,
             "checkpoint_load_error": None,
@@ -164,10 +180,17 @@ def _collect_frozen_assets(
         artifacts.append(
             {
                 "id": declared.get("id", str(path_value)),
+                "kind": kind,
                 "path": str(resolved_path),
                 "exists": exists,
                 "expected_sha256": declared.get("sha256"),
-                "actual_sha256": _sha256_file(resolved_path) if exists else None,
+                "actual_sha256": (
+                    _directory_manifest_sha256(resolved_path)
+                    if exists and kind == "directory"
+                    else _sha256_file(resolved_path)
+                    if exists
+                    else None
+                ),
                 "expected_obs_dim": declared.get("expected_obs_dim"),
                 "expected_action_dim": declared.get("expected_action_dim"),
                 **dimensions,

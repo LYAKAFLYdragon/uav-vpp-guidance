@@ -61,6 +61,10 @@ frozen_assets:
     - id: trajectory_prediction_asset
       path: outputs/trajectory_prediction/best_model.pt
       sha256: 96bc8e5e1aebd32ca6a528fb3149cfd58aeff276c18bca66388d650f00495931
+    - id: jsbsim_f16_data
+      kind: directory
+      path: envs/JSBSim/data
+      sha256: 18fa1c4107fbcccb41ecdcf31e565ec5809fac16f45d1e1c006c6f691c42c10a
 
 methods:
   canonical_ppo_high_level_policy:

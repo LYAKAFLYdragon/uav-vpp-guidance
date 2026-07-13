@@ -179,6 +179,6 @@ def test_followup_audits_select_only_mechanical_candidate_sets(tmp_path):
     opponent = json.loads(
         (output / "expert_disadvantage_opponent_divergence_audit.json").read_text()
     )
-    assert opponent["early_divergence_label_counts"] == {
+    assert opponent["divergence_label_counts"] == {
         "early_opponent_behavior_divergence_candidate": 10
     }

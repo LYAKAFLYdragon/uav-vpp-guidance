@@ -40,6 +40,13 @@ EARLY_DIVERGENCE_THRESHOLDS = {
     "target_attack_zone_step_fraction": 0.10,
     "range_rate_mps": 25.0,
 }
+LATE_DIVERGENCE_THRESHOLDS = {
+    "mean_range_rate_mps": 25.0,
+    "mean_vp_forward_bias_m": 250.0,
+    "mean_vp_lateral_bias_m": 250.0,
+    "mean_vp_vertical_offset_m": 150.0,
+    "mean_abs_nz_tracking_error_g": 0.5,
+}
 
 
 def _finite(value: Any) -> float | None:
@@ -402,29 +409,34 @@ def _paired_delta(expert: Mapping[str, Any], end_to_end: Mapping[str, Any]) -> d
         if len(signals) >= 2
         else "no_predeclared_early_divergence_threshold"
     )
-    late_vpp_fields = (
-        "mean_vp_forward_bias_m",
-        "mean_vp_lateral_bias_m",
-        "mean_vp_vertical_offset_m",
-        "mean_abs_nz_tracking_error_g",
-    )
-    late_deltas = {
-        f"post_merge_delta_{field}": (
-            _finite(expert["post_merge"].get(field))
-            - _finite(end_to_end["post_merge"].get(field))
-            if _finite(expert["post_merge"].get(field)) is not None
-            and _finite(end_to_end["post_merge"].get(field)) is not None
-            else None
-        )
-        for field in late_vpp_fields
-    }
+    late_deltas: dict[str, float | None] = {}
+    late_signals: list[str] = []
+    for field, threshold in LATE_DIVERGENCE_THRESHOLDS.items():
+        expert_value = _finite(expert["post_merge"].get(field))
+        end_value = _finite(end_to_end["post_merge"].get(field))
+        delta = expert_value - end_value if expert_value is not None and end_value is not None else None
+        late_deltas[f"post_merge_delta_{field}"] = delta
+        if delta is not None and abs(delta) >= threshold:
+            late_signals.append(field)
+    terminal_outcome_differs = expert["outcome"] != end_to_end["outcome"]
+    if len(signals) >= 2:
+        divergence_label = "early_opponent_behavior_divergence_candidate"
+    elif terminal_outcome_differs and late_signals:
+        divergence_label = "late_geometry_or_execution_divergence_candidate"
+    elif terminal_outcome_differs:
+        divergence_label = "terminal_only_or_unresolved_divergence"
+    else:
+        divergence_label = "shared_or_unresolved_failure_candidate"
     return {
         **deltas,
         **late_deltas,
         "early_divergence_signal_count": len(signals),
         "early_divergence_signals": signals,
         "early_divergence_label": early_label,
-        "terminal_outcome_differs": expert["outcome"] != end_to_end["outcome"],
+        "late_divergence_signal_count": len(late_signals),
+        "late_divergence_signals": late_signals,
+        "divergence_label": divergence_label,
+        "terminal_outcome_differs": terminal_outcome_differs,
         "terminal_category_differs": expert["terminal_category"] != end_to_end["terminal_category"],
     }
 
@@ -461,7 +473,7 @@ def _opponent_divergence_audit(
                 "comparison": _paired_delta(expert_summary, end_summary),
             }
             rows.append(row)
-    labels = Counter(row["comparison"]["early_divergence_label"] for row in rows)
+    labels = Counter(row["comparison"]["divergence_label"] for row in rows)
     return {
         "scope": {
             "selection_rule": "expert/disadvantage + library_gap_candidate + all_method_failure",
@@ -472,7 +484,7 @@ def _opponent_divergence_audit(
         },
         "selected_scenario_count": len(selected),
         "selected_pair_count": len(rows),
-        "early_divergence_label_counts": dict(sorted(labels.items())),
+        "divergence_label_counts": dict(sorted(labels.items())),
         "raw_source_hashes": raw_hashes,
         "pairs": rows,
         "interpretation_boundary": "An early-divergence label is an interaction-conditioned candidate, not causal proof that opponent policy alone caused the terminal outcome.",
@@ -557,8 +569,11 @@ def _opponent_markdown(audit: Mapping[str, Any], rows: Sequence[Mapping[str, Any
             "expert_outcome": row["expert"]["outcome"],
             "end_to_end_outcome": row["end_to_end"]["outcome"],
             "early_signal_count": row["comparison"]["early_divergence_signal_count"],
-            "early_label": row["comparison"]["early_divergence_label"],
-            "signals": row["comparison"]["early_divergence_signals"],
+            "early_signal_count": row["comparison"]["early_divergence_signal_count"],
+            "late_signal_count": row["comparison"]["late_divergence_signal_count"],
+            "label": row["comparison"]["divergence_label"],
+            "early_signals": row["comparison"]["early_divergence_signals"],
+            "late_signals": row["comparison"]["late_divergence_signals"],
         }
         for row in rows
     ]
@@ -584,16 +599,18 @@ def _opponent_markdown(audit: Mapping[str, Any], rows: Sequence[Mapping[str, Any
                     ("expert_outcome", "expert"),
                     ("end_to_end_outcome", "end-to-end"),
                     ("early_signal_count", "早期信号数"),
-                    ("early_label", "判定"),
-                    ("signals", "命中信号"),
+                    ("late_signal_count", "后期信号数"),
+                    ("label", "判定"),
+                    ("early_signals", "早期信号"),
+                    ("late_signals", "后期信号"),
                 ),
             ),
             "",
             "## 解释边界",
             "",
-            "早期分歧标签仅说明在相同 specialist 与初始几何下，交互早期已有多个对手相关行为指标不同。它不单独证明对手策略是终端事件的唯一原因；晚期 VPP/过载差异也必须与终端和攻击区时间一起阅读。",
+            "早期分歧标签仅说明在相同 specialist 与初始几何下，交互早期已有多个对手相关行为指标不同。若早期未达阈值、但终端不同且 post-merge 的 VPP/range-rate/过载响应至少一项达阈值，则标为后期几何或执行链分歧候选。两者都不是单独的因果证明。",
             "",
-            f"候选物理场景：{audit['selected_scenario_count']}；specialist 配对：{audit['selected_pair_count']}；早期标签计数：`{json.dumps(audit['early_divergence_label_counts'], sort_keys=True)}`。",
+            f"候选物理场景：{audit['selected_scenario_count']}；specialist 配对：{audit['selected_pair_count']}；综合分歧标签计数：`{json.dumps(audit['divergence_label_counts'], sort_keys=True)}`。",
         ]
     ) + "\n"
 

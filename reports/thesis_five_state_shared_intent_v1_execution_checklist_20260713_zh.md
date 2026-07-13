@@ -186,6 +186,15 @@ base geometry + predicted-target VPP context + explicit short history
 
 若第三 PPO/VPP opponent 无法独立审计和冻结，或 heldout60 不能证明与 train/dev 不相交，则不启动三 opponent 训练；可退回完成数据/对手基础设施，但不得把“两 opponent 结果”写成已满足本 v1 计划。
 
+### P2 执行记录（2026-07-13）
+
+- [x] 已冻结 [连续训练分布](E:/uav-vpp-guidance-thesis-five-state-v1/config/experiment/thesis_five_state_shared_intent_v1_train_distribution.yaml)：五态势、三高度、镜像、phase transition 与三 opponent 均衡采样；训练支持域固定为 range `1800--2500 m`、双方 speed `185--225 m/s`，不允许以 dev/heldout 数据拟合 normalization。
+- [x] 已冻结 [dev30](E:/uav-vpp-guidance-thesis-five-state-v1/config/experiment/manifests/thesis_five_state_shared_intent_v1_dev30.yaml)（payload SHA-256 `539d91632358d2ed26d064de65c36498ff0ca6379ca2d08a85a5c9df6ba032a6`）和 [heldout60](E:/uav-vpp-guidance-thesis-five-state-v1/config/experiment/manifests/thesis_five_state_shared_intent_v1_heldout60.yaml)（payload SHA-256 `a43e304751c2f23d4be4975f07d781a2475eacef100c6ef336923ffed4001725`）。heldout60 精确平衡 `5 states x 3 heights x 2 mirrors x 2` 个训练域外 distance-speed packages。
+- [x] dev30、heldout60、Taxonomy30、CAN-20260705 和 IND-HEADON-20260712 的已读取 full-state signatures 交集均为零；Taxonomy30 仍只允许作旧系统诊断，不得作新 family 的选择或正式统计。
+- [x] 已冻结 [三 opponent registry](E:/uav-vpp-guidance-thesis-five-state-v1/config/experiment/thesis_five_state_shared_intent_v1_opponent_registry.yaml) 和 [capability cards](E:/uav-vpp-guidance-thesis-five-state-v1/reports/thesis_five_state_shared_intent_v1_opponent_capability_cards.yaml)：rule-based expert、existing end-to-end neural、independent PPO/VPP；训练采用均衡轮转，失败时 fail-closed，正式结果按 opponent 分开报告且禁止 Elo/总强度声明。
+- [x] 已冻结 [trajectory provenance](E:/uav-vpp-guidance-thesis-five-state-v1/reports/thesis_five_state_shared_intent_v1_trajectory_dataset_provenance.yaml)：当前状态为 `schema_frozen_no_training_trajectories_collected`；只允许后续 P3 收集 train-only 轨迹，dev30/heldout60/Taxonomy30 只能 transform、永不参与 statistics fitting。
+- [x] P2 tests：`tests/test_thesis_five_state_manifests.py`、`test_thesis_five_state_train_distribution.py`、`test_thesis_five_state_opponent_registry.py`、`test_thesis_five_state_trajectory_dataset.py`，共 `10 passed`。本阶段没有启动四个低层技能或高层 PPO 训练，也没有创建训练 checkpoint。
+
 ## 5. P3：时序 encoder 自监督预训练
 
 ### 5.1 训练设计
@@ -361,8 +370,9 @@ primary formal methods 为：
 
 - [x] 研究目标、五态势 taxonomy、4 skills、7 profiles、预测器边界、三 opponent 计划、时序 encoder 方案、训练阶段、数据切分和成功门槛已通过访谈冻结。
 - [x] 已有 Taxonomy30 诊断证据支持“不应继续对双技能 canonical family 做 routing patch”，但它不构成新系统的训练证据。
-- [x] P0 的 clean worktree、[asset manifest](E:/uav-vpp-guidance-thesis-five-state-v1/reports/thesis_five_state_shared_intent_v1_asset_manifest.yaml)、[容量策略](E:/uav-vpp-guidance-thesis-five-state-v1/config/experiment/thesis_five_state_shared_intent_v1_output_retention.yaml) 和 [preflight 记录](E:/uav-vpp-guidance-thesis-five-state-v1/reports/thesis_five_state_shared_intent_v1_p0_preflight_20260713.json) 已完成；四个 baseline/predictor assets 的 SHA/shape 均通过。
+- [x] P0 的 clean worktree、[asset manifest](E:/uav-vpp-guidance-thesis-five-state-v1/reports/thesis_five_state_shared_intent_v1_asset_manifest.yaml)、[容量策略](E:/uav-vpp-guidance-thesis-five-state-v1/config/experiment/thesis_five_state_shared_intent_v1_output_retention.yaml) 和 [preflight 记录](E:/uav-vpp-guidance-thesis-five-state-v1/reports/thesis_five_state_shared_intent_v1_p0_preflight_20260713.json) 已完成；六个 baseline/predictor/opponent assets 的 SHA/shape 均通过。
 - [x] P0 第三 PPO/VPP opponent 审计已完成，结论详见 [capability audit](E:/uav-vpp-guidance-thesis-five-state-v1/reports/thesis_five_state_shared_intent_v1_third_opponent_capability_audit_20260713.md)：独立 `16-D -> 3-D` PPO/VPP checkpoint 已通过 fixed-horizon training gate 与 JSBSim target-side probe，并已冻结进 asset bundle。
 - [x] P0 的 `--require-training-ready` 最终 preflight 已通过：六个资产 SHA/shape、容量 policy 与第三 opponent readiness 均为 green。
 - [x] P1 的 observation contract、显式 10-step history extractor、七个 profile compiler 与 `(skill, profile)` validity mask 已完成：`five_state_shared_intent_v1` 固定为 66-D，禁止 task/opponent bits、future state 和隐式 padding/truncation；profile YAML target/weight 已冻结并与代码一致性测试通过。
-- [ ] P2--P7 尚未开始。下一步是 P2 的 train/dev/heldout manifests、三 opponent registry 与 trajectory dataset provenance；四技能或高层训练仍被禁止。
+- [x] P2 已完成：连续 train distribution、dev30/heldout60、三 opponent registry、capability cards 与 train-only trajectory provenance 已冻结并通过 10 项测试；四技能和高层 PPO 训练仍未启动。
+- [ ] 下一步仅可进入 P3：基于 train-only provenance 收集受控轨迹并做 temporal encoder 自监督预训练；不得使用 dev30/heldout60/Taxonomy30 轨迹，也不得开始四技能或高层 PPO 训练。

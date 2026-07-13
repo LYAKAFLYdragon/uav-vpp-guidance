@@ -1,0 +1,44 @@
+schema_version: 1
+source_id: THESIS-FIVE-STATE-SHARED-INTENT-V1-TRAJECTORY-PROVENANCE
+lane: noncanonical_thesis_extension
+family: thesis_five_state_shared_intent_v1
+status: schema_frozen_no_training_trajectories_collected
+collection_scope:
+  allowed_split: train
+  prohibited_splits:
+  - dev30
+  - heldout60
+  - taxonomy30
+  allowed_phase: P3_temporal_encoder_pretraining_only
+  raw_trajectory_root: E:\uav-vpp-guidance-thesis-five-state-v1-results\trajectory_datasets\train_only_v1\raw
+  index_path: E:\uav-vpp-guidance-thesis-five-state-v1-results\trajectory_datasets\train_only_v1\train_episode_index.jsonl
+  full_raw_telemetry_retention: prohibited_during_skill_and_high_level_training
+record_contract:
+  episode_id: globally_unique_train_only_identifier
+  source_distribution_seed: required
+  opponent_id: required
+  initial_class: required
+  height_condition: required
+  mirror_sign: required
+  step_index: strictly_increasing_within_episode
+  reset_boundary: required
+  observation_history_window_steps: 10
+  future_state_or_label: prohibited
+normalization_contract:
+  fit_split: train_only
+  fit_after_train_episode_index_freeze: true
+  dev30_usage: transform_only_never_fit
+  heldout60_usage: transform_only_never_fit
+  statistics_artifact: E:\uav-vpp-guidance-thesis-five-state-v1-results\trajectory_datasets\train_only_v1\normalization_train_only.json
+provenance_sources:
+  train_distribution_source_id: THESIS-FIVE-STATE-SHARED-INTENT-V1-TRAIN-DISTRIBUTION
+  train_distribution_payload_sha256: e823108f02e2b3e7c64192cdf5d1e952190b27058e14d880733a48f46fda2675
+  dev30_source_id: THESIS-FIVE-STATE-SHARED-INTENT-V1-DEV30
+  dev30_payload_sha256: 539d91632358d2ed26d064de65c36498ff0ca6379ca2d08a85a5c9df6ba032a6
+  heldout60_source_id: THESIS-FIVE-STATE-SHARED-INTENT-V1-HELDOUT60
+  heldout60_payload_sha256: a43e304751c2f23d4be4975f07d781a2475eacef100c6ef336923ffed4001725
+stop_rule: If an episode cannot prove train-only provenance or chronological order,
+  exclude it; do not substitute dev30, heldout60, or Taxonomy30 data.
+integrity:
+  builder_code_sha256: 5ed519740890eddca486f51d8eb4019a809968bc85e1f73ef339760fe63cb7ad
+  payload_sha256: 69a199eae98f7ea6a9a81e6cf84d381b8e83cf9b3fdba19f0e243bd3f32962f7

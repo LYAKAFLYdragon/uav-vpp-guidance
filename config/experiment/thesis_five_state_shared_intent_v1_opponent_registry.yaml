@@ -1,0 +1,56 @@
+schema_version: 1
+lane:
+  id: noncanonical_thesis_extension
+  family: thesis_five_state_shared_intent_v1
+  status: frozen_before_training
+registry_version: thesis_five_state_shared_intent_v1_opponents_v1
+training_sampling:
+  strategy: balanced_round_robin
+  weights:
+    expert_rule_based: 1.0
+    end_to_end_neural: 1.0
+    independent_ppo_vpp: 1.0
+  missing_or_failed_opponent: fail_closed
+evaluation_reporting:
+  aggregate_opponents: prohibited
+  report_each_opponent_separately: true
+  strength_claim: prohibited
+action_cadence_contract:
+  environment_high_level_dt_s: 0.2
+  target_action_update: once_per_high_level_step
+  action_mode_difference: explicitly_recorded
+opponents:
+  expert_rule_based:
+    type: rule_based
+    class: uav_vpp_guidance.envs.expert_opponent.ExpertOpponent
+    config: {}
+    checkpoint: null
+    checkpoint_sha256: null
+    action_mode: vpp
+    capability_card: rule_mechanism_only_no_elo_claim
+  end_to_end_neural:
+    type: neural
+    class: uav_vpp_guidance.envs.end_to_end_opponent.EndToEndOpponent
+    checkpoint: E:/uav-vpp-guidance-thesis-five-state-v1-assets/canonical_end_to_end_neural_opponent_best.pt
+    checkpoint_sha256: d38828338d5e7e22167129b2e9972d52ecf5fc3fda5d52caff95a8374c35b8bc
+    invert_observation: true
+    device: cpu
+    action_mode: direct_command
+    expected_obs_dim: 16
+    expected_action_dim: 3
+    capability_card: reports/thesis_five_state_shared_intent_v1_opponent_capability_cards.yaml
+  independent_ppo_vpp:
+    type: continuous_vpp_neural
+    class: uav_vpp_guidance.envs.vpp_ppo_opponent.VPPPPOOpponent
+    checkpoint: E:/uav-vpp-guidance-thesis-five-state-v1-assets/independent_ppo_vpp_opponent_v1_step_32768.pt
+    checkpoint_sha256: 43cd37fc86c0eb01d96a693f68d30894de7e768de01aed6dba41fa4761edfc60
+    device: cpu
+    action_mode: vpp
+    observation_schema:
+      role_reversed: true
+      base_geometry_obs_dim: 16
+      task_bit: prohibited
+      opponent_stage_bit: prohibited
+    expected_obs_dim: 16
+    expected_action_dim: 3
+    capability_card: reports/thesis_five_state_shared_intent_v1_opponent_capability_cards.yaml

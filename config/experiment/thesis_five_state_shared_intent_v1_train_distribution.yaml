@@ -1,0 +1,107 @@
+schema_version: 1
+source_id: THESIS-FIVE-STATE-SHARED-INTENT-V1-TRAIN-DISTRIBUTION
+lane:
+  id: noncanonical_thesis_extension
+  family: thesis_five_state_shared_intent_v1
+  training_permitted_by_this_config: false
+sampling_contract:
+  sampler: continuous_stratified_v1
+  seed: 20260713
+  initial_states:
+    advantage:
+      weight: 1.0
+      own_to_target_los_angle_deg:
+      - 12.0
+      - 32.0
+      target_velocity_to_own_los_angle_deg:
+      - 148.0
+      - 168.0
+    head_on:
+      weight: 1.0
+      own_to_target_los_angle_deg:
+      - 12.0
+      - 32.0
+      target_velocity_to_own_los_angle_deg:
+      - 12.0
+      - 32.0
+    disadvantage:
+      weight: 1.0
+      own_to_target_los_angle_deg:
+      - 148.0
+      - 168.0
+      target_velocity_to_own_los_angle_deg:
+      - 12.0
+      - 32.0
+    neutral:
+      weight: 1.0
+      own_to_target_los_angle_deg:
+      - 148.0
+      - 168.0
+      target_velocity_to_own_los_angle_deg:
+      - 148.0
+      - 168.0
+    crossing_entry:
+      weight: 1.0
+      own_to_target_los_angle_deg:
+      - 12.0
+      - 32.0
+      target_velocity_to_own_los_angle_deg:
+      - 68.0
+      - 82.0
+  transition_band_deg:
+  - 85.0
+  - 95.0
+  height_conditions:
+    own_below:
+      weight: 1.0
+      target_minus_own_altitude_m:
+      - 300.0
+      - 650.0
+    co_altitude:
+      weight: 1.0
+      target_minus_own_altitude_m:
+      - -120.0
+      - 120.0
+    own_above:
+      weight: 1.0
+      target_minus_own_altitude_m:
+      - -650.0
+      - -300.0
+  mirror_signs:
+    negative: 1.0
+    positive: 1.0
+  continuous_support:
+    own_altitude_m:
+    - 4600.0
+    - 5400.0
+    initial_range_m:
+    - 1800.0
+    - 2500.0
+    own_speed_mps:
+    - 185.0
+    - 225.0
+    target_speed_mps:
+    - 185.0
+    - 225.0
+    los_azimuth_abs_deg:
+    - 8.0
+    - 24.0
+  phase_transition_sampling:
+    enabled: true
+    pre_merge_weight: 1.0
+    post_merge_weight: 1.0
+    re_entry_weight: 1.0
+  opponents_registry: config/experiment/thesis_five_state_shared_intent_v1_opponent_registry.yaml
+  opponent_sampling: balanced_round_robin
+leakage_controls:
+  taxonomy30: diagnostic_only_and_excluded_from_checkpoint_selection
+  dev30: excluded_from_training_support_by_distance_speed_package
+  heldout60: excluded_from_training_support_by_distance_speed_package
+  normalization_fit_split: train_only
+  train_raw_telemetry_retention: prohibited
+integrity:
+  dev30_payload_sha256: 539d91632358d2ed26d064de65c36498ff0ca6379ca2d08a85a5c9df6ba032a6
+  heldout60_payload_sha256: a43e304751c2f23d4be4975f07d781a2475eacef100c6ef336923ffed4001725
+  dev30_training_support_overlap_count: 0
+  heldout60_training_support_overlap_count: 0
+  payload_sha256: e823108f02e2b3e7c64192cdf5d1e952190b27058e14d880733a48f46fda2675

@@ -1,0 +1,34 @@
+schema_version: 1
+source_id: THESIS-FIVE-STATE-SHARED-INTENT-V1-OPPONENT-CAPABILITY-CARDS
+lane: noncanonical_thesis_extension
+claim_boundary: capability documentation only; no Elo or total-strength ranking
+shared_runtime:
+  environment_high_level_dt_s: 0.2
+  target_action_update: once_per_high_level_step
+  action_mode_difference: explicitly_recorded
+cards:
+  expert_rule_based:
+    identity: ExpertOpponent / ExpertVPPPolicy
+    control_mechanism: rule-based VPP through guidance and PID
+    checkpoint: null
+    reference_evidence: rule mechanism is auditable; no training-budget claim
+    known_boundary: not a learned or Elo-calibrated opponent
+  end_to_end_neural:
+    identity: frozen 16-D to 3-D direct-command neural opponent
+    checkpoint: E:/uav-vpp-guidance-thesis-five-state-v1-assets/canonical_end_to_end_neural_opponent_best.pt
+    checkpoint_sha256: d38828338d5e7e22167129b2e9972d52ecf5fc3fda5d52caff95a8374c35b8bc
+    action_mode: direct_command
+    known_boundary: historical frozen checkpoint; strength is reported per opponent
+      rather than ranked
+  independent_ppo_vpp:
+    identity: independent frozen 16-D to 3-D PPO/VPP opponent
+    checkpoint: E:/uav-vpp-guidance-thesis-five-state-v1-assets/independent_ppo_vpp_opponent_v1_step_32768.pt
+    checkpoint_sha256: 43cd37fc86c0eb01d96a693f68d30894de7e768de01aed6dba41fa4761edfc60
+    action_mode: vpp
+    reference_evidence: E:/uav-vpp-guidance-thesis-five-state-opponent-prep-results/experiments/thesis_independent_ppo_vpp_opponent_v1/capability_audit.json
+    known_boundary: qualified for the documented two-task/two-training-opponent preparation
+      envelope; not a general opponent-strength or Elo claim
+integrity:
+  registry_sha256: 57bdb617f9360f7821fc0e0a9b6b7ec1661da7a024b15bb5b9ccc11428b72302
+  asset_manifest_sha256: abf2158737a89ea7662df45ff6fb50406fac1b4961ff414d4cc62bbdbab648d6
+  builder_code_sha256: 9da355ecd26d330377f3c11c5f819cd1265dd1a9a1f7d4bdb212eb01a019a00e

@@ -940,10 +940,16 @@ def _build_chinese_report(
             if diagnostic["opponent_dependent"]
         }
     )
+    systematic_library_keys = {
+        (str(row["opponent_stage"]), str(row["initial_class"]))
+        for row in systematic_library
+    }
     library_cells = [
         diagnostic
         for diagnostic in diagnostics
         if "library_gap_candidate" in diagnostic["labels"]
+        and (str(diagnostic["opponent_stage"]), str(diagnostic["initial_class"]))
+        in systematic_library_keys
     ]
     terminal_counter = Counter(
         terminal

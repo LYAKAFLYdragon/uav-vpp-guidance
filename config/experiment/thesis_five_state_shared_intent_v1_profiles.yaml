@@ -1,0 +1,19 @@
+schema_version: 1
+profile_version: global_tactical_intent_v1
+target_units:
+  aa_target_deg: deg
+  ata_target_deg: deg
+  range_target_m: m
+  range_rate_target_mps: mps
+  specific_energy_delta_m: m
+  altitude_delta_m: m
+normalization_scales: [180.0, 180.0, 5000.0, 200.0, 1000.0, 1000.0]
+profiles:
+  - front_intercept
+  - rear_quarter_alignment
+  - lateral_displacement
+  - defensive_break
+  - range_extension
+  - energy_altitude_recovery
+  - reentry_preparation
+claim_boundary: interpretable initialization priors, not optimal maneuver labels or direct VPP commands

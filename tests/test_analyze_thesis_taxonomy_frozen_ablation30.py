@@ -38,8 +38,21 @@ def _trajectory(mode: str | None = None):
             "pre_merge": step < 2,
             "post_merge": step == 2,
             "range_rate_mps": -10.0 if step == 2 else -220.0,
+            "range_m": 2600.0 - 40.0 * step,
+            "ego_in_attack_zone": step >= 1,
+            "target_in_attack_zone": step == 2,
+            "ego_attack_score": 0.25 * step,
+            "target_attack_score": 0.1 * step,
+            "vp_pos_z": 5100.0 + 10.0 * step,
             "vp_forward_bias_m": 100.0,
             "vp_lateral_bias_m": -20.0,
+            "altitude_m": 5000.0,
+            "speed_mps": 220.0,
+            "nz_cmd": 2.0,
+            "nz_g": 1.5,
+            "nz_saturated": 0.0,
+            "roll_rate_saturated": 0.0,
+            "throttle_saturated": 0.0,
         }
         if mode is not None:
             frame.update(
@@ -48,6 +61,9 @@ def _trajectory(mode: str | None = None):
                     "commander_mode_name": mode,
                     "commander_switch_count": 0,
                     "commander_mode_constraint_reason": "none",
+                    "commander_mode_constraint_triggered": False,
+                    "commander_mode_switched": False,
+                    "commander_first_switch_step": None,
                 }
             )
         frames.append(frame)
@@ -64,6 +80,7 @@ def _episode(scenario: str, metadata: dict, method: str, *, win: bool, loss: boo
         "strict_backend": True,
         "git_commit": "96fce9a",
         "config_sha256": "test-config",
+        "opponent_config": {"type": "synthetic", "stage": "test"},
         "scenario": scenario,
         "scenario_metadata": metadata,
         "trajectory": _trajectory("head_on_specialist" if method.startswith("canonical") else None),
@@ -196,6 +213,15 @@ def test_read_only_analyzer_writes_required_artifacts_and_labels(tmp_path):
         "mirror_pair_summary.csv",
         "thesis_taxonomy_ablation30_result_zh.md",
         "artifact_source_hash_manifest.json",
+        "telemetry_summary_by_method.json",
+        "telemetry_summary_by_method.csv",
+        "opponent_capability_card.json",
+        "opponent_capability_card_zh.md",
+        "opponent_reference_pressure.csv",
+        "expert_disadvantage_feasibility_audit.json",
+        "expert_disadvantage_feasibility_audit_summary.csv",
+        "expert_disadvantage_feasibility_audit.csv",
+        "expert_disadvantage_feasibility_audit.md",
     ):
         assert (output / name).is_file()
     diagnostics = (output / "diagnostic_label_by_episode.csv").read_text(encoding="utf-8")
@@ -206,6 +232,14 @@ def test_read_only_analyzer_writes_required_artifacts_and_labels(tmp_path):
     verification = json.loads((output / "taxonomy_initial_state_verification.json").read_text())
     assert verification["status"] == "passed"
     assert verification["match_count"] == 240
+    telemetry = (output / "telemetry_summary_by_method.csv").read_text(encoding="utf-8")
+    assert "mean_mean_vp_vertical_offset_m" in telemetry
+    assert "ego_attack_zone_episode_entry_rate" in telemetry
+    feasibility = json.loads(
+        (output / "expert_disadvantage_feasibility_audit.json").read_text(encoding="utf-8")
+    )
+    assert feasibility["candidate_scenario_count"] == 0
+    assert feasibility["decision"]["shared_skill_library_training_approved"] is False
 
 
 def test_analyzer_rejects_incomplete_method_pairing(tmp_path):
@@ -241,3 +275,16 @@ def test_initial_geometry_does_not_read_scenario_name():
     assert geometry["geometry_state"] == "advantage"
     assert geometry["own_to_target_los_angle_deg"] == pytest.approx(0.0)
     assert geometry["target_velocity_to_own_los_angle_deg"] == pytest.approx(180.0)
+
+
+def test_trajectory_telemetry_keeps_units_and_attack_zone_semantics():
+    module = _load_module()
+    telemetry = module._trajectory_telemetry(_trajectory("head_on_specialist"))
+
+    assert telemetry["initial_range_m"] == pytest.approx(2600.0)
+    assert telemetry["minimum_range_m"] == pytest.approx(2520.0)
+    assert telemetry["ego_attack_zone_entry_time_s"] == pytest.approx(0.4)
+    assert telemetry["target_attack_zone_entry_time_s"] == pytest.approx(0.6)
+    assert telemetry["mean_vp_vertical_offset_m"] == pytest.approx(110.0)
+    assert telemetry["mean_abs_nz_tracking_error_g"] == pytest.approx(0.5)
+    assert telemetry["nz_saturation_step_fraction"] == pytest.approx(0.0)

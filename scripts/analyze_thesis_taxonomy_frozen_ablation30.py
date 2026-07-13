@@ -32,7 +32,7 @@ from uav_vpp_guidance.evaluation.engagement_geometry_taxonomy import (  # noqa: 
 )
 
 
-ANALYSIS_VERSION = "thesis_taxonomy_ablation30_step4_v1"
+ANALYSIS_VERSION = "thesis_taxonomy_ablation30_step4_v2"
 SOURCE_ID = "THESIS-TAXONOMY-ABLATION30-V1"
 METHODS = (
     "canonical_ppo_high_level_policy",
@@ -285,6 +285,143 @@ def _first_value(trajectory: Sequence[Mapping[str, Any]], field: str) -> Any:
     return None
 
 
+def _min_finite(values: Iterable[Any]) -> float | None:
+    finite = [number for value in values if (number := _finite(value)) is not None]
+    return min(finite) if finite else None
+
+
+def _max_finite(values: Iterable[Any]) -> float | None:
+    finite = [number for value in values if (number := _finite(value)) is not None]
+    return max(finite) if finite else None
+
+
+def _first_true_time_s(trajectory: Sequence[Mapping[str, Any]], field: str) -> float | None:
+    for frame in trajectory:
+        if _bool(frame.get(field)):
+            return _finite(frame.get("time_s"))
+    return None
+
+
+def _true_fraction(trajectory: Sequence[Mapping[str, Any]], field: str) -> float | None:
+    if not trajectory or not any(field in frame for frame in trajectory):
+        return None
+    return sum(_bool(frame.get(field)) for frame in trajectory) / len(trajectory)
+
+
+def _mode_step_fractions(trajectory: Sequence[Mapping[str, Any]], field: str) -> dict[str, float]:
+    counts = _mode_counts(trajectory, field)
+    total = sum(counts.values())
+    return {mode: count / total for mode, count in counts.items()} if total else {}
+
+
+def _first_switch_step(trajectory: Sequence[Mapping[str, Any]]) -> int | None:
+    for frame in trajectory:
+        value = _finite(frame.get("commander_first_switch_step"))
+        if value is not None:
+            return int(value)
+    for frame in trajectory:
+        if _bool(frame.get("commander_mode_switched")):
+            value = _finite(frame.get("step"))
+            return int(value) if value is not None else None
+    return None
+
+
+def _target_speed_mps(trajectory: Sequence[Mapping[str, Any]]) -> list[float]:
+    speeds: list[float] = []
+    for first, second in zip(trajectory, trajectory[1:]):
+        velocity = _velocity_between(first, second, "target")
+        if velocity is not None:
+            speeds.append(_norm(velocity))
+    return speeds
+
+
+def _vertical_vpp_offset_m(frame: Mapping[str, Any]) -> float | None:
+    vp_z = _finite(frame.get("vp_pos_z"))
+    ego_z = _finite(frame.get("ego_pos_z"))
+    if vp_z is None or ego_z is None:
+        return None
+    return vp_z - ego_z
+
+
+def _trajectory_telemetry(trajectory: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    """Compress one raw trajectory into paper-facing, unit-preserving features."""
+
+    initial_range = _finite(trajectory[0].get("range_m"))
+    final_range = _finite(trajectory[-1].get("range_m"))
+    terminal_geometry = _initial_geometry(trajectory[-2:]) if len(trajectory) >= 2 else {}
+    effective_fractions = _mode_step_fractions(trajectory, "commander_mode_name")
+    requested_fractions = _mode_step_fractions(trajectory, "commander_requested_mode_name")
+    has_mode_telemetry = bool(effective_fractions or requested_fractions)
+    return {
+        "initial_range_m": initial_range,
+        "final_range_m": final_range,
+        "minimum_range_m": _min_finite(frame.get("range_m") for frame in trajectory),
+        "mean_range_m": _mean_finite(frame.get("range_m") for frame in trajectory),
+        "mean_range_rate_mps": _mean_finite(frame.get("range_rate_mps") for frame in trajectory),
+        "minimum_range_rate_mps": _min_finite(frame.get("range_rate_mps") for frame in trajectory),
+        "maximum_range_rate_mps": _max_finite(frame.get("range_rate_mps") for frame in trajectory),
+        "ego_attack_zone_entry_time_s": _first_true_time_s(trajectory, "ego_in_attack_zone"),
+        "target_attack_zone_entry_time_s": _first_true_time_s(trajectory, "target_in_attack_zone"),
+        "ego_attack_zone_step_fraction": _true_fraction(trajectory, "ego_in_attack_zone"),
+        "target_attack_zone_step_fraction": _true_fraction(trajectory, "target_in_attack_zone"),
+        "mean_ego_attack_score": _mean_finite(frame.get("ego_attack_score") for frame in trajectory),
+        "mean_target_attack_score": _mean_finite(frame.get("target_attack_score") for frame in trajectory),
+        "mean_vp_vertical_offset_m": _mean_finite(
+            _vertical_vpp_offset_m(frame) for frame in trajectory
+        ),
+        "minimum_vp_vertical_offset_m": _min_finite(
+            _vertical_vpp_offset_m(frame) for frame in trajectory
+        ),
+        "maximum_vp_vertical_offset_m": _max_finite(
+            _vertical_vpp_offset_m(frame) for frame in trajectory
+        ),
+        "initial_altitude_m": _finite(trajectory[0].get("altitude_m")),
+        "terminal_altitude_m": _finite(trajectory[-1].get("altitude_m")),
+        "mean_altitude_m": _mean_finite(frame.get("altitude_m") for frame in trajectory),
+        "mean_speed_mps": _mean_finite(frame.get("speed_mps") for frame in trajectory),
+        "mean_target_altitude_m": _mean_finite(frame.get("target_pos_z") for frame in trajectory),
+        "mean_target_speed_mps": _mean_finite(_target_speed_mps(trajectory)),
+        "terminal_specific_energy_difference_m2_s2": terminal_geometry.get(
+            "specific_energy_difference_m2_s2"
+        ),
+        "first_switch_step": _first_switch_step(trajectory),
+        "has_mode_telemetry": has_mode_telemetry,
+        "effective_mode_step_fractions": effective_fractions,
+        "requested_mode_step_fractions": requested_fractions,
+        "guard_override_step_fraction": (
+            _true_fraction(trajectory, "commander_mode_constraint_triggered")
+            if has_mode_telemetry
+            else None
+        ),
+        "guard_override_reasons": (
+            _unique_values(trajectory, "commander_mode_constraint_reason")
+            if has_mode_telemetry
+            else []
+        ),
+        "mean_nz_cmd_g": _mean_finite(frame.get("nz_cmd") for frame in trajectory),
+        "mean_nz_g": _mean_finite(frame.get("nz_g") for frame in trajectory),
+        "mean_abs_nz_tracking_error_g": _mean_finite(
+            abs(command - actual)
+            for frame in trajectory
+            if (command := _finite(frame.get("nz_cmd"))) is not None
+            and (actual := _finite(frame.get("nz_g"))) is not None
+        ),
+        "max_abs_nz_tracking_error_g": _max_finite(
+            abs(command - actual)
+            for frame in trajectory
+            if (command := _finite(frame.get("nz_cmd"))) is not None
+            and (actual := _finite(frame.get("nz_g"))) is not None
+        ),
+        "nz_saturation_step_fraction": _true_fraction(trajectory, "nz_saturated"),
+        "roll_rate_saturation_step_fraction": _true_fraction(
+            trajectory, "roll_rate_saturated"
+        ),
+        "throttle_saturation_step_fraction": _true_fraction(
+            trajectory, "throttle_saturated"
+        ),
+    }
+
+
 def _episode_record(
     raw_path: Path,
     split: str,
@@ -342,6 +479,7 @@ def _episode_record(
         if (value := _finite(frame.get("commander_switch_count"))) is not None
     ]
     terminal_reason = raw.get("termination_reason") or raw.get("combat_reason")
+    telemetry = _trajectory_telemetry(trajectory)
     record = {
         "opponent_stage": split,
         "source_raw_path": str(raw_path),
@@ -408,6 +546,8 @@ def _episode_record(
         "max_commander_switch_count": int(max(switches)) if switches else None,
         "git_commit": raw.get("git_commit"),
         "config_sha256": raw.get("config_sha256"),
+        "opponent_config": raw.get("opponent_config"),
+        **telemetry,
     }
     record["outcome"] = _outcome(record)
     return record, source_hash
@@ -755,6 +895,452 @@ def _terminal_summary(records: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
         },
         "rows": rows,
     }
+
+
+def _mean_record_field(records: Sequence[Mapping[str, Any]], field: str) -> float | None:
+    return _mean_finite(record.get(field) for record in records)
+
+
+def _mean_mode_fraction(records: Sequence[Mapping[str, Any]], field: str, mode: str) -> float | None:
+    values = [
+        record[field].get(mode)
+        for record in records
+        if isinstance(record.get(field), Mapping) and mode in record[field]
+    ]
+    return _mean_finite(values)
+
+
+def _telemetry_summary_rows(records: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:
+    """Aggregate the missing checklist metrics without pooling opponent splits."""
+
+    groups: dict[tuple[str, str, str], list[Mapping[str, Any]]] = defaultdict(list)
+    for record in records:
+        groups[
+            (
+                str(record["opponent_stage"]),
+                str(record["initial_class"]),
+                str(record["method"]),
+            )
+        ].append(record)
+    rows: list[dict[str, Any]] = []
+    scalar_fields = (
+        "initial_range_m",
+        "final_range_m",
+        "minimum_range_m",
+        "mean_range_m",
+        "mean_range_rate_mps",
+        "minimum_range_rate_mps",
+        "maximum_range_rate_mps",
+        "mean_ego_attack_score",
+        "mean_target_attack_score",
+        "mean_vp_forward_bias_m",
+        "mean_vp_lateral_bias_m",
+        "mean_vp_vertical_offset_m",
+        "minimum_vp_vertical_offset_m",
+        "maximum_vp_vertical_offset_m",
+        "initial_altitude_m",
+        "terminal_altitude_m",
+        "mean_altitude_m",
+        "mean_speed_mps",
+        "mean_target_altitude_m",
+        "mean_target_speed_mps",
+        "initial_los_elevation_deg",
+        "initial_specific_energy_difference_m2_s2",
+        "terminal_specific_energy_difference_m2_s2",
+        "first_switch_step",
+        "max_commander_switch_count",
+        "guard_override_step_fraction",
+        "mean_nz_cmd_g",
+        "mean_nz_g",
+        "mean_abs_nz_tracking_error_g",
+        "max_abs_nz_tracking_error_g",
+        "nz_saturation_step_fraction",
+        "roll_rate_saturation_step_fraction",
+        "throttle_saturation_step_fraction",
+    )
+    for (split, initial_class, method), candidates in sorted(groups.items()):
+        row: dict[str, Any] = {
+            "opponent_stage": split,
+            "initial_class": initial_class,
+            "method": method,
+            "n_episodes": len(candidates),
+            "ego_attack_zone_episode_entry_rate": sum(
+                record["ego_attack_zone_entry_time_s"] is not None for record in candidates
+            )
+            / len(candidates),
+            "target_attack_zone_episode_entry_rate": sum(
+                record["target_attack_zone_entry_time_s"] is not None for record in candidates
+            )
+            / len(candidates),
+            "mean_first_ego_attack_zone_entry_time_s": _mean_record_field(
+                candidates, "ego_attack_zone_entry_time_s"
+            ),
+            "mean_first_target_attack_zone_entry_time_s": _mean_record_field(
+                candidates, "target_attack_zone_entry_time_s"
+            ),
+            "mean_ego_attack_zone_step_fraction": _mean_record_field(
+                candidates, "ego_attack_zone_step_fraction"
+            ),
+            "mean_target_attack_zone_step_fraction": _mean_record_field(
+                candidates, "target_attack_zone_step_fraction"
+            ),
+            "mean_hp_advantage": _mean_record_field(candidates, "hp_advantage"),
+            "mode_telemetry_episode_count": sum(
+                _bool(record["has_mode_telemetry"]) for record in candidates
+            ),
+            "guard_override_reasons": sorted(
+                {
+                    reason
+                    for record in candidates
+                    for reason in record["guard_override_reasons"]
+                }
+            ),
+        }
+        row.update({f"mean_{field}": _mean_record_field(candidates, field) for field in scalar_fields})
+        for mode in (
+            "head_on_specialist",
+            "crossing_specialist",
+            "post_merge_recovery_specialist",
+        ):
+            row[f"mean_effective_{mode}_fraction"] = _mean_mode_fraction(
+                candidates, "effective_mode_step_fractions", mode
+            )
+            row[f"mean_requested_{mode}_fraction"] = _mean_mode_fraction(
+                candidates, "requested_mode_step_fractions", mode
+            )
+        rows.append(row)
+    return rows
+
+
+def _opponent_reference_pressure_rows(records: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:
+    """Describe opponent pressure using frozen non-PPO reference methods."""
+
+    reference_methods = (ORACLE_METHOD, *FIXED_METHODS)
+    groups: dict[tuple[str, str], list[Mapping[str, Any]]] = defaultdict(list)
+    for record in records:
+        if record["method"] in reference_methods:
+            groups[(str(record["opponent_stage"]), str(record["method"]))].append(record)
+    rows: list[dict[str, Any]] = []
+    for (split, method), candidates in sorted(groups.items()):
+        wins = sum(_bool(record["win"]) for record in candidates)
+        losses = sum(_bool(record["loss"]) for record in candidates)
+        resolved = wins + losses
+        rows.append(
+            {
+                "opponent_stage": split,
+                "ego_reference_method": method,
+                "n_total": len(candidates),
+                "n_resolved": resolved,
+                "ego_wins": wins,
+                "ego_losses": losses,
+                "ego_loss_rate_resolved": losses / resolved if resolved else None,
+                "mean_ego_hp_advantage": _mean_record_field(candidates, "hp_advantage"),
+                "mean_target_attack_zone_step_fraction": _mean_record_field(
+                    candidates, "target_attack_zone_step_fraction"
+                ),
+                "target_attack_zone_episode_entry_rate": sum(
+                    record["target_attack_zone_entry_time_s"] is not None for record in candidates
+                )
+                / len(candidates),
+                "mean_first_target_attack_zone_entry_time_s": _mean_record_field(
+                    candidates, "target_attack_zone_entry_time_s"
+                ),
+                "ego_crash_or_oob": sum(
+                    record["terminal_category"] == "ego_crash_or_oob" for record in candidates
+                ),
+                "target_crash_or_oob": sum(
+                    record["terminal_category"] == "target_crash_or_oob" for record in candidates
+                ),
+            }
+        )
+    return rows
+
+
+def _opponent_capability_card(
+    records: Sequence[Mapping[str, Any]],
+    source_id: str,
+) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    """Build two interaction-conditioned capability cards, not an Elo ranking."""
+
+    pressure_rows = _opponent_reference_pressure_rows(records)
+    cards: list[dict[str, Any]] = []
+    for split in ("expert", "end_to_end"):
+        candidates = [record for record in records if record["opponent_stage"] == split]
+        configurations = sorted(
+            {
+                json.dumps(_json_safe(record.get("opponent_config")), sort_keys=True)
+                for record in candidates
+                if record.get("opponent_config") is not None
+            }
+        )
+        cards.append(
+            {
+                "opponent_stage": split,
+                "identity_and_provenance": {
+                    "raw_opponent_configs": [json.loads(item) for item in configurations],
+                    "formal_source_id": source_id,
+                    "interaction_episode_count": len(candidates),
+                    "formal_splits_share_the_same_30_initial_ego_states": True,
+                },
+                "interface_and_training_boundary": {
+                    "opponent_internal_observation_action_and_decision_period": "not logged by this evaluation telemetry",
+                    "expert_training": "not applicable: raw config identifies a rule-based ExpertOpponent",
+                    "end_to_end_training_budget_seed_and_selection": "not recoverable from this frozen raw telemetry; checkpoint path is recorded when present",
+                },
+                "interaction_conditioned_flight_behavior": {
+                    "mean_target_speed_mps": _mean_record_field(candidates, "mean_target_speed_mps"),
+                    "mean_target_altitude_m": _mean_record_field(candidates, "mean_target_altitude_m"),
+                    "mean_target_attack_zone_step_fraction": _mean_record_field(
+                        candidates, "target_attack_zone_step_fraction"
+                    ),
+                    "target_attack_zone_episode_entry_rate": sum(
+                        record["target_attack_zone_entry_time_s"] is not None
+                        for record in candidates
+                    )
+                    / len(candidates),
+                    "mean_first_target_attack_zone_entry_time_s": _mean_record_field(
+                        candidates, "target_attack_zone_entry_time_s"
+                    ),
+                    "mean_post_merge_step_fraction": _mean_record_field(
+                        candidates, "post_merge_step_fraction"
+                    ),
+                    "mean_re_entry_step_fraction": _mean_record_field(
+                        candidates, "re_entry_step_fraction"
+                    ),
+                },
+                "reference_pressure_rows": [
+                    row for row in pressure_rows if row["opponent_stage"] == split
+                ],
+                "interpretation_boundary": [
+                    "Metrics are interaction-conditioned summaries across frozen ego references and the preregistered 30 scenes.",
+                    "The card supports split-specific pressure descriptions, not an absolute opponent-strength ranking or Elo claim.",
+                    "Opponent internal modes and training details not present in raw telemetry are explicitly unavailable rather than inferred.",
+                ],
+            }
+        )
+    return {"source_id": source_id, "cards": cards}, pressure_rows
+
+
+def _build_opponent_capability_markdown(card: Mapping[str, Any]) -> str:
+    lines = [
+        "# Opponent Capability Card: THESIS-TAXONOMY-ABLATION30-V1",
+        "",
+        "## Scope",
+        "",
+        "This is a read-only, interaction-conditioned profile over the same 30 frozen initial states and three non-PPO ego references (static Oracle, always-head-on, always-crossing). It is not an Elo ranking or a claim of absolute opponent strength.",
+    ]
+    for item in card["cards"]:
+        identity = item["identity_and_provenance"]
+        behavior = item["interaction_conditioned_flight_behavior"]
+        lines.extend(
+            [
+                "",
+                f"## {item['opponent_stage']}",
+                "",
+                "**Identity and provenance**",
+                "",
+                f"- Frozen interaction episodes: {identity['interaction_episode_count']}.",
+                f"- Raw config: `{json.dumps(identity['raw_opponent_configs'], ensure_ascii=True)}`.",
+                "- Internal observation/action interface and learned training metadata are reported only when present in raw provenance; unlogged details are unavailable.",
+                "",
+                "**Interaction-conditioned behavior**",
+                "",
+                _markdown_table(
+                    [behavior],
+                    (
+                        ("mean_target_speed_mps", "Target speed (m/s)"),
+                        ("mean_target_altitude_m", "Target altitude (m)"),
+                        ("mean_target_attack_zone_step_fraction", "Target attack-zone step fraction"),
+                        ("target_attack_zone_episode_entry_rate", "Target attack-zone entry rate"),
+                        ("mean_first_target_attack_zone_entry_time_s", "First target attack-zone time (s)"),
+                        ("mean_post_merge_step_fraction", "Post-merge fraction"),
+                        ("mean_re_entry_step_fraction", "Re-entry fraction"),
+                    ),
+                ),
+                "",
+                "**Frozen reference pressure**",
+                "",
+                _markdown_table(
+                    item["reference_pressure_rows"],
+                    (
+                        ("ego_reference_method", "Ego reference"),
+                        ("n_resolved", "Resolved N"),
+                        ("ego_loss_rate_resolved", "Ego loss rate"),
+                        ("mean_ego_hp_advantage", "Mean ego HP advantage"),
+                        ("mean_target_attack_zone_step_fraction", "Target AZ fraction"),
+                        ("ego_crash_or_oob", "Ego crash/OOB"),
+                    ),
+                ),
+            ]
+        )
+    lines.extend(
+        [
+            "",
+            "## Boundaries",
+            "",
+            "- The two opponents must not be called universally stronger or weaker from these results.",
+            "- All comparisons remain conditional on this JSBSim asset set, AoA60 terminal protocol, 30-scenario envelope, and frozen ego references.",
+            "- A future Elo or Bradley-Terry claim would require a larger fixed opponent pool and a separate rating protocol.",
+        ]
+    )
+    return "\n".join(lines) + "\n"
+
+
+def _expert_disadvantage_feasibility_audit(
+    records: Sequence[Mapping[str, Any]], diagnostics: Sequence[Mapping[str, Any]]
+) -> tuple[dict[str, Any], list[dict[str, Any]], list[dict[str, Any]]]:
+    """Audit the five expert/disadvantage candidates without attributing causality."""
+
+    candidate_cells = [
+        diagnostic
+        for diagnostic in diagnostics
+        if diagnostic["opponent_stage"] == "expert"
+        and diagnostic["initial_class"] == "disadvantage"
+        and "library_gap_candidate" in diagnostic["labels"]
+        and "all_method_failure" in diagnostic["labels"]
+    ]
+    by_split_scenario: dict[tuple[str, str], list[Mapping[str, Any]]] = defaultdict(list)
+    for record in records:
+        by_split_scenario[(str(record["opponent_stage"]), str(record["scenario"]))].append(record)
+    detail_rows: list[dict[str, Any]] = []
+    scenario_rows: list[dict[str, Any]] = []
+    for candidate in sorted(candidate_cells, key=lambda item: str(item["scenario"])):
+        scenario = str(candidate["scenario"])
+        expert_records = by_split_scenario[("expert", scenario)]
+        counterpart = {
+            record["method"]: record
+            for record in by_split_scenario[("end_to_end", scenario)]
+        }
+        counterpart_fixed_any_win = any(
+            _bool(counterpart[method]["win"]) for method in FIXED_METHODS
+        )
+        scenario_rows.append(
+            {
+                "scenario": scenario,
+                "height_condition": candidate["height_condition"],
+                "mirror_sign": candidate["mirror_sign"],
+                "expert_all_method_failure": True,
+                "expert_terminal_categories": sorted(
+                    {record["terminal_category"] for record in expert_records}
+                ),
+                "expert_ego_crash_or_oob_method_count": sum(
+                    record["terminal_category"] == "ego_crash_or_oob"
+                    for record in expert_records
+                ),
+                "expert_any_control_saturation": any(
+                    any(
+                        (_finite(record.get(field)) or 0.0) > 0.0
+                        for field in (
+                            "nz_saturation_step_fraction",
+                            "roll_rate_saturation_step_fraction",
+                            "throttle_saturation_step_fraction",
+                        )
+                    )
+                    for record in expert_records
+                ),
+                "end_to_end_same_scenario_fixed_any_win": counterpart_fixed_any_win,
+                "end_to_end_outcomes": {
+                    method: counterpart[method]["outcome"] for method in METHODS
+                },
+            }
+        )
+        for record in sorted(expert_records, key=lambda item: str(item["method"])):
+            detail_rows.append(
+                {
+                    "scenario": scenario,
+                    "height_condition": record["height_condition"],
+                    "mirror_sign": record["mirror_sign"],
+                    "method": record["method"],
+                    "outcome": record["outcome"],
+                    "termination_reason": record["termination_reason"],
+                    "terminal_category": record["terminal_category"],
+                    "hp_advantage": record["hp_advantage"],
+                    "initial_range_m": record["initial_range_m"],
+                    "minimum_range_m": record["minimum_range_m"],
+                    "final_range_m": record["final_range_m"],
+                    "mean_range_rate_mps": record["mean_range_rate_mps"],
+                    "ego_attack_zone_entry_time_s": record["ego_attack_zone_entry_time_s"],
+                    "target_attack_zone_entry_time_s": record["target_attack_zone_entry_time_s"],
+                    "ego_attack_zone_step_fraction": record["ego_attack_zone_step_fraction"],
+                    "target_attack_zone_step_fraction": record["target_attack_zone_step_fraction"],
+                    "mean_vp_forward_bias_m": record["mean_vp_forward_bias_m"],
+                    "mean_vp_lateral_bias_m": record["mean_vp_lateral_bias_m"],
+                    "mean_vp_vertical_offset_m": record["mean_vp_vertical_offset_m"],
+                    "initial_altitude_m": record["initial_altitude_m"],
+                    "terminal_altitude_m": record["terminal_altitude_m"],
+                    "mean_abs_nz_tracking_error_g": record["mean_abs_nz_tracking_error_g"],
+                    "max_abs_nz_tracking_error_g": record["max_abs_nz_tracking_error_g"],
+                    "nz_saturation_step_fraction": record["nz_saturation_step_fraction"],
+                    "roll_rate_saturation_step_fraction": record[
+                        "roll_rate_saturation_step_fraction"
+                    ],
+                    "throttle_saturation_step_fraction": record[
+                        "throttle_saturation_step_fraction"
+                    ],
+                    "effective_mode_step_fractions": record["effective_mode_step_fractions"],
+                    "guard_override_step_fraction": record["guard_override_step_fraction"],
+                    "end_to_end_same_scenario_outcome": counterpart[record["method"]]["outcome"],
+                    "end_to_end_same_scenario_fixed_any_win": counterpart_fixed_any_win,
+                    "source_raw_path": record["source_raw_path"],
+                }
+            )
+    counterpart_fixed_successes = sum(
+        _bool(row["end_to_end_same_scenario_fixed_any_win"]) for row in scenario_rows
+    )
+    any_saturation = sum(_bool(row["expert_any_control_saturation"]) for row in scenario_rows)
+    audit = {
+        "scope": "expert/disadvantage all-method-failure library-gap candidates only",
+        "candidate_scenario_count": len(scenario_rows),
+        "candidate_scenarios": scenario_rows,
+        "counterpart_end_to_end_fixed_any_win_count": counterpart_fixed_successes,
+        "candidate_scenarios_with_any_logged_control_saturation": any_saturation,
+        "decision": {
+            "shared_skill_library_training_approved": False,
+            "reason": "Frozen telemetry shows an expert-only candidate set with mixed terminal paths; it cannot yet exclude opponent conditioning or common execution-chain effects.",
+            "next_gate": "Complete opponent capability interpretation and a dedicated low-level feasibility protocol before any specialist training.",
+        },
+    }
+    return audit, scenario_rows, detail_rows
+
+
+def _build_feasibility_markdown(audit: Mapping[str, Any]) -> str:
+    rows = audit["candidate_scenarios"]
+    lines = [
+        "# Expert/Disadvantage Low-Level Feasibility Audit",
+        "",
+        "## Scope",
+        "",
+        "This read-only audit examines only `expert/disadvantage` cells tagged both `library_gap_candidate` and `all_method_failure`. It does not train, tune, or diagnose a causal controller defect from a single terminal event.",
+        "",
+        "## Candidate Scenarios",
+        "",
+        _markdown_table(
+            rows,
+            (
+                ("scenario", "Scenario"),
+                ("height_condition", "Height"),
+                ("mirror_sign", "Mirror"),
+                ("expert_terminal_categories", "Expert terminal categories"),
+                ("expert_ego_crash_or_oob_method_count", "Ego crash/OOB methods"),
+                ("expert_any_control_saturation", "Any logged saturation"),
+                ("end_to_end_same_scenario_fixed_any_win", "E2E fixed any win"),
+            ),
+        ),
+        "",
+        "## Exclusion Logic",
+        "",
+        f"- Candidate count: {audit['candidate_scenario_count']}.",
+        f"- The same physical scenarios have at least one end-to-end fixed-specialist win in {audit['counterpart_end_to_end_fixed_any_win_count']}/{audit['candidate_scenario_count']} cases.",
+        f"- Logged command/response saturation is present in {audit['candidate_scenarios_with_any_logged_control_saturation']}/{audit['candidate_scenario_count']} candidate scenarios.",
+        "- Mixed terminal categories and split-dependent counterpart outcomes prevent attributing the failures solely to a missing specialist or solely to the shared guidance/PID chain.",
+        "",
+        "## Decision",
+        "",
+        "- Shared-skill-library training is **not approved** by this audit.",
+        "- Preserve the five scenarios as negative evidence. Use the detailed CSV to inspect VPP forward/lateral/vertical geometry, range evolution, attack-zone timing, and command-vs-response error before defining any low-level feasibility experiment.",
+        "- A zero saturation fraction is not a flight-safety certification and does not exclude every shared-execution limitation.",
+    ]
+    return "\n".join(lines) + "\n"
 
 
 def _markdown_table(rows: Sequence[Mapping[str, Any]], columns: Sequence[tuple[str, str]]) -> str:
@@ -1148,6 +1734,11 @@ def analyze(
     mirror_rows = _mirror_rows(records)
     threshold_rows = _threshold_rows(diagnostics)
     terminal_summary = _terminal_summary(records)
+    telemetry_rows = _telemetry_summary_rows(records)
+    capability_card, reference_pressure_rows = _opponent_capability_card(records, SOURCE_ID)
+    feasibility_audit, feasibility_scenario_rows, feasibility_detail_rows = (
+        _expert_disadvantage_feasibility_audit(records, diagnostics)
+    )
     raw_audit_rows = [
         {
             **{
@@ -1161,12 +1752,24 @@ def analyze(
                     "requested_mode_step_counts",
                     "effective_mode_step_counts",
                     "effective_mode_constraint_reasons",
+                    "effective_mode_step_fractions",
+                    "requested_mode_step_fractions",
+                    "guard_override_reasons",
+                    "opponent_config",
                 }
             },
             "geometry_state_step_counts": json.dumps(record["geometry_state_step_counts"], sort_keys=True),
             "requested_mode_step_counts": json.dumps(record["requested_mode_step_counts"], sort_keys=True),
             "effective_mode_step_counts": json.dumps(record["effective_mode_step_counts"], sort_keys=True),
             "effective_mode_constraint_reasons": ";".join(record["effective_mode_constraint_reasons"]),
+            "effective_mode_step_fractions": json.dumps(
+                record["effective_mode_step_fractions"], sort_keys=True
+            ),
+            "requested_mode_step_fractions": json.dumps(
+                record["requested_mode_step_fractions"], sort_keys=True
+            ),
+            "guard_override_reasons": ";".join(record["guard_override_reasons"]),
+            "opponent_config": json.dumps(_json_safe(record["opponent_config"]), sort_keys=True),
         }
         for record in records
     ]
@@ -1201,6 +1804,27 @@ def analyze(
         },
     )
     _write_json(output_dir / "terminal_reason_summary.json", terminal_summary)
+    _write_json(
+        output_dir / "telemetry_summary_by_method.json",
+        {"source_id": SOURCE_ID, "analysis_version": ANALYSIS_VERSION, "rows": telemetry_rows},
+    )
+    _write_csv(output_dir / "telemetry_summary_by_method.csv", telemetry_rows)
+    _write_json(output_dir / "opponent_capability_card.json", capability_card)
+    (output_dir / "opponent_capability_card_zh.md").write_text(
+        _build_opponent_capability_markdown(capability_card), encoding="utf-8"
+    )
+    _write_csv(output_dir / "opponent_reference_pressure.csv", reference_pressure_rows)
+    _write_json(output_dir / "expert_disadvantage_feasibility_audit.json", feasibility_audit)
+    _write_csv(
+        output_dir / "expert_disadvantage_feasibility_audit_summary.csv",
+        feasibility_scenario_rows,
+    )
+    _write_csv(
+        output_dir / "expert_disadvantage_feasibility_audit.csv", feasibility_detail_rows
+    )
+    (output_dir / "expert_disadvantage_feasibility_audit.md").write_text(
+        _build_feasibility_markdown(feasibility_audit), encoding="utf-8"
+    )
     _write_json(output_dir / "geometry_taxonomy_audit.json", geometry_audit)
     _write_csv(output_dir / "geometry_taxonomy_audit.csv", raw_audit_rows)
     _write_csv(
@@ -1266,6 +1890,8 @@ def analyze(
         "diagnostic_cells": len(diagnostics),
         "initial_verification": initial_verification,
         "threshold_rows": threshold_rows,
+        "telemetry_summary_rows": len(telemetry_rows),
+        "feasibility_candidate_count": feasibility_audit["candidate_scenario_count"],
     }
 
 

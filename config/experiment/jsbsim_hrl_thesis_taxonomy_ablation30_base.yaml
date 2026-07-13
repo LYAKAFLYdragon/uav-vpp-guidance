@@ -1,0 +1,119 @@
+includes:
+  - ./jsbsim_hrl_oracle_vs_commander_post_merge_recovery_formal_heldout.yaml
+
+experiment:
+  name: jsbsim_hrl_thesis_taxonomy_ablation30_base
+  description: "Evaluation-only 30-scenario taxonomy ablation. Frozen canonical PPO, legacy static two-skill oracle, and two no-routing fixed-specialist controls."
+
+thesis_taxonomy_ablation30:
+  source_id: THESIS-TAXONOMY-ABLATION30-V1
+  evaluation_only: true
+  training_permitted: false
+  tuning_permitted: false
+  methods:
+    - canonical_ppo_high_level_policy
+    - legacy_static_oracle_task_gate
+    - head_on_vpp_specialist_no_routing
+    - crossing_vpp_specialist_no_routing
+  oracle_mapping:
+    head_on: head_on
+    crossing_feasible: crossing_feasible
+  fixed_controls_bypass:
+    high_level_routing: true
+    recovery_override: true
+
+scenario_manifest:
+  path: ./manifests/thesis_taxonomy_ablation30_v1.yaml
+  source_id: THESIS-TAXONOMY-ABLATION30-V1
+  payload_sha256: ff43d0ed946463ed448f0c6eba7ffdd55622b4267d7999e7cc20f1d785bb4baf
+  task_key_field: task_registry_key
+  expected_task_counts:
+    head_on: 24
+    crossing_feasible: 6
+  task_labels:
+    head_on: "Taxonomy ablation: advantage, head-on, disadvantage, and neutral"
+    crossing_feasible: "Taxonomy ablation: crossing-entry"
+  use_scenario_seed: true
+
+frozen_assets:
+  source_worktree: E:/uav-vpp-guidance-can20260705
+  source_git_sha: 9a9f9bf6d68560afa81560f5260b78f318dcd9b1
+  artifacts:
+    - id: canonical_ppo_high_level_policy
+      path: outputs/diagnostics/hierarchical_commander_mvp_2mode_task_type_mode_dominance_gated_alignment_shaped_v2_oracle_imitation_warmstart_balanced_tail_checkpoint_retrospective_expert_10seed_20260701_checkpoint_snapshots/best.pt
+      sha256: 26280e0ccc40f9db51995ed5f90491cc0c91217337f291d7136cc28f5ed66694
+      expected_obs_dim: 19
+      expected_action_dim: 2
+    - id: head_on_vpp_specialist
+      path: outputs/experiments/prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp_combat_finetune_mixed_opponent_aware_32k_task_type_headon_weighted/checkpoints/best.pt
+      sha256: 0aeadd11cd8c7723c8963bcc5da21dd97c365e64f234d07b86c2b8f0d7ec5fb6
+      expected_obs_dim: 19
+      expected_action_dim: 3
+    - id: crossing_v3_vpp_specialist
+      path: outputs/experiments/prediction_vpp_ppo_crossing_v3/checkpoints/last.pt
+      sha256: 5eddc138bff55a5466da1129e840ef7dfb3677347a05276c3877746c8e89148b
+      expected_obs_dim: 18
+      expected_action_dim: 3
+    - id: trajectory_prediction_asset
+      path: outputs/trajectory_prediction/best_model.pt
+      sha256: 96bc8e5e1aebd32ca6a528fb3149cfd58aeff276c18bca66388d650f00495931
+
+methods:
+  canonical_ppo_high_level_policy:
+    label: "Frozen canonical PPO high-level policy"
+    agent_type: hierarchical_commander
+    checkpoint: outputs/diagnostics/hierarchical_commander_mvp_2mode_task_type_mode_dominance_gated_alignment_shaped_v2_oracle_imitation_warmstart_balanced_tail_checkpoint_retrospective_expert_10seed_20260701_checkpoint_snapshots/best.pt
+    config_path: config/experiment/train_prediction_vpp_hierarchical_commander_ppo_reset075_tactical_basis_3mode_post_merge_recovery_bootstrap.yaml
+    prediction_variant: learned
+  legacy_static_oracle_task_gate:
+    label: "Legacy static two-skill oracle task gate"
+    agent_type: oracle_task_gate
+    prediction_variant: learned
+    specialists:
+      head_on:
+        specialist_key: head_on
+        specialist_mode_name: head_on_specialist
+        checkpoint: outputs/experiments/prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp_combat_finetune_mixed_opponent_aware_32k_task_type_headon_weighted/checkpoints/best.pt
+        config_path: config/experiment/train_prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp_combat_finetune_mixed_opponent_aware_32k_task_type_headon_weighted.yaml
+      crossing_feasible:
+        specialist_key: crossing_feasible
+        specialist_mode_name: crossing_specialist
+        checkpoint: outputs/experiments/prediction_vpp_ppo_crossing_v3/checkpoints/last.pt
+        config_path: config/experiment/train_prediction_vpp_ppo_crossing_v3.yaml
+  head_on_vpp_specialist_no_routing:
+    label: "Frozen head-on VPP specialist without high-level routing"
+    agent_type: ppo
+    checkpoint: outputs/experiments/prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp_combat_finetune_mixed_opponent_aware_32k_task_type_headon_weighted/checkpoints/best.pt
+    config_path: config/experiment/train_prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp_combat_finetune_mixed_opponent_aware_32k_task_type_headon_weighted.yaml
+    prediction_variant: learned
+  crossing_vpp_specialist_no_routing:
+    label: "Frozen crossing-v3 VPP specialist without high-level routing"
+    agent_type: ppo
+    checkpoint: outputs/experiments/prediction_vpp_ppo_crossing_v3/checkpoints/last.pt
+    config_path: config/experiment/train_prediction_vpp_ppo_crossing_v3.yaml
+    prediction_variant: learned
+    observation_contract:
+      checkpoint_obs_dim: 18
+      include_task_type: false
+      rationale: "The historical crossing-v3 checkpoint predates the task-type bit; disabling it preserves the original frozen input schema."
+    config_overrides:
+      observation.include_task_type: false
+
+run_defaults:
+  backend: jsbsim
+  tasks:
+    - head_on
+    - crossing_feasible
+  main_methods:
+    - canonical_ppo_high_level_policy
+    - legacy_static_oracle_task_gate
+    - head_on_vpp_specialist_no_routing
+    - crossing_vpp_specialist_no_routing
+  ablation_methods:
+    - canonical_ppo_high_level_policy
+    - legacy_static_oracle_task_gate
+    - head_on_vpp_specialist_no_routing
+    - crossing_vpp_specialist_no_routing
+  seeds:
+    - 0
+  n_episodes: 1

@@ -1,0 +1,1095 @@
+source_id: THESIS-TAXONOMY-ABLATION30-V1
+manifest_version: 1
+status: preregistered_before_evaluation
+frozen_source:
+  git_sha: 9a9f9bf6d68560afa81560f5260b78f318dcd9b1
+  detached_worktree_required: true
+protocol:
+  evaluation_only: true
+  training_permitted: false
+  tuning_permitted: false
+  opponent_stages:
+  - expert
+  - end_to_end
+  methods:
+  - canonical_ppo_high_level_policy
+  - legacy_static_oracle_task_gate
+  - head_on_vpp_specialist_no_routing
+  - crossing_vpp_specialist_no_routing
+  episodes_per_scenario_method_opponent: 1
+  episodes_total: 240
+  stop_rule: No training, tuning, scenario replacement, seed replacement, reward change,
+    VPP change, guidance change, PID change, or result-driven rerun is permitted.
+generation_contract:
+  taxonomy_version: v1
+  initial_classes:
+  - advantage
+  - head_on
+  - disadvantage
+  - neutral
+  - crossing_entry
+  height_offsets_target_minus_own_m:
+    own_below: 400.0
+    co_altitude: 0.0
+    own_above: -400.0
+  mirror_signs:
+  - negative
+  - positive
+  initial_range_m: 2600.0
+  own_altitude_m: 5000.0
+  own_speed_mps: 220.0
+  target_speed_mps: 220.0
+  transition_band_deg:
+  - 85.0
+  - 95.0
+  legacy_task_bit_contract:
+    crossing_entry: 1
+    advantage_head_on_disadvantage_neutral: 0
+scenarios:
+- name: taxonomy30_advantage_below400_neg
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5000.0
+    velocity_mps: 220.0
+    heading_deg: 6.007765192
+  target_init:
+    position_m:
+    - 2512.906685538
+    - -534.134804876
+    - 5400.0
+    velocity_mps: 220.0
+    heading_deg: 6.007765192
+  metadata:
+    scenario_type: advantage
+    manifest_family: thesis_taxonomy_ablation30_v1
+    initial_class: advantage
+    height_condition: own_below
+    mirror_sign: negative
+    mirror_pair_id: advantage__own_below
+    task_registry_key: head_on
+    ppo_task_bit: 0
+    crossing_context: false
+    scenario_seed: 73000
+    initial_range_m: 2600.0
+    horizontal_range_m: 2569.046515733
+    altitude_diff_m: 400.0
+    lateral_offset_m: -534.134804876
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: advantage
+- name: taxonomy30_advantage_below400_pos
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5000.0
+    velocity_mps: 220.0
+    heading_deg: 353.992234808
+  target_init:
+    position_m:
+    - 2512.906685538
+    - 534.134804876
+    - 5400.0
+    velocity_mps: 220.0
+    heading_deg: 353.992234808
+  metadata:
+    scenario_type: advantage
+    manifest_family: thesis_taxonomy_ablation30_v1
+    initial_class: advantage
+    height_condition: own_below
+    mirror_sign: positive
+    mirror_pair_id: advantage__own_below
+    task_registry_key: head_on
+    ppo_task_bit: 0
+    crossing_context: false
+    scenario_seed: 73001
+    initial_range_m: 2600.0
+    horizontal_range_m: 2569.046515733
+    altitude_diff_m: 400.0
+    lateral_offset_m: 534.134804876
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: advantage
+- name: taxonomy30_advantage_level_neg
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5000.0
+    velocity_mps: 220.0
+    heading_deg: 8.0
+  target_init:
+    position_m:
+    - 2543.183761908
+    - -540.570396126
+    - 5000.0
+    velocity_mps: 220.0
+    heading_deg: 8.0
+  metadata:
+    scenario_type: advantage
+    manifest_family: thesis_taxonomy_ablation30_v1
+    initial_class: advantage
+    height_condition: co_altitude
+    mirror_sign: negative
+    mirror_pair_id: advantage__co_altitude
+    task_registry_key: head_on
+    ppo_task_bit: 0
+    crossing_context: false
+    scenario_seed: 73002
+    initial_range_m: 2600.0
+    horizontal_range_m: 2600.0
+    altitude_diff_m: 0.0
+    lateral_offset_m: -540.570396126
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: advantage
+- name: taxonomy30_advantage_level_pos
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5000.0
+    velocity_mps: 220.0
+    heading_deg: 352.0
+  target_init:
+    position_m:
+    - 2543.183761908
+    - 540.570396126
+    - 5000.0
+    velocity_mps: 220.0
+    heading_deg: 352.0
+  metadata:
+    scenario_type: advantage
+    manifest_family: thesis_taxonomy_ablation30_v1
+    initial_class: advantage
+    height_condition: co_altitude
+    mirror_sign: positive
+    mirror_pair_id: advantage__co_altitude
+    task_registry_key: head_on
+    ppo_task_bit: 0
+    crossing_context: false
+    scenario_seed: 73003
+    initial_range_m: 2600.0
+    horizontal_range_m: 2600.0
+    altitude_diff_m: 0.0
+    lateral_offset_m: 540.570396126
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: advantage
+- name: taxonomy30_advantage_above400_neg
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5000.0
+    velocity_mps: 220.0
+    heading_deg: 6.007765192
+  target_init:
+    position_m:
+    - 2512.906685538
+    - -534.134804876
+    - 4600.0
+    velocity_mps: 220.0
+    heading_deg: 6.007765192
+  metadata:
+    scenario_type: advantage
+    manifest_family: thesis_taxonomy_ablation30_v1
+    initial_class: advantage
+    height_condition: own_above
+    mirror_sign: negative
+    mirror_pair_id: advantage__own_above
+    task_registry_key: head_on
+    ppo_task_bit: 0
+    crossing_context: false
+    scenario_seed: 73004
+    initial_range_m: 2600.0
+    horizontal_range_m: 2569.046515733
+    altitude_diff_m: -400.0
+    lateral_offset_m: -534.134804876
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: advantage
+- name: taxonomy30_advantage_above400_pos
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5000.0
+    velocity_mps: 220.0
+    heading_deg: 353.992234808
+  target_init:
+    position_m:
+    - 2512.906685538
+    - 534.134804876
+    - 4600.0
+    velocity_mps: 220.0
+    heading_deg: 353.992234808
+  metadata:
+    scenario_type: advantage
+    manifest_family: thesis_taxonomy_ablation30_v1
+    initial_class: advantage
+    height_condition: own_above
+    mirror_sign: positive
+    mirror_pair_id: advantage__own_above
+    task_registry_key: head_on
+    ppo_task_bit: 0
+    crossing_context: false
+    scenario_seed: 73005
+    initial_range_m: 2600.0
+    horizontal_range_m: 2569.046515733
+    altitude_diff_m: -400.0
+    lateral_offset_m: 534.134804876
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: advantage
+- name: taxonomy30_head_on_below400_neg
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5000.0
+    velocity_mps: 220.0
+    heading_deg: 6.007765192
+  target_init:
+    position_m:
+    - 2512.906685538
+    - -534.134804876
+    - 5400.0
+    velocity_mps: 220.0
+    heading_deg: 149.992234808
+  metadata:
+    scenario_type: head_on
+    manifest_family: thesis_taxonomy_ablation30_v1
+    initial_class: head_on
+    height_condition: own_below
+    mirror_sign: negative
+    mirror_pair_id: head_on__own_below
+    task_registry_key: head_on
+    ppo_task_bit: 0
+    crossing_context: false
+    scenario_seed: 73006
+    initial_range_m: 2600.0
+    horizontal_range_m: 2569.046515733
+    altitude_diff_m: 400.0
+    lateral_offset_m: -534.134804876
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: head_on
+- name: taxonomy30_head_on_below400_pos
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5000.0
+    velocity_mps: 220.0
+    heading_deg: 353.992234808
+  target_init:
+    position_m:
+    - 2512.906685538
+    - 534.134804876
+    - 5400.0
+    velocity_mps: 220.0
+    heading_deg: 210.007765192
+  metadata:
+    scenario_type: head_on
+    manifest_family: thesis_taxonomy_ablation30_v1
+    initial_class: head_on
+    height_condition: own_below
+    mirror_sign: positive
+    mirror_pair_id: head_on__own_below
+    task_registry_key: head_on
+    ppo_task_bit: 0
+    crossing_context: false
+    scenario_seed: 73007
+    initial_range_m: 2600.0
+    horizontal_range_m: 2569.046515733
+    altitude_diff_m: 400.0
+    lateral_offset_m: 534.134804876
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: head_on
+- name: taxonomy30_head_on_level_neg
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5000.0
+    velocity_mps: 220.0
+    heading_deg: 8.0
+  target_init:
+    position_m:
+    - 2543.183761908
+    - -540.570396126
+    - 5000.0
+    velocity_mps: 220.0
+    heading_deg: 148.0
+  metadata:
+    scenario_type: head_on
+    manifest_family: thesis_taxonomy_ablation30_v1
+    initial_class: head_on
+    height_condition: co_altitude
+    mirror_sign: negative
+    mirror_pair_id: head_on__co_altitude
+    task_registry_key: head_on
+    ppo_task_bit: 0
+    crossing_context: false
+    scenario_seed: 73008
+    initial_range_m: 2600.0
+    horizontal_range_m: 2600.0
+    altitude_diff_m: 0.0
+    lateral_offset_m: -540.570396126
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: head_on
+- name: taxonomy30_head_on_level_pos
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5000.0
+    velocity_mps: 220.0
+    heading_deg: 352.0
+  target_init:
+    position_m:
+    - 2543.183761908
+    - 540.570396126
+    - 5000.0
+    velocity_mps: 220.0
+    heading_deg: 212.0
+  metadata:
+    scenario_type: head_on
+    manifest_family: thesis_taxonomy_ablation30_v1
+    initial_class: head_on
+    height_condition: co_altitude
+    mirror_sign: positive
+    mirror_pair_id: head_on__co_altitude
+    task_registry_key: head_on
+    ppo_task_bit: 0
+    crossing_context: false
+    scenario_seed: 73009
+    initial_range_m: 2600.0
+    horizontal_range_m: 2600.0
+    altitude_diff_m: 0.0
+    lateral_offset_m: 540.570396126
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: head_on
+- name: taxonomy30_head_on_above400_neg
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5000.0
+    velocity_mps: 220.0
+    heading_deg: 6.007765192
+  target_init:
+    position_m:
+    - 2512.906685538
+    - -534.134804876
+    - 4600.0
+    velocity_mps: 220.0
+    heading_deg: 149.992234808
+  metadata:
+    scenario_type: head_on
+    manifest_family: thesis_taxonomy_ablation30_v1
+    initial_class: head_on
+    height_condition: own_above
+    mirror_sign: negative
+    mirror_pair_id: head_on__own_above
+    task_registry_key: head_on
+    ppo_task_bit: 0
+    crossing_context: false
+    scenario_seed: 73010
+    initial_range_m: 2600.0
+    horizontal_range_m: 2569.046515733
+    altitude_diff_m: -400.0
+    lateral_offset_m: -534.134804876
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: head_on
+- name: taxonomy30_head_on_above400_pos
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5000.0
+    velocity_mps: 220.0
+    heading_deg: 353.992234808
+  target_init:
+    position_m:
+    - 2512.906685538
+    - 534.134804876
+    - 4600.0
+    velocity_mps: 220.0
+    heading_deg: 210.007765192
+  metadata:
+    scenario_type: head_on
+    manifest_family: thesis_taxonomy_ablation30_v1
+    initial_class: head_on
+    height_condition: own_above
+    mirror_sign: positive
+    mirror_pair_id: head_on__own_above
+    task_registry_key: head_on
+    ppo_task_bit: 0
+    crossing_context: false
+    scenario_seed: 73011
+    initial_range_m: 2600.0
+    horizontal_range_m: 2569.046515733
+    altitude_diff_m: -400.0
+    lateral_offset_m: 534.134804876
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: head_on
+- name: taxonomy30_disadvantage_below400_neg
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5000.0
+    velocity_mps: 220.0
+    heading_deg: 149.992234808
+  target_init:
+    position_m:
+    - 2512.906685538
+    - -534.134804876
+    - 5400.0
+    velocity_mps: 220.0
+    heading_deg: 149.992234808
+  metadata:
+    scenario_type: disadvantage
+    manifest_family: thesis_taxonomy_ablation30_v1
+    initial_class: disadvantage
+    height_condition: own_below
+    mirror_sign: negative
+    mirror_pair_id: disadvantage__own_below
+    task_registry_key: head_on
+    ppo_task_bit: 0
+    crossing_context: false
+    scenario_seed: 73012
+    initial_range_m: 2600.0
+    horizontal_range_m: 2569.046515733
+    altitude_diff_m: 400.0
+    lateral_offset_m: -534.134804876
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: disadvantage
+- name: taxonomy30_disadvantage_below400_pos
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5000.0
+    velocity_mps: 220.0
+    heading_deg: 210.007765192
+  target_init:
+    position_m:
+    - 2512.906685538
+    - 534.134804876
+    - 5400.0
+    velocity_mps: 220.0
+    heading_deg: 210.007765192
+  metadata:
+    scenario_type: disadvantage
+    manifest_family: thesis_taxonomy_ablation30_v1
+    initial_class: disadvantage
+    height_condition: own_below
+    mirror_sign: positive
+    mirror_pair_id: disadvantage__own_below
+    task_registry_key: head_on
+    ppo_task_bit: 0
+    crossing_context: false
+    scenario_seed: 73013
+    initial_range_m: 2600.0
+    horizontal_range_m: 2569.046515733
+    altitude_diff_m: 400.0
+    lateral_offset_m: 534.134804876
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: disadvantage
+- name: taxonomy30_disadvantage_level_neg
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5000.0
+    velocity_mps: 220.0
+    heading_deg: 148.0
+  target_init:
+    position_m:
+    - 2543.183761908
+    - -540.570396126
+    - 5000.0
+    velocity_mps: 220.0
+    heading_deg: 148.0
+  metadata:
+    scenario_type: disadvantage
+    manifest_family: thesis_taxonomy_ablation30_v1
+    initial_class: disadvantage
+    height_condition: co_altitude
+    mirror_sign: negative
+    mirror_pair_id: disadvantage__co_altitude
+    task_registry_key: head_on
+    ppo_task_bit: 0
+    crossing_context: false
+    scenario_seed: 73014
+    initial_range_m: 2600.0
+    horizontal_range_m: 2600.0
+    altitude_diff_m: 0.0
+    lateral_offset_m: -540.570396126
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: disadvantage
+- name: taxonomy30_disadvantage_level_pos
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5000.0
+    velocity_mps: 220.0
+    heading_deg: 212.0
+  target_init:
+    position_m:
+    - 2543.183761908
+    - 540.570396126
+    - 5000.0
+    velocity_mps: 220.0
+    heading_deg: 212.0
+  metadata:
+    scenario_type: disadvantage
+    manifest_family: thesis_taxonomy_ablation30_v1
+    initial_class: disadvantage
+    height_condition: co_altitude
+    mirror_sign: positive
+    mirror_pair_id: disadvantage__co_altitude
+    task_registry_key: head_on
+    ppo_task_bit: 0
+    crossing_context: false
+    scenario_seed: 73015
+    initial_range_m: 2600.0
+    horizontal_range_m: 2600.0
+    altitude_diff_m: 0.0
+    lateral_offset_m: 540.570396126
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: disadvantage
+- name: taxonomy30_disadvantage_above400_neg
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5000.0
+    velocity_mps: 220.0
+    heading_deg: 149.992234808
+  target_init:
+    position_m:
+    - 2512.906685538
+    - -534.134804876
+    - 4600.0
+    velocity_mps: 220.0
+    heading_deg: 149.992234808
+  metadata:
+    scenario_type: disadvantage
+    manifest_family: thesis_taxonomy_ablation30_v1
+    initial_class: disadvantage
+    height_condition: own_above
+    mirror_sign: negative
+    mirror_pair_id: disadvantage__own_above
+    task_registry_key: head_on
+    ppo_task_bit: 0
+    crossing_context: false
+    scenario_seed: 73016
+    initial_range_m: 2600.0
+    horizontal_range_m: 2569.046515733
+    altitude_diff_m: -400.0
+    lateral_offset_m: -534.134804876
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: disadvantage
+- name: taxonomy30_disadvantage_above400_pos
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5000.0
+    velocity_mps: 220.0
+    heading_deg: 210.007765192
+  target_init:
+    position_m:
+    - 2512.906685538
+    - 534.134804876
+    - 4600.0
+    velocity_mps: 220.0
+    heading_deg: 210.007765192
+  metadata:
+    scenario_type: disadvantage
+    manifest_family: thesis_taxonomy_ablation30_v1
+    initial_class: disadvantage
+    height_condition: own_above
+    mirror_sign: positive
+    mirror_pair_id: disadvantage__own_above
+    task_registry_key: head_on
+    ppo_task_bit: 0
+    crossing_context: false
+    scenario_seed: 73017
+    initial_range_m: 2600.0
+    horizontal_range_m: 2569.046515733
+    altitude_diff_m: -400.0
+    lateral_offset_m: 534.134804876
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: disadvantage
+- name: taxonomy30_neutral_below400_neg
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5000.0
+    velocity_mps: 220.0
+    heading_deg: 149.992234808
+  target_init:
+    position_m:
+    - 2512.906685538
+    - -534.134804876
+    - 5400.0
+    velocity_mps: 220.0
+    heading_deg: 6.007765192
+  metadata:
+    scenario_type: neutral
+    manifest_family: thesis_taxonomy_ablation30_v1
+    initial_class: neutral
+    height_condition: own_below
+    mirror_sign: negative
+    mirror_pair_id: neutral__own_below
+    task_registry_key: head_on
+    ppo_task_bit: 0
+    crossing_context: false
+    scenario_seed: 73018
+    initial_range_m: 2600.0
+    horizontal_range_m: 2569.046515733
+    altitude_diff_m: 400.0
+    lateral_offset_m: -534.134804876
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: neutral
+- name: taxonomy30_neutral_below400_pos
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5000.0
+    velocity_mps: 220.0
+    heading_deg: 210.007765192
+  target_init:
+    position_m:
+    - 2512.906685538
+    - 534.134804876
+    - 5400.0
+    velocity_mps: 220.0
+    heading_deg: 353.992234808
+  metadata:
+    scenario_type: neutral
+    manifest_family: thesis_taxonomy_ablation30_v1
+    initial_class: neutral
+    height_condition: own_below
+    mirror_sign: positive
+    mirror_pair_id: neutral__own_below
+    task_registry_key: head_on
+    ppo_task_bit: 0
+    crossing_context: false
+    scenario_seed: 73019
+    initial_range_m: 2600.0
+    horizontal_range_m: 2569.046515733
+    altitude_diff_m: 400.0
+    lateral_offset_m: 534.134804876
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: neutral
+- name: taxonomy30_neutral_level_neg
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5000.0
+    velocity_mps: 220.0
+    heading_deg: 148.0
+  target_init:
+    position_m:
+    - 2543.183761908
+    - -540.570396126
+    - 5000.0
+    velocity_mps: 220.0
+    heading_deg: 8.0
+  metadata:
+    scenario_type: neutral
+    manifest_family: thesis_taxonomy_ablation30_v1
+    initial_class: neutral
+    height_condition: co_altitude
+    mirror_sign: negative
+    mirror_pair_id: neutral__co_altitude
+    task_registry_key: head_on
+    ppo_task_bit: 0
+    crossing_context: false
+    scenario_seed: 73020
+    initial_range_m: 2600.0
+    horizontal_range_m: 2600.0
+    altitude_diff_m: 0.0
+    lateral_offset_m: -540.570396126
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: neutral
+- name: taxonomy30_neutral_level_pos
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5000.0
+    velocity_mps: 220.0
+    heading_deg: 212.0
+  target_init:
+    position_m:
+    - 2543.183761908
+    - 540.570396126
+    - 5000.0
+    velocity_mps: 220.0
+    heading_deg: 352.0
+  metadata:
+    scenario_type: neutral
+    manifest_family: thesis_taxonomy_ablation30_v1
+    initial_class: neutral
+    height_condition: co_altitude
+    mirror_sign: positive
+    mirror_pair_id: neutral__co_altitude
+    task_registry_key: head_on
+    ppo_task_bit: 0
+    crossing_context: false
+    scenario_seed: 73021
+    initial_range_m: 2600.0
+    horizontal_range_m: 2600.0
+    altitude_diff_m: 0.0
+    lateral_offset_m: 540.570396126
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: neutral
+- name: taxonomy30_neutral_above400_neg
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5000.0
+    velocity_mps: 220.0
+    heading_deg: 149.992234808
+  target_init:
+    position_m:
+    - 2512.906685538
+    - -534.134804876
+    - 4600.0
+    velocity_mps: 220.0
+    heading_deg: 6.007765192
+  metadata:
+    scenario_type: neutral
+    manifest_family: thesis_taxonomy_ablation30_v1
+    initial_class: neutral
+    height_condition: own_above
+    mirror_sign: negative
+    mirror_pair_id: neutral__own_above
+    task_registry_key: head_on
+    ppo_task_bit: 0
+    crossing_context: false
+    scenario_seed: 73022
+    initial_range_m: 2600.0
+    horizontal_range_m: 2569.046515733
+    altitude_diff_m: -400.0
+    lateral_offset_m: -534.134804876
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: neutral
+- name: taxonomy30_neutral_above400_pos
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5000.0
+    velocity_mps: 220.0
+    heading_deg: 210.007765192
+  target_init:
+    position_m:
+    - 2512.906685538
+    - 534.134804876
+    - 4600.0
+    velocity_mps: 220.0
+    heading_deg: 353.992234808
+  metadata:
+    scenario_type: neutral
+    manifest_family: thesis_taxonomy_ablation30_v1
+    initial_class: neutral
+    height_condition: own_above
+    mirror_sign: positive
+    mirror_pair_id: neutral__own_above
+    task_registry_key: head_on
+    ppo_task_bit: 0
+    crossing_context: false
+    scenario_seed: 73023
+    initial_range_m: 2600.0
+    horizontal_range_m: 2569.046515733
+    altitude_diff_m: -400.0
+    lateral_offset_m: 534.134804876
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: neutral
+- name: taxonomy30_crossing_entry_below400_neg
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5000.0
+    velocity_mps: 220.0
+    heading_deg: 6.007765192
+  target_init:
+    position_m:
+    - 2512.906685538
+    - -534.134804876
+    - 5400.0
+    velocity_mps: 220.0
+    heading_deg: 78.0
+  metadata:
+    scenario_type: crossing_negative
+    manifest_family: thesis_taxonomy_ablation30_v1
+    initial_class: crossing_entry
+    height_condition: own_below
+    mirror_sign: negative
+    mirror_pair_id: crossing_entry__own_below
+    task_registry_key: crossing_feasible
+    ppo_task_bit: 1
+    crossing_context: true
+    scenario_seed: 73024
+    initial_range_m: 2600.0
+    horizontal_range_m: 2569.046515733
+    altitude_diff_m: 400.0
+    lateral_offset_m: -534.134804876
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 90.0
+    taxonomy_geometry_state: transition
+- name: taxonomy30_crossing_entry_below400_pos
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5000.0
+    velocity_mps: 220.0
+    heading_deg: 353.992234808
+  target_init:
+    position_m:
+    - 2512.906685538
+    - 534.134804876
+    - 5400.0
+    velocity_mps: 220.0
+    heading_deg: 282.0
+  metadata:
+    scenario_type: crossing_positive
+    manifest_family: thesis_taxonomy_ablation30_v1
+    initial_class: crossing_entry
+    height_condition: own_below
+    mirror_sign: positive
+    mirror_pair_id: crossing_entry__own_below
+    task_registry_key: crossing_feasible
+    ppo_task_bit: 1
+    crossing_context: true
+    scenario_seed: 73025
+    initial_range_m: 2600.0
+    horizontal_range_m: 2569.046515733
+    altitude_diff_m: 400.0
+    lateral_offset_m: 534.134804876
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 90.0
+    taxonomy_geometry_state: transition
+- name: taxonomy30_crossing_entry_level_neg
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5000.0
+    velocity_mps: 220.0
+    heading_deg: 8.0
+  target_init:
+    position_m:
+    - 2543.183761908
+    - -540.570396126
+    - 5000.0
+    velocity_mps: 220.0
+    heading_deg: 78.0
+  metadata:
+    scenario_type: crossing_negative
+    manifest_family: thesis_taxonomy_ablation30_v1
+    initial_class: crossing_entry
+    height_condition: co_altitude
+    mirror_sign: negative
+    mirror_pair_id: crossing_entry__co_altitude
+    task_registry_key: crossing_feasible
+    ppo_task_bit: 1
+    crossing_context: true
+    scenario_seed: 73026
+    initial_range_m: 2600.0
+    horizontal_range_m: 2600.0
+    altitude_diff_m: 0.0
+    lateral_offset_m: -540.570396126
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 90.0
+    taxonomy_geometry_state: transition
+- name: taxonomy30_crossing_entry_level_pos
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5000.0
+    velocity_mps: 220.0
+    heading_deg: 352.0
+  target_init:
+    position_m:
+    - 2543.183761908
+    - 540.570396126
+    - 5000.0
+    velocity_mps: 220.0
+    heading_deg: 282.0
+  metadata:
+    scenario_type: crossing_positive
+    manifest_family: thesis_taxonomy_ablation30_v1
+    initial_class: crossing_entry
+    height_condition: co_altitude
+    mirror_sign: positive
+    mirror_pair_id: crossing_entry__co_altitude
+    task_registry_key: crossing_feasible
+    ppo_task_bit: 1
+    crossing_context: true
+    scenario_seed: 73027
+    initial_range_m: 2600.0
+    horizontal_range_m: 2600.0
+    altitude_diff_m: 0.0
+    lateral_offset_m: 540.570396126
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 90.0
+    taxonomy_geometry_state: transition
+- name: taxonomy30_crossing_entry_above400_neg
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5000.0
+    velocity_mps: 220.0
+    heading_deg: 6.007765192
+  target_init:
+    position_m:
+    - 2512.906685538
+    - -534.134804876
+    - 4600.0
+    velocity_mps: 220.0
+    heading_deg: 78.0
+  metadata:
+    scenario_type: crossing_negative
+    manifest_family: thesis_taxonomy_ablation30_v1
+    initial_class: crossing_entry
+    height_condition: own_above
+    mirror_sign: negative
+    mirror_pair_id: crossing_entry__own_above
+    task_registry_key: crossing_feasible
+    ppo_task_bit: 1
+    crossing_context: true
+    scenario_seed: 73028
+    initial_range_m: 2600.0
+    horizontal_range_m: 2569.046515733
+    altitude_diff_m: -400.0
+    lateral_offset_m: -534.134804876
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 90.0
+    taxonomy_geometry_state: transition
+- name: taxonomy30_crossing_entry_above400_pos
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5000.0
+    velocity_mps: 220.0
+    heading_deg: 353.992234808
+  target_init:
+    position_m:
+    - 2512.906685538
+    - 534.134804876
+    - 4600.0
+    velocity_mps: 220.0
+    heading_deg: 282.0
+  metadata:
+    scenario_type: crossing_positive
+    manifest_family: thesis_taxonomy_ablation30_v1
+    initial_class: crossing_entry
+    height_condition: own_above
+    mirror_sign: positive
+    mirror_pair_id: crossing_entry__own_above
+    task_registry_key: crossing_feasible
+    ppo_task_bit: 1
+    crossing_context: true
+    scenario_seed: 73029
+    initial_range_m: 2600.0
+    horizontal_range_m: 2569.046515733
+    altitude_diff_m: -400.0
+    lateral_offset_m: 534.134804876
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 90.0
+    taxonomy_geometry_state: transition
+disjointness:
+  sources:
+  - source_id: CAN-20260705
+    unique_signature_count: 65
+    intersection_count: 0
+  - source_id: RQ1-20260711
+    unique_signature_count: 89
+    intersection_count: 0
+  - source_id: RQ2-20260712
+    unique_signature_count: 89
+    intersection_count: 0
+  - source_id: RQ3-RQ1-20260712
+    unique_signature_count: 89
+    intersection_count: 0
+  - source_id: RQ3-RQ2-20260712
+    unique_signature_count: 89
+    intersection_count: 0
+  - source_id: RQ4-20260712
+    unique_signature_count: 77
+    intersection_count: 0
+  - source_id: IND-HEADON-20260712
+    unique_signature_count: 89
+    intersection_count: 0
+  intersection_count: 0
+  source_files:
+  - source_id: CAN-20260705
+    config_name: jsbsim_hrl_oracle_vs_balanced_tail_eval10_secondary_clamp_fresh_geometry_manifest60_pilot.yaml
+    config_sha256: ce2342eea682c0dc454d78cc4b918c93e9eafc682d01a7cbf0af0e36eb74f1ba
+    unique_signature_count: 65
+  - source_id: RQ1-20260711
+    config_name: jsbsim_hrl_rq1_crossing_generalization_v1.yaml
+    config_sha256: 15df6ed05fdea89ddaad8952f22e955f0ba66662fd14c510a1351e72bba42ba0
+    unique_signature_count: 89
+  - source_id: RQ2-20260712
+    config_name: jsbsim_hrl_rq2_crossing_independent_envelope_v1.yaml
+    config_sha256: 30aa36347bb3c7b608daf4074016e5d3c2eecddf1e0d76d42baf6c58756a4af6
+    unique_signature_count: 89
+  - source_id: RQ3-RQ1-20260712
+    config_name: jsbsim_hrl_rq3_crossing_locked_unlocked_rq1_v1.yaml
+    config_sha256: 5a32d0bca598f3472431bd2c43d39829d7855231714b177264a0232fc3649c81
+    unique_signature_count: 89
+  - source_id: RQ3-RQ2-20260712
+    config_name: jsbsim_hrl_rq3_crossing_locked_unlocked_rq2_v1.yaml
+    config_sha256: 2fad92bb6fd0d9616a4137e82b73e88668b575e578a14ec4d621bad3c7c87f1e
+    unique_signature_count: 89
+  - source_id: RQ4-20260712
+    config_name: jsbsim_hrl_rq4_postmerge_dynamic_routing_v1.yaml
+    config_sha256: 020c69e89780fbf469d160b6adde701301b7a11419a41388535f5dcd318af4b0
+    unique_signature_count: 77
+  - source_id: IND-HEADON-20260712
+    config_name: jsbsim_hrl_ind_headon_preregistered_v1.yaml
+    config_sha256: 2d744eb010ca8541e2a4d52c241f80a0e24470b74108d23e626a76057158e5f3
+    unique_signature_count: 89
+integrity:
+  classifier_code_sha256: 9736dd64b13d3f8bd51372f650b51d324f258626bc96439e9788524b6267f05b
+  builder_code_sha256: a26466f492f93be1a44ead5f7f7eb6bdbe488ee2d775e25544186d22f3f703d3
+  payload_sha256: ff43d0ed946463ed448f0c6eba7ffdd55622b4267d7999e7cc20f1d785bb4baf

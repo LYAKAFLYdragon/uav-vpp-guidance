@@ -16,6 +16,7 @@ from __future__ import annotations
 import argparse
 import copy
 import csv
+import hashlib
 import importlib
 import json
 import os
@@ -293,6 +294,117 @@ def _resolve_task_def(task_def: Dict[str, Any]) -> Dict[str, Any]:
         resolved["label"] = task_def["label"]
     resolved["config_path"] = str(task_config)
     return resolved
+
+
+def _scenario_manifest_payload_sha256(manifest: Dict[str, Any]) -> str:
+    """Return the builder-compatible hash while excluding its self-reference."""
+
+    payload = copy.deepcopy(manifest)
+    integrity = payload.get("integrity")
+    if isinstance(integrity, dict):
+        integrity.pop("payload_sha256", None)
+    serialized = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return hashlib.sha256(serialized).hexdigest()
+
+
+def _materialize_scenario_manifest(
+    comparison_config: Dict[str, Any],
+    comparison_config_path: Path,
+) -> Dict[str, Any]:
+    """Expand a frozen scenario manifest into task groups for the comparison runner.
+
+    The taxonomy ablation stores all 30 physical scenarios in one immutable
+    manifest. Grouping by the preregistered task registry key is necessary so
+    the static oracle sees the intended legacy task label for every episode.
+    """
+
+    manifest_spec = comparison_config.get("scenario_manifest")
+    if not isinstance(manifest_spec, dict):
+        return comparison_config
+
+    raw_path = manifest_spec.get("path")
+    if not raw_path:
+        raise ValueError("scenario_manifest.path is required")
+    manifest_path = Path(str(raw_path))
+    if not manifest_path.is_absolute():
+        manifest_path = (comparison_config_path.parent / manifest_path).resolve()
+    if not manifest_path.exists():
+        raise FileNotFoundError(f"Scenario manifest not found: {manifest_path}")
+
+    manifest = yaml.safe_load(manifest_path.read_text(encoding="utf-8")) or {}
+    expected_source_id = manifest_spec.get("source_id")
+    if expected_source_id and manifest.get("source_id") != expected_source_id:
+        raise ValueError(
+            "Scenario manifest source_id mismatch: "
+            f"expected={expected_source_id}, actual={manifest.get('source_id')}"
+        )
+    expected_hash = manifest_spec.get("payload_sha256")
+    actual_hash = _scenario_manifest_payload_sha256(manifest)
+    if expected_hash and actual_hash != expected_hash:
+        raise ValueError(
+            "Scenario manifest payload hash mismatch: "
+            f"expected={expected_hash}, actual={actual_hash}"
+        )
+
+    scenarios = manifest.get("scenarios")
+    if not isinstance(scenarios, list) or not scenarios:
+        raise ValueError("Scenario manifest must contain a non-empty scenarios list")
+
+    task_field = str(manifest_spec.get("task_key_field", "task_registry_key"))
+    expected_task_counts = manifest_spec.get("expected_task_counts", {}) or {}
+    grouped: Dict[str, List[Dict[str, Any]]] = {}
+    for scenario in scenarios:
+        if not isinstance(scenario, dict):
+            raise TypeError("Scenario manifest entries must be mappings")
+        metadata = scenario.get("metadata", {})
+        task_name = metadata.get(task_field) if isinstance(metadata, dict) else None
+        if not task_name:
+            raise ValueError(
+                f"Scenario {scenario.get('name', '<unnamed>')} is missing metadata.{task_field}"
+            )
+        grouped.setdefault(str(task_name), []).append(copy.deepcopy(scenario))
+
+    if set(grouped) != set(expected_task_counts):
+        raise ValueError(
+            "Scenario manifest task groups mismatch: "
+            f"expected={sorted(expected_task_counts)}, actual={sorted(grouped)}"
+        )
+    for task_name, expected_count in expected_task_counts.items():
+        actual_count = len(grouped.get(str(task_name), []))
+        if actual_count != int(expected_count):
+            raise ValueError(
+                f"Scenario manifest count mismatch for {task_name}: "
+                f"expected={expected_count}, actual={actual_count}"
+            )
+
+    materialized = copy.deepcopy(comparison_config)
+    base_tasks = materialized.get("tasks", {})
+    if not isinstance(base_tasks, dict):
+        raise TypeError("Comparison config tasks must be a mapping")
+    task_labels = manifest_spec.get("task_labels", {}) or {}
+    resolved_tasks: Dict[str, Dict[str, Any]] = {}
+    for task_name, task_scenarios in grouped.items():
+        if task_name not in base_tasks:
+            raise KeyError(
+                f"Scenario manifest references task {task_name!r} absent from the comparison config"
+            )
+        task_def = copy.deepcopy(base_tasks[task_name])
+        task_block = task_def.setdefault("task", {})
+        task_block["name"] = task_name
+        task_block["scenarios"] = task_scenarios
+        if task_name in task_labels:
+            task_def["label"] = str(task_labels[task_name])
+        resolved_tasks[task_name] = task_def
+
+    materialized["tasks"] = resolved_tasks
+    materialized["scenario_manifest_resolution"] = {
+        "path": str(manifest_path),
+        "source_id": manifest.get("source_id"),
+        "payload_sha256": actual_hash,
+        "task_counts": {task_name: len(items) for task_name, items in grouped.items()},
+        "use_scenario_seed": bool(manifest_spec.get("use_scenario_seed", False)),
+    }
+    return materialized
 
 
 def _import_class(class_path: str):
@@ -6151,6 +6263,7 @@ def main() -> int:
     if config_path is None:
         raise RuntimeError("Config path is required")
     comparison_config = _load_config_with_includes(config_path)
+    comparison_config = _materialize_scenario_manifest(comparison_config, config_path)
 
     methods = _select_methods(comparison_config, args.preset, args.methods)
     tasks = _select_tasks(comparison_config, args.tasks)
@@ -6217,6 +6330,10 @@ def main() -> int:
     manifest.mark_started()
     manifest.compute_config_hash()
     manifest.record_input_file("comparison_config", config_path)
+    scenario_manifest_resolution = comparison_config.get("scenario_manifest_resolution", {})
+    scenario_manifest_path = scenario_manifest_resolution.get("path")
+    if scenario_manifest_path:
+        manifest.record_input_file("scenario_manifest", Path(str(scenario_manifest_path)))
     manifest.record_output_file("resolved_config.yaml", resolved_config_path)
     manifest.record_output_file("design_notes.json", design_notes_path)
     manifest.extra.update(
@@ -6375,7 +6492,20 @@ def main() -> int:
                                     selected = agent.select_random_specialist()
                                     agent.set_specialist(selected)
                                 episode_id = scenario_idx * n_episodes + ep
-                                ep_seed = seed * 100000 + scenario_idx * 100 + ep
+                                scenario_seed = (
+                                    scenario.get("metadata", {}).get("scenario_seed")
+                                    if isinstance(scenario, dict)
+                                    else None
+                                )
+                                use_scenario_seed = bool(
+                                    comparison_config.get("scenario_manifest_resolution", {}).get(
+                                        "use_scenario_seed", False
+                                    )
+                                )
+                                if use_scenario_seed and scenario_seed is not None:
+                                    ep_seed = int(scenario_seed) + ep
+                                else:
+                                    ep_seed = seed * 100000 + scenario_idx * 100 + ep
                                 rec = _run_episode(
                                     env=env,
                                     agent=agent,

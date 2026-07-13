@@ -1,0 +1,11 @@
+includes:
+  - ./jsbsim_hrl_thesis_taxonomy_ablation30_base.yaml
+
+experiment:
+  name: jsbsim_hrl_thesis_taxonomy_ablation30_expert
+  description: "THESIS-TAXONOMY-ABLATION30-V1 expert-opponent split."
+
+opponent_stage: expert
+
+run_defaults:
+  output_id: THESIS-TAXONOMY-ABLATION30-V1-expert

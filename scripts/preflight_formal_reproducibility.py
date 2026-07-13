@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import copy
+import hashlib
 import json
 import subprocess
 import sys
@@ -114,6 +115,123 @@ def _checkpoint_dimension_info(checkpoint_path: Path) -> Dict[str, Any]:
         "checkpoint_obs_dim": checkpoint.get("obs_dim"),
         "checkpoint_action_dim": checkpoint.get("action_dim"),
         "checkpoint_load_error": None,
+    }
+
+
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _collect_frozen_assets(
+    *,
+    repo_root: Path,
+    config: Dict[str, Any],
+) -> Dict[str, Any]:
+    """Collect immutable external assets declared by an evaluation config."""
+
+    contract = config.get("frozen_assets", {}) or {}
+    source_worktree_value = contract.get("source_worktree")
+    source_worktree = Path(str(source_worktree_value)) if source_worktree_value else None
+    source_git_sha = contract.get("source_git_sha")
+    source_git_actual = None
+    source_git_error = None
+    if source_worktree is not None and source_worktree.exists():
+        try:
+            source_git_actual = subprocess.check_output(
+                ["git", "rev-parse", "HEAD"], cwd=source_worktree, text=True
+            ).strip()
+        except Exception as exc:  # pragma: no cover - defensive guard
+            source_git_error = str(exc)
+
+    artifacts: List[Dict[str, Any]] = []
+    for declared in contract.get("artifacts", []) or []:
+        if not isinstance(declared, dict):
+            raise TypeError("frozen_assets.artifacts entries must be mappings")
+        path_value = declared.get("path")
+        resolved_path = _resolve_repo_relative_path(repo_root, path_value)
+        if resolved_path is None:
+            raise ValueError("frozen asset is missing path")
+        exists = resolved_path.exists()
+        dimensions = _checkpoint_dimension_info(resolved_path) if exists else {
+            "checkpoint_obs_dim": None,
+            "checkpoint_action_dim": None,
+            "checkpoint_load_error": None,
+        }
+        artifacts.append(
+            {
+                "id": declared.get("id", str(path_value)),
+                "path": str(resolved_path),
+                "exists": exists,
+                "expected_sha256": declared.get("sha256"),
+                "actual_sha256": _sha256_file(resolved_path) if exists else None,
+                "expected_obs_dim": declared.get("expected_obs_dim"),
+                "expected_action_dim": declared.get("expected_action_dim"),
+                **dimensions,
+            }
+        )
+
+    return {
+        "source_worktree": str(source_worktree) if source_worktree else None,
+        "source_worktree_exists": bool(source_worktree and source_worktree.exists()),
+        "expected_source_git_sha": source_git_sha,
+        "actual_source_git_sha": source_git_actual,
+        "source_git_error": source_git_error,
+        "artifacts": artifacts,
+    }
+
+
+def _collect_scenario_manifest(
+    *,
+    config_path: Path,
+    config: Dict[str, Any],
+    yaml_dependencies: Set[Path],
+) -> Dict[str, Any]:
+    """Validate and register the immutable explicit-scenario manifest, if used."""
+
+    spec = config.get("scenario_manifest")
+    if not isinstance(spec, dict):
+        return {"configured": False}
+    raw_path = spec.get("path")
+    if not raw_path:
+        return {"configured": True, "path": None, "error": "missing scenario_manifest.path"}
+    path = Path(str(raw_path))
+    if not path.is_absolute():
+        path = (config_path.parent / path).resolve()
+    if not path.exists():
+        return {"configured": True, "path": str(path), "exists": False}
+
+    yaml_dependencies.add(path)
+    manifest = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    integrity = copy.deepcopy(manifest.get("integrity", {}))
+    recorded_hash = integrity.pop("payload_sha256", None)
+    manifest_for_hash = copy.deepcopy(manifest)
+    manifest_for_hash["integrity"] = integrity
+    actual_hash = hashlib.sha256(
+        json.dumps(manifest_for_hash, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    ).hexdigest()
+    task_key_field = str(spec.get("task_key_field", "task_registry_key"))
+    task_counts: Dict[str, int] = {}
+    for scenario in manifest.get("scenarios", []) or []:
+        metadata = scenario.get("metadata", {}) if isinstance(scenario, dict) else {}
+        task_name = metadata.get(task_key_field) if isinstance(metadata, dict) else None
+        if task_name:
+            task_counts[str(task_name)] = task_counts.get(str(task_name), 0) + 1
+    return {
+        "configured": True,
+        "path": str(path),
+        "exists": True,
+        "source_id": manifest.get("source_id"),
+        "expected_source_id": spec.get("source_id"),
+        "recorded_payload_sha256": recorded_hash,
+        "expected_payload_sha256": spec.get("payload_sha256"),
+        "actual_payload_sha256": actual_hash,
+        "scenario_count": len(manifest.get("scenarios", []) or []),
+        "expected_task_counts": spec.get("expected_task_counts", {}),
+        "actual_task_counts": task_counts,
     }
 
 
@@ -249,6 +367,12 @@ def collect_formal_dependencies(
         owner="comparison_config",
         config=resolved_root,
     )
+    scenario_manifest = _collect_scenario_manifest(
+        config_path=config_path,
+        config=resolved_root,
+        yaml_dependencies=yaml_dependencies,
+    )
+    frozen_assets = _collect_frozen_assets(repo_root=repo_root, config=resolved_root)
 
     methods = resolved_root.get("methods", {})
     selected_methods = list(
@@ -381,6 +505,8 @@ def collect_formal_dependencies(
             runtime_artifacts.values(),
             key=lambda item: (str(item["kind"]), str(item["path"])),
         ),
+        "scenario_manifest": scenario_manifest,
+        "frozen_assets": frozen_assets,
     }
 
 
@@ -403,6 +529,43 @@ def run_preflight(*, repo_root: Path, config_path: Path) -> Tuple[Dict[str, Any]
             continue
         if not _git_is_tracked(repo_root, dep_path):
             issues.append(f"untracked code dependency: {dep_path}")
+
+    scenario_manifest = report.get("scenario_manifest", {})
+    if scenario_manifest.get("configured", False):
+        if scenario_manifest.get("error"):
+            issues.append(f"scenario manifest: {scenario_manifest['error']}")
+        elif not scenario_manifest.get("exists", False):
+            issues.append(f"scenario manifest missing: {scenario_manifest.get('path')}")
+        elif (
+            scenario_manifest.get("expected_source_id")
+            and scenario_manifest.get("source_id")
+            != scenario_manifest.get("expected_source_id")
+        ):
+            issues.append(
+                "scenario manifest source_id mismatch: "
+                f"expected={scenario_manifest.get('expected_source_id')}, "
+                f"actual={scenario_manifest.get('source_id')}"
+            )
+        elif (
+            scenario_manifest.get("recorded_payload_sha256")
+            != scenario_manifest.get("actual_payload_sha256")
+            or scenario_manifest.get("expected_payload_sha256")
+            != scenario_manifest.get("actual_payload_sha256")
+        ):
+            issues.append(
+                "scenario manifest payload SHA-256 mismatch: "
+                f"recorded={scenario_manifest.get('recorded_payload_sha256')}, "
+                f"expected={scenario_manifest.get('expected_payload_sha256')}, "
+                f"actual={scenario_manifest.get('actual_payload_sha256')}"
+            )
+        elif scenario_manifest.get("expected_task_counts") != scenario_manifest.get(
+            "actual_task_counts"
+        ):
+            issues.append(
+                "scenario manifest task counts mismatch: "
+                f"expected={scenario_manifest.get('expected_task_counts')}, "
+                f"actual={scenario_manifest.get('actual_task_counts')}"
+            )
 
     for method_report in report["methods"]:
         if method_report["config_path"] and not method_report["config_exists"]:
@@ -450,6 +613,59 @@ def run_preflight(*, repo_root: Path, config_path: Path) -> Tuple[Dict[str, Any]
             issues.append(
                 f"{artifact_label}: checkpoint action dim mismatch "
                 f"(checkpoint={checkpoint_action_dim}, expected={expected_action_dim})"
+            )
+
+    frozen_assets = report.get("frozen_assets", {})
+    if frozen_assets.get("source_worktree"):
+        if not frozen_assets.get("source_worktree_exists", False):
+            issues.append(
+                "frozen asset source worktree missing: "
+                f"{frozen_assets.get('source_worktree')}"
+            )
+        elif frozen_assets.get("source_git_error"):
+            issues.append(
+                "frozen asset source git inspection failed: "
+                f"{frozen_assets.get('source_git_error')}"
+            )
+        elif (
+            frozen_assets.get("expected_source_git_sha")
+            and frozen_assets.get("actual_source_git_sha")
+            != frozen_assets.get("expected_source_git_sha")
+        ):
+            issues.append(
+                "frozen asset source SHA mismatch: "
+                f"expected={frozen_assets.get('expected_source_git_sha')}, "
+                f"actual={frozen_assets.get('actual_source_git_sha')}"
+            )
+
+    for artifact in frozen_assets.get("artifacts", []):
+        label = f"frozen asset {artifact['id']}"
+        if not artifact.get("exists", False):
+            issues.append(f"{label}: missing: {artifact['path']}")
+            continue
+        if artifact.get("expected_sha256") and artifact.get("actual_sha256") != artifact.get(
+            "expected_sha256"
+        ):
+            issues.append(
+                f"{label}: SHA-256 mismatch "
+                f"(expected={artifact.get('expected_sha256')}, "
+                f"actual={artifact.get('actual_sha256')})"
+            )
+        expected_obs_dim = artifact.get("expected_obs_dim")
+        if expected_obs_dim is not None and artifact.get("checkpoint_obs_dim") != int(
+            expected_obs_dim
+        ):
+            issues.append(
+                f"{label}: checkpoint obs dim mismatch "
+                f"(expected={expected_obs_dim}, actual={artifact.get('checkpoint_obs_dim')})"
+            )
+        expected_action_dim = artifact.get("expected_action_dim")
+        if expected_action_dim is not None and artifact.get("checkpoint_action_dim") != int(
+            expected_action_dim
+        ):
+            issues.append(
+                f"{label}: checkpoint action dim mismatch "
+                f"(expected={expected_action_dim}, actual={artifact.get('checkpoint_action_dim')})"
             )
 
     return report, issues

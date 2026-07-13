@@ -3,6 +3,8 @@ from __future__ import annotations
 import importlib.util
 from pathlib import Path
 
+import yaml
+
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPT_PATH = REPO_ROOT / "scripts" / "preflight_formal_reproducibility.py"
@@ -280,3 +282,76 @@ def test_collect_formal_dependencies_includes_commander_mode_artifacts(tmp_path)
     }
     assert ("commander_mode_checkpoint", "best.pt") in runtime_artifacts
     assert ("commander_mode_config", "mode.yaml") in runtime_artifacts
+
+
+def test_collect_frozen_assets_records_hash_and_checkpoint_shape(tmp_path):
+    import hashlib
+
+    import torch
+
+    checkpoint = tmp_path / "checkpoint.pt"
+    torch.save({"obs_dim": 18, "action_dim": 3}, checkpoint)
+    expected_hash = hashlib.sha256(checkpoint.read_bytes()).hexdigest()
+
+    report = _MODULE._collect_frozen_assets(
+        repo_root=tmp_path,
+        config={
+            "frozen_assets": {
+                "artifacts": [
+                    {
+                        "id": "crossing",
+                        "path": "checkpoint.pt",
+                        "sha256": expected_hash,
+                        "expected_obs_dim": 18,
+                        "expected_action_dim": 3,
+                    }
+                ]
+            }
+        },
+    )
+
+    assert report["artifacts"] == [
+        {
+            "id": "crossing",
+            "path": str(checkpoint.resolve()),
+            "exists": True,
+            "expected_sha256": expected_hash,
+            "actual_sha256": expected_hash,
+            "expected_obs_dim": 18,
+            "expected_action_dim": 3,
+            "checkpoint_obs_dim": 18,
+            "checkpoint_action_dim": 3,
+            "checkpoint_load_error": None,
+        }
+    ]
+
+
+def test_collect_scenario_manifest_records_hash_and_task_groups(tmp_path):
+    manifest_path = tmp_path / "manifest.yaml"
+    payload = {
+        "source_id": "TEST-SOURCE",
+        "scenarios": [
+            {"name": "head", "metadata": {"task_registry_key": "head_on"}},
+            {"name": "cross", "metadata": {"task_registry_key": "crossing_feasible"}},
+        ],
+        "integrity": {},
+    }
+    raw = __import__("json").dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    payload["integrity"]["payload_sha256"] = __import__("hashlib").sha256(raw).hexdigest()
+    manifest_path.write_text(yaml.safe_dump(payload, sort_keys=False), encoding="utf-8")
+
+    report = _MODULE._collect_scenario_manifest(
+        config_path=tmp_path / "comparison.yaml",
+        config={
+            "scenario_manifest": {
+                "path": "manifest.yaml",
+                "source_id": "TEST-SOURCE",
+                "payload_sha256": payload["integrity"]["payload_sha256"],
+                "expected_task_counts": {"head_on": 1, "crossing_feasible": 1},
+            }
+        },
+        yaml_dependencies=set(),
+    )
+
+    assert report["recorded_payload_sha256"] == report["actual_payload_sha256"]
+    assert report["actual_task_counts"] == {"head_on": 1, "crossing_feasible": 1}

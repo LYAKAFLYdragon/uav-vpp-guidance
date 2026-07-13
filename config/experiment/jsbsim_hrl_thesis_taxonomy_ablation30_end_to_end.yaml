@@ -1,0 +1,11 @@
+includes:
+  - ./jsbsim_hrl_thesis_taxonomy_ablation30_base.yaml
+
+experiment:
+  name: jsbsim_hrl_thesis_taxonomy_ablation30_end_to_end
+  description: "THESIS-TAXONOMY-ABLATION30-V1 end-to-end-opponent split."
+
+opponent_stage: end_to_end
+
+run_defaults:
+  output_id: THESIS-TAXONOMY-ABLATION30-V1-end_to_end

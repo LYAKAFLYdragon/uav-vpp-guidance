@@ -54,6 +54,7 @@ def test_base_config_freezes_exactly_four_methods_and_the_rq4_crossing_contract(
         "high_level_routing": True,
         "recovery_override": True,
     }
+    assert resolved["attack_zone"]["close_range_max_aoa_deg"] == 60.0
     crossing = resolved["methods"]["crossing_vpp_specialist_no_routing"]
     assert crossing["agent_type"] == "ppo"
     assert crossing["config_overrides"] == {"observation.include_task_type": False}

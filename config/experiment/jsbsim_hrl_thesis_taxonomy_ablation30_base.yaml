@@ -22,6 +22,10 @@ thesis_taxonomy_ablation30:
     high_level_routing: true
     recovery_override: true
 
+attack_zone:
+  # This is the frozen AoA60 evaluation protocol, not a post-result override.
+  close_range_max_aoa_deg: 60.0
+
 scenario_manifest:
   path: ./manifests/thesis_taxonomy_ablation30_v1.yaml
   source_id: THESIS-TAXONOMY-ABLATION30-V1

@@ -306,6 +306,7 @@ def analyze(*, run_dir: Path, output_dir: Path) -> dict[str, Any]:
     _write_json(
         output_dir / "artifact_source_hash_manifest.json",
         {
+            "analyzer_script": _sha256(Path(__file__).resolve()),
             "run_manifest": _sha256(run_dir / "run_manifest.json"),
             "resolved_config": _sha256(run_dir / "resolved_config.yaml"),
             "raw_episode_hashes": _hash_raw_sources(run_dir, episodes),

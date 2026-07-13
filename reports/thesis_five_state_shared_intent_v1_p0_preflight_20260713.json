@@ -49,11 +49,33 @@
       "id": "frozen_trajectory_predictor",
       "obs_dim": null,
       "path": "E:\\uav-vpp-guidance-thesis-five-state-v1-assets\\frozen_trajectory_predictor_best_model.pt"
+    },
+    {
+      "action_dim": 3,
+      "actual_sha256": "d38828338d5e7e22167129b2e9972d52ecf5fc3fda5d52caff95a8374c35b8bc",
+      "errors": [],
+      "exists": true,
+      "expected_action_dim": 3,
+      "expected_obs_dim": 16,
+      "expected_sha256": "d38828338d5e7e22167129b2e9972d52ecf5fc3fda5d52caff95a8374c35b8bc",
+      "id": "canonical_end_to_end_neural_opponent",
+      "obs_dim": 16,
+      "path": "E:\\uav-vpp-guidance-thesis-five-state-v1-assets\\canonical_end_to_end_neural_opponent_best.pt"
+    },
+    {
+      "action_dim": 3,
+      "actual_sha256": "43cd37fc86c0eb01d96a693f68d30894de7e768de01aed6dba41fa4761edfc60",
+      "errors": [],
+      "exists": true,
+      "expected_action_dim": 3,
+      "expected_obs_dim": 16,
+      "expected_sha256": "43cd37fc86c0eb01d96a693f68d30894de7e768de01aed6dba41fa4761edfc60",
+      "id": "independent_ppo_vpp_opponent_v1",
+      "obs_dim": 16,
+      "path": "E:\\uav-vpp-guidance-thesis-five-state-v1-assets\\independent_ppo_vpp_opponent_v1_step_32768.pt"
     }
   ],
-  "blockers": [
-    "blocked_no_independent_ppo_vpp_checkpoint"
-  ],
+  "blockers": [],
   "errors": [],
   "lane": {
     "baseline_commit": "9a9f9bf6d68560afa81560f5260b78f318dcd9b1",
@@ -64,7 +86,7 @@
     "worktree": "E:/uav-vpp-guidance-thesis-five-state-v1"
   },
   "retention": {
-    "actual_free_gb": 297.56,
+    "actual_free_gb": 297.53,
     "checkpoint_top_k": 3,
     "errors": [],
     "full_raw_telemetry_allowed_splits": [
@@ -81,6 +103,6 @@
     "output_root_exists": false
   },
   "retention_policy": "E:\\uav-vpp-guidance-thesis-five-state-v1\\config\\experiment\\thesis_five_state_shared_intent_v1_output_retention.yaml",
-  "third_opponent_ready": false,
-  "training_ready": false
+  "third_opponent_ready": true,
+  "training_ready": true
 }

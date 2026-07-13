@@ -36,11 +36,32 @@ assets:
     sha256: 96bc8e5e1aebd32ca6a528fb3149cfd58aeff276c18bca66388d650f00495931
     expected_obs_dim: null
     expected_action_dim: null
+  - id: canonical_end_to_end_neural_opponent
+    role: read_only_existing_neural_opponent
+    source_path: E:/uav-vpp-guidance-explore-rl/outputs/experiments/end_to_end_ppo/checkpoints/best.pt
+    frozen_path: E:/uav-vpp-guidance-thesis-five-state-v1-assets/canonical_end_to_end_neural_opponent_best.pt
+    sha256: d38828338d5e7e22167129b2e9972d52ecf5fc3fda5d52caff95a8374c35b8bc
+    expected_obs_dim: 16
+    expected_action_dim: 3
+  - id: independent_ppo_vpp_opponent_v1
+    role: read_only_third_opponent
+    source_path: E:/uav-vpp-guidance-thesis-five-state-opponent-prep-results/experiments/thesis_independent_ppo_vpp_opponent_v1/checkpoints/step_32768.pt
+    frozen_path: E:/uav-vpp-guidance-thesis-five-state-v1-assets/independent_ppo_vpp_opponent_v1_step_32768.pt
+    sha256: 43cd37fc86c0eb01d96a693f68d30894de7e768de01aed6dba41fa4761edfc60
+    expected_obs_dim: 16
+    expected_action_dim: 3
 third_ppo_vpp_opponent:
   required_before_training: true
-  eligible: false
-  status: blocked_no_independent_ppo_vpp_checkpoint
+  eligible: true
+  status: qualified_limited_prep_envelope
   audit_report: reports/thesis_five_state_shared_intent_v1_third_opponent_capability_audit_20260713.md
+  source_worktree: E:/uav-vpp-guidance-thesis-five-state-opponent-prep
+  source_commit: 2de69150bb1f493be8dc427f9ec43532fec29776
+  selected_checkpoint: independent_ppo_vpp_opponent_v1_step_32768.pt
+  selection_rule: fixed_final_horizon
+  capability_audit: E:/uav-vpp-guidance-thesis-five-state-opponent-prep-results/experiments/thesis_independent_ppo_vpp_opponent_v1/capability_audit.json
+  capability_audit_sha256: 0b2ef40c3bae119fe8e3934bf0ce455c18c9276fd0039b8adf74053df2934f1d
+  claim_boundary: qualified for the documented two-task/two-training-opponent preparation envelope; not a general opponent-strength or Elo claim
   rejected_candidate:
     path: E:/uav-vpp-guidance-explore-rl/outputs_exploratory/experiments/exploratory_ppo_commander_self_play_test/checkpoints/best.pt
     sha256: 47690eb0fc3b5e859abe6868d236470cfd17f2afdfebbf730cbdaefabc24f53c

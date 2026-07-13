@@ -2,7 +2,7 @@
 
 **Lane:** `noncanonical_thesis_extension` / `thesis_five_state_shared_intent_v1`
 **Date:** 2026-07-13
-**Decision:** `BLOCKED_NO_ELIGIBLE_INDEPENDENT_PPO_VPP_OPPONENT`
+**Decision:** `QUALIFIED_LIMITED_PREPARATION_ENVELOPE`
 
 ## Acceptance contract
 
@@ -17,6 +17,23 @@ The third opponent must be a frozen, independently auditable PPO policy that emi
 | Canonical crossing specialist | `obs_dim=18`, `action_dim=3`; SHA locked in the v1 asset manifest. | **Rejected as opponent.** It is an ego baseline specialist and its 18-D legacy contract cannot establish an independent opponent condition. |
 | Existing end-to-end neural opponent | Existing fixed neural opponent used by canonical evidence. | **Not a third PPO/VPP opponent.** It remains the second required opponent but does not satisfy the new pool's independent PPO/VPP requirement. |
 
+## Qualified candidate
+
+| Field | Frozen value |
+|---|---|
+| Checkpoint | `E:\uav-vpp-guidance-thesis-five-state-v1-assets\independent_ppo_vpp_opponent_v1_step_32768.pt` |
+| SHA-256 | `43cd37fc86c0eb01d96a693f68d30894de7e768de01aed6dba41fa4761edfc60` |
+| Source lane | `E:\uav-vpp-guidance-thesis-five-state-opponent-prep`, commit `2de69150bb1f493be8dc427f9ec43532fec29776` |
+| Selection rule | Predeclared fixed final horizon, `step_32768.pt`; not the earlier same-score `best.pt`. |
+| Interface | Role-reversed base geometry `16-D -> 3-D` continuous VPP action; target aircraft executes through JSBSim VPP/guidance/PID. |
+| Training scope | Balanced `head_on/crossing_feasible x expert/end_to_end`, 32,768 PPO steps; no warm-start, task bit, opponent-stage bit or prediction reward. |
+| Capability gate | Four final lanes each had six evaluation episodes, at least one win, crash/OOB `<= 0.25`; JSBSim target-side probe emitted 48 finite VPP actions without exception. |
+| Raw audit | `E:\uav-vpp-guidance-thesis-five-state-opponent-prep-results\experiments\thesis_independent_ppo_vpp_opponent_v1\capability_audit.json` (SHA-256 `0b2ef40c3bae119fe8e3934bf0ce455c18c9276fd0039b8adf74053df2934f1d`). |
+
+## Claim boundary
+
+This checkpoint is qualified only as the third frozen PPO/VPP opponent for the documented preparation envelope. It is not an Elo-ranked adversary, a universal strength claim, or evidence that predicted-target VPP input is unnecessary: this opponent intentionally uses the same VPP/guidance/PID execution chain with a `current_target` anchor, whereas the five-state ego system retains its frozen predicted-target VPP interface.
+
 ## Consequence
 
-The P0 asset and capacity preflight can pass, but `training_ready=false` until a new independent PPO/VPP opponent checkpoint and capability card are frozen. The prescribed next action is **not** to begin five-state training with two opponents or to relabel a canonical specialist as an opponent. Instead, create and audit an independent PPO/VPP opponent in a separately named preparation lane, then update the asset manifest only after its checkpoint, config, cadence, action shape, fixed reference-set behavior, terminal mix, and SHA-256 are available.
+The third-opponent condition is now met. The five-state P0 preflight must be rerun with `--require-training-ready`; only a passing result permits P1 observation-contract implementation. The rejected 64-step historical candidate remains documented as negative provenance evidence.

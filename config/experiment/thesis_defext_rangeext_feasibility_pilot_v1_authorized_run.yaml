@@ -1,0 +1,26 @@
+base_config: ./thesis_defext_rangeext_feasibility_pilot_v1.yaml
+experiment:
+  execution_mode: authorized_single_skill_feasibility_pilot
+authorization:
+  base_config_sha256: 3a050de1eac5258fb68ae52dea71fc9cc8c9ad1bea69a73c0cd403a56e40b1f2
+  scope: single_defensive_extension_feasibility_pilot_only
+  run_id: DEFEXT-FEAS-V1-AUTH-20260714
+  required_implementation_git_sha: 7c325eb8ea1db456e7565652e5c350963c1a1bb3
+  authorized_code_files:
+    - path: src/uav_vpp_guidance/training/thesis_defext_rangeext_pilot.py
+      sha256: 864d8ee8b189c62587737e5a2f5e23c2de84e212e8944ae85c615601384e6623
+    - path: scripts/run_thesis_defext_rangeext_feasibility_pilot_v1.py
+      sha256: 019e036158055b8bb36ef5104a59356b749e6070eef6d19f2b2be6b10072b60f
+    - path: src/uav_vpp_guidance/evaluation/single_motif_continuous_66d.py
+      sha256: 00ddb3ea0294681791cbe39a5194b71343510c29775db98b090e85954d671429
+    - path: src/uav_vpp_guidance/evaluation/phase_reachability_handoff_contract.py
+      sha256: c97ff47e2a7d139ce40da02932c96d4b8f1aed3b9b3072ff62eccf74cb153195
+  training_permitted: true
+  pilot_execution_permitted: true
+  baseline_evaluation_permitted: true
+  heldout_evaluation_permitted: true
+  high_level_ppo_training_permitted: false
+  four_skill_training_permitted: false
+  combat_finetune_permitted: false
+outputs:
+  creation_permitted_by_this_config: true

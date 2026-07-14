@@ -12,6 +12,10 @@
 *.ini text eol=lf
 *.cfg text eol=lf
 
+# The P4 evidence bundle is an immutable byte-level record.  Do not normalize
+# line endings in its copied JSON/YAML inputs, or its manifest hashes break.
+/reports/p4_evidence_bundle_20260714/** -text
+
 # Denote binary files
 *.png binary
 *.jpg binary

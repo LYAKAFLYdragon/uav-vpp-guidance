@@ -38,6 +38,8 @@ SRC_ROOT = REPO_ROOT / "src"
 if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
 
+DEFAULT_EVIDENCE_ROOT = REPO_ROOT / "reports" / "p4_evidence_bundle_20260714"
+
 from uav_vpp_guidance.evaluation.p4_gate_failure_attribution import (  # noqa: E402
     CONCLUSION_COMBAT_FINETUNE,
     build_matrix,
@@ -96,11 +98,19 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument(
+        "--evidence-root",
+        default=os.environ.get("P4_EVIDENCE_ROOT", str(DEFAULT_EVIDENCE_ROOT)),
+        help=(
+            "Portable P4 evidence bundle root. Default: "
+            "reports/p4_evidence_bundle_20260714 (or P4_EVIDENCE_ROOT)."
+        ),
+    )
+    parser.add_argument(
         "--results-root",
         default=None,
         help=(
-            "Results root directory. Default: the repo root. The gate JSON "
-            "actually lives at src/p4_geometry_pretrain_gate.json on this repo."
+            "Legacy results root directory. When supplied, it provides the default "
+            "gate path; otherwise the portable evidence bundle is used."
         ),
     )
     parser.add_argument(
@@ -108,16 +118,17 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help=(
             "Path to p4_geometry_pretrain_gate.json. Default: "
-            "<results-root>/p4_geometry_pretrain_gate.json. On this repo point "
-            "at src/p4_geometry_pretrain_gate.json."
+            "<evidence-root>/p4_geometry_pretrain_gate.json, or "
+            "<results-root>/p4_geometry_pretrain_gate.json when --results-root is set."
         ),
     )
     parser.add_argument(
         "--registry-path",
-        required=True,
+        default=None,
         help=(
-            "REQUIRED. Shared-skill registry YAML (declared-cell source; a "
-            "provenance_unverified substitute for the missing training_plan.json)."
+            "Shared-skill registry YAML. Default: the registry snapshot in "
+            "--evidence-root; it is a provenance_unverified substitute for the "
+            "missing training_plan.json."
         ),
     )
     parser.add_argument(
@@ -172,24 +183,31 @@ def build_parser() -> argparse.ArgumentParser:
 def resolve_paths(args: argparse.Namespace) -> Dict[str, Any]:
     """Resolve the effective input paths from the parsed arguments.
 
-    ``--results-root`` defaults to the repo root; ``--gate-json`` defaults to
-    ``<results-root>/p4_geometry_pretrain_gate.json``; ``--summaries-root``
-    defaults to ``<dir of gate-json>/skills``.
+    The portable bundle is the default source. ``--results-root`` remains a
+    backward-compatible override for an external result directory.
     """
-    results_root = args.results_root or str(REPO_ROOT)
+    evidence_root = os.path.abspath(args.evidence_root)
+    results_root = args.results_root
 
     if args.gate_json:
         gate_json = args.gate_json
-    else:
+    elif results_root:
         gate_json = os.path.join(results_root, "p4_geometry_pretrain_gate.json")
+    else:
+        gate_json = os.path.join(evidence_root, "p4_geometry_pretrain_gate.json")
 
     gate_dir = os.path.dirname(os.path.abspath(gate_json))
     summaries_root = args.summaries_root or os.path.join(gate_dir, "skills")
+    registry_path = args.registry_path or os.path.join(
+        evidence_root, "thesis_five_state_shared_skill_registry_v1.yaml"
+    )
 
     return {
+        "evidence_root": evidence_root,
         "results_root": results_root,
         "gate_json": gate_json,
         "summaries_root": summaries_root,
+        "registry_path": registry_path,
     }
 
 
@@ -253,6 +271,7 @@ def run(args: argparse.Namespace) -> int:
     paths = resolve_paths(args)
     gate_json_path = paths["gate_json"]
     summaries_root = paths["summaries_root"]
+    registry_path = paths["registry_path"]
 
     # ---- Step 1: load + validate the gate JSON --------------------------
     if not os.path.isfile(gate_json_path):
@@ -271,9 +290,9 @@ def run(args: argparse.Namespace) -> int:
             print(f"  - {msg}", file=sys.stderr)
         return 2
 
-    if not os.path.isfile(args.registry_path):
+    if not os.path.isfile(registry_path):
         print(
-            f"ERROR: --registry-path not found: {args.registry_path}",
+            f"ERROR: registry path not found: {registry_path}",
             file=sys.stderr,
         )
         return 2
@@ -311,14 +330,14 @@ def run(args: argparse.Namespace) -> int:
         return 3
 
     # ---- Step 4: 2a declared-vs-emitted reconciliation (continue) -------
-    declared = derive_declared_cells(args.registry_path)
+    declared = derive_declared_cells(registry_path)
     emitted = collect_emitted_cells(gate_obj)
     reconcile_result = reconcile(declared, emitted)
 
     # ---- Step 5: freeze provenance --------------------------------------
     prov_inputs: Dict[str, Optional[str]] = {
         "gate_json": gate_json_path,
-        "registry": args.registry_path,
+        "registry": registry_path,
         "training_plan": args.training_plan,
         "resolved_geometry_config": args.resolved_config,
         "dev30_manifest": args.dev30_manifest_path,

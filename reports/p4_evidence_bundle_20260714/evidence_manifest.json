@@ -15,7 +15,7 @@
       "role": "top_level_gate",
       "sha256": "144df30e2151d1f6d15fb3704432bec149c5f5e510a3388e6fe709e9e3b6c56a",
       "size_bytes": 256780,
-      "source_path": "src/p4_geometry_pretrain_gate.json"
+      "source_path": "../uav-vpp-guidance-thesis-five-state-v1-results/p4_shared_skills_geometry_v1_geo20260713_r1/p4_geometry_pretrain_gate.json"
     },
     {
       "bundle_path": "skills/defensive_extension/geometry_pretrain_summary.json",
@@ -30,7 +30,7 @@
       "role": "per_skill_summary:defensive_extension",
       "sha256": "a92abf7d9f0686349128ea44b1fcdfa86bfaa8714d58ad8eb1e2bca2b908c24a",
       "size_bytes": 53980,
-      "source_path": "src/skills/defensive_extension/geometry_pretrain_summary.json"
+      "source_path": "../uav-vpp-guidance-thesis-five-state-v1-results/p4_shared_skills_geometry_v1_geo20260713_r1/skills/defensive_extension/geometry_pretrain_summary.json"
     },
     {
       "bundle_path": "skills/lead_intercept/geometry_pretrain_summary.json",
@@ -45,7 +45,7 @@
       "role": "per_skill_summary:lead_intercept",
       "sha256": "e6046432c75bc3de5835f9967e480c9414e8bedf58239a16253b2e96c7ad7f38",
       "size_bytes": 55395,
-      "source_path": "src/skills/lead_intercept/geometry_pretrain_summary.json"
+      "source_path": "../uav-vpp-guidance-thesis-five-state-v1-results/p4_shared_skills_geometry_v1_geo20260713_r1/skills/lead_intercept/geometry_pretrain_summary.json"
     },
     {
       "bundle_path": "skills/pursuit_conversion/geometry_pretrain_summary.json",
@@ -60,7 +60,7 @@
       "role": "per_skill_summary:pursuit_conversion",
       "sha256": "7f0cdcda23f5e750bf64208831f0af43484eeaae1dae3f1430648eee1347e9a4",
       "size_bytes": 57185,
-      "source_path": "src/skills/pursuit_conversion/geometry_pretrain_summary.json"
+      "source_path": "../uav-vpp-guidance-thesis-five-state-v1-results/p4_shared_skills_geometry_v1_geo20260713_r1/skills/pursuit_conversion/geometry_pretrain_summary.json"
     },
     {
       "bundle_path": "skills/reentry_recovery/geometry_pretrain_summary.json",
@@ -75,7 +75,7 @@
       "role": "per_skill_summary:reentry_recovery",
       "sha256": "69f95662f1d4fbae98c1388cb6922552e2be196be650b10e79b9faad4a2abe48",
       "size_bytes": 60547,
-      "source_path": "src/skills/reentry_recovery/geometry_pretrain_summary.json"
+      "source_path": "../uav-vpp-guidance-thesis-five-state-v1-results/p4_shared_skills_geometry_v1_geo20260713_r1/skills/reentry_recovery/geometry_pretrain_summary.json"
     },
     {
       "bundle_path": "thesis_five_state_shared_skill_registry_v1.yaml",
@@ -95,7 +95,7 @@
     "next_stage": "do_not_start_combat_finetune",
     "p3_encoder_sha256": "385663281a9c48c0416ea4d1a1bb8dc08ed64a0cfebb0f01083cbbb8bcfbdc59"
   },
-  "generated_utc": "2026-07-14T00:28:13.812677+00:00",
+  "generated_utc": "2026-07-14T00:47:31.863503+00:00",
   "provenance_boundaries": {
     "declared_cells_source": "registry snapshot (provenance_unverified substitute for the missing frozen training_plan.json)",
     "dev30_manifest": "provenance_unverified",
@@ -138,9 +138,9 @@
   },
   "schema_version": "p4_evidence_bundle_v1",
   "source_machine": {
-    "hostname": "DESKTOP-7E7D3T0",
-    "platform": "Windows-10-10.0.26100-SP0",
-    "python_version": "3.11.14"
+    "hostname": "f2r",
+    "platform": "Windows-10-10.0.22631-SP0",
+    "python_version": "3.9.13"
   },
   "verify_hint": "python scripts/export_p4_evidence_bundle.py --verify --out-dir <this-dir>"
 }

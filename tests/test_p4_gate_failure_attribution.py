@@ -12,23 +12,25 @@ letters in logic).
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 
 import pytest
 
 # ---------------------------------------------------------------------------
-# Repo-relative artifact locations (no hardcoded drive letters)
+# Repo-relative portable evidence locations (no hardcoded drive letters).
+# An external bundle can be supplied only through P4_EVIDENCE_ROOT.
 # ---------------------------------------------------------------------------
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-
-REGISTRY_PATH = (
-    REPO_ROOT
-    / "config"
-    / "experiment"
-    / "thesis_five_state_shared_skill_registry_v1.yaml"
+EVIDENCE_ROOT = Path(
+    os.environ.get(
+        "P4_EVIDENCE_ROOT",
+        str(REPO_ROOT / "reports" / "p4_evidence_bundle_20260714"),
+    )
 )
-GATE_JSON_PATH = REPO_ROOT / "src" / "p4_geometry_pretrain_gate.json"
+REGISTRY_PATH = EVIDENCE_ROOT / "thesis_five_state_shared_skill_registry_v1.yaml"
+GATE_JSON_PATH = EVIDENCE_ROOT / "p4_geometry_pretrain_gate.json"
 
 SKILLS = [
     "pursuit_conversion",
@@ -39,7 +41,7 @@ SKILLS = [
 
 
 def _per_skill_summary_path(skill: str) -> Path:
-    return REPO_ROOT / "src" / "skills" / skill / "geometry_pretrain_summary.json"
+    return EVIDENCE_ROOT / "skills" / skill / "geometry_pretrain_summary.json"
 
 
 # ---------------------------------------------------------------------------
@@ -517,31 +519,64 @@ P3_ENCODER_BEST_PT_SHA256 = (
 def _p4_artifact_paths() -> list[Path]:
     """Return the sorted list of in-repo P4 artifact paths to preserve.
 
-    The set is the in-repo evidence + config to be preserved:
-    - the top-level gate JSON ``src/p4_geometry_pretrain_gate.json``,
-    - the four ``src/skills/<skill>/geometry_pretrain_summary.json``,
-    - the shared-skill registry
-      ``config/experiment/thesis_five_state_shared_skill_registry_v1.yaml``.
+    The set is the portable evidence bundle: one top-level gate, four skill
+    summaries, and the registry snapshot that declares the covered cells.
     """
     paths = [GATE_JSON_PATH, REGISTRY_PATH]
     paths.extend(_per_skill_summary_path(skill) for skill in SKILLS)
     return sorted(paths)
 
 
-def _sha256_manifest(paths: list[Path]) -> dict[str, str]:
-    """Compute ``{relpath: sha256hex}`` for each existing path.
+def _artifact_role(path: Path) -> str:
+    """Return a stable evidence role rather than a location-dependent path."""
+    if path == GATE_JSON_PATH:
+        return "top_level_gate"
+    if path == REGISTRY_PATH:
+        return "registry_snapshot"
+    for skill in SKILLS:
+        if path == _per_skill_summary_path(skill):
+            return f"per_skill_summary:{skill}"
+    raise ValueError(f"unknown P4 evidence path: {path}")
 
-    Keys are repo-relative POSIX paths so the manifest is portable (no drive
-    letters). Only existing files are hashed.
-    """
+
+def _sha256_manifest(paths: list[Path]) -> dict[str, str]:
+    """Compute ``{stable evidence role: sha256hex}`` for existing inputs."""
     manifest: dict[str, str] = {}
     for path in paths:
         if not path.is_file():
             continue
         digest = hashlib.sha256(path.read_bytes()).hexdigest()
-        relpath = path.resolve().relative_to(REPO_ROOT).as_posix()
-        manifest[relpath] = digest
+        manifest[_artifact_role(path)] = digest
     return manifest
+
+
+def _normalize_baseline_manifest(manifest: dict[str, str]) -> dict[str, str]:
+    """Upgrade the pre-bundle path-keyed baseline without rewriting it.
+
+    The original preservation baseline predates the tracked evidence bundle and
+    identifies the same six artifacts by their old repo paths.  Compare by
+    evidence role so moving immutable copies into the bundle is not reported as
+    a mutation of their bytes.
+    """
+    normalized: dict[str, str] = {}
+    for key, digest in manifest.items():
+        if key.endswith("p4_geometry_pretrain_gate.json"):
+            role = "top_level_gate"
+        elif key.endswith("thesis_five_state_shared_skill_registry_v1.yaml"):
+            role = "registry_snapshot"
+        else:
+            role = next(
+                (
+                    f"per_skill_summary:{skill}"
+                    for skill in SKILLS
+                    if key.endswith(f"skills/{skill}/geometry_pretrain_summary.json")
+                ),
+                None,
+            )
+            if role is None:
+                raise ValueError(f"unrecognized baseline evidence key: {key}")
+        normalized[role] = digest
+    return normalized
 
 
 def test_record_preservation_baseline():
@@ -1193,6 +1228,13 @@ AUDIT_ALLOWLIST = {
     "reports/thesis_five_state_p4_gate_failure_attribution_matrix_20260714.csv",
     "reports/thesis_five_state_p4_gate_failure_attribution_matrix_20260714.json",
     "reports/thesis_five_state_shared_intent_v1_execution_checklist_20260713_zh.md",
+    ".gitattributes",
+    "reports/p4_evidence_bundle_20260714/evidence_manifest.json",
+    "reports/p4_evidence_bundle_20260714/p4_geometry_pretrain_gate.json",
+    "reports/p4_evidence_bundle_20260714/skills/defensive_extension/geometry_pretrain_summary.json",
+    "reports/p4_evidence_bundle_20260714/skills/lead_intercept/geometry_pretrain_summary.json",
+    "reports/p4_evidence_bundle_20260714/skills/pursuit_conversion/geometry_pretrain_summary.json",
+    "reports/p4_evidence_bundle_20260714/skills/reentry_recovery/geometry_pretrain_summary.json",
 }
 
 # The execution checklist is a PRE-EXISTING tracked file that the audit edited;
@@ -1201,9 +1243,9 @@ CHECKLIST_REL = (
     "reports/thesis_five_state_shared_intent_v1_execution_checklist_20260713_zh.md"
 )
 
-# Everything else in the allowlist is a NEW file created by the audit (it must
-# appear as untracked-added or ignored, never as a tracked modification).
-NEW_AUDIT_FILES_REL = AUDIT_ALLOWLIST - {CHECKLIST_REL}
+# The audit and its evidence bundle are committed deliverables.  A portability
+# test must not require them to remain untracked after checkout.
+NEW_AUDIT_FILES_REL: set[str] = set()
 
 
 def _git_output(args: list[str]) -> str:
@@ -1290,7 +1332,9 @@ def test_preservation_p4_artifacts_unchanged():
         assert path.is_file(), f"P4 artifact not found: {path}"
 
     current_manifest = _sha256_manifest(paths)
-    baseline_manifest = baseline["artifact_sha256_manifest"]
+    baseline_manifest = _normalize_baseline_manifest(
+        baseline["artifact_sha256_manifest"]
+    )
 
     assert set(current_manifest) == set(baseline_manifest), (
         "preserved artifact set changed between baseline and now: "
@@ -1368,20 +1412,18 @@ def test_preservation_p4_artifacts_unchanged():
         f"modifications: diff={tracked_modified} porcelain={_pm_mod}"
     )
 
-    # (a) The checklist is a PRE-EXISTING tracked file edited by the audit: it
-    #     MUST appear as a tracked modification.
-    assert CHECKLIST_REL in tracked_modified, (
-        f"execution checklist must appear as a tracked modification: "
-        f"{sorted(tracked_modified)}"
+    # (a) A clean checkout has no modifications; an in-progress portability
+    # repair may touch only the explicit audit/bundle allowlist.
+    assert tracked_modified <= AUDIT_ALLOWLIST, (
+        "portable audit repair modified an out-of-scope tracked file: "
+        f"{sorted(tracked_modified - AUDIT_ALLOWLIST)}"
     )
 
-    # (b) Among audit-relevant files, tracked modifications == {checklist} ONLY.
-    #     This is the key preservation guarantee: no tracked P4 artifact / gate /
-    #     model / mainline file was modified.
+    # (b) No tracked change outside the audit/bundle allowlist is permitted.
     audit_tracked_mods = tracked_modified & AUDIT_ALLOWLIST
-    assert audit_tracked_mods == {CHECKLIST_REL}, (
-        "the only tracked modification among audit files must be the checklist; "
-        f"got {sorted(audit_tracked_mods)}"
+    assert audit_tracked_mods == tracked_modified, (
+        "tracked modification classification lost an audit/bundle path: "
+        f"tracked={sorted(tracked_modified)} audit={sorted(audit_tracked_mods)}"
     )
 
     # (c) NONE of the 6 preserved P4 artifacts appears as a tracked modification.

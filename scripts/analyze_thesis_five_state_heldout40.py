@@ -267,6 +267,95 @@ def _write_csv(path: Path, rows: Sequence[Mapping[str, Any]]) -> None:
         writer.writerows(rows)
 
 
+def _pairing_verification(rows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    cells: list[dict[str, Any]] = []
+    for opponent in OPPONENTS:
+        scenarios = sorted(
+            {str(row["scenario"]) for row in rows if row["opponent"] == opponent}
+        )
+        for scenario in scenarios:
+            selected = [
+                row for row in rows if row["opponent"] == opponent and row["scenario"] == scenario
+            ]
+            methods = sorted(str(row["method"]) for row in selected)
+            seeds = {row["seed"] for row in selected}
+            cells.append(
+                {
+                    "opponent": opponent,
+                    "scenario": scenario,
+                    "method_count": len(methods),
+                    "methods": methods,
+                    "shared_seed": next(iter(seeds)) if len(seeds) == 1 else None,
+                    "passed": methods == sorted(METHODS) and len(seeds) == 1,
+                }
+            )
+    return {
+        "source_id": SOURCE_ID,
+        "expected_cells": len(OPPONENTS) * 40,
+        "actual_cells": len(cells),
+        "all_cells_passed": all(cell["passed"] for cell in cells),
+        "cells": cells,
+    }
+
+
+def _format_ratio(value: Any) -> str:
+    number = _finite(value)
+    return "NA" if number is None else f"{number:.3f}"
+
+
+def _execution_report_markdown(
+    *,
+    gate: Mapping[str, Any],
+    pairing: Mapping[str, Any],
+    run_dirs: Mapping[str, Path],
+) -> str:
+    lines = [
+        "# Heldout40 Execution Report",
+        "",
+        f"- Source ID: `{SOURCE_ID}`",
+        "- Scope: 40 explicit five-state scenarios x 4 frozen methods x 3 separately reported opponents = 480 strict-JSBSim episodes.",
+        "- Training/tuning: none. The analyzer read immutable formal outputs only.",
+        f"- Pairing: `{pairing['actual_cells']}/{pairing['expected_cells']}` scenario-opponent cells passed shared-seed four-method pairing.",
+        "",
+        "## Head-On Terminal Discriminability",
+        "",
+        "The gate uses the eight `initial_class=head_on` scenarios per opponent. A routing comparison is terminally interpretable only when canonical PPO and at least one fixed control have a resolved ratio >= 0.60.",
+        "",
+        "| Opponent | Canonical resolved ratio | Fixed head-on | Fixed crossing | Verdict |",
+        "|---|---:|---:|---:|---|",
+    ]
+    for opponent in OPPONENTS:
+        item = gate["opponents"][opponent]
+        fixed = item["fixed_resolved_ratios"]
+        lines.append(
+            "| {opponent} | {canonical} | {head_on} | {crossing} | {label} |".format(
+                opponent=opponent,
+                canonical=_format_ratio(item["canonical_resolved_ratio"]),
+                head_on=_format_ratio(fixed["head_on_vpp_specialist_no_routing"]),
+                crossing=_format_ratio(fixed["crossing_vpp_specialist_no_routing"]),
+                label=item["label"],
+            )
+        )
+    lines.extend(
+        [
+            "",
+            "All three opponent-specific gates passed. This establishes terminal discriminability for this envelope; it does not by itself establish superiority or universal generalization.",
+            "",
+            "## Evidence Index",
+            "",
+            "- `heldout40_episode_metrics.csv`: terminal semantics, HP, attack-zone, phase, dynamic taxonomy, and VPP geometry per episode.",
+            "- `heldout40_summary.csv`: opponent/method/initial-state summaries; opponents are not pooled.",
+            "- `heldout40_terminal_discriminability_gate.json`: preregistered gate verdicts.",
+            "- `heldout40_pairing_verification.json`: shared-seed four-method pairing proof.",
+            "",
+            "## Formal Inputs",
+            "",
+        ]
+    )
+    lines.extend(f"- `{opponent}`: `{run_dirs[opponent]}`" for opponent in OPPONENTS)
+    return "\n".join(lines) + "\n"
+
+
 def analyze(
     *,
     run_dirs: Mapping[str, Path],
@@ -343,11 +432,17 @@ def analyze(
             "head_on_summary_by_method": by_method,
         }
 
+    pairing = _pairing_verification(episode_rows)
+    if not pairing["all_cells_passed"]:
+        raise ValueError("Heldout40 pairing verification failed after record validation")
     output_dir.mkdir(parents=True, exist_ok=True)
     _write_csv(output_dir / "heldout40_episode_metrics.csv", episode_rows)
     _write_csv(output_dir / "heldout40_summary.csv", summary_rows)
     (output_dir / "heldout40_terminal_discriminability_gate.json").write_text(
         json.dumps(gate, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
+    (output_dir / "heldout40_pairing_verification.json").write_text(
+        json.dumps(pairing, indent=2, sort_keys=True) + "\n", encoding="utf-8"
     )
     report = {
         "source_id": SOURCE_ID,
@@ -356,14 +451,25 @@ def analyze(
         "n_summary_rows": len(summary_rows),
         "opponents_reported_separately": list(OPPONENTS),
         "gate": gate,
+        "pairing": {
+            "expected_cells": pairing["expected_cells"],
+            "actual_cells": pairing["actual_cells"],
+            "all_cells_passed": pairing["all_cells_passed"],
+        },
         "artifacts": {
             "episode_metrics_csv": "heldout40_episode_metrics.csv",
             "summary_csv": "heldout40_summary.csv",
             "terminal_discriminability_gate": "heldout40_terminal_discriminability_gate.json",
+            "pairing_verification": "heldout40_pairing_verification.json",
+            "execution_report": "heldout40_execution_report.md",
         },
     }
     (output_dir / "heldout40_analysis.json").write_text(
         json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
+    (output_dir / "heldout40_execution_report.md").write_text(
+        _execution_report_markdown(gate=gate, pairing=pairing, run_dirs=run_dirs),
+        encoding="utf-8",
     )
     return report
 

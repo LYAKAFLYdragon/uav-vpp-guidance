@@ -313,6 +313,11 @@ def test_read_only_analysis_enforces_pairing_and_terminal_discriminability(tmp_p
     report = analyzer.analyze(run_dirs=run_dirs, manifest_path=MANIFEST_PATH, output_dir=output)
     assert report["n_episode_rows"] == 480
     assert all(item["passed"] for item in report["gate"]["opponents"].values())
+    assert report["pairing"]["all_cells_passed"] is True
     assert (output / "heldout40_episode_metrics.csv").is_file()
     assert (output / "heldout40_summary.csv").is_file()
     assert (output / "heldout40_terminal_discriminability_gate.json").is_file()
+    assert (output / "heldout40_pairing_verification.json").is_file()
+    assert "All three opponent-specific gates passed" in (
+        output / "heldout40_execution_report.md"
+    ).read_text(encoding="utf-8")

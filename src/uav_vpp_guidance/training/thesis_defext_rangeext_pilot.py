@@ -994,10 +994,13 @@ def analyze_heldout(
         mirrors = {item["mirror_sign"] for item in candidate if item.get("qualifying")}
         contract_pass = (
             candidate_summary["qualifying_episodes"] >= int(contract_min["qualifying_paired_episodes"])
+            and paired_head_count >= int(contract_min["qualifying_paired_episodes"])
+            and paired_cross_count >= int(contract_min["qualifying_paired_episodes"])
             and candidate_summary["valid_target_steps"] >= int(contract_min["valid_target_steps"])
             and len(signatures) >= int(contract_min["distinct_scenario_signatures"])
             and len(mirrors) >= int(contract_min["distinct_mirror_signs"])
-            and candidate_summary["qualifying_episodes"] >= int(claim_ready["qualifying_paired_episodes"])
+            and paired_head_count >= int(claim_ready["qualifying_paired_episodes"])
+            and paired_cross_count >= int(claim_ready["qualifying_paired_episodes"])
             and candidate_summary["valid_target_steps"] >= int(claim_ready["valid_target_steps"])
         )
         crash_delta = candidate_summary["ego_crash_oob_rate"] - head_summary["ego_crash_oob_rate"]

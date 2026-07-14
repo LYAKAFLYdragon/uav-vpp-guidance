@@ -126,3 +126,28 @@ def test_heldout_decision_supports_new_skill_only_when_better_than_best_existing
     decision = pilot.analyze_heldout(config, crossing_already_sufficient)
     assert decision["new_skill_gap_supported"] is False
     assert decision["verdict"] == "existing_library_routing_or_composition_gap"
+
+
+def test_claim_ready_contract_uses_paired_not_candidate_only_coverage():
+    config = _config()
+    records = {}
+    for opponent in pilot.OPPONENTS:
+        candidate = [_record(opponent, "candidate_fixed_defensive_extension", index, 0.70) for index in range(24)]
+        head = [_record(opponent, "frozen_fixed_head_on", index, 0.80) for index in range(24)]
+        crossing = [_record(opponent, "frozen_fixed_crossing", index, 0.75) for index in range(24)]
+        if opponent == "independent_ppo_vpp":
+            for item in head[6:]:
+                item["qualifying"] = False
+                item["intent_loss_auc20"] = None
+            for item in crossing[6:]:
+                item["qualifying"] = False
+                item["intent_loss_auc20"] = None
+        records[opponent] = {
+            "candidate_fixed_defensive_extension": candidate,
+            "frozen_fixed_head_on": head,
+            "frozen_fixed_crossing": crossing,
+        }
+    decision = pilot.analyze_heldout(config, records)
+    assert decision["per_opponent"]["independent_ppo_vpp"]["paired_head_count"] == 6
+    assert decision["per_opponent"]["independent_ppo_vpp"]["contract_pass"] is False
+    assert decision["verdict"] == "safety_or_contract_no_go"

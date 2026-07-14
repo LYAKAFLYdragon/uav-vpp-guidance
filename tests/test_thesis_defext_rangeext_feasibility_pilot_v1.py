@@ -101,12 +101,18 @@ def test_gate_and_stop_rule_preserve_three_opponent_causal_decision():
     assert config["safety_stop_rule"]["after_abort"]["rerun_same_source_id"] == "prohibited"
 
 
-def test_independent_review_passes_without_authorizing_execution():
+def test_independent_review_passes_without_authorizing_execution(tmp_path: Path):
     reviewer = _load(
         SCRIPTS / "review_thesis_defext_rangeext_feasibility_pilot_v1.py",
         "defext_prereg_reviewer",
     )
-    result = reviewer.review(CONFIG)
+    config = yaml.safe_load(CONFIG.read_text(encoding="utf-8"))
+    config["outputs"]["root"] = str(
+        tmp_path / "defensive_extension_range_extension_feasibility_v1"
+    )
+    config_path = tmp_path / "pilot_config.yaml"
+    config_path.write_text(yaml.safe_dump(config, sort_keys=False), encoding="utf-8")
+    result = reviewer.review(config_path)
     assert result["passed"] is True
     assert result["training_authorized"] is False
     assert result["pilot_execution_authorized"] is False

@@ -1,6 +1,6 @@
 # 对手 Calibration v2 与 Phase-Feasible Disadvantage 决策
 
-**日期：** 2026-07-14  
+**日期：** 2026-07-14
 **范围：** evaluation-only；无训练、无调参、无 canonical 资产修改。
 
 ## 1. 对手 Calibration / Capability Card v2

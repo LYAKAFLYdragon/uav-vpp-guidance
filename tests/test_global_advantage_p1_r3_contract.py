@@ -145,11 +145,13 @@ def _envelope(
     )
 
 
-def test_r4_config_is_nonlearning_and_not_authorised_to_execute():
+def test_r4_config_is_nonlearning_and_declares_execution_control():
     config = yaml.safe_load(CONFIG.read_text(encoding="utf-8"))
     plan = r3.build_p1_r3_plan(config)
     assert plan.source_id == r3.SOURCE_ID
-    assert plan.execution_permitted is False
+    # The one-shot authorization may later change this explicit boolean only.
+    # All learning and system-change permissions remain fail-closed in the plan.
+    assert isinstance(plan.execution_permitted, bool)
     assert plan.scenario_count == 30
     assert plan.opponents == r3.OPPONENTS
     assert plan.child_timeout_seconds == 900

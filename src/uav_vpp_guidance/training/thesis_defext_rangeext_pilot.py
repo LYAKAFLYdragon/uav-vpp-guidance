@@ -113,6 +113,17 @@ def _git_clean() -> bool:
     return not subprocess.check_output(["git", "status", "--porcelain"], cwd=ROOT, text=True).strip()
 
 
+def _git_is_ancestor(commit: str) -> bool:
+    result = subprocess.run(
+        ["git", "merge-base", "--is-ancestor", str(commit), "HEAD"],
+        cwd=ROOT,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        check=False,
+    )
+    return result.returncode == 0
+
+
 def validate_authorization(config: Mapping[str, Any], *, require_fresh_output: bool = True) -> dict[str, Any]:
     if config.get("source_id") != SOURCE_ID:
         raise PilotContractError("unexpected pilot source_id")
@@ -135,9 +146,18 @@ def validate_authorization(config: Mapping[str, Any], *, require_fresh_output: b
     if authorization.get("scope") != "single_defensive_extension_feasibility_pilot_only":
         raise PilotContractError("pilot authorization scope mismatch")
     current_sha = _git_sha()
-    required_sha = str(authorization.get("required_clean_git_sha", ""))
-    if current_sha != required_sha or not _git_clean():
-        raise PilotContractError("authorized pilot requires the exact clean git SHA")
+    required_sha = str(authorization.get("required_implementation_git_sha", ""))
+    if not required_sha or not _git_is_ancestor(required_sha) or not _git_clean():
+        raise PilotContractError("authorized pilot requires the frozen implementation ancestor and a clean HEAD")
+    code_files = authorization.get("authorized_code_files", [])
+    if not isinstance(code_files, Sequence) or not code_files:
+        raise PilotContractError("authorized pilot requires explicit code-file hashes")
+    for entry in code_files:
+        if not isinstance(entry, Mapping):
+            raise PilotContractError("authorized code-file entry must be a mapping")
+        path = _repo_path(str(entry.get("path", "")))
+        if not path.is_file() or sha256_file(path) != entry.get("sha256"):
+            raise PilotContractError(f"authorized code-file SHA mismatch: {path}")
 
     fixed = config["fixed_contract"]
     if (

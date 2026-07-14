@@ -70,12 +70,21 @@ def test_authorization_requires_exact_clean_sha_and_fresh_output(monkeypatch, tm
             "baseline_evaluation_permitted": True,
             "heldout_evaluation_permitted": True,
             "scope": "single_defensive_extension_feasibility_pilot_only",
-            "required_clean_git_sha": "test-sha",
+            "required_implementation_git_sha": "test-sha",
+            "authorized_code_files": [
+                {
+                    "path": "src/uav_vpp_guidance/training/thesis_defext_rangeext_pilot.py",
+                    "sha256": pilot.sha256_file(
+                        ROOT / "src/uav_vpp_guidance/training/thesis_defext_rangeext_pilot.py"
+                    ),
+                }
+            ],
         }
     )
     config["outputs"]["root"] = str(tmp_path / "fresh")
     monkeypatch.setattr(pilot, "_git_sha", lambda: "test-sha")
     monkeypatch.setattr(pilot, "_git_clean", lambda: True)
+    monkeypatch.setattr(pilot, "_git_is_ancestor", lambda _commit: True)
     result = pilot.validate_authorization(config)
     assert result["git_sha"] == "test-sha"
     assert result["git_clean"] is True
@@ -83,7 +92,7 @@ def test_authorization_requires_exact_clean_sha_and_fresh_output(monkeypatch, tm
     try:
         pilot.validate_authorization(config)
     except pilot.PilotContractError as exc:
-        assert "exact clean git SHA" in str(exc)
+        assert "clean HEAD" in str(exc)
     else:
         raise AssertionError("dirty authorization unexpectedly passed")
 

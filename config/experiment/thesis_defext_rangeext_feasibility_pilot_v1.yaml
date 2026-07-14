@@ -1,0 +1,216 @@
+schema_version: 1
+source_id: THESIS-DEFEXT-RANGEEXT-FEASIBILITY-PILOT-V1
+status: preregistered_design_only
+experiment:
+  name: noncanonical_thesis_defext_rangeext_feasibility_pilot_v1
+  family: thesis_five_state_shared_intent_v1
+  stage: single_skill_feasibility_pilot
+  execution_mode: preregistration_only
+authorization:
+  design_complete: true
+  training_permitted: false
+  pilot_execution_permitted: false
+  baseline_evaluation_permitted: false
+  heldout_evaluation_permitted: false
+  high_level_ppo_training_permitted: false
+  four_skill_training_permitted: false
+  combat_finetune_permitted: false
+implementation_freeze:
+  git_sha: 8cec8f0c0b3cac1c50adbfc1581b06d45df09d8e
+  manifest: reports/thesis_defext_rangeext_feasibility_pilot_v1_implementation_freeze.json
+  require_clean_worktree_for_future_execution: true
+  dirty_collector_run_status: research_only_not_paper_safe
+sources:
+  train_distribution: config/experiment/thesis_defext_rangeext_feasibility_pilot_v1_train_distribution.yaml
+  dev_manifest: config/experiment/manifests/thesis_defext_rangeext_feasibility_pilot_v1_dev12.yaml
+  dev_manifest_payload_sha256: 4240e9d245d38b8f30fceb092e73ec1e6601d855b4ef4cea3ef991b66ecbc0c1
+  heldout_manifest: config/experiment/manifests/thesis_defext_rangeext_feasibility_pilot_v1_heldout24.yaml
+  heldout_manifest_payload_sha256: ec004d389330b8236cf3ed9548c1e9c118d6c57b499625a5a5feb4b81c19bfbc
+  v2_manifest: config/experiment/manifests/thesis_phase_reachability_v2_run_in_handoff_r1.yaml
+  v2_payload_sha256: 5ffdaa4bc248bf40c1532b13c8030dca43240711f5751cf8c4f26217525cfaae
+  opponent_registry: config/experiment/thesis_five_state_shared_intent_v1_opponent_registry.yaml
+fixed_contract:
+  skill: defensive_extension
+  profile: range_extension
+  routing_enabled: false
+  high_level_policy_present: false
+  observation_dim: 66
+  action_dim: 3
+  action_semantics: normalized_vpp_forward_lateral_vertical_bias
+  encoder:
+    checkpoint: E:/uav-vpp-guidance-thesis-five-state-v1-results/p3_temporal_encoder_phaseconditional_v2/checkpoints/best.pt
+    sha256: 385663281a9c48c0416ea4d1a1bb8dc08ed64a0cfebb0f01083cbbb8bcfbdc59
+    trainable: false
+    fallback: prohibited
+  prediction_reward: prohibited
+  policy_history_padding: prohibited
+  predictor_vpp_guidance_pid: frozen_existing_chain
+physical_handoff:
+  run_in_controller: legacy_static_oracle_task_gate
+  run_in_task_registry_key: head_on
+  one_continuous_jsbsim_episode: true
+  reset_at_handoff: false
+  snapshot_restore: false
+  future_state_injection: false
+  trigger:
+    first_pass_complete: true
+    dynamic_state: disadvantage
+    phase_any_of: [post_merge, re_entry]
+    validity_pair_required: [defensive_extension, range_extension]
+    exact_real_history_frames: 10
+  pre_handoff_transitions_stored_for_candidate_training: false
+  post_handoff_skill_fixed_for_episode: true
+methods:
+  candidate_fixed_defensive_extension:
+    role: experimental
+    checkpoint: null
+    checkpoint_status: untrained_not_authorized
+    skill: defensive_extension
+    profile: range_extension
+    routing: disabled
+  frozen_fixed_head_on:
+    role: primary_baseline
+    checkpoint: E:/uav-vpp-guidance-thesis-five-state-v1-assets/canonical_head_on_specialist_best.pt
+    checkpoint_sha256: 0aeadd11cd8c7723c8963bcc5da21dd97c365e64f234d07b86c2b8f0d7ec5fb6
+    routing: disabled
+  frozen_fixed_crossing:
+    role: auxiliary_existing_library_baseline
+    checkpoint: E:/uav-vpp-guidance-thesis-five-state-v1-assets/canonical_crossing_specialist_last.pt
+    checkpoint_sha256: 5eddc138bff55a5466da1129e840ef7dfb3677347a05276c3877746c8e89148b
+    observation_compatibility: feature_name_projected_frozen_checkpoint_contract
+    routing: disabled
+opponents:
+  order: [expert, end_to_end, independent_ppo_vpp]
+  balanced_training_sampling: true
+  report_separately: true
+  pooled_gate: prohibited
+proposed_training:
+  total_timesteps: 50000
+  training_seed: 2026071402
+  budget_extension: prohibited
+  reward_change_after_start: prohibited
+  scenario_support_change_after_start: prohibited
+  profile_change_after_start: prohibited
+  opponent_sampling: balanced_round_robin
+  checkpoint_evaluation_steps: [10000, 20000, 30000, 40000, 50000]
+  checkpoint_selection_split: dev12_only
+  heldout_use_for_selection: prohibited
+  ppo:
+    rollout_steps: 2048
+    learning_rate: 0.0003
+    gamma: 0.99
+    gae_lambda: 0.95
+    clip_coef: 0.2
+    entropy_coef: 0.005
+    update_epochs: 10
+    minibatch_size: 256
+  geometry_reward:
+    source: frozen_profile_weighted_geometry_progress_v1
+    progress_weight: 2.0
+    alignment_weight: 0.1
+    terminal_ego_crash_oob_penalty: 2.0
+    physical_command_saturation_penalty: 0.05
+    intent_error_clip: 2.0
+evaluation:
+  dev12:
+    purpose: fixed_schedule_checkpoint_selection_and_safety_stop_only
+    scenarios_per_opponent_method: 12
+    result_claims: prohibited
+  heldout24:
+    purpose: one_time_feasibility_decision
+    scenarios_per_opponent_method: 24
+    methods: [candidate_fixed_defensive_extension, frozen_fixed_head_on, frozen_fixed_crossing]
+    paired_by: [opponent, scenario_signature, scenario_seed]
+    rerun_after_result: prohibited
+metrics:
+  primary:
+    name: normalized_range_extension_intent_loss_auc20
+    lower_is_better: true
+    window: first_20_valid_target_motif_steps_after_handoff
+    paired_delta: candidate_minus_baseline
+  mechanism:
+    - range_opening_fraction_auc20
+    - specific_energy_height_delta_m_at_20
+    - target_attack_zone_exposure_fraction_auc20
+    - post_merge_re_entry_valid_step_count
+    - vpp_forward_lateral_vertical_bias
+    - actual_nz_aoa_response
+  safety:
+    - ego_crash_oob_rate
+    - nonfinite_observation_action_count
+    - backend_fallback_count
+    - checkpoint_fallback_count
+    - abnormal_reset_count
+  secondary_only:
+    - win_rate
+    - hp_advantage
+    - terminal_reason_mix
+gates:
+  per_opponent_contract_minimum:
+    qualifying_paired_episodes: 2
+    valid_target_steps: 20
+    distinct_scenario_signatures: 2
+    distinct_mirror_signs: 2
+    all_66d_and_3d_finite: true
+    no_padding: true
+    no_prediction_fallback: true
+    no_reset: true
+    no_backend_fallback: true
+    no_checkpoint_fallback: true
+  per_opponent_claim_ready_coverage:
+    qualifying_paired_episodes: 8
+    valid_target_steps: 160
+  safety_noninferiority_vs_head_on:
+    ego_crash_oob_rate_delta_max: 0.05
+  geometry_noninferiority_vs_head_on:
+    paired_intent_loss_auc20_delta_max: 0.02
+  practical_improvement_vs_head_on:
+    paired_intent_loss_auc20_delta_max: -0.05
+    minimum_opponents_passing: 2
+  practical_improvement_vs_best_existing_specialist:
+    paired_intent_loss_auc20_delta_max: -0.02
+    minimum_opponents_passing: 2
+  remaining_opponent_noninferiority_vs_best_existing_specialist:
+    paired_intent_loss_auc20_delta_max: 0.02
+decision_logic:
+  new_skill_gap_supported: >
+    All per-opponent contract, coverage, safety, and head-on noninferiority
+    gates pass; at least two opponents pass practical improvement versus both
+    head-on and the better existing specialist; the remaining opponent is no
+    worse than the better existing specialist by more than 0.02.
+  existing_library_routing_or_composition_gap: >
+    Frozen crossing matches or outperforms the candidate on the paired primary
+    metric without a safety penalty; do not claim a missing skill.
+  defensive_extension_hypothesis_not_supported: >
+    Candidate fails head-on geometry noninferiority or fails to show practical
+    improvement in at least two opponents.
+  safety_no_go: >
+    Any opponent exceeds the ego crash/OOB delta gate or any fail-closed
+    structural safety condition occurs.
+safety_stop_rule:
+  immediate_abort_on:
+    - nonfinite_66d_observation
+    - nonfinite_or_out_of_bounds_3d_action
+    - jsbsim_backend_fallback
+    - checkpoint_fallback
+    - abnormal_environment_reset
+    - history_padding_or_future_state_injection
+  dev_abort_on:
+    metric: ego_crash_oob_rate_delta_vs_frozen_fixed_head_on
+    threshold: 0.05
+  after_abort:
+    freeze_as_negative_evidence: true
+    reward_tuning: prohibited
+    add_training_steps: prohibited
+    replace_scenarios: prohibited
+    replace_checkpoint_or_encoder: prohibited
+    rerun_same_source_id: prohibited
+outputs:
+  root: E:/uav-vpp-guidance-five-state-heldout-envelope-v1-results/defensive_extension_range_extension_feasibility_v1
+  proposed_run_ids:
+    baseline_dev: DEFEXT-FEAS-V1-DEV-BASELINES
+    train: DEFEXT-FEAS-V1-TRAIN-S0
+    candidate_dev: DEFEXT-FEAS-V1-DEV-CANDIDATE
+    heldout: DEFEXT-FEAS-V1-HELDOUT-R1
+  must_be_fresh_and_empty_before_authorized_execution: true
+  creation_permitted_by_this_config: false

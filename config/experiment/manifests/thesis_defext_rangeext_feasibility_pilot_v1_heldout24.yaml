@@ -1,0 +1,915 @@
+source_id: THESIS-DEFEXT-RANGEEXT-FEASIBILITY-PILOT-V1-HELDOUT24
+manifest_version: 1
+status: preregistered_design_only
+protocol:
+  training_permitted: false
+  evaluation_permitted: false
+  continuous_physical_run_in: true
+  snapshot_restore: false
+  future_state_injection: false
+  routing_enabled: false
+  fixed_skill: defensive_extension
+  fixed_profile: range_extension
+  opponents_reported_separately: true
+independence:
+  v2_source_id: THESIS-PHASE-REACHABILITY-V2-RUN-IN-HANDOFF-R1
+  v2_payload_sha256: 5ffdaa4bc248bf40c1532b13c8030dca43240711f5751cf8c4f26217525cfaae
+  v2_signature_overlap_count: 0
+  package_signatures:
+  - - 1075.0
+    - 175.0
+    - 345.0
+  - - 1525.0
+    - 195.0
+    - 395.0
+  - - 1775.0
+    - 215.0
+    - 420.0
+  - - 2000.0
+    - 225.0
+    - 430.0
+generation_contract:
+  initial_class: disadvantage
+  own_altitude_m: 5200.0
+  height_offsets_target_minus_own_m:
+    own_below: 200.0
+    co_altitude: 0.0
+    own_above: -200.0
+  mirror_signs:
+  - negative
+  - positive
+  packages:
+  - id: defext_hold_a
+    initial_range_m: 1075.0
+    own_speed_mps: 175.0
+    target_speed_mps: 345.0
+    own_angle_deg: 154.0
+    target_angle_deg: 26.0
+    los_azimuth_abs_deg: 14.0
+  - id: defext_hold_b
+    initial_range_m: 1525.0
+    own_speed_mps: 195.0
+    target_speed_mps: 395.0
+    own_angle_deg: 162.0
+    target_angle_deg: 18.0
+    los_azimuth_abs_deg: 22.0
+  - id: defext_hold_c
+    initial_range_m: 1775.0
+    own_speed_mps: 215.0
+    target_speed_mps: 420.0
+    own_angle_deg: 158.0
+    target_angle_deg: 22.0
+    los_azimuth_abs_deg: 30.0
+  - id: defext_hold_d
+    initial_range_m: 2000.0
+    own_speed_mps: 225.0
+    target_speed_mps: 430.0
+    own_angle_deg: 166.0
+    target_angle_deg: 14.0
+    los_azimuth_abs_deg: 10.0
+  first_pass_requirement: legal reset with range > 1000 m followed by one continuous
+    JSBSim episode
+scenarios:
+- name: defext_rangeext_heldout24_defext_hold_a_own_below_neg
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 175.0
+    heading_deg: 142.172373766
+  target_init:
+    position_m:
+    - 1024.856918863
+    - -255.52552878
+    - 5400.0
+    velocity_mps: 345.0
+    heading_deg: 142.172373766
+  metadata:
+    pilot_family: THESIS-DEFEXT-RANGEEXT-FEASIBILITY-PILOT-V1
+    split: heldout24
+    initial_class: disadvantage
+    height_condition: own_below
+    mirror_sign: negative
+    distance_speed_package: defext_hold_a
+    scenario_signature: defext_hold_a|own_below|negative
+    scenario_seed: 82600
+    phase_at_reset: pre_merge
+    continuous_run_in: true
+    task_registry_key: head_on
+    routing_enabled: false
+    fixed_skill: defensive_extension
+    fixed_profile: range_extension
+    initial_range_m: 1074.999999999842
+    altitude_diff_m: 200.0
+    own_to_target_los_angle_deg: 154.00000000005005
+    target_velocity_to_own_los_angle_deg: 25.999999999949964
+    taxonomy_geometry_state: disadvantage
+- name: defext_rangeext_heldout24_defext_hold_a_own_below_pos
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 175.0
+    heading_deg: 217.827626234
+  target_init:
+    position_m:
+    - 1024.856918863
+    - 255.52552878
+    - 5400.0
+    velocity_mps: 345.0
+    heading_deg: 217.827626234
+  metadata:
+    pilot_family: THESIS-DEFEXT-RANGEEXT-FEASIBILITY-PILOT-V1
+    split: heldout24
+    initial_class: disadvantage
+    height_condition: own_below
+    mirror_sign: positive
+    distance_speed_package: defext_hold_a
+    scenario_signature: defext_hold_a|own_below|positive
+    scenario_seed: 82601
+    phase_at_reset: pre_merge
+    continuous_run_in: true
+    task_registry_key: head_on
+    routing_enabled: false
+    fixed_skill: defensive_extension
+    fixed_profile: range_extension
+    initial_range_m: 1074.999999999842
+    altitude_diff_m: 200.0
+    own_to_target_los_angle_deg: 154.00000000005005
+    target_velocity_to_own_los_angle_deg: 25.999999999949964
+    taxonomy_geometry_state: disadvantage
+- name: defext_rangeext_heldout24_defext_hold_a_co_altitude_neg
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 175.0
+    heading_deg: 140.0
+  target_init:
+    position_m:
+    - 1043.067905747
+    - -260.06603777
+    - 5200.0
+    velocity_mps: 345.0
+    heading_deg: 140.0
+  metadata:
+    pilot_family: THESIS-DEFEXT-RANGEEXT-FEASIBILITY-PILOT-V1
+    split: heldout24
+    initial_class: disadvantage
+    height_condition: co_altitude
+    mirror_sign: negative
+    distance_speed_package: defext_hold_a
+    scenario_signature: defext_hold_a|co_altitude|negative
+    scenario_seed: 82602
+    phase_at_reset: pre_merge
+    continuous_run_in: true
+    task_registry_key: head_on
+    routing_enabled: false
+    fixed_skill: defensive_extension
+    fixed_profile: range_extension
+    initial_range_m: 1075.000000000381
+    altitude_diff_m: 0.0
+    own_to_target_los_angle_deg: 154.00000000001455
+    target_velocity_to_own_los_angle_deg: 25.99999999998547
+    taxonomy_geometry_state: disadvantage
+- name: defext_rangeext_heldout24_defext_hold_a_co_altitude_pos
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 175.0
+    heading_deg: 220.0
+  target_init:
+    position_m:
+    - 1043.067905747
+    - 260.06603777
+    - 5200.0
+    velocity_mps: 345.0
+    heading_deg: 220.0
+  metadata:
+    pilot_family: THESIS-DEFEXT-RANGEEXT-FEASIBILITY-PILOT-V1
+    split: heldout24
+    initial_class: disadvantage
+    height_condition: co_altitude
+    mirror_sign: positive
+    distance_speed_package: defext_hold_a
+    scenario_signature: defext_hold_a|co_altitude|positive
+    scenario_seed: 82603
+    phase_at_reset: pre_merge
+    continuous_run_in: true
+    task_registry_key: head_on
+    routing_enabled: false
+    fixed_skill: defensive_extension
+    fixed_profile: range_extension
+    initial_range_m: 1075.000000000381
+    altitude_diff_m: 0.0
+    own_to_target_los_angle_deg: 154.00000000001458
+    target_velocity_to_own_los_angle_deg: 25.99999999998544
+    taxonomy_geometry_state: disadvantage
+- name: defext_rangeext_heldout24_defext_hold_a_own_above_neg
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 175.0
+    heading_deg: 142.172373766
+  target_init:
+    position_m:
+    - 1024.856918863
+    - -255.52552878
+    - 5000.0
+    velocity_mps: 345.0
+    heading_deg: 142.172373766
+  metadata:
+    pilot_family: THESIS-DEFEXT-RANGEEXT-FEASIBILITY-PILOT-V1
+    split: heldout24
+    initial_class: disadvantage
+    height_condition: own_above
+    mirror_sign: negative
+    distance_speed_package: defext_hold_a
+    scenario_signature: defext_hold_a|own_above|negative
+    scenario_seed: 82604
+    phase_at_reset: pre_merge
+    continuous_run_in: true
+    task_registry_key: head_on
+    routing_enabled: false
+    fixed_skill: defensive_extension
+    fixed_profile: range_extension
+    initial_range_m: 1074.999999999842
+    altitude_diff_m: -200.0
+    own_to_target_los_angle_deg: 154.00000000005005
+    target_velocity_to_own_los_angle_deg: 25.999999999949964
+    taxonomy_geometry_state: disadvantage
+- name: defext_rangeext_heldout24_defext_hold_a_own_above_pos
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 175.0
+    heading_deg: 217.827626234
+  target_init:
+    position_m:
+    - 1024.856918863
+    - 255.52552878
+    - 5000.0
+    velocity_mps: 345.0
+    heading_deg: 217.827626234
+  metadata:
+    pilot_family: THESIS-DEFEXT-RANGEEXT-FEASIBILITY-PILOT-V1
+    split: heldout24
+    initial_class: disadvantage
+    height_condition: own_above
+    mirror_sign: positive
+    distance_speed_package: defext_hold_a
+    scenario_signature: defext_hold_a|own_above|positive
+    scenario_seed: 82605
+    phase_at_reset: pre_merge
+    continuous_run_in: true
+    task_registry_key: head_on
+    routing_enabled: false
+    fixed_skill: defensive_extension
+    fixed_profile: range_extension
+    initial_range_m: 1074.999999999842
+    altitude_diff_m: -200.0
+    own_to_target_los_angle_deg: 154.00000000005005
+    target_velocity_to_own_los_angle_deg: 25.999999999949964
+    taxonomy_geometry_state: disadvantage
+- name: defext_rangeext_heldout24_defext_hold_b_own_below_neg
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 195.0
+    heading_deg: 141.605787776
+  target_init:
+    position_m:
+    - 1401.742849304
+    - -566.340872996
+    - 5400.0
+    velocity_mps: 395.0
+    heading_deg: 141.605787776
+  metadata:
+    pilot_family: THESIS-DEFEXT-RANGEEXT-FEASIBILITY-PILOT-V1
+    split: heldout24
+    initial_class: disadvantage
+    height_condition: own_below
+    mirror_sign: negative
+    distance_speed_package: defext_hold_b
+    scenario_signature: defext_hold_b|own_below|negative
+    scenario_seed: 82606
+    phase_at_reset: pre_merge
+    continuous_run_in: true
+    task_registry_key: head_on
+    routing_enabled: false
+    fixed_skill: defensive_extension
+    fixed_profile: range_extension
+    initial_range_m: 1525.0000000002517
+    altitude_diff_m: 200.0
+    own_to_target_los_angle_deg: 162.00000000012815
+    target_velocity_to_own_los_angle_deg: 17.999999999871868
+    taxonomy_geometry_state: disadvantage
+- name: defext_rangeext_heldout24_defext_hold_b_own_below_pos
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 195.0
+    heading_deg: 218.394212224
+  target_init:
+    position_m:
+    - 1401.742849304
+    - 566.340872996
+    - 5400.0
+    velocity_mps: 395.0
+    heading_deg: 218.394212224
+  metadata:
+    pilot_family: THESIS-DEFEXT-RANGEEXT-FEASIBILITY-PILOT-V1
+    split: heldout24
+    initial_class: disadvantage
+    height_condition: own_below
+    mirror_sign: positive
+    distance_speed_package: defext_hold_b
+    scenario_signature: defext_hold_b|own_below|positive
+    scenario_seed: 82607
+    phase_at_reset: pre_merge
+    continuous_run_in: true
+    task_registry_key: head_on
+    routing_enabled: false
+    fixed_skill: defensive_extension
+    fixed_profile: range_extension
+    initial_range_m: 1525.0000000002517
+    altitude_diff_m: 200.0
+    own_to_target_los_angle_deg: 162.00000000012815
+    target_velocity_to_own_los_angle_deg: 17.999999999871825
+    taxonomy_geometry_state: disadvantage
+- name: defext_rangeext_heldout24_defext_hold_b_co_altitude_neg
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 195.0
+    heading_deg: 140.0
+  target_init:
+    position_m:
+    - 1413.955378214
+    - -571.275054959
+    - 5200.0
+    velocity_mps: 395.0
+    heading_deg: 140.0
+  metadata:
+    pilot_family: THESIS-DEFEXT-RANGEEXT-FEASIBILITY-PILOT-V1
+    split: heldout24
+    initial_class: disadvantage
+    height_condition: co_altitude
+    mirror_sign: negative
+    distance_speed_package: defext_hold_b
+    scenario_signature: defext_hold_b|co_altitude|negative
+    scenario_seed: 82608
+    phase_at_reset: pre_merge
+    continuous_run_in: true
+    task_registry_key: head_on
+    routing_enabled: false
+    fixed_skill: defensive_extension
+    fixed_profile: range_extension
+    initial_range_m: 1524.999999999575
+    altitude_diff_m: 0.0
+    own_to_target_los_angle_deg: 161.99999999999568
+    target_velocity_to_own_los_angle_deg: 18.00000000000431
+    taxonomy_geometry_state: disadvantage
+- name: defext_rangeext_heldout24_defext_hold_b_co_altitude_pos
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 195.0
+    heading_deg: 220.0
+  target_init:
+    position_m:
+    - 1413.955378214
+    - 571.275054959
+    - 5200.0
+    velocity_mps: 395.0
+    heading_deg: 220.0
+  metadata:
+    pilot_family: THESIS-DEFEXT-RANGEEXT-FEASIBILITY-PILOT-V1
+    split: heldout24
+    initial_class: disadvantage
+    height_condition: co_altitude
+    mirror_sign: positive
+    distance_speed_package: defext_hold_b
+    scenario_signature: defext_hold_b|co_altitude|positive
+    scenario_seed: 82609
+    phase_at_reset: pre_merge
+    continuous_run_in: true
+    task_registry_key: head_on
+    routing_enabled: false
+    fixed_skill: defensive_extension
+    fixed_profile: range_extension
+    initial_range_m: 1524.999999999575
+    altitude_diff_m: 0.0
+    own_to_target_los_angle_deg: 161.99999999999568
+    target_velocity_to_own_los_angle_deg: 18.00000000000429
+    taxonomy_geometry_state: disadvantage
+- name: defext_rangeext_heldout24_defext_hold_b_own_above_neg
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 195.0
+    heading_deg: 141.605787776
+  target_init:
+    position_m:
+    - 1401.742849304
+    - -566.340872996
+    - 5000.0
+    velocity_mps: 395.0
+    heading_deg: 141.605787776
+  metadata:
+    pilot_family: THESIS-DEFEXT-RANGEEXT-FEASIBILITY-PILOT-V1
+    split: heldout24
+    initial_class: disadvantage
+    height_condition: own_above
+    mirror_sign: negative
+    distance_speed_package: defext_hold_b
+    scenario_signature: defext_hold_b|own_above|negative
+    scenario_seed: 82610
+    phase_at_reset: pre_merge
+    continuous_run_in: true
+    task_registry_key: head_on
+    routing_enabled: false
+    fixed_skill: defensive_extension
+    fixed_profile: range_extension
+    initial_range_m: 1525.0000000002517
+    altitude_diff_m: -200.0
+    own_to_target_los_angle_deg: 162.00000000012815
+    target_velocity_to_own_los_angle_deg: 17.999999999871868
+    taxonomy_geometry_state: disadvantage
+- name: defext_rangeext_heldout24_defext_hold_b_own_above_pos
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 195.0
+    heading_deg: 218.394212224
+  target_init:
+    position_m:
+    - 1401.742849304
+    - 566.340872996
+    - 5000.0
+    velocity_mps: 395.0
+    heading_deg: 218.394212224
+  metadata:
+    pilot_family: THESIS-DEFEXT-RANGEEXT-FEASIBILITY-PILOT-V1
+    split: heldout24
+    initial_class: disadvantage
+    height_condition: own_above
+    mirror_sign: positive
+    distance_speed_package: defext_hold_b
+    scenario_signature: defext_hold_b|own_above|positive
+    scenario_seed: 82611
+    phase_at_reset: pre_merge
+    continuous_run_in: true
+    task_registry_key: head_on
+    routing_enabled: false
+    fixed_skill: defensive_extension
+    fixed_profile: range_extension
+    initial_range_m: 1525.0000000002517
+    altitude_diff_m: -200.0
+    own_to_target_los_angle_deg: 162.00000000012815
+    target_velocity_to_own_los_angle_deg: 17.999999999871825
+    taxonomy_geometry_state: disadvantage
+- name: defext_rangeext_heldout24_defext_hold_c_own_below_neg
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 215.0
+    heading_deg: 128.927499658
+  target_init:
+    position_m:
+    - 1527.405889081
+    - -881.848201223
+    - 5400.0
+    velocity_mps: 420.0
+    heading_deg: 128.927499658
+  metadata:
+    pilot_family: THESIS-DEFEXT-RANGEEXT-FEASIBILITY-PILOT-V1
+    split: heldout24
+    initial_class: disadvantage
+    height_condition: own_below
+    mirror_sign: negative
+    distance_speed_package: defext_hold_c
+    scenario_signature: defext_hold_c|own_below|negative
+    scenario_seed: 82612
+    phase_at_reset: pre_merge
+    continuous_run_in: true
+    task_registry_key: head_on
+    routing_enabled: false
+    fixed_skill: defensive_extension
+    fixed_profile: range_extension
+    initial_range_m: 1774.999999999876
+    altitude_diff_m: 200.0
+    own_to_target_los_angle_deg: 157.99999999991718
+    target_velocity_to_own_los_angle_deg: 22.00000000008283
+    taxonomy_geometry_state: disadvantage
+- name: defext_rangeext_heldout24_defext_hold_c_own_below_pos
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 215.0
+    heading_deg: 231.072500342
+  target_init:
+    position_m:
+    - 1527.405889081
+    - 881.848201223
+    - 5400.0
+    velocity_mps: 420.0
+    heading_deg: 231.072500342
+  metadata:
+    pilot_family: THESIS-DEFEXT-RANGEEXT-FEASIBILITY-PILOT-V1
+    split: heldout24
+    initial_class: disadvantage
+    height_condition: own_below
+    mirror_sign: positive
+    distance_speed_package: defext_hold_c
+    scenario_signature: defext_hold_c|own_below|positive
+    scenario_seed: 82613
+    phase_at_reset: pre_merge
+    continuous_run_in: true
+    task_registry_key: head_on
+    routing_enabled: false
+    fixed_skill: defensive_extension
+    fixed_profile: range_extension
+    initial_range_m: 1774.999999999876
+    altitude_diff_m: 200.0
+    own_to_target_los_angle_deg: 157.99999999991718
+    target_velocity_to_own_los_angle_deg: 22.000000000082846
+    taxonomy_geometry_state: disadvantage
+- name: defext_rangeext_heldout24_defext_hold_c_co_altitude_neg
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 215.0
+    heading_deg: 128.0
+  target_init:
+    position_m:
+    - 1537.195091717
+    - -887.5
+    - 5200.0
+    velocity_mps: 420.0
+    heading_deg: 128.0
+  metadata:
+    pilot_family: THESIS-DEFEXT-RANGEEXT-FEASIBILITY-PILOT-V1
+    split: heldout24
+    initial_class: disadvantage
+    height_condition: co_altitude
+    mirror_sign: negative
+    distance_speed_package: defext_hold_c
+    scenario_signature: defext_hold_c|co_altitude|negative
+    scenario_seed: 82614
+    phase_at_reset: pre_merge
+    continuous_run_in: true
+    task_registry_key: head_on
+    routing_enabled: false
+    fixed_skill: defensive_extension
+    fixed_profile: range_extension
+    initial_range_m: 1774.9999999996721
+    altitude_diff_m: 0.0
+    own_to_target_los_angle_deg: 158.00000000000614
+    target_velocity_to_own_los_angle_deg: 21.999999999993882
+    taxonomy_geometry_state: disadvantage
+- name: defext_rangeext_heldout24_defext_hold_c_co_altitude_pos
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 215.0
+    heading_deg: 232.0
+  target_init:
+    position_m:
+    - 1537.195091717
+    - 887.5
+    - 5200.0
+    velocity_mps: 420.0
+    heading_deg: 232.0
+  metadata:
+    pilot_family: THESIS-DEFEXT-RANGEEXT-FEASIBILITY-PILOT-V1
+    split: heldout24
+    initial_class: disadvantage
+    height_condition: co_altitude
+    mirror_sign: positive
+    distance_speed_package: defext_hold_c
+    scenario_signature: defext_hold_c|co_altitude|positive
+    scenario_seed: 82615
+    phase_at_reset: pre_merge
+    continuous_run_in: true
+    task_registry_key: head_on
+    routing_enabled: false
+    fixed_skill: defensive_extension
+    fixed_profile: range_extension
+    initial_range_m: 1774.9999999996721
+    altitude_diff_m: 0.0
+    own_to_target_los_angle_deg: 158.0000000000061
+    target_velocity_to_own_los_angle_deg: 21.999999999993918
+    taxonomy_geometry_state: disadvantage
+- name: defext_rangeext_heldout24_defext_hold_c_own_above_neg
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 215.0
+    heading_deg: 128.927499658
+  target_init:
+    position_m:
+    - 1527.405889081
+    - -881.848201223
+    - 5000.0
+    velocity_mps: 420.0
+    heading_deg: 128.927499658
+  metadata:
+    pilot_family: THESIS-DEFEXT-RANGEEXT-FEASIBILITY-PILOT-V1
+    split: heldout24
+    initial_class: disadvantage
+    height_condition: own_above
+    mirror_sign: negative
+    distance_speed_package: defext_hold_c
+    scenario_signature: defext_hold_c|own_above|negative
+    scenario_seed: 82616
+    phase_at_reset: pre_merge
+    continuous_run_in: true
+    task_registry_key: head_on
+    routing_enabled: false
+    fixed_skill: defensive_extension
+    fixed_profile: range_extension
+    initial_range_m: 1774.999999999876
+    altitude_diff_m: -200.0
+    own_to_target_los_angle_deg: 157.99999999991718
+    target_velocity_to_own_los_angle_deg: 22.00000000008283
+    taxonomy_geometry_state: disadvantage
+- name: defext_rangeext_heldout24_defext_hold_c_own_above_pos
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 215.0
+    heading_deg: 231.072500342
+  target_init:
+    position_m:
+    - 1527.405889081
+    - 881.848201223
+    - 5000.0
+    velocity_mps: 420.0
+    heading_deg: 231.072500342
+  metadata:
+    pilot_family: THESIS-DEFEXT-RANGEEXT-FEASIBILITY-PILOT-V1
+    split: heldout24
+    initial_class: disadvantage
+    height_condition: own_above
+    mirror_sign: positive
+    distance_speed_package: defext_hold_c
+    scenario_signature: defext_hold_c|own_above|positive
+    scenario_seed: 82617
+    phase_at_reset: pre_merge
+    continuous_run_in: true
+    task_registry_key: head_on
+    routing_enabled: false
+    fixed_skill: defensive_extension
+    fixed_profile: range_extension
+    initial_range_m: 1774.999999999876
+    altitude_diff_m: -200.0
+    own_to_target_los_angle_deg: 157.99999999991718
+    target_velocity_to_own_los_angle_deg: 22.000000000082846
+    taxonomy_geometry_state: disadvantage
+- name: defext_rangeext_heldout24_defext_hold_d_own_below_neg
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 225.0
+    heading_deg: 157.208936301
+  target_init:
+    position_m:
+    - 1959.742684425
+    - -345.55551051
+    - 5400.0
+    velocity_mps: 430.0
+    heading_deg: 157.208936301
+  metadata:
+    pilot_family: THESIS-DEFEXT-RANGEEXT-FEASIBILITY-PILOT-V1
+    split: heldout24
+    initial_class: disadvantage
+    height_condition: own_below
+    mirror_sign: negative
+    distance_speed_package: defext_hold_d
+    scenario_signature: defext_hold_d|own_below|negative
+    scenario_seed: 82618
+    phase_at_reset: pre_merge
+    continuous_run_in: true
+    task_registry_key: head_on
+    routing_enabled: false
+    fixed_skill: defensive_extension
+    fixed_profile: range_extension
+    initial_range_m: 2000.000000000283
+    altitude_diff_m: 200.0
+    own_to_target_los_angle_deg: 166.00000000032273
+    target_velocity_to_own_los_angle_deg: 13.999999999677293
+    taxonomy_geometry_state: disadvantage
+- name: defext_rangeext_heldout24_defext_hold_d_own_below_pos
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 225.0
+    heading_deg: 202.791063699
+  target_init:
+    position_m:
+    - 1959.742684425
+    - 345.55551051
+    - 5400.0
+    velocity_mps: 430.0
+    heading_deg: 202.791063699
+  metadata:
+    pilot_family: THESIS-DEFEXT-RANGEEXT-FEASIBILITY-PILOT-V1
+    split: heldout24
+    initial_class: disadvantage
+    height_condition: own_below
+    mirror_sign: positive
+    distance_speed_package: defext_hold_d
+    scenario_signature: defext_hold_d|own_below|positive
+    scenario_seed: 82619
+    phase_at_reset: pre_merge
+    continuous_run_in: true
+    task_registry_key: head_on
+    routing_enabled: false
+    fixed_skill: defensive_extension
+    fixed_profile: range_extension
+    initial_range_m: 2000.000000000283
+    altitude_diff_m: 200.0
+    own_to_target_los_angle_deg: 166.00000000032273
+    target_velocity_to_own_los_angle_deg: 13.99999999967732
+    taxonomy_geometry_state: disadvantage
+- name: defext_rangeext_heldout24_defext_hold_d_co_altitude_neg
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 225.0
+    heading_deg: 156.0
+  target_init:
+    position_m:
+    - 1969.615506024
+    - -347.296355334
+    - 5200.0
+    velocity_mps: 430.0
+    heading_deg: 156.0
+  metadata:
+    pilot_family: THESIS-DEFEXT-RANGEEXT-FEASIBILITY-PILOT-V1
+    split: heldout24
+    initial_class: disadvantage
+    height_condition: co_altitude
+    mirror_sign: negative
+    distance_speed_package: defext_hold_d
+    scenario_signature: defext_hold_d|co_altitude|negative
+    scenario_seed: 82620
+    phase_at_reset: pre_merge
+    continuous_run_in: true
+    task_registry_key: head_on
+    routing_enabled: false
+    fixed_skill: defensive_extension
+    fixed_profile: range_extension
+    initial_range_m: 1999.9999999996144
+    altitude_diff_m: 0.0
+    own_to_target_los_angle_deg: 166.00000000000603
+    target_velocity_to_own_los_angle_deg: 13.999999999994005
+    taxonomy_geometry_state: disadvantage
+- name: defext_rangeext_heldout24_defext_hold_d_co_altitude_pos
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 225.0
+    heading_deg: 204.0
+  target_init:
+    position_m:
+    - 1969.615506024
+    - 347.296355334
+    - 5200.0
+    velocity_mps: 430.0
+    heading_deg: 204.0
+  metadata:
+    pilot_family: THESIS-DEFEXT-RANGEEXT-FEASIBILITY-PILOT-V1
+    split: heldout24
+    initial_class: disadvantage
+    height_condition: co_altitude
+    mirror_sign: positive
+    distance_speed_package: defext_hold_d
+    scenario_signature: defext_hold_d|co_altitude|positive
+    scenario_seed: 82621
+    phase_at_reset: pre_merge
+    continuous_run_in: true
+    task_registry_key: head_on
+    routing_enabled: false
+    fixed_skill: defensive_extension
+    fixed_profile: range_extension
+    initial_range_m: 1999.9999999996144
+    altitude_diff_m: 0.0
+    own_to_target_los_angle_deg: 166.000000000006
+    target_velocity_to_own_los_angle_deg: 13.999999999994005
+    taxonomy_geometry_state: disadvantage
+- name: defext_rangeext_heldout24_defext_hold_d_own_above_neg
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 225.0
+    heading_deg: 157.208936301
+  target_init:
+    position_m:
+    - 1959.742684425
+    - -345.55551051
+    - 5000.0
+    velocity_mps: 430.0
+    heading_deg: 157.208936301
+  metadata:
+    pilot_family: THESIS-DEFEXT-RANGEEXT-FEASIBILITY-PILOT-V1
+    split: heldout24
+    initial_class: disadvantage
+    height_condition: own_above
+    mirror_sign: negative
+    distance_speed_package: defext_hold_d
+    scenario_signature: defext_hold_d|own_above|negative
+    scenario_seed: 82622
+    phase_at_reset: pre_merge
+    continuous_run_in: true
+    task_registry_key: head_on
+    routing_enabled: false
+    fixed_skill: defensive_extension
+    fixed_profile: range_extension
+    initial_range_m: 2000.000000000283
+    altitude_diff_m: -200.0
+    own_to_target_los_angle_deg: 166.00000000032273
+    target_velocity_to_own_los_angle_deg: 13.999999999677293
+    taxonomy_geometry_state: disadvantage
+- name: defext_rangeext_heldout24_defext_hold_d_own_above_pos
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 225.0
+    heading_deg: 202.791063699
+  target_init:
+    position_m:
+    - 1959.742684425
+    - 345.55551051
+    - 5000.0
+    velocity_mps: 430.0
+    heading_deg: 202.791063699
+  metadata:
+    pilot_family: THESIS-DEFEXT-RANGEEXT-FEASIBILITY-PILOT-V1
+    split: heldout24
+    initial_class: disadvantage
+    height_condition: own_above
+    mirror_sign: positive
+    distance_speed_package: defext_hold_d
+    scenario_signature: defext_hold_d|own_above|positive
+    scenario_seed: 82623
+    phase_at_reset: pre_merge
+    continuous_run_in: true
+    task_registry_key: head_on
+    routing_enabled: false
+    fixed_skill: defensive_extension
+    fixed_profile: range_extension
+    initial_range_m: 2000.000000000283
+    altitude_diff_m: -200.0
+    own_to_target_los_angle_deg: 166.00000000032273
+    target_velocity_to_own_los_angle_deg: 13.99999999967732
+    taxonomy_geometry_state: disadvantage
+integrity:
+  builder_code_sha256: c087e35d20889c8cc061b48e95ce0c65e003bd8ef476f8c6b0a4168f07d1c4b1
+  payload_sha256: ec004d389330b8236cf3ed9548c1e9c118d6c57b499625a5a5feb4b81c19bfbc

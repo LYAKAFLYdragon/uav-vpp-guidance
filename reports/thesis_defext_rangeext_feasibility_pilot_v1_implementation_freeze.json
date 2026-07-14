@@ -1,0 +1,67 @@
+{
+  "source_id": "THESIS-DEFEXT-RANGEEXT-FEASIBILITY-PILOT-V1-IMPLEMENTATION-FREEZE",
+  "implementation_git_sha": "8cec8f0c0b3cac1c50adbfc1581b06d45df09d8e",
+  "branch": "codex/five-state-heldout-envelope-v1",
+  "clean_at_freeze": true,
+  "p3_checkpoint": {
+    "path": "E:/uav-vpp-guidance-thesis-five-state-v1-results/p3_temporal_encoder_phaseconditional_v2/checkpoints/best.pt",
+    "sha256": "385663281a9c48c0416ea4d1a1bb8dc08ed64a0cfebb0f01083cbbb8bcfbdc59",
+    "trainable": false
+  },
+  "files": [
+    {
+      "path": "src/uav_vpp_guidance/evaluation/phase_reachability_handoff_contract.py",
+      "sha256": "c97ff47e2a7d139ce40da02932c96d4b8f1aed3b9b3072ff62eccf74cb153195"
+    },
+    {
+      "path": "src/uav_vpp_guidance/evaluation/single_motif_continuous_66d.py",
+      "sha256": "00ddb3ea0294681791cbe39a5194b71343510c29775db98b090e85954d671429"
+    },
+    {
+      "path": "src/uav_vpp_guidance/evaluation/single_motif_continuous_66d_analysis.py",
+      "sha256": "302ca277586fbcd5f39d8220785bc2d8305a05e7b4a5c8b45109f7116a38eec9"
+    },
+    {
+      "path": "scripts/run_jsbsim_hrl_comparison.py",
+      "sha256": "bf2c9cb437ecdf0bf239da4c9894de131887a0fa1ae6d2c2b677753c3fea1c33"
+    },
+    {
+      "path": "scripts/analyze_thesis_single_motif_continuous_66d.py",
+      "sha256": "1fd125b1c5edb3f9b8637c603fac47d127a00826bb91b6c374269a19612f2a44"
+    },
+    {
+      "path": "scripts/preflight_thesis_single_motif_continuous_66d.py",
+      "sha256": "61bd0b49d2075f635893f0dbb0a63d740a74cfd6cc22bdde7e7e42acdd5d11ac"
+    },
+    {
+      "path": "config/experiment/jsbsim_hrl_thesis_single_motif_continuous_66d_r1.yaml",
+      "sha256": "7045319904131a9ae49cf490c25062c10e1a2e9b693b7840e1fd7a7d2a586e20"
+    },
+    {
+      "path": "config/experiment/jsbsim_hrl_thesis_phase_reachability_v2_run_in_handoff_r1.yaml",
+      "sha256": "58054b6f9e42080ca108c8198e528fcb15efb0b30298993d1c23b96ee202169c"
+    },
+    {
+      "path": "config/experiment/manifests/thesis_phase_reachability_v2_run_in_handoff_r1.yaml",
+      "sha256": "d2c7f97f4f7cc99fd14649cc27866557784b27fbeba9f729f1a87b406b31c6e6"
+    },
+    {
+      "path": "tests/test_thesis_single_motif_continuous_66d.py",
+      "sha256": "481f7fcf8f5167cb219185f6d8b30ea60dd81b1aa035c737ef81debf8c99c06a"
+    },
+    {
+      "path": "tests/test_thesis_phase_reachability_v2.py",
+      "sha256": "f3ca19718d324267abecad14f0cad664432625d3be09e8a1f8c40c1d1bf98cc4"
+    },
+    {
+      "path": "tests/test_thesis_phase_reachability_v2_probe.py",
+      "sha256": "949bc2094e54186dbf34b6bb5ac05ba61f00ce3f68e2cee42bd2a48be763716a"
+    }
+  ],
+  "dirty_run_evidence": {
+    "status": "research_only_not_paper_safe",
+    "gate_path": "E:/uav-vpp-guidance-five-state-heldout-envelope-v1-results/single_motif_continuous_66d_r1/analysis_r1/single_motif_continuous_66d_gate.json",
+    "gate_sha256_at_freeze": "2135aecb8bcbdc812637e4cd1fd4d30de9d02809f02601d0dc516522d37b6dcf",
+    "promotion_to_paper_safe": false
+  }
+}

@@ -48,11 +48,11 @@ DEFAULT_CONFIG = (
     ROOT
     / "config"
     / "experiment"
-    / "thesis_global_advantage_v1_p1_r3_fresh_environment.yaml"
+    / "thesis_global_advantage_v1_p1_r4_fresh_environment.yaml"
 )
 _AUTHORIZATION_DELTA_PATHS = {
-    "config/experiment/thesis_global_advantage_v1_p1_r3_fresh_environment.yaml",
-    "reports/thesis_global_advantage_p1_r3_execution_authorization_request_20260715_zh.md",
+    "config/experiment/thesis_global_advantage_v1_p1_r4_fresh_environment.yaml",
+    "reports/thesis_global_advantage_p1_r4_execution_authorization_request_20260715_zh.md",
     "reports/thesis_five_state_global_advantage_goal_checklist_v1_20260714_zh.md",
 }
 

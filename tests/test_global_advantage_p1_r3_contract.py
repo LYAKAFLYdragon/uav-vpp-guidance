@@ -18,7 +18,7 @@ CONFIG = (
     ROOT
     / "config"
     / "experiment"
-    / "thesis_global_advantage_v1_p1_r3_fresh_environment.yaml"
+    / "thesis_global_advantage_v1_p1_r4_fresh_environment.yaml"
 )
 RUNNER_PATH = ROOT / "scripts" / "run_thesis_global_advantage_p1_r3_fresh_environment.py"
 
@@ -93,7 +93,11 @@ def _fake_env() -> SimpleNamespace:
     env.virtual_point_generator = _component(_last_virtual_point=None)
     env.reward_calculator = _component(_prev_command=None)
     env.termination_checker = _component(_success_counter=0)
-    env.combat_hp = _component(own_hp=1.0, target_hp=1.0)
+    env.combat_hp = _component(
+        own_hp=1.0,
+        target_hp=1.0,
+        last_info={"combat_time_to_kill": float("nan")},
+    )
     env.opponent_policy = _component(
         _projection_count=0,
         delegate=_component(_last_action=np.zeros(3, dtype=np.float32)),
@@ -141,11 +145,11 @@ def _envelope(
     )
 
 
-def test_r3_config_is_nonlearning_and_authorised_for_one_preflight_only():
+def test_r4_config_is_nonlearning_and_not_authorised_to_execute():
     config = yaml.safe_load(CONFIG.read_text(encoding="utf-8"))
     plan = r3.build_p1_r3_plan(config)
     assert plan.source_id == r3.SOURCE_ID
-    assert plan.execution_permitted is True
+    assert plan.execution_permitted is False
     assert plan.scenario_count == 30
     assert plan.opponents == r3.OPPONENTS
     assert plan.child_timeout_seconds == 900
@@ -169,6 +173,9 @@ def test_reset_envelope_records_nested_runtime_state_and_fdm_properties():
     first_hash = r3.snapshot_hash(first, 6)
     assert set(first["fdm"]) == {"own", "target"}
     assert len(first["fdm"]["own"]["properties"]) == len(r3.FDM_PROPERTY_NAMES)
+    assert first["components"]["combat_hp"]["fields"]["last_info"][
+        "combat_time_to_kill"
+    ] == {"state": "not_terminal_or_not_killed"}
     assert first["components"]["opponent_policy"]["fields"]["delegate"]["fields"][
         "_last_action"
     ] == [0.0, 0.0, 0.0]

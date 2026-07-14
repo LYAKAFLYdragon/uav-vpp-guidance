@@ -1,6 +1,6 @@
 # P1 R3 一次性执行授权请求清单
 
-**状态：** `authorised_one_shot_nonlearning_execution`
+**状态：** `implementation_failure_not_experimental_evidence`
 **Source ID：** `THESIS-GLOBAL-ADVANTAGE-V1-P1-R3-FRESH-ENV-REPRO-V1`
 **范围：** 仅 30 个 dev 场景 x 3 对手 x 3 repeat 的非学习 run-in 可重复性复核，共 270 episode。它不是训练、技能比较、消融或 formal held-out。
 **实现冻结 SHA：** `b8deed5987a14a69a831514c14736fdb8c88db28`（取代 `15761a444ccc1fc1469aeda94158e6465dae48f1`；包含授权 config 的回归测试，仍禁止任何运行时代码差异）
@@ -49,7 +49,7 @@
 - [x] 复核输出目录不存在，目标磁盘空闲空间为 292.76 GB，高于 120 GB gate。
 - [x] 复核 R3/P1/provenance/post-processor/tracking-env 定向测试：169 passed、2 skipped；未执行验证通过。
 
-**授权边界：** 本次授权只允许下面的一次性 R3 命令。它不授权任何训练、调参、场景修改、R2 重跑、P2、P4、P5 或 formal held-out。
+**归档边界：** R3 已在首个 snapshot 因具名 combat-time sentinel 的未编码实现缺口终止，零 episode 输出已归档至 `reports/thesis_global_advantage_p1_r3_implementation_failure_20260715_zh.md`。R3 不得重跑；后续工作仅能使用新的 R4 Source ID。
 
 ## 一次性运行与判定
 

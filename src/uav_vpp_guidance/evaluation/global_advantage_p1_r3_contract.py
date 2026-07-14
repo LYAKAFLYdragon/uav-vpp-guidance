@@ -14,7 +14,7 @@ from typing import Any
 import numpy as np
 
 
-SOURCE_ID = "THESIS-GLOBAL-ADVANTAGE-V1-P1-R3-FRESH-ENV-REPRO-V1"
+SOURCE_ID = "THESIS-GLOBAL-ADVANTAGE-V1-P1-R4-FRESH-ENV-REPRO-V1"
 OPPONENTS = ("expert", "end_to_end", "independent_ppo_vpp")
 ORDER_VARIANTS = ("forward", "reverse", "mirror_interleaved")
 
@@ -335,6 +335,34 @@ def _component_state(component: Any, *, name: str) -> Mapping[str, Any] | None:
     }
 
 
+def _combat_hp_component_state(component: Any) -> Mapping[str, Any] | None:
+    """Encode the combat manager's documented not-yet-terminal sentinel."""
+
+    if component is None:
+        return None
+    try:
+        fields = dict(vars(component))
+    except TypeError as error:
+        raise GlobalAdvantageP1R3ContractError("cannot inspect combat_hp state") from error
+    last_info = fields.get("last_info")
+    if isinstance(last_info, Mapping):
+        normalized_info = dict(last_info)
+        value = normalized_info.get("combat_time_to_kill")
+        if isinstance(value, (float, np.floating)) and math.isnan(float(value)):
+            normalized_info["combat_time_to_kill"] = {
+                "state": "not_terminal_or_not_killed"
+            }
+        elif isinstance(value, (float, np.floating)) and not math.isfinite(float(value)):
+            raise GlobalAdvantageP1R3ContractError(
+                "combat_time_to_kill has an unsupported non-finite value"
+            )
+        fields["last_info"] = normalized_info
+    return {
+        "class": f"{component.__class__.__module__}.{component.__class__.__qualname__}",
+        "fields": canonicalize(fields, path="combat_hp"),
+    }
+
+
 def _observation_snapshot(observation: Mapping[str, Any]) -> Mapping[str, Any]:
     schema = _mapping(observation.get("observation_schema"), "observation_schema")
     names = tuple(str(name) for name in schema.get("feature_names", ()))
@@ -474,7 +502,7 @@ def capture_runtime_envelope(
         "termination_checker": _component_state(
             getattr(env, "termination_checker", None), name="termination_checker"
         ),
-        "combat_hp": _component_state(getattr(env, "combat_hp", None), name="combat_hp"),
+        "combat_hp": _combat_hp_component_state(getattr(env, "combat_hp", None)),
         "opponent_policy": _component_state(
             getattr(env, "opponent_policy", None), name="opponent_policy"
         ),

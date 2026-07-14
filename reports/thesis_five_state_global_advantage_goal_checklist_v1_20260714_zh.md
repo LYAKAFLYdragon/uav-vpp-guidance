@@ -171,6 +171,6 @@
 - [x] 已完成 P1 R3 fresh-environment-per-episode 复核的设计预注册：`reports/thesis_global_advantage_p1_r3_fresh_environment_design_20260715_zh.md`。
 - [x] 已实现 R3 的默认锁定 config、独立 child runner、完整 reset/runtime/FDM state exporter 与字段敏感性 tests；`execution_permitted=false`，未执行任何 R3 episode。
 - [x] 已建立非授权性质的运行前请求清单：`reports/thesis_global_advantage_p1_r3_execution_authorization_request_20260715_zh.md`。
-- [x] 已完成对冻结 implementation SHA `b8deed5987a14a69a831514c14736fdb8c88db28` 的隔离式对抗复核，并签发一次性 P1 R3 非学习执行授权。
-- [ ] **当前唯一允许动作：执行一次 P1 R3，并按 90/90 gate 冻结 PASS 或 NO-GO；不得重跑失败 cell 或开展任何训练。**
+- [x] R3 在首个 reset-runtime snapshot 因 `combat_time_to_kill=NaN` 的未编码语义哨兵终止，`completed_episode_count=0`；已保留为 implementation failure，见 `reports/thesis_global_advantage_p1_r3_implementation_failure_20260715_zh.md`。
+- [ ] **当前唯一允许动作：冻结、复核并一次性授权新的 P1 R4；按 90/90 gate 冻结 PASS 或 NO-GO；不得重跑 R3、失败 cell 或开展任何训练。**
 - [ ] P2--P8 均未授权；尤其不允许以“追求全场景优势”为由绕过 P1/P3 的负证据和 stop rule。

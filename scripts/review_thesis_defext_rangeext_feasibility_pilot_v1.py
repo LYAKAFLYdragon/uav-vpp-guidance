@@ -111,6 +111,16 @@ def review(config_path: Path = DEFAULT_CONFIG) -> dict[str, Any]:
     fixed = config.get("fixed_contract", {})
     check("fixed_skill_profile", fixed.get("skill") == "defensive_extension" and fixed.get("profile") == "range_extension", f"{fixed.get('skill')}/{fixed.get('profile')}")
     check("routing_disabled", fixed.get("routing_enabled") is False and fixed.get("high_level_policy_present") is False, str(fixed))
+    attack_zone = fixed.get("attack_zone", {})
+    check(
+        "fixed_attack_zone",
+        attack_zone.get("enabled") is True
+        and attack_zone.get("initial_hp") == 100.0
+        and attack_zone.get("damage_per_step") == 0.5
+        and attack_zone.get("close_range_max_km") == 3.0
+        and attack_zone.get("close_range_max_aoa_deg") == 60.0,
+        str(attack_zone),
+    )
 
     methods = config.get("methods", {})
     expected_methods = {"candidate_fixed_defensive_extension", "frozen_fixed_head_on", "frozen_fixed_crossing"}
@@ -154,7 +164,39 @@ def review(config_path: Path = DEFAULT_CONFIG) -> dict[str, Any]:
     opponents = config.get("opponents", {})
     check("opponents_separate", opponents.get("order") == ["expert", "end_to_end", "independent_ppo_vpp"] and opponents.get("report_separately") is True and opponents.get("pooled_gate") == "prohibited", str(opponents))
     training = config.get("proposed_training", {})
-    check("fixed_training_budget", training.get("total_timesteps") == 50000 and training.get("budget_extension") == "prohibited" and training.get("heldout_use_for_selection") == "prohibited", str(training))
+    ppo = training.get("ppo", {})
+    policy = training.get("policy", {})
+    check(
+        "fixed_training_budget",
+        training.get("total_timesteps") == 50000
+        and training.get("max_high_level_steps_per_episode") == 260
+        and training.get("max_episode_attempts") == 2000
+        and training.get("budget_extension") == "prohibited"
+        and training.get("heldout_use_for_selection") == "prohibited"
+        and training.get("checkpoint_selection_rule") == "minimize_worst_opponent_mean_paired_intent_loss_auc20_delta_vs_head_on"
+        and ppo.get("value_coef") == 0.5
+        and ppo.get("max_grad_norm") == 0.5
+        and policy.get("hidden_dim") == 128,
+        str(training),
+    )
+    runtime_template = _repo_path(str(sources.get("runtime_template", "")))
+    check(
+        "runtime_template_hash",
+        runtime_template.is_file()
+        and _sha256(runtime_template) == sources.get("runtime_template_sha256"),
+        str(runtime_template),
+    )
+    runtime_registry = _repo_path(str(sources.get("pilot_runtime_registry", "")))
+    runtime_registry_payload = _load_yaml(runtime_registry)
+    runtime_registry_ok = (
+        runtime_registry.is_file()
+        and _sha256(runtime_registry) == sources.get("pilot_runtime_registry_sha256")
+        and list(runtime_registry_payload.get("opponents", {}))
+        == ["expert", "end_to_end", "independent_ppo_vpp"]
+        and set(runtime_registry_payload.get("specialists", {}))
+        == {"run_in_head_on", "frozen_fixed_head_on", "frozen_fixed_crossing"}
+    )
+    check("pilot_runtime_registry", runtime_registry_ok, str(runtime_registry))
 
     gates = config.get("gates", {})
     minimum = gates.get("per_opponent_contract_minimum", {})

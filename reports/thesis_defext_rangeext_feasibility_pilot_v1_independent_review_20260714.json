@@ -43,7 +43,12 @@
     {
       "id": "routing_disabled",
       "passed": true,
-      "detail": "{'skill': 'defensive_extension', 'profile': 'range_extension', 'routing_enabled': False, 'high_level_policy_present': False, 'observation_dim': 66, 'action_dim': 3, 'action_semantics': 'normalized_vpp_forward_lateral_vertical_bias', 'encoder': {'checkpoint': 'E:/uav-vpp-guidance-thesis-five-state-v1-results/p3_temporal_encoder_phaseconditional_v2/checkpoints/best.pt', 'sha256': '385663281a9c48c0416ea4d1a1bb8dc08ed64a0cfebb0f01083cbbb8bcfbdc59', 'trainable': False, 'fallback': 'prohibited'}, 'prediction_reward': 'prohibited', 'policy_history_padding': 'prohibited', 'predictor_vpp_guidance_pid': 'frozen_existing_chain'}"
+      "detail": "{'skill': 'defensive_extension', 'profile': 'range_extension', 'routing_enabled': False, 'high_level_policy_present': False, 'observation_dim': 66, 'action_dim': 3, 'action_semantics': 'normalized_vpp_forward_lateral_vertical_bias', 'encoder': {'checkpoint': 'E:/uav-vpp-guidance-thesis-five-state-v1-results/p3_temporal_encoder_phaseconditional_v2/checkpoints/best.pt', 'sha256': '385663281a9c48c0416ea4d1a1bb8dc08ed64a0cfebb0f01083cbbb8bcfbdc59', 'trainable': False, 'fallback': 'prohibited'}, 'prediction_reward': 'prohibited', 'policy_history_padding': 'prohibited', 'predictor_vpp_guidance_pid': 'frozen_existing_chain', 'attack_zone': {'enabled': True, 'initial_hp': 100.0, 'damage_per_step': 0.5, 'close_range_max_km': 3.0, 'close_range_max_aoa_deg': 60.0, 'semantics': 'frozen_taxonomy_AoA60_mechanism_and_secondary_combat_telemetry'}}"
+    },
+    {
+      "id": "fixed_attack_zone",
+      "passed": true,
+      "detail": "{'enabled': True, 'initial_hp': 100.0, 'damage_per_step': 0.5, 'close_range_max_km': 3.0, 'close_range_max_aoa_deg': 60.0, 'semantics': 'frozen_taxonomy_AoA60_mechanism_and_secondary_combat_telemetry'}"
     },
     {
       "id": "minimal_method_matrix",
@@ -98,7 +103,17 @@
     {
       "id": "fixed_training_budget",
       "passed": true,
-      "detail": "{'total_timesteps': 50000, 'training_seed': 2026071402, 'budget_extension': 'prohibited', 'reward_change_after_start': 'prohibited', 'scenario_support_change_after_start': 'prohibited', 'profile_change_after_start': 'prohibited', 'opponent_sampling': 'balanced_round_robin', 'checkpoint_evaluation_steps': [10000, 20000, 30000, 40000, 50000], 'checkpoint_selection_split': 'dev12_only', 'heldout_use_for_selection': 'prohibited', 'ppo': {'rollout_steps': 2048, 'learning_rate': 0.0003, 'gamma': 0.99, 'gae_lambda': 0.95, 'clip_coef': 0.2, 'entropy_coef': 0.005, 'update_epochs': 10, 'minibatch_size': 256}, 'geometry_reward': {'source': 'frozen_profile_weighted_geometry_progress_v1', 'progress_weight': 2.0, 'alignment_weight': 0.1, 'terminal_ego_crash_oob_penalty': 2.0, 'physical_command_saturation_penalty': 0.05, 'intent_error_clip': 2.0}}"
+      "detail": "{'total_timesteps': 50000, 'training_seed': 2026071402, 'max_high_level_steps_per_episode': 260, 'max_episode_attempts': 2000, 'budget_extension': 'prohibited', 'reward_change_after_start': 'prohibited', 'scenario_support_change_after_start': 'prohibited', 'profile_change_after_start': 'prohibited', 'opponent_sampling': 'balanced_round_robin', 'checkpoint_evaluation_steps': [10000, 20000, 30000, 40000, 50000], 'checkpoint_selection_split': 'dev12_only', 'checkpoint_selection_rule': 'minimize_worst_opponent_mean_paired_intent_loss_auc20_delta_vs_head_on', 'heldout_use_for_selection': 'prohibited', 'ppo': {'rollout_steps': 2048, 'learning_rate': 0.0003, 'gamma': 0.99, 'gae_lambda': 0.95, 'clip_coef': 0.2, 'value_coef': 0.5, 'entropy_coef': 0.005, 'max_grad_norm': 0.5, 'update_epochs': 10, 'minibatch_size': 256}, 'policy': {'hidden_dim': 128}, 'geometry_reward': {'source': 'frozen_profile_weighted_geometry_progress_v1', 'progress_weight': 2.0, 'alignment_weight': 0.1, 'terminal_ego_crash_oob_penalty': 2.0, 'physical_command_saturation_penalty': 0.05, 'intent_error_clip': 2.0}}"
+    },
+    {
+      "id": "runtime_template_hash",
+      "passed": true,
+      "detail": "E:\\uav-vpp-guidance-five-state-heldout-envelope-v1\\config\\experiment\\train_thesis_five_state_shared_skills_geometry_v1.yaml"
+    },
+    {
+      "id": "pilot_runtime_registry",
+      "passed": true,
+      "detail": "E:\\uav-vpp-guidance-five-state-heldout-envelope-v1\\config\\experiment\\thesis_defext_rangeext_feasibility_pilot_v1_runtime_registry.yaml"
     },
     {
       "id": "preregistered_thresholds",

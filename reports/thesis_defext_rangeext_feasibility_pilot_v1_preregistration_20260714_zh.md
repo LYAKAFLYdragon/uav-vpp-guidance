@@ -10,6 +10,8 @@
 
 本 pilot 不训练高层 PPO，不选择 profile，不改变 P3 encoder、预测器、VPP、制导或 PID，不回答五态势整体架构是否有效，也不使用 win rate 作为主要优化或通过依据。
 
+所有方法统一启用冻结 taxonomy AoA60 attack-zone 语义：initial HP `100`、damage per step `0.5`、close-range `3 km`、maximum AoA `60 deg`。该设置只用于攻击区暴露、HP 与 secondary combat telemetry；primary geometry reward 和通过门不使用 win rate。
+
 ## 2. 冻结实现与前置证据
 
 - Implementation clean SHA：`8cec8f0c0b3cac1c50adbfc1581b06d45df09d8e`。
@@ -77,6 +79,7 @@ Dev、heldout、v2 与 train support 的 package signature 均不重合。
 - P3 encoder、预测器、VPP、guidance、PID 全冻结。
 - PPO 与 geometry reward 参数在 [pilot config](E:/uav-vpp-guidance-five-state-heldout-envelope-v1/config/experiment/thesis_defext_rangeext_feasibility_pilot_v1.yaml) 中固定，训练开始后禁止修改。
 - checkpoint 仅按 Dev12 固定时间点选择；heldout 不参与选择。
+- Dev checkpoint 选择规则固定为 minimax：对每个 checkpoint 分别计算三个对手的 candidate-vs-head-on mean paired intent-loss delta，取其中最差值；选择该最差值最小的 checkpoint。不得使用 opponent pooling、win rate 或 heldout 指标选择。
 
 这是 feasibility pilot，不用于宣称 seed 稳健性。若 pilot 为正，后续正式实验必须另行预注册多 seed replication。
 
@@ -150,3 +153,7 @@ Win rate、HP advantage 和 terminal mix 只作背景，不可替代 primary geo
 ## 12. 当前授权状态
 
 本预注册只完成设计与独立复核。`training_permitted=false`、`pilot_execution_permitted=false`、`baseline_evaluation_permitted=false`。任何训练或评估必须在新的用户授权后，先验证 clean SHA、fresh output root 和所有资产 hash，再开始执行。
+
+## 13. Pre-Execution Readiness Amendment
+
+在任何 pilot 数据产生前，补齐了原 config 中未显式列出的 PPO 实现常量与 checkpoint 选择规则：`value_coef=0.5`、`max_grad_norm=0.5`、MLP hidden dimension `128`、episode horizon `260`、最大 episode attempts `2000`，以及上述 minimax Dev 选择规则。这些值沿用已经冻结的 P4 实现默认值，不来自本 pilot 的任何结果，也不改变研究问题、方法矩阵、场景、reward、效果门或 safety stop rule。

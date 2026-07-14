@@ -31,12 +31,18 @@ def test_preregistration_is_design_only_and_fixes_skill_profile_and_methods():
     assert config["fixed_contract"]["skill"] == "defensive_extension"
     assert config["fixed_contract"]["profile"] == "range_extension"
     assert config["fixed_contract"]["routing_enabled"] is False
+    assert config["fixed_contract"]["attack_zone"]["enabled"] is True
+    assert config["fixed_contract"]["attack_zone"]["close_range_max_aoa_deg"] == 60.0
     assert set(config["methods"]) == {
         "candidate_fixed_defensive_extension",
         "frozen_fixed_head_on",
         "frozen_fixed_crossing",
     }
     assert config["methods"]["candidate_fixed_defensive_extension"]["checkpoint"] is None
+    assert config["proposed_training"]["ppo"]["value_coef"] == 0.5
+    assert config["proposed_training"]["ppo"]["max_grad_norm"] == 0.5
+    assert config["proposed_training"]["policy"]["hidden_dim"] == 128
+    assert config["proposed_training"]["checkpoint_selection_rule"] == "minimize_worst_opponent_mean_paired_intent_loss_auc20_delta_vs_head_on"
 
 
 def test_dev12_and_heldout24_are_reproducible_and_disjoint_from_v2():

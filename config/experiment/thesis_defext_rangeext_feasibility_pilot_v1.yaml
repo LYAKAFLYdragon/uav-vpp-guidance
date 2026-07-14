@@ -29,6 +29,10 @@ sources:
   v2_manifest: config/experiment/manifests/thesis_phase_reachability_v2_run_in_handoff_r1.yaml
   v2_payload_sha256: 5ffdaa4bc248bf40c1532b13c8030dca43240711f5751cf8c4f26217525cfaae
   opponent_registry: config/experiment/thesis_five_state_shared_intent_v1_opponent_registry.yaml
+  pilot_runtime_registry: config/experiment/thesis_defext_rangeext_feasibility_pilot_v1_runtime_registry.yaml
+  pilot_runtime_registry_sha256: c87edfed4be69a8293a889c9caa55c520fdab7dd93c44c9c6e057be869f435c5
+  runtime_template: config/experiment/train_thesis_five_state_shared_skills_geometry_v1.yaml
+  runtime_template_sha256: 2a9fb82721d82cd67e13e08157d5cc9d9eac3deafa04b12e253c8b6098c38806
 fixed_contract:
   skill: defensive_extension
   profile: range_extension
@@ -45,6 +49,13 @@ fixed_contract:
   prediction_reward: prohibited
   policy_history_padding: prohibited
   predictor_vpp_guidance_pid: frozen_existing_chain
+  attack_zone:
+    enabled: true
+    initial_hp: 100.0
+    damage_per_step: 0.5
+    close_range_max_km: 3.0
+    close_range_max_aoa_deg: 60.0
+    semantics: frozen_taxonomy_AoA60_mechanism_and_secondary_combat_telemetry
 physical_handoff:
   run_in_controller: legacy_static_oracle_task_gate
   run_in_task_registry_key: head_on
@@ -87,6 +98,8 @@ opponents:
 proposed_training:
   total_timesteps: 50000
   training_seed: 2026071402
+  max_high_level_steps_per_episode: 260
+  max_episode_attempts: 2000
   budget_extension: prohibited
   reward_change_after_start: prohibited
   scenario_support_change_after_start: prohibited
@@ -94,6 +107,7 @@ proposed_training:
   opponent_sampling: balanced_round_robin
   checkpoint_evaluation_steps: [10000, 20000, 30000, 40000, 50000]
   checkpoint_selection_split: dev12_only
+  checkpoint_selection_rule: minimize_worst_opponent_mean_paired_intent_loss_auc20_delta_vs_head_on
   heldout_use_for_selection: prohibited
   ppo:
     rollout_steps: 2048
@@ -101,9 +115,13 @@ proposed_training:
     gamma: 0.99
     gae_lambda: 0.95
     clip_coef: 0.2
+    value_coef: 0.5
     entropy_coef: 0.005
+    max_grad_norm: 0.5
     update_epochs: 10
     minibatch_size: 256
+  policy:
+    hidden_dim: 128
   geometry_reward:
     source: frozen_profile_weighted_geometry_progress_v1
     progress_weight: 2.0

@@ -3,6 +3,7 @@
 **状态：** `not_authorized`
 **Source ID：** `THESIS-GLOBAL-ADVANTAGE-V1-P1-R3-FRESH-ENV-REPRO-V1`
 **范围：** 仅 30 个 dev 场景 x 3 对手 x 3 repeat 的非学习 run-in 可重复性复核，共 270 episode。它不是训练、技能比较、消融或 formal held-out。
+**实现冻结 SHA：** `de20805190750a3684af81d68e87fb35d6cf04ca`
 
 ## 已具备的实现证据
 
@@ -28,14 +29,14 @@
 
 | 路径 | SHA-256 | 复核人 |
 |---|---|---|
-| `scripts/run_thesis_global_advantage_p1_r3_fresh_environment.py` | `TO_BE_FILLED_AFTER_IMPLEMENTATION_COMMIT` | `TO_BE_FILLED` |
-| `src/uav_vpp_guidance/evaluation/global_advantage_p1_r3_contract.py` | `TO_BE_FILLED_AFTER_IMPLEMENTATION_COMMIT` | `TO_BE_FILLED` |
-| `src/uav_vpp_guidance/evaluation/global_advantage_runin_contract.py` | `TO_BE_FILLED_AFTER_IMPLEMENTATION_COMMIT` | `TO_BE_FILLED` |
-| `src/uav_vpp_guidance/training/thesis_defext_rangeext_pilot.py` | `TO_BE_FILLED_AFTER_IMPLEMENTATION_COMMIT` | `TO_BE_FILLED` |
-| `src/uav_vpp_guidance/training/thesis_shared_skill_geometry.py` | `TO_BE_FILLED_AFTER_IMPLEMENTATION_COMMIT` | `TO_BE_FILLED` |
-| `src/uav_vpp_guidance/envs/tracking_env.py` | `TO_BE_FILLED_AFTER_IMPLEMENTATION_COMMIT` | `TO_BE_FILLED` |
-| `src/uav_vpp_guidance/envs/jsbsim_env.py` | `TO_BE_FILLED_AFTER_IMPLEMENTATION_COMMIT` | `TO_BE_FILLED` |
-| `src/uav_vpp_guidance/hierarchy/specialist_policy.py` | `TO_BE_FILLED_AFTER_IMPLEMENTATION_COMMIT` | `TO_BE_FILLED` |
+| `scripts/run_thesis_global_advantage_p1_r3_fresh_environment.py` | `7ce61f2766f6784f82fdcc40b1546f914a8f93212e0fd7eefc4b9da7b22d463d` | `PENDING_INDEPENDENT_REVIEW` |
+| `src/uav_vpp_guidance/evaluation/global_advantage_p1_r3_contract.py` | `713f68d4daa608800b908ac13b2c0dbadb4494997d1cd764a74ea68a748e1ff5` | `PENDING_INDEPENDENT_REVIEW` |
+| `src/uav_vpp_guidance/evaluation/global_advantage_runin_contract.py` | `314b742c7417fce2fa7001965d69faba6f1934bf3e05d72ef5f3d9b7787b65df` | `PENDING_INDEPENDENT_REVIEW` |
+| `src/uav_vpp_guidance/training/thesis_defext_rangeext_pilot.py` | `c598738dfd7a548d642079fef9eb23bdb9d71fb94a8d7575826ae56505d52fc5` | `PENDING_INDEPENDENT_REVIEW` |
+| `src/uav_vpp_guidance/training/thesis_shared_skill_geometry.py` | `4de550c2d405e657004dfb9aece07ecea8f8782f4efbac4b0d859b136a51d6a8` | `PENDING_INDEPENDENT_REVIEW` |
+| `src/uav_vpp_guidance/envs/tracking_env.py` | `7596f6b7250c52f76db5c7612496a1f5afcbb2bdd2dba934ce066b9c4f3805a3` | `PENDING_INDEPENDENT_REVIEW` |
+| `src/uav_vpp_guidance/envs/jsbsim_env.py` | `e22464927bcf98db06c0d6fe97e0747a4454480deae2d9810a69bcc5305828bb` | `PENDING_INDEPENDENT_REVIEW` |
+| `src/uav_vpp_guidance/hierarchy/specialist_policy.py` | `fbc64964a6056382602e3fbe3ca802be13e915677b597b8b0c03dd9b7e5ff3ce` | `PENDING_INDEPENDENT_REVIEW` |
 
 ## 独立复核项
 

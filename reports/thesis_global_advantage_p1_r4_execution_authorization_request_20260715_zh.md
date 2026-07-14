@@ -1,6 +1,6 @@
 # P1 R4 一次性执行授权请求
 
-**状态：** `implementation_frozen_not_authorized`
+**状态：** `one_shot_execution_authorized_not_started`
 **Source ID：** `THESIS-GLOBAL-ADVANTAGE-V1-P1-R4-FRESH-ENV-REPRO-V1`
 **输出根：** `E:/uav-vpp-guidance-five-state-heldout-envelope-v1-results/global_advantage_v1_p1_r4_fresh_environment`
 
@@ -29,8 +29,10 @@ R3 的零 episode 实现失败来自 `CombatHPManager.last_info.combat_time_to_k
 - [x] R4 implementation 与测试已在新的 clean SHA 冻结。
 - [x] R4 config 的 source/checkpoint/code-file SHA 已填写并独立复核。
 - [x] R4 output root 不存在，磁盘空闲空间不少于 120 GB。
-- [ ] 一次性授权仅允许 30 dev 场景 x 3 对手 x 3 repeat 的非学习复核。
+- [x] 一次性授权仅允许 30 dev 场景 x 3 对手 x 3 repeat 的非学习复核。
 
 R4 的通过门仍为 90/90 cell 的完整 reset envelope、首个双方动作、trajectory、boundary 与 terminal 等价；任何失败都为 `runin_protocol_not_reproducible_do_not_train`，不允许 rerun 或训练。
 
 授权时仅允许以下三项一致修改：将 `execution_permitted` 改为 `true`，把 `status` 改为已授权状态，并在本文件与 goal checklist 记录授权时间。任何代码、资产、场景、对手、阈值或输出根变化都会使授权失效。
+
+**授权记录（2026-07-15）：** 执行范围固定为 30 个 dev 场景、3 个对手和 3 个顺序 repeat，共 270 条 non-learning fresh-process episode。`training_permitted`、`tuning_permitted`、`policy_change_permitted`、`vpp_change_permitted`、`guidance_change_permitted`、`pid_change_permitted` 与 `heldout_evaluation_permitted` 均持续为 `false`。运行结束后无论 PASS 或 NO-GO 都冻结输出，不重跑任何 cell。

@@ -1,6 +1,6 @@
 schema_version: 1
 source_id: THESIS-GLOBAL-ADVANTAGE-V1-P1-R3-FRESH-ENV-REPRO-V1
-status: design_implemented_not_authorised_to_execute
+status: authorised_one_shot_nonlearning_execution
 
 experiment:
   name: noncanonical_thesis_global_advantage_v1_p1_r3_fresh_environment
@@ -10,9 +10,27 @@ experiment:
 global_advantage_p1_r3:
   source_id: THESIS-GLOBAL-ADVANTAGE-V1-P1-R3-FRESH-ENV-REPRO-V1
   authorization:
-    execution_permitted: false
-    required_implementation_git_sha: null
-    authorized_code_files: []
+    execution_permitted: true
+    required_implementation_git_sha: b8deed5987a14a69a831514c14736fdb8c88db28
+    authorized_code_files:
+      - path: scripts/run_thesis_global_advantage_p1_r3_fresh_environment.py
+        sha256: 945efab8f0e63f1f31cb1aa6337d73590ca2d63bcc9d6581fdece670da62680f
+      - path: src/uav_vpp_guidance/evaluation/global_advantage_p1_r3_contract.py
+        sha256: 5d0acae9f38e5ab146b06a2686917e16466f560c96276c2713bcfcb2ea3282d0
+      - path: src/uav_vpp_guidance/evaluation/global_advantage_runin_contract.py
+        sha256: 314b742c7417fce2fa7001965d69faba6f1934bf3e05d72ef5f3d9b7787b65df
+      - path: src/uav_vpp_guidance/training/thesis_defext_rangeext_pilot.py
+        sha256: c598738dfd7a548d642079fef9eb23bdb9d71fb94a8d7575826ae56505d52fc5
+      - path: src/uav_vpp_guidance/training/thesis_shared_skill_geometry.py
+        sha256: 4de550c2d405e657004dfb9aece07ecea8f8782f4efbac4b0d859b136a51d6a8
+      - path: src/uav_vpp_guidance/envs/tracking_env.py
+        sha256: 7596f6b7250c52f76db5c7612496a1f5afcbb2bdd2dba934ce066b9c4f3805a3
+      - path: src/uav_vpp_guidance/envs/jsbsim_env.py
+        sha256: e22464927bcf98db06c0d6fe97e0747a4454480deae2d9810a69bcc5305828bb
+      - path: src/uav_vpp_guidance/hierarchy/specialist_policy.py
+        sha256: fbc64964a6056382602e3fbe3ca802be13e915677b597b8b0c03dd9b7e5ff3ce
+      - path: src/uav_vpp_guidance/guidance/overload_rollrate.py
+        sha256: f1f7ee541a4050b7297d004d054d6cf2d6f34bfb090396c71fb5a4952b02333a
     training_permitted: false
     tuning_permitted: false
     policy_change_permitted: false

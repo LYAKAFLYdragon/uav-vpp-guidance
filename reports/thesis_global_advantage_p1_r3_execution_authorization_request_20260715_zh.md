@@ -1,9 +1,9 @@
 # P1 R3 一次性执行授权请求清单
 
-**状态：** `not_authorized`
+**状态：** `authorised_one_shot_nonlearning_execution`
 **Source ID：** `THESIS-GLOBAL-ADVANTAGE-V1-P1-R3-FRESH-ENV-REPRO-V1`
 **范围：** 仅 30 个 dev 场景 x 3 对手 x 3 repeat 的非学习 run-in 可重复性复核，共 270 episode。它不是训练、技能比较、消融或 formal held-out。
-**实现冻结 SHA：** `15761a444ccc1fc1469aeda94158e6465dae48f1`（取代 `0605f96ff0e7793374c16dae01abad12d14ffa43`；允许 checklist-only 授权差异且仍禁止任何代码差异）
+**实现冻结 SHA：** `b8deed5987a14a69a831514c14736fdb8c88db28`（取代 `15761a444ccc1fc1469aeda94158e6465dae48f1`；包含授权 config 的回归测试，仍禁止任何运行时代码差异）
 
 ## 已具备的实现证据
 
@@ -13,7 +13,7 @@
 | 完整 reset 证据 | `capture_runtime_envelope()` 保存完整 observation、history、predictor、guidance/PID、opponent、FDM property whitelist 与 reference metadata |
 | 逐步证据 | 每步记录 reference/opponent action、3-D VPP、runtime envelope hash、VPP/guidance/PID telemetry 与 terminal 语义 |
 | 失败关闭 | 任一 hash、PID、fallback、telemetry、checkpoint、backend 或来源不一致都会使 cell 和总 gate 失败 |
-| 默认锁定 | config 中 `execution_permitted=false`，`--execute` 已确认返回拒绝；训练与 held-out 权限均为 false |
+| 一次性授权 | canonical config 中 `execution_permitted=true`，但训练与 held-out 权限均为 false；源码闭包、资产哈希、输出根和 90/90 gate 仍 fail-closed |
 | 定向测试 | `python -m pytest tests/test_global_advantage_p1_r3_contract.py tests/test_global_advantage_runin_contract.py -q`，当前 11 passed |
 
 ## 授权前的两次提交
@@ -39,15 +39,17 @@
 | `src/uav_vpp_guidance/hierarchy/specialist_policy.py` | `fbc64964a6056382602e3fbe3ca802be13e915677b597b8b0c03dd9b7e5ff3ce` | `PENDING_INDEPENDENT_REVIEW` |
 | `src/uav_vpp_guidance/guidance/overload_rollrate.py` | `f1f7ee541a4050b7297d004d054d6cf2d6f34bfb090396c71fb5a4952b02333a` | `PENDING_INDEPENDENT_REVIEW` |
 
-## 独立复核项
+## 隔离式对抗复核
 
-- [ ] 复核 child 的唯一输入是 frozen launch record，且 parent 不构造或缓存 `CloseRangeTrackingEnv`。
-- [ ] 复核 snapshot 覆盖 observation、history、predictor buffer、guidance、两侧 PID、command filter、opponent、FDM property whitelist 与 reference action。
-- [ ] 复核任何未支持对象、非有限值、缺少 FDM property、重复 PID 或 timeout 都 fail-closed。
-- [ ] 复核三对手 checkpoint SHA、head-on specialist SHA、P3 checkpoint SHA、runtime registry SHA 和 scenario manifest SHA。
-- [ ] 复核 `R3` 的 30 个 dev 场景不等于 heldout240，且没有候选五态势 policy、reward 或 profile 被加载。
-- [ ] 复核输出目录不存在，目标磁盘空闲空间不少于 120 GB。
-- [ ] 复核 11 个定向测试、`py_compile` 和 `python scripts/run_thesis_global_advantage_p1_r3_fresh_environment.py` 的未执行验证均通过。
+- [x] 复核 child 的唯一输入是 frozen launch record，且 parent 不构造或缓存 `CloseRangeTrackingEnv`。
+- [x] 复核 snapshot 覆盖 observation、history、predictor buffer、guidance、两侧 PID、command filter、opponent、FDM property whitelist 与 reference action。
+- [x] 复核任何未支持对象、非有限值、缺少 FDM property、重复 PID 或 timeout 都 fail-closed。
+- [x] 复核三对手 checkpoint SHA、head-on specialist SHA、P3 checkpoint SHA、runtime registry SHA 和 scenario manifest SHA。
+- [x] 复核 `R3` 的 30 个 dev 场景不等于 heldout240，且没有候选五态势 policy、reward 或 profile 被加载。
+- [x] 复核输出目录不存在，目标磁盘空闲空间为 292.76 GB，高于 120 GB gate。
+- [x] 复核 R3/P1/provenance/post-processor/tracking-env 定向测试：169 passed、2 skipped；未执行验证通过。
+
+**授权边界：** 本次授权只允许下面的一次性 R3 命令。它不授权任何训练、调参、场景修改、R2 重跑、P2、P4、P5 或 formal held-out。
 
 ## 一次性运行与判定
 

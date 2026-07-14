@@ -141,11 +141,11 @@ def _envelope(
     )
 
 
-def test_r3_config_is_nonlearning_and_not_authorised_to_execute():
+def test_r3_config_is_nonlearning_and_authorised_for_one_preflight_only():
     config = yaml.safe_load(CONFIG.read_text(encoding="utf-8"))
     plan = r3.build_p1_r3_plan(config)
     assert plan.source_id == r3.SOURCE_ID
-    assert plan.execution_permitted is False
+    assert plan.execution_permitted is True
     assert plan.scenario_count == 30
     assert plan.opponents == r3.OPPONENTS
     assert plan.child_timeout_seconds == 900

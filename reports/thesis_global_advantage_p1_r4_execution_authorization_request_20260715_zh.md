@@ -1,8 +1,16 @@
 # P1 R4 一次性执行授权请求
 
-**状态：** `not_authorized`
+**状态：** `implementation_frozen_not_authorized`
 **Source ID：** `THESIS-GLOBAL-ADVANTAGE-V1-P1-R4-FRESH-ENV-REPRO-V1`
 **输出根：** `E:/uav-vpp-guidance-five-state-heldout-envelope-v1-results/global_advantage_v1_p1_r4_fresh_environment`
+
+## 已冻结的实现
+
+- **Implementation SHA：** `5af60fa1a2f7fb0d3722601be393b7008a29b712`
+- **合同测试：** `tests/test_global_advantage_p1_r3_contract.py` 为 `6 passed`。
+- **非执行预检：** `validated_not_executed`；`execution_permitted=false`、30 个场景、270 个计划 episode。
+- **运行时文件：** runner、R4 contract、run-in contract、pilot adapter、P3 encoder adapter、tracking environment 与 command post-processor 的 SHA-256 已写入 R4 config；执行时逐文件复核。
+- **空间与输出：** R4 output root 当前不存在；E: 可用空间约 292.8 GB，高于 120 GB 下限。
 
 ## R3 后的唯一修复
 
@@ -10,9 +18,11 @@ R3 的零 episode 实现失败来自 `CombatHPManager.last_info.combat_time_to_k
 
 ## 授权前条件
 
-- [ ] R4 implementation 与测试已在新的 clean SHA 冻结。
-- [ ] R4 config 的 source/checkpoint/code-file SHA 已填写并独立复核。
-- [ ] R4 output root 不存在，磁盘空闲空间不少于 120 GB。
+- [x] R4 implementation 与测试已在新的 clean SHA 冻结。
+- [x] R4 config 的 source/checkpoint/code-file SHA 已填写并独立复核。
+- [x] R4 output root 不存在，磁盘空闲空间不少于 120 GB。
 - [ ] 一次性授权仅允许 30 dev 场景 x 3 对手 x 3 repeat 的非学习复核。
 
 R4 的通过门仍为 90/90 cell 的完整 reset envelope、首个双方动作、trajectory、boundary 与 terminal 等价；任何失败都为 `runin_protocol_not_reproducible_do_not_train`，不允许 rerun 或训练。
+
+授权时仅允许以下三项一致修改：将 `execution_permitted` 改为 `true`，把 `status` 改为已授权状态，并在本文件与 goal checklist 记录授权时间。任何代码、资产、场景、对手、阈值或输出根变化都会使授权失效。

@@ -172,5 +172,6 @@
 - [x] 已实现 R3 的默认锁定 config、独立 child runner、完整 reset/runtime/FDM state exporter 与字段敏感性 tests；`execution_permitted=false`，未执行任何 R3 episode。
 - [x] 已建立非授权性质的运行前请求清单：`reports/thesis_global_advantage_p1_r3_execution_authorization_request_20260715_zh.md`。
 - [x] R3 在首个 reset-runtime snapshot 因 `combat_time_to_kill=NaN` 的未编码语义哨兵终止，`completed_episode_count=0`；已保留为 implementation failure，见 `reports/thesis_global_advantage_p1_r3_implementation_failure_20260715_zh.md`。
-- [ ] **当前唯一允许动作：冻结、复核并一次性授权新的 P1 R4；按 90/90 gate 冻结 PASS 或 NO-GO；不得重跑 R3、失败 cell 或开展任何训练。**
+- [x] R4 implementation 已冻结于 `5af60fa1a2f7fb0d3722601be393b7008a29b712`；合同测试 `6 passed`，非执行 preflight 已验证 30 场景、三对手、三 repeat 共 270 条计划 episode，且仍为 `execution_permitted=false`。
+- [ ] **当前唯一允许动作：对冻结 R4 做一次性执行授权，并按 90/90 gate 冻结 PASS 或 NO-GO；不得重跑 R3、失败 cell 或开展任何训练。**
 - [ ] P2--P8 均未授权；尤其不允许以“追求全场景优势”为由绕过 P1/P3 的负证据和 stop rule。

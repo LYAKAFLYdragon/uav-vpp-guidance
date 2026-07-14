@@ -11,8 +11,22 @@ global_advantage_p1_r3:
   source_id: THESIS-GLOBAL-ADVANTAGE-V1-P1-R4-FRESH-ENV-REPRO-V1
   authorization:
     execution_permitted: false
-    required_implementation_git_sha: null
-    authorized_code_files: []
+    required_implementation_git_sha: 5af60fa1a2f7fb0d3722601be393b7008a29b712
+    authorized_code_files:
+      - path: scripts/run_thesis_global_advantage_p1_r3_fresh_environment.py
+        sha256: 6d8427b96512a306156412c61a4ca5326ca592f6a1df169d3137742e37a892d1
+      - path: src/uav_vpp_guidance/evaluation/global_advantage_p1_r3_contract.py
+        sha256: b511c1874d4025f7452e04ebbbfbf9aa58160da21273f5aa85f65200b5781ce6
+      - path: src/uav_vpp_guidance/evaluation/global_advantage_runin_contract.py
+        sha256: 314b742c7417fce2fa7001965d69faba6f1934bf3e05d72ef5f3d9b7787b65df
+      - path: src/uav_vpp_guidance/training/thesis_defext_rangeext_pilot.py
+        sha256: c598738dfd7a548d642079fef9eb23bdb9d71fb94a8d7575826ae56505d52fc5
+      - path: src/uav_vpp_guidance/training/thesis_shared_skill_geometry.py
+        sha256: 4de550c2d405e657004dfb9aece07ecea8f8782f4efbac4b0d859b136a51d6a8
+      - path: src/uav_vpp_guidance/envs/tracking_env.py
+        sha256: 7596f6b7250c52f76db5c7612496a1f5afcbb2bdd2dba934ce066b9c4f3805a3
+      - path: src/uav_vpp_guidance/guidance/overload_rollrate.py
+        sha256: f1f7ee541a4050b7297d004d054d6cf2d6f34bfb090396c71fb5a4952b02333a
     training_permitted: false
     tuning_permitted: false
     policy_change_permitted: false

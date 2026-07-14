@@ -3,7 +3,7 @@
 **状态：** `not_authorized`
 **Source ID：** `THESIS-GLOBAL-ADVANTAGE-V1-P1-R3-FRESH-ENV-REPRO-V1`
 **范围：** 仅 30 个 dev 场景 x 3 对手 x 3 repeat 的非学习 run-in 可重复性复核，共 270 episode。它不是训练、技能比较、消融或 formal held-out。
-**实现冻结 SHA：** `0605f96ff0e7793374c16dae01abad12d14ffa43`（取代 `152aa92c8864211a14ec15db6fba7647842b0d56`；包含 post-processor reset 修复与授权闭包锁）
+**实现冻结 SHA：** `15761a444ccc1fc1469aeda94158e6465dae48f1`（取代 `0605f96ff0e7793374c16dae01abad12d14ffa43`；允许 checklist-only 授权差异且仍禁止任何代码差异）
 
 ## 已具备的实现证据
 
@@ -29,7 +29,7 @@
 
 | 路径 | SHA-256 | 复核人 |
 |---|---|---|
-| `scripts/run_thesis_global_advantage_p1_r3_fresh_environment.py` | `ecd2f7e522fdb827503122af70b1e83313afdfa6684de1b21a3310121151ccd3` | `PENDING_INDEPENDENT_REVIEW` |
+| `scripts/run_thesis_global_advantage_p1_r3_fresh_environment.py` | `945efab8f0e63f1f31cb1aa6337d73590ca2d63bcc9d6581fdece670da62680f` | `PENDING_INDEPENDENT_REVIEW` |
 | `src/uav_vpp_guidance/evaluation/global_advantage_p1_r3_contract.py` | `5d0acae9f38e5ab146b06a2686917e16466f560c96276c2713bcfcb2ea3282d0` | `PENDING_INDEPENDENT_REVIEW` |
 | `src/uav_vpp_guidance/evaluation/global_advantage_runin_contract.py` | `314b742c7417fce2fa7001965d69faba6f1934bf3e05d72ef5f3d9b7787b65df` | `PENDING_INDEPENDENT_REVIEW` |
 | `src/uav_vpp_guidance/training/thesis_defext_rangeext_pilot.py` | `c598738dfd7a548d642079fef9eb23bdb9d71fb94a8d7575826ae56505d52fc5` | `PENDING_INDEPENDENT_REVIEW` |

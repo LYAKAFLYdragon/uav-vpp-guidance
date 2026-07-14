@@ -1,0 +1,169 @@
+# 五态势全场景实用优势 Goal Checklist
+
+**Goal 状态：** Active
+**日期：** 2026-07-14
+**研发身份：** `noncanonical_thesis_extension`
+**目标：** 在预注册、可枚举的五态势 x 高度 x 镜像 x 未见飞行包线 x 三对手 JSBSim 集合内，建立安全、可复现且具有稳定实用优势的五态势共享意图分层飞控方法。
+
+## 0. 先冻结“优势”的可验证含义
+
+“所有可能空战状态均优于所有方法”不可穷尽也不可证伪。本 goal 的正式对象是一个在开始前冻结的 `GLOBAL-ADVANTAGE-V1` evaluation envelope：
+
+| 维度 | 冻结内容 | 数量 |
+|---|---|---:|
+| 初始态势 | `advantage`、`head_on`、`disadvantage`、`neutral`、`crossing_entry` | 5 |
+| 高度条件 | `own_below`、`co_altitude`、`own_above` | 3 |
+| 镜像 | `negative`、`positive` | 2 |
+| 未见 range-speed 包线 | 两个未出现在训练和 dev 的合法组合 | 2 |
+| evaluation seed | 每个几何 cell 四个独立 seed | 4 |
+| 对手 | expert、end-to-end、independent PPO/VPP | 3 |
+
+正式 held-out 共 `5 x 3 x 2 x 2 x 4 = 240` episode / method / opponent / policy seed。三组对手永远分开报告，禁止 pooled superiority claim。
+
+### 0.1 两层成功门
+
+| 层级 | 通过条件 | 允许的表述 |
+|---|---|---|
+| 全 cell 安全非劣 | 每个 `state x height x mirror x envelope x opponent` 聚合 cell 对冻结双技能 baseline 的胜率差 `>= -0.05`，ego crash/OOB 差 `<= +0.05`，且无 contract failure | “在冻结包线内未出现实用退化” |
+| 全态势实用优势 | 五个初始态势中每一个均在至少 `2/3` opponents 的 state-level 配对结果上达到胜率差 `>= +0.05`；第三个 opponent 不低于 `-0.05` | “在该包线内跨五态势表现出稳定实用优势” |
+| 统计可信度 | 每个 state x opponent 报告 `N_total/N_resolved`、terminal mix、Wilson CI、scenario-clustered paired-bootstrap CI；CI 不支持时降级为实用证据，不称显著优越 | “实用优势，不等同于普适或统计显著优势” |
+
+任何单一 micro-cell 的小样本反例都不得被掩盖；它会进入 failure atlas。该设计追求的是“所有 cell 安全非劣 + 所有态势总体实用占优”，不是不可信的逐 episode 必胜承诺。
+
+## 1. P0：主线隔离与不可变边界
+
+- [ ] 从当前 clean SHA 建立新的 goal worktree 和全新 output root；不得覆盖 `CAN-20260705`、Taxonomy30、P4 或 defensive-extension pilot 输出。
+- [ ] 建立 `GLOBAL-ADVANTAGE-V1` source ID、asset manifest、resolved config、容量预算和 retention policy。
+- [ ] 固定 canonical 双技能 PPO 为主要 baseline；head-on、crossing、static oracle 仅作为机制参考，不与主要 baseline 混合统计。
+- [ ] 冻结三 opponent 的 checkpoint、config、feature contract 和 capability card；缺任一 opponent 即阻塞正式训练。
+- [ ] 保持预测器、predicted-target VPP 接口、3-D VPP action head、guidance law、PID、JSBSim、终端规则和 AoA60 限制不变。
+- [ ] 禁止 prediction reward、事后修改 taxonomy、用 held-out 选 checkpoint、隐式 task bit、checkpoint fallback 或 backend fallback。
+
+**P0 验收：** 所有输入 SHA/shape 通过，output root 为空，磁盘安全余量 `>= 120 GB`，并可一条命令验证 manifest。
+
+## 2. P1：先修复评价可识别性
+
+这是当前唯一允许进入实现的阶段。此前 pilot 显示：同一 scenario/seed 在方法尚未分叉的 run-in 阶段就可能产生不同 handoff metadata，且 held-out 未保存逐步控制 telemetry。
+
+### 2.1 Run-in deterministic-equivalence preflight
+
+- [ ] 新建仅 dev 的 `GLOBAL-ADVANTAGE-V1-RUNIN-PREFLIGHT`，使用与正式 held-out 不重合的 `5 x 3 x 2 = 30` 场景。
+- [ ] 对每个 opponent/scenario/seed，独立运行三次完全相同的 run-in；不加载 candidate、不开启 post-handoff policy。
+- [ ] 每次写入 reset state hash、每步 quantized physical-state hash、10-frame history hash、predictor state hash、run-in action hash、handoff state hash 和 terminal reason。
+- [ ] 对三种未来 method order permutation 重复 preflight，排查跨 episode state leakage。
+- [ ] hash 比较采用冻结序列化和明确量化精度；禁止只比较 handoff step 或 terminal label。
+- [ ] 一旦任一 cell 的 reset/handoff hash 不一致，输出可复现故障包并停止，不得启动训练或性能评估。
+
+**P1 gate：** 所有 30 场景 x 3 opponents x 3 repeats 均达到 reset、run-in、handoff 一致；任何 backend/checkpoint/prediction/history fallback 均为零。
+
+### 2.2 Telemetry persistence contract
+
+- [ ] 每个 step 持久化：16-D base state、10-frame history hash、temporal embedding hash、dynamic taxonomy、phase、proposed/effective `(skill, profile)`、mask reason、normalized 3-D action、VPP 三轴偏置、guidance command、`n_z` command/actual、AoA、roll/speed/altitude、PID saturation、prediction valid/fallback、攻击区、HP 和 terminal reason。
+- [ ] 每个 episode 存储 handoff snapshot hash 与 raw telemetry path；任何缺字段、padding、NaN/Inf、异常 reset 或 fallback 都要 fail-closed。
+- [ ] 训练期只保留抽样 telemetry；dev、ablation 和 held-out 保存完整 telemetry，并写入 artifact manifest 与 SHA-256。
+- [ ] 增加 schema test、round-trip reader test、disk-budget test 和 run-to-run hash-equivalence test。
+
+**P1 stop rule：** 不为获得一致性而放松精度、删除 mismatch cell 或改动环境种子；问题先作为 simulator/evaluator reproducibility 缺陷修复并独立复核。
+
+## 3. P2：冻结 GLOBAL-ADVANTAGE-V1 场景与对手压力基线
+
+- [ ] 用连续合法采样器生成 train distribution；train 不得含 dev30 或 heldout240 signature。
+- [ ] 固定 dev30 用于 checkpoint 选择：五态势 x 高度 x 镜像各一条，不得用于正式声明。
+- [ ] 固定 heldout240：每个几何 cell 两个未见 range-speed package x 四个 evaluation seed；完成 disjointness、镜像、物理可达性和 taxonomy unit tests。
+- [ ] 为每个 opponent 建立 capability card：共同 frozen reference policy 下的 target speed/altitude/specific energy、攻击区暴露、first-pass、post-merge/re-entry、terminal mix 与 crash/OOB。
+- [ ] 输出 `state x opponent x phase` coverage matrix；任何持久 phase 缺失均阻塞相关技能训练，不能靠增加 episode 数掩盖。
+- [ ] 在训练前冻结所有 advantage 判定、paired key、resolved-episode 语义、CI 方法、safety 门和 stop rule。
+
+**P2 验收：** 三 opponent 均有完整 capability card；所有 60 几何 cell 物理可达、metadata 完整、训练/dev/held-out 不相交。
+
+## 4. P3：先证明单个新增机制值得学习
+
+根据 P1 telemetry 的唯一归因选择分支；不得同时开启四技能。
+
+| P1 归因 | 允许的下一步 | 禁止的动作 |
+|---|---|---|
+| VPP action 导致 command/response 裕度破坏 | 先建立可解释 VPP feasibility projection，并做无学习 step-response/trajectory 测试 | 直接加 reward、加步数或训练四技能 |
+| guidance/PID 无法跟随可行 VPP | 修复执行接口并以固定 action replay 验证 | 将问题归咎于 PPO 或 profile |
+| 现有 crossing/head-on 已覆盖目标几何 | 设计冻结 phase-aware composition baseline | 声称“缺新技能” |
+| 两种既有技能均无法建立目标几何且执行链安全 | 起草一个新 Source ID 的单技能 pilot 预注册 | 自动解锁完整四技能训练 |
+
+- [ ] 每个单技能 pilot 使用新的 train/dev/held-out、固定 profile、固定 P3 encoder、三 opponent 分开门和一次性 held-out。
+- [ ] 开始前定义最小安全门、primary intent metric、secondary combat metric、paired handoff hash 条件和停止规则。
+- [ ] 仅当至少两个 opponents 同时通过实用改善与安全门，才允许将该技能加入共享库候选。
+
+## 5. P4：四共享技能库与七 profile 的阶段化训练
+
+仅在 P3 已给出至少一个安全、有效的新增机制后启动。
+
+- [ ] 冻结 66-D observation、P3 encoder、四技能 registry、七 profile compiler、validity mask 和三 opponent registry。
+- [ ] 每个技能先在其职责态势 x phase 支持域做几何预训练；每个 declared dynamic-state x phase cell 必须有足量真实、连续、无 padding 的样本。
+- [ ] 每个技能独立通过：66-D -> 3-D VPP contract、profile-conditioned input、VPP/guidance/PID safety、对手分开覆盖和 intent progress gate。
+- [ ] 所有技能通过后才进行三 opponent 平衡 combat finetune；每个 checkpoint 单独冻结 SHA。
+- [ ] 任何 skill 未过 gate，冻结该 skill 的负证据并停止完整库训练，不用其他 skill 的成功掩盖。
+
+**P4 验收：** 4/4 skills 分别通过覆盖、可执行性和安全门，且输出中不存在 checkpoint/backend/history/prediction fallback。
+
+## 6. P5：高层五态势共享意图 PPO
+
+- [ ] 仅用已冻结的四技能训练高层 PPO；高层输出 factorized `(skill, profile)`，mask 每步可审计。
+- [ ] 训练流程固定为：teacher/oracle imitation warm-start -> balanced multitask PPO -> dynamic-transition finetune。
+- [ ] 保留显式短时统计；P3 temporal encoder 默认冻结，仅在已预注册的单独 ablation 中允许小幅微调。
+- [ ] 连续 train distribution 三 opponent 平衡采样；dev30 仅用于 checkpoint selection 和 safety stop。
+- [ ] 训练三独立 policy seeds；所有 seed 共享相同资产、训练预算和选择规则。
+- [ ] 记录 state/phase/profile/skill dwell time、switch reason、mask intervention、VPP/PID telemetry 与 terminal semantics。
+
+**P5 gate：** 三 seed 中至少 `2/3` 通过 dev 安全非劣和五态势覆盖门；否则冻结为负证据，不进入 formal held-out。
+
+## 7. P6：完整消融矩阵
+
+在同一训练分布、同一三 opponent、同一 dev30 checkpoint rule 下完成下列对照；每个变体独立 seed，不跨变体挑 best run。
+
+| 方法 | 回答的问题 |
+|---|---|
+| 冻结双技能 PPO baseline | 现有主线水平 |
+| Full shared-intent | 完整方法 |
+| Full minus temporal encoder | 时序表征是否必要 |
+| Full minus profile conditioning | intent profile 是否有独立贡献 |
+| Fixed-skill / learned-profile | skill selection 的贡献 |
+| Learned-skill / fixed-profile | profile selection 的贡献 |
+| Best fixed existing specialist | 现有库是否已经足够 |
+| 安全 projection（若 P3 触发） | 安全接口是否解释性能变化 |
+
+- [ ] 报告每一 cell 的 paired delta、terminal mix、VPP/PID safety、mode/profile fraction 与 attack-zone/energy mechanism metrics。
+- [ ] Oracle 仅作为 privileged upper reference，不与学习方法合并胜率或作可部署基线。
+- [ ] 不使用 ablation 结果反向改变 full 方法的 held-out config。
+
+## 8. P7：一次性 GLOBAL-ADVANTAGE-V1 formal held-out
+
+- [ ] 只有 P0--P6 全部通过时才创建独立 clean worktree 和新 output root。
+- [ ] 在 heldout240 上对三 policy seeds、三 opponents、主要 baseline 和 full method 执行一次性评估。
+- [ ] 每个 episode 先验证 run-in/handoff state hash，再执行 policy；hash 不等价时该 cell 标记 contract failure，不进入 superiority 统计。
+- [ ] 输出 per-cell、state-level、opponent-level 和全 envelope 的结果；主文不合并 opponent，补充材料保存完整 telemetry、CI、raw paired outcomes 和 provenance bundle。
+- [ ] 预注册 winner rule：先判 safety/contract，再判全 cell 非劣，最后判全态势实用优势；不得只展示 aggregate win rate。
+- [ ] 完成后立即冻结结果；无论正负都不得更换场景、seed、训练预算、reward、mask 或重新运行同一 held-out。
+
+## 9. P8：论文与学术价值收口
+
+- [ ] 方法部分明确区分 learned skill/profile、taxonomy validity mask 和任何 deterministic physical safety override。
+- [ ] 结果按“五态势 x 三对手 x 关键阶段”展示，不将 dev 或 exploratory 数据写成 formal superiority。
+- [ ] 讨论三个层次：可执行性、安全边界、对手依赖；说明未覆盖的真实对抗、武器模型和飞行器模型外推限制。
+- [ ] 若 P7 通过：主张“在预注册 JSBSim envelope 内的跨五态势实用优势”。
+- [ ] 若 P7 不通过：主张“识别并量化了技能、路由、执行安全或对手压力的边界”，不虚构全场景优势。
+
+## 10. 每周决策板
+
+| 当前证据 | 本周唯一允许推进 | 不允许推进 |
+|---|---|---|
+| P1 未通过 | run-in reproducibility 与 telemetry contract | 任意性能训练或 held-out |
+| P1/P2 通过、P3 未判定 | 单机制 feasibility 预注册 | 四技能并行训练 |
+| P3 通过、P4 未通过 | 失败技能的真实 coverage/执行归因 | combat finetune 或 P5 |
+| P4 通过、P5 未通过 | 高层三 seed dev 训练 | formal held-out |
+| P5/P6 通过 | P7 一次性 formal held-out | 事后调参 |
+| P7 完成 | 论文证据整合与复现包 | 重跑以追逐更好数字 |
+
+## 11. 当前状态（2026-07-14）
+
+- [x] 已识别双技能 baseline、三 opponent、五态势 taxonomy、四 skills、七 profiles、P3 encoder 与既有 negative evidence。
+- [x] 已完成 defensive-extension pilot 的只读归因；其结论是 candidate-specific terminal safety signal 存在，但冻结 held-out 缺少逐步 telemetry 且 run-in metadata 不一致，不能确定根因。
+- [ ] **当前唯一 GO：P1 run-in deterministic-equivalence preflight 与 telemetry persistence contract。**
+- [ ] P2--P8 均未授权；尤其不允许以“追求全场景优势”为由绕过 P1/P3 的负证据和 stop rule。

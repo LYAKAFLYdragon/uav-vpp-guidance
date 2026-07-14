@@ -1,0 +1,43 @@
+{
+  "artifact_count": 6,
+  "artifact_sha256_manifest": {
+    "config/experiment/thesis_five_state_shared_skill_registry_v1.yaml": "2a06c21b9a8af4a94b7e0c3b644b2e3298d2f5b5c95dbf992d61c0cbfd7b4f92",
+    "src/p4_geometry_pretrain_gate.json": "144df30e2151d1f6d15fb3704432bec149c5f5e510a3388e6fe709e9e3b6c56a",
+    "src/skills/defensive_extension/geometry_pretrain_summary.json": "a92abf7d9f0686349128ea44b1fcdfa86bfaa8714d58ad8eb1e2bca2b908c24a",
+    "src/skills/lead_intercept/geometry_pretrain_summary.json": "e6046432c75bc3de5835f9967e480c9414e8bedf58239a16253b2e96c7ad7f38",
+    "src/skills/pursuit_conversion/geometry_pretrain_summary.json": "7f0cdcda23f5e750bf64208831f0af43484eeaae1dae3f1430648eee1347e9a4",
+    "src/skills/reentry_recovery/geometry_pretrain_summary.json": "69f95662f1d4fbae98c1388cb6922552e2be196be650b10e79b9faad4a2abe48"
+  },
+  "description": "Concrete preservation baseline for GEO-20260713-R1 P4 attribution audit. Records the pre-audit SHA256 manifest of the P4 artifact set and the frozen gate invariants. Written once (idempotent) to reflect the UNFIXED state; the Phase 4 preservation test asserts these hashes are byte-identical after the audit runs.",
+  "gate_thresholds": {
+    "minimum_geometry_phase_coverage_per_declared_cell": 2,
+    "minimum_intent_progress_fraction": 0.55
+  },
+  "gate_verdict": {
+    "all_skills_ready_for_combat_finetune": false,
+    "next_stage": "do_not_start_combat_finetune"
+  },
+  "p3_encoder_best_pt_sha256": "385663281a9c48c0416ea4d1a1bb8dc08ed64a0cfebb0f01083cbbb8bcfbdc59",
+  "passing_subchecks": {
+    "defensive_extension": {
+      "intent_progress": false,
+      "profile_conditioning_coverage": true,
+      "safety": true
+    },
+    "lead_intercept": {
+      "intent_progress": false,
+      "profile_conditioning_coverage": true,
+      "safety": true
+    },
+    "pursuit_conversion": {
+      "intent_progress": false,
+      "profile_conditioning_coverage": true,
+      "safety": true
+    },
+    "reentry_recovery": {
+      "intent_progress": true,
+      "profile_conditioning_coverage": true,
+      "safety": true
+    }
+  }
+}

@@ -1,0 +1,54 @@
+includes:
+  - ./jsbsim_hrl_thesis_five_state_heldout40_v1.yaml
+
+experiment:
+  name: noncanonical_thesis_five_state_phase_feasible_disadvantage_v1
+  description: >
+    Evaluation-only physical phase-entry probe. It preserves all frozen assets
+    and evaluates only the common static oracle task-gate reference.
+
+phase_feasible_disadvantage_protocol:
+  source_id: THESIS-FIVE-STATE-PHASE-FEASIBLE-DISADVANTAGE-V1
+  evaluation_only: true
+  training_permitted: false
+  tuning_permitted: false
+  reference_controller: legacy_static_oracle_task_gate
+  opponents:
+    - expert
+    - end_to_end
+    - independent_ppo_vpp
+  purpose: >
+    Establish physical post-merge and re-entry reachability, not combat
+    superiority, policy selection, checkpoint selection, or skill training.
+  stop_rule: >
+    A failed phase gate freezes negative evidence. It does not authorize
+    reward, VPP, guidance, PID, scenario, seed, or checkpoint changes.
+
+env:
+  max_high_level_steps: 240
+  strict_backend: true
+
+scenario_manifest:
+  path: ./manifests/thesis_five_state_phase_feasible_disadvantage_v1.yaml
+  source_id: THESIS-FIVE-STATE-PHASE-FEASIBLE-DISADVANTAGE-V1
+  payload_sha256: 86da72996e9a42cc19b4ac0b8223658fccd8c029ca6ec431255a301c2c02b98a
+  task_key_field: task_registry_key
+  active_task_groups:
+    - head_on
+  expected_task_counts:
+    head_on: 12
+  task_labels:
+    head_on: "Phase-feasible disadvantage: reference-only first-pass probe"
+  use_scenario_seed: true
+
+run_defaults:
+  backend: jsbsim
+  tasks:
+    - head_on
+  main_methods:
+    - legacy_static_oracle_task_gate
+  ablation_methods:
+    - legacy_static_oracle_task_gate
+  seeds:
+    - 0
+  n_episodes: 1

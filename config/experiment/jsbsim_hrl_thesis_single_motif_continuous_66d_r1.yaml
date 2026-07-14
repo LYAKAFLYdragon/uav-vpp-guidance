@@ -1,0 +1,99 @@
+includes:
+  - ./jsbsim_hrl_thesis_phase_reachability_v2_run_in_handoff_r1.yaml
+
+experiment:
+  name: noncanonical_thesis_single_motif_continuous_66d_r1
+  description: >
+    Independent observe-only collector for the disadvantage to post-merge or
+    re-entry defensive-extension motif. It reuses the frozen v2 physical
+    run-in scenarios but does not repair P4-v1 or authorize any training.
+
+single_motif_continuous_66d:
+  source_id: THESIS-SINGLE-MOTIF-CONTINUOUS-66D-R1
+  status: preregistered_evaluation_only
+  authorization:
+    execution_permitted: true
+    training_permitted: false
+    tuning_permitted: false
+    action_replacement_permitted: false
+    policy_change_permitted: false
+    vpp_change_permitted: false
+    guidance_change_permitted: false
+    pid_change_permitted: false
+    reset_after_first_pass: false
+    snapshot_restore: false
+    future_state_injection: false
+    history_padding_permitted: false
+  reference:
+    controller: legacy_static_oracle_task_gate
+    learning: false
+    task_registry_key: head_on
+  source_manifest:
+    path: ./manifests/thesis_phase_reachability_v2_run_in_handoff_r1.yaml
+    source_id: THESIS-PHASE-REACHABILITY-V2-RUN-IN-HANDOFF-R1
+    payload_sha256: 5ffdaa4bc248bf40c1532b13c8030dca43240711f5751cf8c4f26217525cfaae
+    reuse_semantics: independent_evaluation_source_not_p4_v1_repair
+  frozen_p3_encoder:
+    checkpoint: E:/uav-vpp-guidance-thesis-five-state-v1-results/p3_temporal_encoder_phaseconditional_v2/checkpoints/best.pt
+    sha256: 385663281a9c48c0416ea4d1a1bb8dc08ed64a0cfebb0f01083cbbb8bcfbdc59
+    input_dim: 16
+    history_window_steps: 10
+    embedding_dim: 32
+  observation_contract:
+    base_dim: 16
+    explicit_history_dim: 6
+    intent_target_dim: 6
+    intent_weight_dim: 6
+    temporal_embedding_dim: 32
+    history_window_steps: 10
+    composed_dim: 66
+    projection: feature_name_only
+  target_motif:
+    dynamic_state: disadvantage
+    phases:
+      - post_merge
+      - re_entry
+    requires_v2_first_pass_complete: true
+    skill: defensive_extension
+    profile: range_extension
+  context_bands:
+    specific_energy_height_band_m: 100.0
+    altitude_band_m: 100.0
+  opponents:
+    - expert
+    - end_to_end
+    - independent_ppo_vpp
+  gate:
+    minimum_qualifying_episodes_per_opponent: 2
+    minimum_valid_target_steps_per_opponent: 20
+    minimum_distinct_scenario_signatures_per_opponent: 2
+    minimum_distinct_mirror_signs_per_opponent: 2
+    require_all_ready_66d_finite: true
+    require_all_ready_actions_finite: true
+    require_no_prediction_fallback_on_ready_samples: true
+    require_no_reset: true
+    require_no_padding: true
+    require_strict_jsbsim_lineage: true
+    require_v2_continuity: true
+  pass_consequence: >
+    Passing permits only a draft preregistration for one defensive-extension
+    feasibility pilot. It does not authorize training.
+  failure_consequence: >
+    Any opponent failure means the executable 66-D to 3-D learning contract
+    is not established; stop expansion of the five-state training line.
+  stop_rule: >
+    Run each opponent once under a new output ID. Do not tune, replace assets,
+    change scenarios, rerun a failed opponent, or reinterpret partial pooled
+    success as a pass.
+
+run_defaults:
+  backend: jsbsim
+  tasks:
+    - head_on
+  main_methods:
+    - legacy_static_oracle_task_gate
+  ablation_methods:
+    - legacy_static_oracle_task_gate
+  formal_small_seeds:
+    - 0
+  n_episodes: 1

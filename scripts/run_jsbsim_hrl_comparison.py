@@ -44,7 +44,17 @@ from uav_vpp_guidance.common.provenance import (
     get_config_overrides,
     record_config_override_if_changed,
 )
+from uav_vpp_guidance.evaluation.phase_reachability_handoff_contract import (
+    PhaseReachabilityContinuitySidecar,
+    PhaseReachabilityContractError,
+    build_phase_reachability_plan,
+)
 from uav_vpp_guidance.evaluation.recorders import EpisodeRecorder, RunRecorder
+from uav_vpp_guidance.evaluation.single_motif_continuous_66d import (
+    SingleMotifContinuous66DCollector,
+    build_single_motif_plan,
+    write_single_motif_artifacts,
+)
 from uav_vpp_guidance.metrics.combat_evaluator import compute_combat_metrics
 from uav_vpp_guidance.utils.config import load_yaml_config, merge_config
 from uav_vpp_guidance.virtual_point.coordinate_transform import VALID_OFFSET_FRAMES
@@ -2085,6 +2095,39 @@ def _scenario_name(scenario: Optional[Dict[str, Any]], task_name: str) -> str:
     return scenario.get("name", task_name)
 
 
+def _phase_reachability_sidecar_settings(config: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """Return the authorised observe-only v2 sidecar settings, if requested."""
+
+    protocol = config.get("phase_reachability_v2")
+    if not isinstance(protocol, dict):
+        return None
+    if protocol.get("source_id") != "THESIS-PHASE-REACHABILITY-V2-RUN-IN-HANDOFF-R1":
+        return None
+    plan = build_phase_reachability_plan(config)
+    if not plan.execution_permitted or plan.action_replacement_permitted:
+        raise PhaseReachabilityContractError("v2 sidecar is not authorised for observe-only execution")
+    assets = config.get("frozen_assets", {}).get("artifacts", [])
+    prediction_sha = next(
+        (
+            str(asset.get("sha256"))
+            for asset in assets
+            if isinstance(asset, dict) and asset.get("id") == "trajectory_prediction_asset"
+        ),
+        "",
+    )
+    if not prediction_sha:
+        raise PhaseReachabilityContractError("v2 sidecar requires frozen trajectory_prediction_asset SHA")
+    return {"prediction_checkpoint_sha256": prediction_sha}
+
+
+def _single_motif_collector_plan(config: Dict[str, Any]):
+    """Return the authorised observe-only 66-D collector plan, if configured."""
+
+    if not isinstance(config.get("single_motif_continuous_66d"), dict):
+        return None
+    return build_single_motif_plan(config)
+
+
 def _finite_mean(values: Iterable[float]) -> float:
     clean = [float(v) for v in values if v is not None and np.isfinite(v)]
     return float(np.mean(clean)) if clean else float("nan")
@@ -2636,6 +2679,36 @@ def _run_episode(
     reset_provenance = copy.deepcopy(obs.get("provenance", {}))
     observation_schema = copy.deepcopy(obs.get("observation_schema", {}))
     attack_zone_cfg = copy.deepcopy(config.get("attack_zone", {}))
+    sidecar_settings = _phase_reachability_sidecar_settings(config)
+    sidecar = None
+    if sidecar_settings is not None:
+        sidecar = PhaseReachabilityContinuitySidecar(
+            run_id=run_id,
+            method_name=method_name,
+            task_name=task_name,
+            seed=seed,
+            episode=episode,
+            scenario_name=_scenario_name(scenario, task_name),
+            observation_schema=observation_schema,
+            prediction_checkpoint_sha256=sidecar_settings["prediction_checkpoint_sha256"],
+            environment_episode=int(getattr(env, "_episode_count", 0)),
+        )
+    motif_plan = _single_motif_collector_plan(config)
+    motif_collector = None
+    if motif_plan is not None:
+        motif_collector = SingleMotifContinuous66DCollector(
+            plan=motif_plan,
+            run_id=run_id,
+            method_name=method_name,
+            task_name=task_name,
+            opponent_id=str(config.get("opponent_stage", "none")),
+            seed=seed,
+            episode=episode,
+            scenario_name=_scenario_name(scenario, task_name),
+            scenario_metadata=(scenario.get("metadata", {}) if scenario else {}),
+            observation_schema=observation_schema,
+            environment_episode=int(getattr(env, "_episode_count", 0)),
+        )
 
     total_reward = 0.0
     steps = 0
@@ -2687,6 +2760,14 @@ def _run_episode(
         ):
             action = agent.clip_action(action)
 
+        if motif_collector is not None:
+            motif_collector.begin_step(
+                step=steps + 1,
+                observation=obs,
+                action=action,
+                environment_episode=int(getattr(env, "_episode_count", 0)),
+            )
+
         if action is None:
             obs, reward, terminated, truncated, info = env.step(**step_kwargs)
         else:
@@ -2697,6 +2778,24 @@ def _run_episode(
                 info = {**info, **step_metadata}
         total_reward += float(reward)
         steps += 1
+        if motif_collector is not None:
+            motif_collector.finish_step(
+                step=steps,
+                action=action,
+                observation=obs,
+                info=info,
+                environment_episode=int(getattr(env, "_episode_count", 0)),
+            )
+        if sidecar is not None:
+            # The sidecar observes the post-step state only; it never changes action or env.step kwargs.
+            sidecar.observe_after_step(
+                step=steps,
+                observation=obs,
+                action=action,
+                info=info,
+                agent=agent,
+                environment_episode=int(getattr(env, "_episode_count", 0)),
+            )
         own_state = info.get("own_state", {})
         target_state = info.get("target_state", {})
         recorder.record_step(steps, steps * dt, own_state, target_state, info, float(reward))
@@ -2832,6 +2931,10 @@ def _run_episode(
             },
         }
     )
+    if sidecar is not None:
+        record["phase_reachability_handoff_ledger"] = sidecar.ledger()
+    if motif_collector is not None:
+        record["single_motif_continuous_66d"] = motif_collector.ledger()
     record.update(summarize_episode_commander(record))
     record.update(summarize_episode_combat_geometry(record))
     return record
@@ -6554,6 +6657,7 @@ def main() -> int:
                         }
                     )
 
+        single_motif_index = write_single_motif_artifacts(run_dir, all_records)
         recorder = RunRecorder(run_dir)
         for rec in all_records:
             recorder.add(rec)
@@ -6578,6 +6682,11 @@ def main() -> int:
         manifest.record_output_file("aggregate/combat_geometry_diagnostics.json", combat_diagnostics_path)
         manifest.record_output_file("observation_audit.json", observation_audit_path)
         manifest.record_output_file("failures.json", failures_path)
+        if single_motif_index is not None:
+            manifest.record_output_file(
+                "single_motif_continuous_66d/index.json",
+                single_motif_index,
+            )
         manifest.artifacts_present["raw"] = (run_dir / "raw").is_dir()
         manifest.artifacts_present["manifests"] = (run_dir / "manifests").is_dir()
         manifest.extra["elapsed_seconds"] = time.time() - start

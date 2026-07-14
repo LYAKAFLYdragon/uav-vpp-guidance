@@ -20,6 +20,15 @@ v2 是独立的设计验证线，不是 v1 repair。它只允许路线 A：冻�
 必须逐 handoff 验证 episode/JSBSim lineage、observation schema、history、预测器、VPP、
 guidance 与 PID state 的连续 hash；任一不连续即 fail closed。
 
-当前只完成 design preflight，不存在授权的 v2 JSBSim execution。只有未来 v2 在三个对手
-下通过相位 gate 且 handoff continuity 全绿，才可提出单一 `defensive-extension` 或
-`re-entry` 低层技能的最小 pilot 授权申请。
+设计 preflight 后，独立执行线 `THESIS-PHASE-REACHABILITY-V2-RUN-IN-HANDOFF-R1` 已完成
+36 个 strict-JSBSim evaluation-only episode，并在三对手下通过 phase gate 与 handoff
+continuity。正式结果、哈希、观测边界和“不得自动启动训练”的决策见
+[v2 R1 执行结论](E:/uav-vpp-guidance-five-state-heldout-envelope-v1/reports/thesis_phase_reachability_v2_r1_execution_20260714_zh.md)。
+该正向 reachability 证据仅允许未来提出并审核一个独立的单技能 feasibility pilot；当前
+`defensive-extension` / `re-entry` 训练、四共享技能、combat finetune 与 P5 均仍未授权。
+
+随后完成的只读 [v2--P4 sampler 对齐审计](E:/uav-vpp-guidance-five-state-heldout-envelope-v1/reports/thesis_phase_reachability_v2_p4_sampler_alignment_audit_20260714_zh.md)
+以 `sampler_mismatch` 为唯一归因：v2 的三对手均可物理进入目标 phase，但 P4-v2 physical
+sampler 仅通过 `80/156` dynamic-state x phase support 行。该审计同时确认现有 v2 raw
+episode 无法精确复构 `66-D -> 3-D VPP` 学习对，因此只作为观测边界而非第二归因；四共享技能
+与最小 pilot 继续锁定。

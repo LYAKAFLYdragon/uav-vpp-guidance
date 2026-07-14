@@ -176,5 +176,6 @@
 - [x] R4 已于 2026-07-15 一次性执行，但首个 child 的 raw telemetry 写盘遇到 `numpy.ndarray` serialization `TypeError`，`completed_episode_count=0`；已冻结为 `implementation_failure_not_experimental_evidence`，不得重跑或覆盖。
 - [x] R5 JSON-telemetry serialization 修复已实现：raw artifact 写盘前使用 R4 `canonicalize` 递归处理 NumPy arrays；writer regression 已纳入合同测试。
 - [x] R5 implementation 已冻结于 `e1e047ef6db2f38cefe009431f29ee8f48c6fa8a`；相关回归为 `156 passed, 2 skipped`，R5 output root 为空。
-- [ ] **当前唯一允许动作：对冻结 R5 做一次性执行授权，并以新输出根做 90/90 fresh-process 复核；不得复用 R4 output root、调参或开展任何训练。**
+- [x] R5 已于 2026-07-15 一次性授权：范围固定为 30 dev 场景 x 3 对手 x 3 repeat，输出根与 R4 不重合。
+- [ ] **当前唯一允许动作：执行已授权 R5，并按 90/90 gate 冻结 PASS 或 NO-GO；不得重跑、调参或开展任何训练。**
 - [ ] P2--P8 均未授权；尤其不允许以“追求全场景优势”为由绕过 P1/P3 的负证据和 stop rule。

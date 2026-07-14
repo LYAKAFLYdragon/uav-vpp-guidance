@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections import deque
 import hashlib
 import importlib.util
+import json
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -18,7 +19,7 @@ CONFIG = (
     ROOT
     / "config"
     / "experiment"
-    / "thesis_global_advantage_v1_p1_r4_fresh_environment.yaml"
+    / "thesis_global_advantage_v1_p1_r5_json_telemetry.yaml"
 )
 RUNNER_PATH = ROOT / "scripts" / "run_thesis_global_advantage_p1_r3_fresh_environment.py"
 
@@ -145,7 +146,7 @@ def _envelope(
     )
 
 
-def test_r4_config_is_nonlearning_and_declares_execution_control():
+def test_r5_config_is_nonlearning_and_declares_execution_control():
     config = yaml.safe_load(CONFIG.read_text(encoding="utf-8"))
     plan = r3.build_p1_r3_plan(config)
     assert plan.source_id == r3.SOURCE_ID
@@ -155,6 +156,19 @@ def test_r4_config_is_nonlearning_and_declares_execution_control():
     assert plan.scenario_count == 30
     assert plan.opponents == r3.OPPONENTS
     assert plan.child_timeout_seconds == 900
+
+
+def test_atomic_writer_canonicalizes_numpy_telemetry_arrays(tmp_path: Path):
+    runner = _runner_module()
+    artifact = tmp_path / "episode.json"
+
+    runner._write_json_atomic(
+        artifact,
+        {"steps": [{"own_state": {"attitude_rpy": np.array([0.1, 0.2, 0.3])}}]},
+    )
+
+    persisted = json.loads(artifact.read_text(encoding="utf-8"))
+    assert persisted["steps"][0]["own_state"]["attitude_rpy"] == [0.1, 0.2, 0.3]
 
 
 def test_canonical_snapshot_rejects_nonfinite_values_and_is_quantised():

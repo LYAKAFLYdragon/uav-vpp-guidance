@@ -27,6 +27,7 @@ from uav_vpp_guidance.evaluation.global_advantage_p1_r3_contract import (  # noq
     GlobalAdvantageP1R3ContractError,
     GlobalAdvantageP1R3Plan,
     build_p1_r3_plan,
+    canonicalize,
     capture_runtime_envelope,
     compare_r3_repeats,
     finite_action,
@@ -48,11 +49,11 @@ DEFAULT_CONFIG = (
     ROOT
     / "config"
     / "experiment"
-    / "thesis_global_advantage_v1_p1_r4_fresh_environment.yaml"
+    / "thesis_global_advantage_v1_p1_r5_json_telemetry.yaml"
 )
 _AUTHORIZATION_DELTA_PATHS = {
-    "config/experiment/thesis_global_advantage_v1_p1_r4_fresh_environment.yaml",
-    "reports/thesis_global_advantage_p1_r4_execution_authorization_request_20260715_zh.md",
+    "config/experiment/thesis_global_advantage_v1_p1_r5_json_telemetry.yaml",
+    "reports/thesis_global_advantage_p1_r5_execution_authorization_request_20260715_zh.md",
     "reports/thesis_five_state_global_advantage_goal_checklist_v1_20260714_zh.md",
 }
 
@@ -180,11 +181,14 @@ def _episode_path(root: Path, launch: Mapping[str, Any]) -> Path:
 
 
 def _write_json_atomic(path: Path, payload: Mapping[str, Any]) -> None:
+    # Raw telemetry may contain NumPy arrays (for example attitude_rpy).  Use
+    # the same finite, recursive canonicalizer as the reproducibility hashes.
+    serializable = canonicalize(payload, path=f"artifact.{path.name}")
     path.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.NamedTemporaryFile(
         mode="w", encoding="utf-8", suffix=".tmp", dir=path.parent, delete=False
     ) as handle:
-        json.dump(payload, handle, ensure_ascii=False, indent=2, sort_keys=True)
+        json.dump(serializable, handle, ensure_ascii=False, indent=2, sort_keys=True)
         handle.write("\n")
         handle.flush()
         os.fsync(handle.fileno())

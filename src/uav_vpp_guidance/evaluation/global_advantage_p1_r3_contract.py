@@ -14,7 +14,7 @@ from typing import Any
 import numpy as np
 
 
-SOURCE_ID = "THESIS-GLOBAL-ADVANTAGE-V1-P1-R4-FRESH-ENV-REPRO-V1"
+SOURCE_ID = "THESIS-GLOBAL-ADVANTAGE-V1-P1-R5-JSON-TELEMETRY-REPRO-V1"
 OPPONENTS = ("expert", "end_to_end", "independent_ppo_vpp")
 ORDER_VARIANTS = ("forward", "reverse", "mirror_interleaved")
 

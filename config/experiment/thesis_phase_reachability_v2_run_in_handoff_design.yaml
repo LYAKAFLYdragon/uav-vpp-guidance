@@ -1,0 +1,44 @@
+phase_reachability_v2:
+  source_id: THESIS-PHASE-REACHABILITY-V2-DESIGN
+  status: design_validation_only
+  authorization:
+    execution_permitted: false
+    training_permitted: false
+    action_replacement_permitted: false
+  frozen_v1_negative_evidence:
+    gate_path: E:/uav-vpp-guidance-five-state-heldout-envelope-v1-results/phase_feasible_disadvantage_v1_r1/analysis_r1/phase_feasible_disadvantage_gate.json
+    required_verdict: phase_feasible_envelope_not_established
+    policy: immutable_no_rerun_no_result_driven_repair
+  run_in:
+    controller: legacy_static_oracle_task_gate
+    learning: false
+    backend: jsbsim
+    strict_backend: true
+  handoff:
+    mode: physical_continuation_sidecar
+    sampler_action_mode: observe_only
+    reset_after_first_pass: false
+    snapshot_restore: false
+    future_state_injection: false
+    required_continuity_fields:
+      - episode_lineage_id
+      - jsbsim_state_lineage_id
+      - observation_schema_sha256
+      - history_sha256
+      - prediction_checkpoint_sha256
+      - prediction_valid
+      - vpp_action_sha256
+      - guidance_state_sha256
+      - pid_state_sha256
+  opponents:
+    - expert
+    - end_to_end
+    - independent_ppo_vpp
+  phase_gate:
+    post_merge_step_minimum_per_episode: 10
+    re_entry_step_minimum_per_episode: 10
+    minimum_qualifying_episode_fraction_per_opponent: 0.5
+  stop_rule: >
+    Any continuity, backend, phase, or provenance failure freezes v2 as
+    negative evidence. It does not permit tuning, training, checkpoint
+    replacement, scenario repair, snapshot restore, or rerun.

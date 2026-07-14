@@ -50,6 +50,10 @@ DEFAULT_CONFIG = (
     / "experiment"
     / "thesis_global_advantage_v1_p1_r3_fresh_environment.yaml"
 )
+_AUTHORIZATION_DELTA_PATHS = {
+    "config/experiment/thesis_global_advantage_v1_p1_r3_fresh_environment.yaml",
+    "reports/thesis_global_advantage_p1_r3_execution_authorization_request_20260715_zh.md",
+}
 
 
 def _load_yaml(path: Path) -> dict[str, Any]:
@@ -92,6 +96,16 @@ def _git_is_ancestor(commit: str) -> bool:
         ).returncode
         == 0
     )
+
+
+def _git_changed_paths_since(commit: str) -> set[str]:
+    output = subprocess.check_output(
+        ["git", "diff", "--name-only", f"{commit}..HEAD"],
+        cwd=ROOT,
+        text=True,
+        stderr=subprocess.DEVNULL,
+    )
+    return {line.replace("\\", "/") for line in output.splitlines() if line}
 
 
 def _variant_order(
@@ -190,6 +204,10 @@ def _validate_sources(
     plan = build_p1_r3_plan(config)
     protocol = config["global_advantage_p1_r3"]
     if plan.execution_permitted:
+        if config_path.resolve() != DEFAULT_CONFIG.resolve():
+            raise GlobalAdvantageP1R3ContractError(
+                "R3 execution requires the canonical in-repository config"
+            )
         required_sha = protocol["authorization"].get("required_implementation_git_sha")
         if (
             not isinstance(required_sha, str)
@@ -199,6 +217,12 @@ def _validate_sources(
         ):
             raise GlobalAdvantageP1R3ContractError(
                 "R3 execution requires a clean worktree and frozen implementation ancestor"
+            )
+        unexpected_changes = _git_changed_paths_since(required_sha) - _AUTHORIZATION_DELTA_PATHS
+        if unexpected_changes:
+            raise GlobalAdvantageP1R3ContractError(
+                "R3 execution contains non-authorization changes after the "
+                f"implementation freeze: {sorted(unexpected_changes)}"
             )
         authorized_files = protocol["authorization"].get("authorized_code_files")
         if not isinstance(authorized_files, Sequence) or not authorized_files:

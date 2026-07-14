@@ -167,6 +167,7 @@
 - [x] 已完成 defensive-extension pilot 的只读归因；其结论是 candidate-specific terminal safety signal 存在，但冻结 held-out 缺少逐步 telemetry 且 run-in metadata 不一致，不能确定根因。
 - [x] P1 R1 已保留为 `implementation_failure_not_experimental_evidence`；其序列化错误不计入任何性能或物理结论。
 - [x] P1 R2 已冻结为 `runin_protocol_not_reproducible_do_not_train`：270 个 raw artifacts 均通过 SHA-256 审计，但 90/90 `opponent x scenario` 配对单元均未满足完整 trajectory/boundary 等价性。见 `reports/thesis_global_advantage_p1_r2_audit_20260715_zh.md`、`reports/thesis_global_advantage_p1_r2_matrix_20260715.json` 与对应 CSV。
+- [x] 已确认 R2 共同执行链的一项 reset-contract 缺陷：启用的 `CommandPostProcessor` 曾跨 episode 保留 lift-compensation state；修复与边界见 `reports/thesis_global_advantage_p1_r2_reset_leak_diagnosis_20260715_zh.md`。该发现不替代 R3，也不改变 R2 的 NO-GO。
 - [x] 已完成 P1 R3 fresh-environment-per-episode 复核的设计预注册：`reports/thesis_global_advantage_p1_r3_fresh_environment_design_20260715_zh.md`。
 - [x] 已实现 R3 的默认锁定 config、独立 child runner、完整 reset/runtime/FDM state exporter 与字段敏感性 tests；`execution_permitted=false`，未执行任何 R3 episode。
 - [x] 已建立非授权性质的运行前请求清单：`reports/thesis_global_advantage_p1_r3_execution_authorization_request_20260715_zh.md`。

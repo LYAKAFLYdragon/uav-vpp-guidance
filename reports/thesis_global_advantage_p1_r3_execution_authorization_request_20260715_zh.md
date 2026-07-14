@@ -21,7 +21,7 @@
 1. **实现冻结提交**：提交所有 P1 R1/R2/R3 代码、配置、报告和测试；记录该 clean commit 的 SHA 为 `IMPLEMENTATION_SHA`。
 2. **独立复核后授权提交**：仅修改 R3 config 的授权字段；将 `execution_permitted` 改为 true，填写 `required_implementation_git_sha=IMPLEMENTATION_SHA` 和下表中的 SHA-256。该提交后 worktree 必须重新 clean。
 
-配置检查的是“`IMPLEMENTATION_SHA` 是当前 HEAD 的祖先 + 已授权代码文件哈希完全一致 + worktree clean”。这样授权 config 自己的提交不会造成 SHA 自指，同时不能靠后续代码修改绕过冻结。
+配置检查的是“`IMPLEMENTATION_SHA` 是当前 HEAD 的祖先 + 已授权代码文件哈希完全一致 + worktree clean”。此外 implementation freeze 之后的 Git diff 只允许包含 canonical R3 config 与本授权请求文档；这样授权 config 自己的提交不会造成 SHA 自指，同时不能靠后续代码修改绕过冻结。
 
 ## 必须填写的授权代码哈希
 

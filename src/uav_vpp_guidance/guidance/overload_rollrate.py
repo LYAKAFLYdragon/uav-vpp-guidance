@@ -129,7 +129,10 @@ class CommandPostProcessor:
         self.safety_high_altitude_pitch_gain = float(
             params.get("safety_high_altitude_pitch_gain", self.high_altitude_pitch_gain)
         )
-        self._safety_mode = bool(params.get("start_in_safety_mode", False))
+        self._start_in_safety_mode = bool(
+            params.get("start_in_safety_mode", False)
+        )
+        self._safety_mode = self._start_in_safety_mode
 
         # Lift compensation for coordinated turns
         self.enable_lift_compensation = bool(
@@ -158,6 +161,12 @@ class CommandPostProcessor:
 
     def set_safety_mode(self, enabled: bool) -> None:
         self._safety_mode = bool(enabled)
+
+    def reset(self) -> None:
+        """Restore episode-scoped safety and lift-compensation state."""
+
+        self._safety_mode = self._start_in_safety_mode
+        self._lift_compensation_state = 0.0
 
     def process(
         self,

@@ -380,3 +380,21 @@ def test_safety_mode_uses_stronger_high_altitude_protection():
 
     assert protected["nz_cmd"] < normal["nz_cmd"]
     assert abs(protected["roll_rate_cmd"]) < abs(normal["roll_rate_cmd"])
+
+
+def test_reset_restores_episode_scoped_safety_and_lift_state():
+    post = CommandPostProcessor(
+        {
+            "post_process": {
+                "start_in_safety_mode": True,
+                "enable_lift_compensation": True,
+            }
+        }
+    )
+    post.set_safety_mode(False)
+    post._lift_compensation_state = 1.25
+
+    post.reset()
+
+    assert post._safety_mode is True
+    assert post._lift_compensation_state == pytest.approx(0.0)

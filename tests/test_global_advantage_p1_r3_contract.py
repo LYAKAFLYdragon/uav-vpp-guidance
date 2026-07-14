@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from collections import deque
+import hashlib
+import importlib.util
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -18,6 +20,15 @@ CONFIG = (
     / "experiment"
     / "thesis_global_advantage_v1_p1_r3_fresh_environment.yaml"
 )
+RUNNER_PATH = ROOT / "scripts" / "run_thesis_global_advantage_p1_r3_fresh_environment.py"
+
+
+def _runner_module():
+    spec = importlib.util.spec_from_file_location("test_r3_runner", RUNNER_PATH)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 
 class _FakeExec:
@@ -214,3 +225,47 @@ def test_action_contract_and_repeat_gate_fail_closed_on_any_difference():
     failed_process = r3.compare_r3_repeats(same_process)
     assert failed_process["passed"] is False
     assert failed_process["comparison_rows"][0]["fresh_processes"] is False
+
+
+def test_execution_authorization_requires_an_ancestor_and_exact_code_hashes(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+):
+    runner = _runner_module()
+    config = yaml.safe_load(CONFIG.read_text(encoding="utf-8"))
+    authorization = config["global_advantage_p1_r3"]["authorization"]
+    authorization["execution_permitted"] = True
+    authorization["required_implementation_git_sha"] = "a" * 40
+    code_path = ROOT / "src" / "uav_vpp_guidance" / "evaluation" / "global_advantage_p1_r3_contract.py"
+    authorization["authorized_code_files"] = [
+        {
+            "path": str(code_path.relative_to(ROOT)).replace("\\", "/"),
+            "sha256": hashlib.sha256(code_path.read_bytes()).hexdigest(),
+        }
+    ]
+    config_path = tmp_path / "authorised_r3.yaml"
+    config_path.write_text(yaml.safe_dump(config), encoding="utf-8")
+    monkeypatch.setattr(runner, "_git_is_ancestor", lambda commit: commit == "a" * 40)
+    monkeypatch.setattr(runner, "_git_changed_paths_since", lambda commit: set())
+    monkeypatch.setattr(runner, "DEFAULT_CONFIG", config_path)
+    monkeypatch.setattr(
+        runner,
+        "_git_value",
+        lambda *args: "" if args == ("status", "--porcelain") else "test",
+    )
+
+    plan, *_ = runner._validate_sources(config_path)
+    assert plan.execution_permitted is True
+
+    monkeypatch.setattr(
+        runner,
+        "_git_changed_paths_since",
+        lambda commit: {"src/uav_vpp_guidance/envs/tracking_env.py"},
+    )
+    with pytest.raises(r3.GlobalAdvantageP1R3ContractError, match="non-authorization changes"):
+        runner._validate_sources(config_path)
+
+    monkeypatch.setattr(runner, "_git_changed_paths_since", lambda commit: set())
+    authorization["authorized_code_files"][0]["sha256"] = "0" * 64
+    config_path.write_text(yaml.safe_dump(config), encoding="utf-8")
+    with pytest.raises(r3.GlobalAdvantageP1R3ContractError, match="code-file SHA mismatch"):
+        runner._validate_sources(config_path)

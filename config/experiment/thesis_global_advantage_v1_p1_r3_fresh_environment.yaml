@@ -1,0 +1,65 @@
+schema_version: 1
+source_id: THESIS-GLOBAL-ADVANTAGE-V1-P1-R3-FRESH-ENV-REPRO-V1
+status: design_implemented_not_authorised_to_execute
+
+experiment:
+  name: noncanonical_thesis_global_advantage_v1_p1_r3_fresh_environment
+  family: thesis_five_state_shared_intent_v1
+  stage: reproducibility_and_telemetry_contract
+
+global_advantage_p1_r3:
+  source_id: THESIS-GLOBAL-ADVANTAGE-V1-P1-R3-FRESH-ENV-REPRO-V1
+  authorization:
+    execution_permitted: false
+    required_implementation_git_sha: null
+    authorized_code_files: []
+    training_permitted: false
+    tuning_permitted: false
+    policy_change_permitted: false
+    vpp_change_permitted: false
+    guidance_change_permitted: false
+    pid_change_permitted: false
+    heldout_evaluation_permitted: false
+    snapshot_restore_permitted: false
+    future_state_injection_permitted: false
+  run_in:
+    controller: frozen_run_in_head_on_specialist
+    backend: jsbsim
+    strict_backend: true
+    learning: false
+  isolation:
+    fresh_process_per_episode: true
+    fresh_environment_per_episode: true
+  opponents: [expert, end_to_end, independent_ppo_vpp]
+  repeats:
+    count: 3
+    order_variants: [forward, reverse, mirror_interleaved]
+  expected_scenario_count: 30
+  max_high_level_steps: 260
+  child_timeout_seconds: 900
+  min_free_disk_gb: 120.0
+  telemetry:
+    persist_raw_steps: true
+    persist_full_reset_envelope: true
+    hash_decimal_places: 6
+    history_window_steps: 10
+    observation_contract: full_observation_plus_real_history_plus_frozen_p3_hash
+    fdm_snapshot_version: 1
+  sources:
+    runtime_config: config/experiment/thesis_defext_rangeext_feasibility_pilot_v1.yaml
+    runtime_config_sha256: 3a050de1eac5258fb68ae52dea71fc9cc8c9ad1bea69a73c0cd403a56e40b1f2
+    runtime_registry: config/experiment/thesis_defext_rangeext_feasibility_pilot_v1_runtime_registry.yaml
+    runtime_registry_sha256: c87edfed4be69a8293a889c9caa55c520fdab7dd93c44c9c6e057be869f435c5
+    scenario_manifest: config/experiment/manifests/thesis_five_state_shared_intent_v1_dev30.yaml
+    scenario_manifest_sha256: 6bd9c4282a4aa9724dee350114293421287ce0f00387b5b298e7be067c30d130
+    scenario_manifest_source_id: THESIS-FIVE-STATE-SHARED-INTENT-V1-DEV30
+    frozen_p3_checkpoint: E:/uav-vpp-guidance-thesis-five-state-v1-results/p3_temporal_encoder_phaseconditional_v2/checkpoints/best.pt
+    frozen_p3_checkpoint_sha256: 385663281a9c48c0416ea4d1a1bb8dc08ed64a0cfebb0f01083cbbb8bcfbdc59
+  outputs:
+    root: E:/uav-vpp-guidance-five-state-heldout-envelope-v1-results/global_advantage_v1_p1_r3_fresh_environment
+    fresh_output_required: true
+  stop_rule: >
+    Any reset-envelope, action, trajectory, boundary, terminal, telemetry,
+    backend, prediction, checkpoint, process-isolation, or provenance mismatch
+    freezes P1 as negative reproducibility evidence. It does not authorize
+    training, tuning, config repair, policy replacement, or formal held-out evaluation.

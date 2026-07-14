@@ -161,9 +161,14 @@
 | P5/P6 通过 | P7 一次性 formal held-out | 事后调参 |
 | P7 完成 | 论文证据整合与复现包 | 重跑以追逐更好数字 |
 
-## 11. 当前状态（2026-07-14）
+## 11. 当前状态（2026-07-15）
 
 - [x] 已识别双技能 baseline、三 opponent、五态势 taxonomy、四 skills、七 profiles、P3 encoder 与既有 negative evidence。
 - [x] 已完成 defensive-extension pilot 的只读归因；其结论是 candidate-specific terminal safety signal 存在，但冻结 held-out 缺少逐步 telemetry 且 run-in metadata 不一致，不能确定根因。
-- [ ] **当前唯一 GO：P1 run-in deterministic-equivalence preflight 与 telemetry persistence contract。**
+- [x] P1 R1 已保留为 `implementation_failure_not_experimental_evidence`；其序列化错误不计入任何性能或物理结论。
+- [x] P1 R2 已冻结为 `runin_protocol_not_reproducible_do_not_train`：270 个 raw artifacts 均通过 SHA-256 审计，但 90/90 `opponent x scenario` 配对单元均未满足完整 trajectory/boundary 等价性。见 `reports/thesis_global_advantage_p1_r2_audit_20260715_zh.md`、`reports/thesis_global_advantage_p1_r2_matrix_20260715.json` 与对应 CSV。
+- [x] 已完成 P1 R3 fresh-environment-per-episode 复核的设计预注册：`reports/thesis_global_advantage_p1_r3_fresh_environment_design_20260715_zh.md`。
+- [x] 已实现 R3 的默认锁定 config、独立 child runner、完整 reset/runtime/FDM state exporter 与字段敏感性 tests；`execution_permitted=false`，未执行任何 R3 episode。
+- [x] 已建立非授权性质的运行前请求清单：`reports/thesis_global_advantage_p1_r3_execution_authorization_request_20260715_zh.md`。
+- [ ] **当前唯一允许动作：对 R3 代码做独立复核，冻结干净 implementation SHA 并形成一次性执行授权包；未获授权不得将 `execution_permitted` 改为 true。**
 - [ ] P2--P8 均未授权；尤其不允许以“追求全场景优势”为由绕过 P1/P3 的负证据和 stop rule。

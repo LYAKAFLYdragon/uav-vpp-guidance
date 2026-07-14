@@ -3,7 +3,7 @@
 **状态：** `not_authorized`
 **Source ID：** `THESIS-GLOBAL-ADVANTAGE-V1-P1-R3-FRESH-ENV-REPRO-V1`
 **范围：** 仅 30 个 dev 场景 x 3 对手 x 3 repeat 的非学习 run-in 可重复性复核，共 270 episode。它不是训练、技能比较、消融或 formal held-out。
-**实现冻结 SHA：** `152aa92c8864211a14ec15db6fba7647842b0d56`（取代 `de20805190750a3684af81d68e87fb35d6cf04ca`；新增循环状态 fail-closed 检查）
+**实现冻结 SHA：** `0605f96ff0e7793374c16dae01abad12d14ffa43`（取代 `152aa92c8864211a14ec15db6fba7647842b0d56`；包含 post-processor reset 修复与授权闭包锁）
 
 ## 已具备的实现证据
 
@@ -29,7 +29,7 @@
 
 | 路径 | SHA-256 | 复核人 |
 |---|---|---|
-| `scripts/run_thesis_global_advantage_p1_r3_fresh_environment.py` | `7ce61f2766f6784f82fdcc40b1546f914a8f93212e0fd7eefc4b9da7b22d463d` | `PENDING_INDEPENDENT_REVIEW` |
+| `scripts/run_thesis_global_advantage_p1_r3_fresh_environment.py` | `ecd2f7e522fdb827503122af70b1e83313afdfa6684de1b21a3310121151ccd3` | `PENDING_INDEPENDENT_REVIEW` |
 | `src/uav_vpp_guidance/evaluation/global_advantage_p1_r3_contract.py` | `5d0acae9f38e5ab146b06a2686917e16466f560c96276c2713bcfcb2ea3282d0` | `PENDING_INDEPENDENT_REVIEW` |
 | `src/uav_vpp_guidance/evaluation/global_advantage_runin_contract.py` | `314b742c7417fce2fa7001965d69faba6f1934bf3e05d72ef5f3d9b7787b65df` | `PENDING_INDEPENDENT_REVIEW` |
 | `src/uav_vpp_guidance/training/thesis_defext_rangeext_pilot.py` | `c598738dfd7a548d642079fef9eb23bdb9d71fb94a8d7575826ae56505d52fc5` | `PENDING_INDEPENDENT_REVIEW` |
@@ -37,6 +37,7 @@
 | `src/uav_vpp_guidance/envs/tracking_env.py` | `7596f6b7250c52f76db5c7612496a1f5afcbb2bdd2dba934ce066b9c4f3805a3` | `PENDING_INDEPENDENT_REVIEW` |
 | `src/uav_vpp_guidance/envs/jsbsim_env.py` | `e22464927bcf98db06c0d6fe97e0747a4454480deae2d9810a69bcc5305828bb` | `PENDING_INDEPENDENT_REVIEW` |
 | `src/uav_vpp_guidance/hierarchy/specialist_policy.py` | `fbc64964a6056382602e3fbe3ca802be13e915677b597b8b0c03dd9b7e5ff3ce` | `PENDING_INDEPENDENT_REVIEW` |
+| `src/uav_vpp_guidance/guidance/overload_rollrate.py` | `f1f7ee541a4050b7297d004d054d6cf2d6f34bfb090396c71fb5a4952b02333a` | `PENDING_INDEPENDENT_REVIEW` |
 
 ## 独立复核项
 

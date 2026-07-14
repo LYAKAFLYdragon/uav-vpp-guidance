@@ -171,5 +171,5 @@
 - [x] 已完成 P1 R3 fresh-environment-per-episode 复核的设计预注册：`reports/thesis_global_advantage_p1_r3_fresh_environment_design_20260715_zh.md`。
 - [x] 已实现 R3 的默认锁定 config、独立 child runner、完整 reset/runtime/FDM state exporter 与字段敏感性 tests；`execution_permitted=false`，未执行任何 R3 episode。
 - [x] 已建立非授权性质的运行前请求清单：`reports/thesis_global_advantage_p1_r3_execution_authorization_request_20260715_zh.md`。
-- [ ] **当前唯一允许动作：对 R3 代码做独立复核，冻结干净 implementation SHA 并形成一次性执行授权包；未获授权不得将 `execution_permitted` 改为 true。**
+- [ ] **当前唯一允许动作：对冻结 implementation SHA `0605f96ff0e7793374c16dae01abad12d14ffa43` 做独立复核，并形成一次性执行授权包；未获授权不得将 `execution_permitted` 改为 true。**
 - [ ] P2--P8 均未授权；尤其不允许以“追求全场景优势”为由绕过 P1/P3 的负证据和 stop rule。

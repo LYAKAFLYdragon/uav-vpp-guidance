@@ -1,6 +1,6 @@
 schema_version: 1
 source_id: THESIS-GLOBAL-ADVANTAGE-V1-P1-R4-FRESH-ENV-REPRO-V1
-status: one_shot_execution_authorized_not_started
+status: implementation_failure_not_experimental_evidence
 
 experiment:
   name: noncanonical_thesis_global_advantage_v1_p1_r4_fresh_environment
@@ -10,7 +10,7 @@ experiment:
 global_advantage_p1_r3:
   source_id: THESIS-GLOBAL-ADVANTAGE-V1-P1-R4-FRESH-ENV-REPRO-V1
   authorization:
-    execution_permitted: true
+    execution_permitted: false
     required_implementation_git_sha: 5af60fa1a2f7fb0d3722601be393b7008a29b712
     authorized_code_files:
       - path: scripts/run_thesis_global_advantage_p1_r3_fresh_environment.py

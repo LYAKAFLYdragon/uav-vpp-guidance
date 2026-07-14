@@ -1,7 +1,7 @@
 # Independent Five-State Heldout40 Preregistration
 
-**Source ID:** `THESIS-FIVE-STATE-HELDOUT40-V1`  
-**Family:** `noncanonical_thesis_five_state_heldout_envelope_v1`  
+**Source ID:** `THESIS-FIVE-STATE-HELDOUT40-V1`
+**Family:** `noncanonical_thesis_five_state_heldout_envelope_v1`
 **Status:** evaluation-only; no result has been inspected for this envelope.
 
 ## Frozen Protocol

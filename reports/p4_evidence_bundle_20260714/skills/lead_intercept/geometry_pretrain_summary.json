@@ -1,0 +1,1784 @@
+{
+  "dev_evaluations": [
+    {
+      "by_opponent": {
+        "end_to_end_neural": {
+          "episodes": 18,
+          "intent_progress_fraction": 0.543035993740219,
+          "phase_steps": {
+            "pre_merge": 1278
+          },
+          "profile_episodes": {
+            "front_intercept": 6,
+            "lateral_displacement": 6,
+            "rear_quarter_alignment": 6
+          },
+          "response_summary": {
+            "actual_aoa_deg": {
+              "count": 1278,
+              "max_abs": 14.584552031137799,
+              "mean": 3.7986853149371718
+            },
+            "actual_nz_g": {
+              "count": 1278,
+              "max_abs": 8.362848314750082,
+              "mean": 3.096592316640116
+            },
+            "nz_cmd": {
+              "count": 1278,
+              "max_abs": 4.126882768736982,
+              "mean": 2.5286998890139136
+            },
+            "vp_forward_bias_m": {
+              "count": 1278,
+              "max_abs": 557.9895137106308,
+              "mean": -16.562683205316652
+            },
+            "vp_lateral_bias_m": {
+              "count": 1278,
+              "max_abs": 612.3736748018906,
+              "mean": -31.459050388440936
+            }
+          },
+          "state_phase_steps": {
+            "advantage:pre_merge": 426,
+            "crossing_entry:pre_merge": 426,
+            "neutral:pre_merge": 426
+          },
+          "terminal_reasons": {
+            "timeout": 18
+          }
+        },
+        "expert_rule_based": {
+          "episodes": 18,
+          "intent_progress_fraction": 0.45618153364632236,
+          "phase_steps": {
+            "post_merge": 92,
+            "pre_merge": 1185,
+            "re_entry": 1
+          },
+          "profile_episodes": {
+            "front_intercept": 6,
+            "lateral_displacement": 6,
+            "rear_quarter_alignment": 6
+          },
+          "response_summary": {
+            "actual_aoa_deg": {
+              "count": 1278,
+              "max_abs": 13.014109758708216,
+              "mean": 3.8474446607010497
+            },
+            "actual_nz_g": {
+              "count": 1278,
+              "max_abs": 8.593757498926038,
+              "mean": 3.11510475700076
+            },
+            "nz_cmd": {
+              "count": 1278,
+              "max_abs": 3.9964226175721995,
+              "mean": 2.5002007678760716
+            },
+            "vp_forward_bias_m": {
+              "count": 1278,
+              "max_abs": 545.041238976794,
+              "mean": -56.4554720234216
+            },
+            "vp_lateral_bias_m": {
+              "count": 1278,
+              "max_abs": 535.2421501802095,
+              "mean": -18.785166465429427
+            }
+          },
+          "state_phase_steps": {
+            "advantage:pre_merge": 426,
+            "crossing_entry:post_merge": 92,
+            "crossing_entry:pre_merge": 333,
+            "crossing_entry:re_entry": 1,
+            "neutral:pre_merge": 426
+          },
+          "terminal_reasons": {
+            "timeout": 18
+          }
+        },
+        "independent_ppo_vpp": {
+          "episodes": 18,
+          "intent_progress_fraction": 0.4522691705790297,
+          "phase_steps": {
+            "post_merge": 92,
+            "pre_merge": 1185,
+            "re_entry": 1
+          },
+          "profile_episodes": {
+            "front_intercept": 6,
+            "lateral_displacement": 6,
+            "rear_quarter_alignment": 6
+          },
+          "response_summary": {
+            "actual_aoa_deg": {
+              "count": 1278,
+              "max_abs": 13.024250979270489,
+              "mean": 3.8312348834476184
+            },
+            "actual_nz_g": {
+              "count": 1278,
+              "max_abs": 8.337746225612847,
+              "mean": 3.1101813183683897
+            },
+            "nz_cmd": {
+              "count": 1278,
+              "max_abs": 3.990305681237901,
+              "mean": 2.500068323232472
+            },
+            "vp_forward_bias_m": {
+              "count": 1278,
+              "max_abs": 545.0419840710039,
+              "mean": -57.43276176772206
+            },
+            "vp_lateral_bias_m": {
+              "count": 1278,
+              "max_abs": 520.6325264417583,
+              "mean": -18.636858273029123
+            }
+          },
+          "state_phase_steps": {
+            "advantage:pre_merge": 426,
+            "crossing_entry:post_merge": 92,
+            "crossing_entry:pre_merge": 333,
+            "crossing_entry:re_entry": 1,
+            "neutral:pre_merge": 426
+          },
+          "terminal_reasons": {
+            "timeout": 18
+          }
+        }
+      },
+      "gate": {
+        "checks": {
+          "geometry_phase_coverage": false,
+          "intent_progress": false,
+          "profile_conditioning_coverage": true,
+          "safety": true
+        },
+        "geometry_phase_coverage": {
+          "advantage:post_merge": 0,
+          "advantage:pre_merge": 1278,
+          "crossing_entry:post_merge": 184,
+          "crossing_entry:pre_merge": 1092,
+          "neutral:post_merge": 0,
+          "neutral:pre_merge": 1278
+        },
+        "intent_progress_fraction": 0.4838288993218571,
+        "passed": false,
+        "profile_coverage": {
+          "front_intercept": 18,
+          "lateral_displacement": 18,
+          "rear_quarter_alignment": 18
+        },
+        "safety_by_opponent": {
+          "end_to_end_neural": {
+            "delta": 0.0,
+            "passed": true,
+            "policy_crash_oob_rate": 0.0,
+            "zero_vpp_crash_oob_rate": 0.0
+          },
+          "expert_rule_based": {
+            "delta": 0.0,
+            "passed": true,
+            "policy_crash_oob_rate": 0.0,
+            "zero_vpp_crash_oob_rate": 0.0
+          },
+          "independent_ppo_vpp": {
+            "delta": 0.0,
+            "passed": true,
+            "policy_crash_oob_rate": 0.0,
+            "zero_vpp_crash_oob_rate": 0.0
+          }
+        },
+        "status": "not_ready_do_not_start_combat_finetune"
+      },
+      "skill": "lead_intercept",
+      "step": 25063,
+      "zero_vpp_terminal_reasons_by_opponent": {
+        "end_to_end_neural": {
+          "timeout": 18
+        },
+        "expert_rule_based": {
+          "timeout": 18
+        },
+        "independent_ppo_vpp": {
+          "timeout": 18
+        }
+      }
+    },
+    {
+      "by_opponent": {
+        "end_to_end_neural": {
+          "episodes": 18,
+          "intent_progress_fraction": 0.5586854460093896,
+          "phase_steps": {
+            "pre_merge": 1278
+          },
+          "profile_episodes": {
+            "front_intercept": 6,
+            "lateral_displacement": 6,
+            "rear_quarter_alignment": 6
+          },
+          "response_summary": {
+            "actual_aoa_deg": {
+              "count": 1278,
+              "max_abs": 14.165386744436258,
+              "mean": 3.8614430664544153
+            },
+            "actual_nz_g": {
+              "count": 1278,
+              "max_abs": 8.673291822418774,
+              "mean": 3.0507559626997485
+            },
+            "nz_cmd": {
+              "count": 1278,
+              "max_abs": 4.077563355821683,
+              "mean": 2.519695644395475
+            },
+            "vp_forward_bias_m": {
+              "count": 1278,
+              "max_abs": 679.7085788335721,
+              "mean": -31.61468529295271
+            },
+            "vp_lateral_bias_m": {
+              "count": 1278,
+              "max_abs": 702.5526459366878,
+              "mean": -147.99535462533953
+            }
+          },
+          "state_phase_steps": {
+            "advantage:pre_merge": 426,
+            "crossing_entry:pre_merge": 426,
+            "neutral:pre_merge": 426
+          },
+          "terminal_reasons": {
+            "timeout": 18
+          }
+        },
+        "expert_rule_based": {
+          "episodes": 18,
+          "intent_progress_fraction": 0.45774647887323944,
+          "phase_steps": {
+            "post_merge": 92,
+            "pre_merge": 1185,
+            "re_entry": 1
+          },
+          "profile_episodes": {
+            "front_intercept": 6,
+            "lateral_displacement": 6,
+            "rear_quarter_alignment": 6
+          },
+          "response_summary": {
+            "actual_aoa_deg": {
+              "count": 1278,
+              "max_abs": 13.946999998121063,
+              "mean": 3.9474743230089895
+            },
+            "actual_nz_g": {
+              "count": 1278,
+              "max_abs": 8.34448715488664,
+              "mean": 3.0776631730972266
+            },
+            "nz_cmd": {
+              "count": 1278,
+              "max_abs": 3.945498561565565,
+              "mean": 2.4813045671209064
+            },
+            "vp_forward_bias_m": {
+              "count": 1278,
+              "max_abs": 588.7028784628521,
+              "mean": -40.79897406612155
+            },
+            "vp_lateral_bias_m": {
+              "count": 1278,
+              "max_abs": 683.2689559463835,
+              "mean": -80.41222600516343
+            }
+          },
+          "state_phase_steps": {
+            "advantage:pre_merge": 426,
+            "crossing_entry:post_merge": 92,
+            "crossing_entry:pre_merge": 333,
+            "crossing_entry:re_entry": 1,
+            "neutral:pre_merge": 426
+          },
+          "terminal_reasons": {
+            "timeout": 18
+          }
+        },
+        "independent_ppo_vpp": {
+          "episodes": 18,
+          "intent_progress_fraction": 0.47417840375586856,
+          "phase_steps": {
+            "post_merge": 92,
+            "pre_merge": 1185,
+            "re_entry": 1
+          },
+          "profile_episodes": {
+            "front_intercept": 6,
+            "lateral_displacement": 6,
+            "rear_quarter_alignment": 6
+          },
+          "response_summary": {
+            "actual_aoa_deg": {
+              "count": 1278,
+              "max_abs": 14.283769109724133,
+              "mean": 3.920279929178946
+            },
+            "actual_nz_g": {
+              "count": 1278,
+              "max_abs": 8.521962496201313,
+              "mean": 3.0978060551811213
+            },
+            "nz_cmd": {
+              "count": 1278,
+              "max_abs": 3.9490014862071563,
+              "mean": 2.4824613316761117
+            },
+            "vp_forward_bias_m": {
+              "count": 1278,
+              "max_abs": 583.134466062914,
+              "mean": -42.9341929037555
+            },
+            "vp_lateral_bias_m": {
+              "count": 1278,
+              "max_abs": 687.8476736514821,
+              "mean": -81.33872808184331
+            }
+          },
+          "state_phase_steps": {
+            "advantage:pre_merge": 426,
+            "crossing_entry:post_merge": 92,
+            "crossing_entry:pre_merge": 333,
+            "crossing_entry:re_entry": 1,
+            "neutral:pre_merge": 426
+          },
+          "terminal_reasons": {
+            "timeout": 18
+          }
+        }
+      },
+      "gate": {
+        "checks": {
+          "geometry_phase_coverage": false,
+          "intent_progress": false,
+          "profile_conditioning_coverage": true,
+          "safety": true
+        },
+        "geometry_phase_coverage": {
+          "advantage:post_merge": 0,
+          "advantage:pre_merge": 1278,
+          "crossing_entry:post_merge": 184,
+          "crossing_entry:pre_merge": 1092,
+          "neutral:post_merge": 0,
+          "neutral:pre_merge": 1278
+        },
+        "intent_progress_fraction": 0.4968701095461659,
+        "passed": false,
+        "profile_coverage": {
+          "front_intercept": 18,
+          "lateral_displacement": 18,
+          "rear_quarter_alignment": 18
+        },
+        "safety_by_opponent": {
+          "end_to_end_neural": {
+            "delta": 0.0,
+            "passed": true,
+            "policy_crash_oob_rate": 0.0,
+            "zero_vpp_crash_oob_rate": 0.0
+          },
+          "expert_rule_based": {
+            "delta": 0.0,
+            "passed": true,
+            "policy_crash_oob_rate": 0.0,
+            "zero_vpp_crash_oob_rate": 0.0
+          },
+          "independent_ppo_vpp": {
+            "delta": 0.0,
+            "passed": true,
+            "policy_crash_oob_rate": 0.0,
+            "zero_vpp_crash_oob_rate": 0.0
+          }
+        },
+        "status": "not_ready_do_not_start_combat_finetune"
+      },
+      "skill": "lead_intercept",
+      "step": 50055,
+      "zero_vpp_terminal_reasons_by_opponent": {
+        "end_to_end_neural": {
+          "timeout": 18
+        },
+        "expert_rule_based": {
+          "timeout": 18
+        },
+        "independent_ppo_vpp": {
+          "timeout": 18
+        }
+      }
+    },
+    {
+      "by_opponent": {
+        "end_to_end_neural": {
+          "episodes": 18,
+          "intent_progress_fraction": 0.5555555555555556,
+          "phase_steps": {
+            "pre_merge": 1278
+          },
+          "profile_episodes": {
+            "front_intercept": 6,
+            "lateral_displacement": 6,
+            "rear_quarter_alignment": 6
+          },
+          "response_summary": {
+            "actual_aoa_deg": {
+              "count": 1278,
+              "max_abs": 14.934668635568599,
+              "mean": 3.914323403549048
+            },
+            "actual_nz_g": {
+              "count": 1278,
+              "max_abs": 8.214950035835397,
+              "mean": 3.0448830471768162
+            },
+            "nz_cmd": {
+              "count": 1278,
+              "max_abs": 4.164960480299795,
+              "mean": 2.546306713970473
+            },
+            "vp_forward_bias_m": {
+              "count": 1278,
+              "max_abs": 798.700516089631,
+              "mean": -39.70606431935625
+            },
+            "vp_lateral_bias_m": {
+              "count": 1278,
+              "max_abs": 934.0276755561456,
+              "mean": -266.21898584834616
+            }
+          },
+          "state_phase_steps": {
+            "advantage:pre_merge": 426,
+            "crossing_entry:pre_merge": 426,
+            "neutral:pre_merge": 426
+          },
+          "terminal_reasons": {
+            "timeout": 18
+          }
+        },
+        "expert_rule_based": {
+          "episodes": 18,
+          "intent_progress_fraction": 0.46635367762128327,
+          "phase_steps": {
+            "post_merge": 92,
+            "pre_merge": 1185,
+            "re_entry": 1
+          },
+          "profile_episodes": {
+            "front_intercept": 6,
+            "lateral_displacement": 6,
+            "rear_quarter_alignment": 6
+          },
+          "response_summary": {
+            "actual_aoa_deg": {
+              "count": 1278,
+              "max_abs": 13.59148208969603,
+              "mean": 3.986005153195601
+            },
+            "actual_nz_g": {
+              "count": 1278,
+              "max_abs": 8.209114942556035,
+              "mean": 3.0753242357248443
+            },
+            "nz_cmd": {
+              "count": 1278,
+              "max_abs": 4.036651554814549,
+              "mean": 2.501321664427502
+            },
+            "vp_forward_bias_m": {
+              "count": 1278,
+              "max_abs": 916.4148012105153,
+              "mean": -59.44498651017266
+            },
+            "vp_lateral_bias_m": {
+              "count": 1278,
+              "max_abs": 899.6304714910158,
+              "mean": -104.23494858622416
+            }
+          },
+          "state_phase_steps": {
+            "advantage:pre_merge": 426,
+            "crossing_entry:post_merge": 92,
+            "crossing_entry:pre_merge": 333,
+            "crossing_entry:re_entry": 1,
+            "neutral:pre_merge": 426
+          },
+          "terminal_reasons": {
+            "timeout": 18
+          }
+        },
+        "independent_ppo_vpp": {
+          "episodes": 18,
+          "intent_progress_fraction": 0.460093896713615,
+          "phase_steps": {
+            "post_merge": 92,
+            "pre_merge": 1185,
+            "re_entry": 1
+          },
+          "profile_episodes": {
+            "front_intercept": 6,
+            "lateral_displacement": 6,
+            "rear_quarter_alignment": 6
+          },
+          "response_summary": {
+            "actual_aoa_deg": {
+              "count": 1278,
+              "max_abs": 13.601070968109642,
+              "mean": 3.930088969770182
+            },
+            "actual_nz_g": {
+              "count": 1278,
+              "max_abs": 8.21158328037429,
+              "mean": 3.0776635838823454
+            },
+            "nz_cmd": {
+              "count": 1278,
+              "max_abs": 4.022508131775986,
+              "mean": 2.5036603206011336
+            },
+            "vp_forward_bias_m": {
+              "count": 1278,
+              "max_abs": 899.6113232937386,
+              "mean": -58.14880782305382
+            },
+            "vp_lateral_bias_m": {
+              "count": 1278,
+              "max_abs": 888.2651954121809,
+              "mean": -109.51025382419635
+            }
+          },
+          "state_phase_steps": {
+            "advantage:pre_merge": 426,
+            "crossing_entry:post_merge": 92,
+            "crossing_entry:pre_merge": 333,
+            "crossing_entry:re_entry": 1,
+            "neutral:pre_merge": 426
+          },
+          "terminal_reasons": {
+            "timeout": 18
+          }
+        }
+      },
+      "gate": {
+        "checks": {
+          "geometry_phase_coverage": false,
+          "intent_progress": false,
+          "profile_conditioning_coverage": true,
+          "safety": true
+        },
+        "geometry_phase_coverage": {
+          "advantage:post_merge": 0,
+          "advantage:pre_merge": 1278,
+          "crossing_entry:post_merge": 184,
+          "crossing_entry:pre_merge": 1092,
+          "neutral:post_merge": 0,
+          "neutral:pre_merge": 1278
+        },
+        "intent_progress_fraction": 0.49400104329681793,
+        "passed": false,
+        "profile_coverage": {
+          "front_intercept": 18,
+          "lateral_displacement": 18,
+          "rear_quarter_alignment": 18
+        },
+        "safety_by_opponent": {
+          "end_to_end_neural": {
+            "delta": 0.0,
+            "passed": true,
+            "policy_crash_oob_rate": 0.0,
+            "zero_vpp_crash_oob_rate": 0.0
+          },
+          "expert_rule_based": {
+            "delta": 0.0,
+            "passed": true,
+            "policy_crash_oob_rate": 0.0,
+            "zero_vpp_crash_oob_rate": 0.0
+          },
+          "independent_ppo_vpp": {
+            "delta": 0.0,
+            "passed": true,
+            "policy_crash_oob_rate": 0.0,
+            "zero_vpp_crash_oob_rate": 0.0
+          }
+        },
+        "status": "not_ready_do_not_start_combat_finetune"
+      },
+      "skill": "lead_intercept",
+      "step": 75047,
+      "zero_vpp_terminal_reasons_by_opponent": {
+        "end_to_end_neural": {
+          "timeout": 18
+        },
+        "expert_rule_based": {
+          "timeout": 18
+        },
+        "independent_ppo_vpp": {
+          "timeout": 18
+        }
+      }
+    },
+    {
+      "by_opponent": {
+        "end_to_end_neural": {
+          "episodes": 18,
+          "intent_progress_fraction": 0.5469483568075117,
+          "phase_steps": {
+            "pre_merge": 1278
+          },
+          "profile_episodes": {
+            "front_intercept": 6,
+            "lateral_displacement": 6,
+            "rear_quarter_alignment": 6
+          },
+          "response_summary": {
+            "actual_aoa_deg": {
+              "count": 1278,
+              "max_abs": 13.696686796912106,
+              "mean": 3.708929310164941
+            },
+            "actual_nz_g": {
+              "count": 1278,
+              "max_abs": 8.344322072824042,
+              "mean": 2.9581282325169465
+            },
+            "nz_cmd": {
+              "count": 1278,
+              "max_abs": 4.124039827171046,
+              "mean": 2.5140695511755005
+            },
+            "vp_forward_bias_m": {
+              "count": 1278,
+              "max_abs": 1069.5497916250974,
+              "mean": -144.87991698284804
+            },
+            "vp_lateral_bias_m": {
+              "count": 1278,
+              "max_abs": 1187.0985964384581,
+              "mean": -326.1195415115521
+            }
+          },
+          "state_phase_steps": {
+            "advantage:pre_merge": 426,
+            "crossing_entry:pre_merge": 426,
+            "neutral:pre_merge": 426
+          },
+          "terminal_reasons": {
+            "timeout": 18
+          }
+        },
+        "expert_rule_based": {
+          "episodes": 18,
+          "intent_progress_fraction": 0.45618153364632236,
+          "phase_steps": {
+            "post_merge": 92,
+            "pre_merge": 1185,
+            "re_entry": 1
+          },
+          "profile_episodes": {
+            "front_intercept": 6,
+            "lateral_displacement": 6,
+            "rear_quarter_alignment": 6
+          },
+          "response_summary": {
+            "actual_aoa_deg": {
+              "count": 1278,
+              "max_abs": 13.397229559278909,
+              "mean": 3.787464261100654
+            },
+            "actual_nz_g": {
+              "count": 1278,
+              "max_abs": 8.377446653816623,
+              "mean": 3.018180840418998
+            },
+            "nz_cmd": {
+              "count": 1278,
+              "max_abs": 3.9915177913272943,
+              "mean": 2.470623978379437
+            },
+            "vp_forward_bias_m": {
+              "count": 1278,
+              "max_abs": 1057.056409225064,
+              "mean": -145.0639805230493
+            },
+            "vp_lateral_bias_m": {
+              "count": 1278,
+              "max_abs": 1032.8811404354626,
+              "mean": -134.773287755175
+            }
+          },
+          "state_phase_steps": {
+            "advantage:pre_merge": 426,
+            "crossing_entry:post_merge": 92,
+            "crossing_entry:pre_merge": 333,
+            "crossing_entry:re_entry": 1,
+            "neutral:pre_merge": 426
+          },
+          "terminal_reasons": {
+            "timeout": 18
+          }
+        },
+        "independent_ppo_vpp": {
+          "episodes": 18,
+          "intent_progress_fraction": 0.45618153364632236,
+          "phase_steps": {
+            "post_merge": 92,
+            "pre_merge": 1185,
+            "re_entry": 1
+          },
+          "profile_episodes": {
+            "front_intercept": 6,
+            "lateral_displacement": 6,
+            "rear_quarter_alignment": 6
+          },
+          "response_summary": {
+            "actual_aoa_deg": {
+              "count": 1278,
+              "max_abs": 13.372880802698907,
+              "mean": 3.7386298962214575
+            },
+            "actual_nz_g": {
+              "count": 1278,
+              "max_abs": 8.383759955721654,
+              "mean": 2.9824068668474477
+            },
+            "nz_cmd": {
+              "count": 1278,
+              "max_abs": 3.974505888205484,
+              "mean": 2.4734794255304013
+            },
+            "vp_forward_bias_m": {
+              "count": 1278,
+              "max_abs": 1165.323793683549,
+              "mean": -142.51935321681648
+            },
+            "vp_lateral_bias_m": {
+              "count": 1278,
+              "max_abs": 1081.939150028223,
+              "mean": -144.63036265270898
+            }
+          },
+          "state_phase_steps": {
+            "advantage:pre_merge": 426,
+            "crossing_entry:post_merge": 92,
+            "crossing_entry:pre_merge": 333,
+            "crossing_entry:re_entry": 1,
+            "neutral:pre_merge": 426
+          },
+          "terminal_reasons": {
+            "timeout": 18
+          }
+        }
+      },
+      "gate": {
+        "checks": {
+          "geometry_phase_coverage": false,
+          "intent_progress": false,
+          "profile_conditioning_coverage": true,
+          "safety": true
+        },
+        "geometry_phase_coverage": {
+          "advantage:post_merge": 0,
+          "advantage:pre_merge": 1278,
+          "crossing_entry:post_merge": 184,
+          "crossing_entry:pre_merge": 1092,
+          "neutral:post_merge": 0,
+          "neutral:pre_merge": 1278
+        },
+        "intent_progress_fraction": 0.48643714136671884,
+        "passed": false,
+        "profile_coverage": {
+          "front_intercept": 18,
+          "lateral_displacement": 18,
+          "rear_quarter_alignment": 18
+        },
+        "safety_by_opponent": {
+          "end_to_end_neural": {
+            "delta": 0.0,
+            "passed": true,
+            "policy_crash_oob_rate": 0.0,
+            "zero_vpp_crash_oob_rate": 0.0
+          },
+          "expert_rule_based": {
+            "delta": 0.0,
+            "passed": true,
+            "policy_crash_oob_rate": 0.0,
+            "zero_vpp_crash_oob_rate": 0.0
+          },
+          "independent_ppo_vpp": {
+            "delta": 0.0,
+            "passed": true,
+            "policy_crash_oob_rate": 0.0,
+            "zero_vpp_crash_oob_rate": 0.0
+          }
+        },
+        "status": "not_ready_do_not_start_combat_finetune"
+      },
+      "skill": "lead_intercept",
+      "step": 100039,
+      "zero_vpp_terminal_reasons_by_opponent": {
+        "end_to_end_neural": {
+          "timeout": 18
+        },
+        "expert_rule_based": {
+          "timeout": 18
+        },
+        "independent_ppo_vpp": {
+          "timeout": 18
+        }
+      }
+    },
+    {
+      "by_opponent": {
+        "end_to_end_neural": {
+          "episodes": 18,
+          "intent_progress_fraction": 0.5359937402190923,
+          "phase_steps": {
+            "pre_merge": 1278
+          },
+          "profile_episodes": {
+            "front_intercept": 6,
+            "lateral_displacement": 6,
+            "rear_quarter_alignment": 6
+          },
+          "response_summary": {
+            "actual_aoa_deg": {
+              "count": 1278,
+              "max_abs": 14.143420217935452,
+              "mean": 3.8470192097385034
+            },
+            "actual_nz_g": {
+              "count": 1278,
+              "max_abs": 8.536678314570063,
+              "mean": 3.0417127323406885
+            },
+            "nz_cmd": {
+              "count": 1278,
+              "max_abs": 4.058297049438754,
+              "mean": 2.502280760687677
+            },
+            "vp_forward_bias_m": {
+              "count": 1278,
+              "max_abs": 1106.6154498559586,
+              "mean": -224.63542942168584
+            },
+            "vp_lateral_bias_m": {
+              "count": 1278,
+              "max_abs": 1302.6645983715998,
+              "mean": -323.4724438639567
+            }
+          },
+          "state_phase_steps": {
+            "advantage:pre_merge": 426,
+            "crossing_entry:pre_merge": 426,
+            "neutral:pre_merge": 426
+          },
+          "terminal_reasons": {
+            "timeout": 18
+          }
+        },
+        "expert_rule_based": {
+          "episodes": 18,
+          "intent_progress_fraction": 0.46635367762128327,
+          "phase_steps": {
+            "post_merge": 91,
+            "pre_merge": 1185,
+            "re_entry": 2
+          },
+          "profile_episodes": {
+            "front_intercept": 6,
+            "lateral_displacement": 6,
+            "rear_quarter_alignment": 6
+          },
+          "response_summary": {
+            "actual_aoa_deg": {
+              "count": 1278,
+              "max_abs": 15.069215852472343,
+              "mean": 3.9717103183553357
+            },
+            "actual_nz_g": {
+              "count": 1278,
+              "max_abs": 8.65260073655832,
+              "mean": 3.053229589063966
+            },
+            "nz_cmd": {
+              "count": 1278,
+              "max_abs": 3.9103088135121684,
+              "mean": 2.4463532032686137
+            },
+            "vp_forward_bias_m": {
+              "count": 1278,
+              "max_abs": 1068.142730625208,
+              "mean": -187.69865627983572
+            },
+            "vp_lateral_bias_m": {
+              "count": 1278,
+              "max_abs": 1148.747914982274,
+              "mean": -164.3491774163878
+            }
+          },
+          "state_phase_steps": {
+            "advantage:pre_merge": 426,
+            "crossing_entry:post_merge": 91,
+            "crossing_entry:pre_merge": 333,
+            "crossing_entry:re_entry": 2,
+            "neutral:pre_merge": 426
+          },
+          "terminal_reasons": {
+            "timeout": 18
+          }
+        },
+        "independent_ppo_vpp": {
+          "episodes": 18,
+          "intent_progress_fraction": 0.4624413145539906,
+          "phase_steps": {
+            "post_merge": 92,
+            "pre_merge": 1185,
+            "re_entry": 1
+          },
+          "profile_episodes": {
+            "front_intercept": 6,
+            "lateral_displacement": 6,
+            "rear_quarter_alignment": 6
+          },
+          "response_summary": {
+            "actual_aoa_deg": {
+              "count": 1278,
+              "max_abs": 15.039441486070787,
+              "mean": 3.8953799825633957
+            },
+            "actual_nz_g": {
+              "count": 1278,
+              "max_abs": 8.714714064598208,
+              "mean": 3.024348651783199
+            },
+            "nz_cmd": {
+              "count": 1278,
+              "max_abs": 3.9013233548719137,
+              "mean": 2.4477955593841862
+            },
+            "vp_forward_bias_m": {
+              "count": 1278,
+              "max_abs": 1140.773921511202,
+              "mean": -184.91054456565604
+            },
+            "vp_lateral_bias_m": {
+              "count": 1278,
+              "max_abs": 1194.525181605949,
+              "mean": -172.49859958023495
+            }
+          },
+          "state_phase_steps": {
+            "advantage:pre_merge": 426,
+            "crossing_entry:post_merge": 92,
+            "crossing_entry:pre_merge": 333,
+            "crossing_entry:re_entry": 1,
+            "neutral:pre_merge": 426
+          },
+          "terminal_reasons": {
+            "timeout": 18
+          }
+        }
+      },
+      "gate": {
+        "checks": {
+          "geometry_phase_coverage": false,
+          "intent_progress": false,
+          "profile_conditioning_coverage": true,
+          "safety": true
+        },
+        "geometry_phase_coverage": {
+          "advantage:post_merge": 0,
+          "advantage:pre_merge": 1278,
+          "crossing_entry:post_merge": 183,
+          "crossing_entry:pre_merge": 1092,
+          "neutral:post_merge": 0,
+          "neutral:pre_merge": 1278
+        },
+        "intent_progress_fraction": 0.48826291079812206,
+        "passed": false,
+        "profile_coverage": {
+          "front_intercept": 18,
+          "lateral_displacement": 18,
+          "rear_quarter_alignment": 18
+        },
+        "safety_by_opponent": {
+          "end_to_end_neural": {
+            "delta": 0.0,
+            "passed": true,
+            "policy_crash_oob_rate": 0.0,
+            "zero_vpp_crash_oob_rate": 0.0
+          },
+          "expert_rule_based": {
+            "delta": 0.0,
+            "passed": true,
+            "policy_crash_oob_rate": 0.0,
+            "zero_vpp_crash_oob_rate": 0.0
+          },
+          "independent_ppo_vpp": {
+            "delta": 0.0,
+            "passed": true,
+            "policy_crash_oob_rate": 0.0,
+            "zero_vpp_crash_oob_rate": 0.0
+          }
+        },
+        "status": "not_ready_do_not_start_combat_finetune"
+      },
+      "skill": "lead_intercept",
+      "step": 125031,
+      "zero_vpp_terminal_reasons_by_opponent": {
+        "end_to_end_neural": {
+          "timeout": 18
+        },
+        "expert_rule_based": {
+          "timeout": 18
+        },
+        "independent_ppo_vpp": {
+          "timeout": 18
+        }
+      }
+    },
+    {
+      "by_opponent": {
+        "end_to_end_neural": {
+          "episodes": 18,
+          "intent_progress_fraction": 0.5406885758998435,
+          "phase_steps": {
+            "pre_merge": 1278
+          },
+          "profile_episodes": {
+            "front_intercept": 6,
+            "lateral_displacement": 6,
+            "rear_quarter_alignment": 6
+          },
+          "response_summary": {
+            "actual_aoa_deg": {
+              "count": 1278,
+              "max_abs": 13.633372231596377,
+              "mean": 4.038032692863634
+            },
+            "actual_nz_g": {
+              "count": 1278,
+              "max_abs": 8.336617469561308,
+              "mean": 3.130172897133096
+            },
+            "nz_cmd": {
+              "count": 1278,
+              "max_abs": 4.08179967126814,
+              "mean": 2.5309451111467585
+            },
+            "vp_forward_bias_m": {
+              "count": 1278,
+              "max_abs": 1125.284058611213,
+              "mean": -279.2195395959307
+            },
+            "vp_lateral_bias_m": {
+              "count": 1278,
+              "max_abs": 1367.1256606579789,
+              "mean": -253.28199576940023
+            }
+          },
+          "state_phase_steps": {
+            "advantage:pre_merge": 426,
+            "crossing_entry:pre_merge": 426,
+            "neutral:pre_merge": 426
+          },
+          "terminal_reasons": {
+            "timeout": 18
+          }
+        },
+        "expert_rule_based": {
+          "episodes": 18,
+          "intent_progress_fraction": 0.47339593114241,
+          "phase_steps": {
+            "post_merge": 91,
+            "pre_merge": 1185,
+            "re_entry": 2
+          },
+          "profile_episodes": {
+            "front_intercept": 6,
+            "lateral_displacement": 6,
+            "rear_quarter_alignment": 6
+          },
+          "response_summary": {
+            "actual_aoa_deg": {
+              "count": 1278,
+              "max_abs": 15.200715493533695,
+              "mean": 4.113969004491208
+            },
+            "actual_nz_g": {
+              "count": 1278,
+              "max_abs": 8.330982609230377,
+              "mean": 3.158106282009361
+            },
+            "nz_cmd": {
+              "count": 1278,
+              "max_abs": 3.9281897692906256,
+              "mean": 2.4681088826096675
+            },
+            "vp_forward_bias_m": {
+              "count": 1278,
+              "max_abs": 1108.717214471702,
+              "mean": -240.12269360610176
+            },
+            "vp_lateral_bias_m": {
+              "count": 1278,
+              "max_abs": 1189.4112091309835,
+              "mean": -157.70096009042462
+            }
+          },
+          "state_phase_steps": {
+            "advantage:pre_merge": 426,
+            "crossing_entry:post_merge": 91,
+            "crossing_entry:pre_merge": 333,
+            "crossing_entry:re_entry": 2,
+            "neutral:pre_merge": 426
+          },
+          "terminal_reasons": {
+            "timeout": 18
+          }
+        },
+        "independent_ppo_vpp": {
+          "episodes": 18,
+          "intent_progress_fraction": 0.4788732394366197,
+          "phase_steps": {
+            "post_merge": 91,
+            "pre_merge": 1185,
+            "re_entry": 2
+          },
+          "profile_episodes": {
+            "front_intercept": 6,
+            "lateral_displacement": 6,
+            "rear_quarter_alignment": 6
+          },
+          "response_summary": {
+            "actual_aoa_deg": {
+              "count": 1278,
+              "max_abs": 14.917671349423943,
+              "mean": 4.150537636341963
+            },
+            "actual_nz_g": {
+              "count": 1278,
+              "max_abs": 8.315613418957035,
+              "mean": 3.1507905846546884
+            },
+            "nz_cmd": {
+              "count": 1278,
+              "max_abs": 3.917651156550356,
+              "mean": 2.470245305515147
+            },
+            "vp_forward_bias_m": {
+              "count": 1278,
+              "max_abs": 1085.9520996419676,
+              "mean": -243.44385475452455
+            },
+            "vp_lateral_bias_m": {
+              "count": 1278,
+              "max_abs": 1191.1865605291177,
+              "mean": -157.1994637332523
+            }
+          },
+          "state_phase_steps": {
+            "advantage:pre_merge": 426,
+            "crossing_entry:post_merge": 91,
+            "crossing_entry:pre_merge": 333,
+            "crossing_entry:re_entry": 2,
+            "neutral:pre_merge": 426
+          },
+          "terminal_reasons": {
+            "timeout": 18
+          }
+        }
+      },
+      "gate": {
+        "checks": {
+          "geometry_phase_coverage": false,
+          "intent_progress": false,
+          "profile_conditioning_coverage": true,
+          "safety": true
+        },
+        "geometry_phase_coverage": {
+          "advantage:post_merge": 0,
+          "advantage:pre_merge": 1278,
+          "crossing_entry:post_merge": 182,
+          "crossing_entry:pre_merge": 1092,
+          "neutral:post_merge": 0,
+          "neutral:pre_merge": 1278
+        },
+        "intent_progress_fraction": 0.49765258215962443,
+        "passed": false,
+        "profile_coverage": {
+          "front_intercept": 18,
+          "lateral_displacement": 18,
+          "rear_quarter_alignment": 18
+        },
+        "safety_by_opponent": {
+          "end_to_end_neural": {
+            "delta": 0.0,
+            "passed": true,
+            "policy_crash_oob_rate": 0.0,
+            "zero_vpp_crash_oob_rate": 0.0
+          },
+          "expert_rule_based": {
+            "delta": 0.0,
+            "passed": true,
+            "policy_crash_oob_rate": 0.0,
+            "zero_vpp_crash_oob_rate": 0.0
+          },
+          "independent_ppo_vpp": {
+            "delta": 0.0,
+            "passed": true,
+            "policy_crash_oob_rate": 0.0,
+            "zero_vpp_crash_oob_rate": 0.0
+          }
+        },
+        "status": "not_ready_do_not_start_combat_finetune"
+      },
+      "skill": "lead_intercept",
+      "step": 150023,
+      "zero_vpp_terminal_reasons_by_opponent": {
+        "end_to_end_neural": {
+          "timeout": 18
+        },
+        "expert_rule_based": {
+          "timeout": 18
+        },
+        "independent_ppo_vpp": {
+          "timeout": 18
+        }
+      }
+    },
+    {
+      "by_opponent": {
+        "end_to_end_neural": {
+          "episodes": 18,
+          "intent_progress_fraction": 0.5383411580594679,
+          "phase_steps": {
+            "pre_merge": 1278
+          },
+          "profile_episodes": {
+            "front_intercept": 6,
+            "lateral_displacement": 6,
+            "rear_quarter_alignment": 6
+          },
+          "response_summary": {
+            "actual_aoa_deg": {
+              "count": 1278,
+              "max_abs": 14.21173252179922,
+              "mean": 4.061865191338217
+            },
+            "actual_nz_g": {
+              "count": 1278,
+              "max_abs": 8.897864259098155,
+              "mean": 3.114434939892938
+            },
+            "nz_cmd": {
+              "count": 1278,
+              "max_abs": 4.043626973987776,
+              "mean": 2.5252161288275015
+            },
+            "vp_forward_bias_m": {
+              "count": 1278,
+              "max_abs": 1109.1300220074504,
+              "mean": -311.76921761869374
+            },
+            "vp_lateral_bias_m": {
+              "count": 1278,
+              "max_abs": 1328.6122338470245,
+              "mean": -184.80248178161642
+            }
+          },
+          "state_phase_steps": {
+            "advantage:pre_merge": 426,
+            "crossing_entry:pre_merge": 426,
+            "neutral:pre_merge": 426
+          },
+          "terminal_reasons": {
+            "timeout": 18
+          }
+        },
+        "expert_rule_based": {
+          "episodes": 18,
+          "intent_progress_fraction": 0.4616588419405321,
+          "phase_steps": {
+            "post_merge": 90,
+            "pre_merge": 1185,
+            "re_entry": 3
+          },
+          "profile_episodes": {
+            "front_intercept": 6,
+            "lateral_displacement": 6,
+            "rear_quarter_alignment": 6
+          },
+          "response_summary": {
+            "actual_aoa_deg": {
+              "count": 1278,
+              "max_abs": 14.289877349584568,
+              "mean": 4.065497238151093
+            },
+            "actual_nz_g": {
+              "count": 1278,
+              "max_abs": 8.38932890750911,
+              "mean": 3.1096398866513657
+            },
+            "nz_cmd": {
+              "count": 1278,
+              "max_abs": 3.9175141646794254,
+              "mean": 2.481641623522723
+            },
+            "vp_forward_bias_m": {
+              "count": 1278,
+              "max_abs": 1023.4600349166715,
+              "mean": -254.65948480697043
+            },
+            "vp_lateral_bias_m": {
+              "count": 1278,
+              "max_abs": 1108.6290539824008,
+              "mean": -121.49664661986459
+            }
+          },
+          "state_phase_steps": {
+            "advantage:pre_merge": 426,
+            "crossing_entry:post_merge": 90,
+            "crossing_entry:pre_merge": 333,
+            "crossing_entry:re_entry": 3,
+            "neutral:pre_merge": 426
+          },
+          "terminal_reasons": {
+            "timeout": 18
+          }
+        },
+        "independent_ppo_vpp": {
+          "episodes": 18,
+          "intent_progress_fraction": 0.4757433489827856,
+          "phase_steps": {
+            "post_merge": 91,
+            "pre_merge": 1185,
+            "re_entry": 2
+          },
+          "profile_episodes": {
+            "front_intercept": 6,
+            "lateral_displacement": 6,
+            "rear_quarter_alignment": 6
+          },
+          "response_summary": {
+            "actual_aoa_deg": {
+              "count": 1278,
+              "max_abs": 14.537326783616221,
+              "mean": 4.0309194122048515
+            },
+            "actual_nz_g": {
+              "count": 1278,
+              "max_abs": 8.478302708596383,
+              "mean": 3.094294097733825
+            },
+            "nz_cmd": {
+              "count": 1278,
+              "max_abs": 3.917104884749367,
+              "mean": 2.482333024018835
+            },
+            "vp_forward_bias_m": {
+              "count": 1278,
+              "max_abs": 951.7257738377155,
+              "mean": -253.46045102873296
+            },
+            "vp_lateral_bias_m": {
+              "count": 1278,
+              "max_abs": 1168.2296445728966,
+              "mean": -125.96491617216878
+            }
+          },
+          "state_phase_steps": {
+            "advantage:pre_merge": 426,
+            "crossing_entry:post_merge": 91,
+            "crossing_entry:pre_merge": 333,
+            "crossing_entry:re_entry": 2,
+            "neutral:pre_merge": 426
+          },
+          "terminal_reasons": {
+            "timeout": 18
+          }
+        }
+      },
+      "gate": {
+        "checks": {
+          "geometry_phase_coverage": false,
+          "intent_progress": false,
+          "profile_conditioning_coverage": true,
+          "safety": true
+        },
+        "geometry_phase_coverage": {
+          "advantage:post_merge": 0,
+          "advantage:pre_merge": 1278,
+          "crossing_entry:post_merge": 181,
+          "crossing_entry:pre_merge": 1092,
+          "neutral:post_merge": 0,
+          "neutral:pre_merge": 1278
+        },
+        "intent_progress_fraction": 0.4919144496609285,
+        "passed": false,
+        "profile_coverage": {
+          "front_intercept": 18,
+          "lateral_displacement": 18,
+          "rear_quarter_alignment": 18
+        },
+        "safety_by_opponent": {
+          "end_to_end_neural": {
+            "delta": 0.0,
+            "passed": true,
+            "policy_crash_oob_rate": 0.0,
+            "zero_vpp_crash_oob_rate": 0.0
+          },
+          "expert_rule_based": {
+            "delta": 0.0,
+            "passed": true,
+            "policy_crash_oob_rate": 0.0,
+            "zero_vpp_crash_oob_rate": 0.0
+          },
+          "independent_ppo_vpp": {
+            "delta": 0.0,
+            "passed": true,
+            "policy_crash_oob_rate": 0.0,
+            "zero_vpp_crash_oob_rate": 0.0
+          }
+        },
+        "status": "not_ready_do_not_start_combat_finetune"
+      },
+      "skill": "lead_intercept",
+      "step": 175015,
+      "zero_vpp_terminal_reasons_by_opponent": {
+        "end_to_end_neural": {
+          "timeout": 18
+        },
+        "expert_rule_based": {
+          "timeout": 18
+        },
+        "independent_ppo_vpp": {
+          "timeout": 18
+        }
+      }
+    },
+    {
+      "by_opponent": {
+        "end_to_end_neural": {
+          "episodes": 18,
+          "intent_progress_fraction": 0.5320813771517997,
+          "phase_steps": {
+            "pre_merge": 1278
+          },
+          "profile_episodes": {
+            "front_intercept": 6,
+            "lateral_displacement": 6,
+            "rear_quarter_alignment": 6
+          },
+          "response_summary": {
+            "actual_aoa_deg": {
+              "count": 1278,
+              "max_abs": 12.581195432286618,
+              "mean": 4.018318111941227
+            },
+            "actual_nz_g": {
+              "count": 1278,
+              "max_abs": 8.53486116705017,
+              "mean": 3.1356459338095197
+            },
+            "nz_cmd": {
+              "count": 1278,
+              "max_abs": 3.996840305449906,
+              "mean": 2.5062907244269725
+            },
+            "vp_forward_bias_m": {
+              "count": 1278,
+              "max_abs": 1299.886789914465,
+              "mean": -433.7188722610375
+            },
+            "vp_lateral_bias_m": {
+              "count": 1278,
+              "max_abs": 1406.7583536030204,
+              "mean": -178.07335619093723
+            }
+          },
+          "state_phase_steps": {
+            "advantage:pre_merge": 426,
+            "crossing_entry:pre_merge": 426,
+            "neutral:pre_merge": 426
+          },
+          "terminal_reasons": {
+            "timeout": 18
+          }
+        },
+        "expert_rule_based": {
+          "episodes": 18,
+          "intent_progress_fraction": 0.4788732394366197,
+          "phase_steps": {
+            "post_merge": 91,
+            "pre_merge": 1185,
+            "re_entry": 2
+          },
+          "profile_episodes": {
+            "front_intercept": 6,
+            "lateral_displacement": 6,
+            "rear_quarter_alignment": 6
+          },
+          "response_summary": {
+            "actual_aoa_deg": {
+              "count": 1278,
+              "max_abs": 14.247569813774698,
+              "mean": 4.038203416012733
+            },
+            "actual_nz_g": {
+              "count": 1278,
+              "max_abs": 8.62529237759743,
+              "mean": 3.1298448242840022
+            },
+            "nz_cmd": {
+              "count": 1278,
+              "max_abs": 3.866337527495979,
+              "mean": 2.474054206165695
+            },
+            "vp_forward_bias_m": {
+              "count": 1278,
+              "max_abs": 1277.28545637145,
+              "mean": -336.08610489329004
+            },
+            "vp_lateral_bias_m": {
+              "count": 1278,
+              "max_abs": 1213.5469307526484,
+              "mean": -85.61973886033262
+            }
+          },
+          "state_phase_steps": {
+            "advantage:pre_merge": 426,
+            "crossing_entry:post_merge": 91,
+            "crossing_entry:pre_merge": 333,
+            "crossing_entry:re_entry": 2,
+            "neutral:pre_merge": 426
+          },
+          "terminal_reasons": {
+            "timeout": 18
+          }
+        },
+        "independent_ppo_vpp": {
+          "episodes": 18,
+          "intent_progress_fraction": 0.47417840375586856,
+          "phase_steps": {
+            "post_merge": 90,
+            "pre_merge": 1186,
+            "re_entry": 2
+          },
+          "profile_episodes": {
+            "front_intercept": 6,
+            "lateral_displacement": 6,
+            "rear_quarter_alignment": 6
+          },
+          "response_summary": {
+            "actual_aoa_deg": {
+              "count": 1278,
+              "max_abs": 14.218023944348085,
+              "mean": 3.9901921397942255
+            },
+            "actual_nz_g": {
+              "count": 1278,
+              "max_abs": 9.058116418900616,
+              "mean": 3.1209954319236997
+            },
+            "nz_cmd": {
+              "count": 1278,
+              "max_abs": 3.861016758549125,
+              "mean": 2.4736296971649714
+            },
+            "vp_forward_bias_m": {
+              "count": 1278,
+              "max_abs": 1303.0458146671397,
+              "mean": -334.09504603588226
+            },
+            "vp_lateral_bias_m": {
+              "count": 1278,
+              "max_abs": 1191.120057781406,
+              "mean": -87.63228245268071
+            }
+          },
+          "state_phase_steps": {
+            "advantage:pre_merge": 426,
+            "crossing_entry:post_merge": 90,
+            "crossing_entry:pre_merge": 334,
+            "crossing_entry:re_entry": 2,
+            "neutral:pre_merge": 426
+          },
+          "terminal_reasons": {
+            "timeout": 18
+          }
+        }
+      },
+      "gate": {
+        "checks": {
+          "geometry_phase_coverage": false,
+          "intent_progress": false,
+          "profile_conditioning_coverage": true,
+          "safety": true
+        },
+        "geometry_phase_coverage": {
+          "advantage:post_merge": 0,
+          "advantage:pre_merge": 1278,
+          "crossing_entry:post_merge": 181,
+          "crossing_entry:pre_merge": 1093,
+          "neutral:post_merge": 0,
+          "neutral:pre_merge": 1278
+        },
+        "intent_progress_fraction": 0.49504434011476267,
+        "passed": false,
+        "profile_coverage": {
+          "front_intercept": 18,
+          "lateral_displacement": 18,
+          "rear_quarter_alignment": 18
+        },
+        "safety_by_opponent": {
+          "end_to_end_neural": {
+            "delta": 0.0,
+            "passed": true,
+            "policy_crash_oob_rate": 0.0,
+            "zero_vpp_crash_oob_rate": 0.0
+          },
+          "expert_rule_based": {
+            "delta": 0.0,
+            "passed": true,
+            "policy_crash_oob_rate": 0.0,
+            "zero_vpp_crash_oob_rate": 0.0
+          },
+          "independent_ppo_vpp": {
+            "delta": 0.0,
+            "passed": true,
+            "policy_crash_oob_rate": 0.0,
+            "zero_vpp_crash_oob_rate": 0.0
+          }
+        },
+        "status": "not_ready_do_not_start_combat_finetune"
+      },
+      "skill": "lead_intercept",
+      "step": 200000,
+      "zero_vpp_terminal_reasons_by_opponent": {
+        "end_to_end_neural": {
+          "timeout": 18
+        },
+        "expert_rule_based": {
+          "timeout": 18
+        },
+        "independent_ppo_vpp": {
+          "timeout": 18
+        }
+      }
+    }
+  ],
+  "selected_checkpoint": "E:\\uav-vpp-guidance-thesis-five-state-v1-results\\p4_shared_skills_geometry_v1_geo20260713_r1\\skills\\lead_intercept\\checkpoints\\best.pt",
+  "selected_gate": {
+    "checks": {
+      "geometry_phase_coverage": false,
+      "intent_progress": false,
+      "profile_conditioning_coverage": true,
+      "safety": true
+    },
+    "geometry_phase_coverage": {
+      "advantage:post_merge": 0,
+      "advantage:pre_merge": 1278,
+      "crossing_entry:post_merge": 182,
+      "crossing_entry:pre_merge": 1092,
+      "neutral:post_merge": 0,
+      "neutral:pre_merge": 1278
+    },
+    "intent_progress_fraction": 0.49765258215962443,
+    "passed": false,
+    "profile_coverage": {
+      "front_intercept": 18,
+      "lateral_displacement": 18,
+      "rear_quarter_alignment": 18
+    },
+    "safety_by_opponent": {
+      "end_to_end_neural": {
+        "delta": 0.0,
+        "passed": true,
+        "policy_crash_oob_rate": 0.0,
+        "zero_vpp_crash_oob_rate": 0.0
+      },
+      "expert_rule_based": {
+        "delta": 0.0,
+        "passed": true,
+        "policy_crash_oob_rate": 0.0,
+        "zero_vpp_crash_oob_rate": 0.0
+      },
+      "independent_ppo_vpp": {
+        "delta": 0.0,
+        "passed": true,
+        "policy_crash_oob_rate": 0.0,
+        "zero_vpp_crash_oob_rate": 0.0
+      }
+    },
+    "status": "not_ready_do_not_start_combat_finetune"
+  },
+  "status": "geometry_pretrain_gate_failed_do_not_start_combat_finetune",
+  "train_aggregate": {
+    "episodes": 2817,
+    "intent_progress_fraction": 0.442335,
+    "phase_steps": {
+      "post_merge": 27241,
+      "pre_merge": 171436,
+      "re_entry": 1323
+    },
+    "profile_episodes": {
+      "front_intercept": 939,
+      "lateral_displacement": 939,
+      "rear_quarter_alignment": 939
+    },
+    "response_summary": {
+      "actual_aoa_deg": {
+        "count": 200000,
+        "max_abs": 15.360612106788775,
+        "mean": 4.145070834934206
+      },
+      "actual_nz_g": {
+        "count": 200000,
+        "max_abs": 8.264975373257123,
+        "mean": 2.2952221700495965
+      },
+      "nz_cmd": {
+        "count": 200000,
+        "max_abs": 3.682861555342928,
+        "mean": 2.251014558106249
+      },
+      "vp_forward_bias_m": {
+        "count": 200000,
+        "max_abs": 1795.2659331818447,
+        "mean": -70.91085268683024
+      },
+      "vp_lateral_bias_m": {
+        "count": 200000,
+        "max_abs": 1770.2280305113445,
+        "mean": -82.56956312775685
+      }
+    },
+    "state_phase_steps": {
+      "advantage:post_merge": 2920,
+      "advantage:pre_merge": 63721,
+      "advantage:re_entry": 241,
+      "crossing_entry:post_merge": 24321,
+      "crossing_entry:pre_merge": 41053,
+      "crossing_entry:re_entry": 1082,
+      "neutral:pre_merge": 66662
+    },
+    "terminal_reasons": {
+      "timeout": 2817
+    }
+  },
+  "training_steps": 200000
+}

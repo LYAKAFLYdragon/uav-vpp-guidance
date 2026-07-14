@@ -1,0 +1,146 @@
+{
+  "description": "Minimal read-only P4 evidence bundle for GEO-20260713-R1 portability closure. Contains the top-level gate, the four per-skill geometry_pretrain_summary.json, and the shared-skill registry snapshot used as the declared-cell source. All source files were hashed and copied byte-for-byte; nothing was retrained, re-evaluated, or modified.",
+  "files": [
+    {
+      "bundle_path": "p4_geometry_pretrain_gate.json",
+      "json_top_level_fields": [
+        "all_skills_ready_for_combat_finetune",
+        "next_stage",
+        "p3_encoder_sha256",
+        "raw_train_trajectory_persistence",
+        "skills",
+        "stage",
+        "training_started"
+      ],
+      "role": "top_level_gate",
+      "sha256": "144df30e2151d1f6d15fb3704432bec149c5f5e510a3388e6fe709e9e3b6c56a",
+      "size_bytes": 256780,
+      "source_path": "src/p4_geometry_pretrain_gate.json"
+    },
+    {
+      "bundle_path": "skills/defensive_extension/geometry_pretrain_summary.json",
+      "json_top_level_fields": [
+        "dev_evaluations",
+        "selected_checkpoint",
+        "selected_gate",
+        "status",
+        "train_aggregate",
+        "training_steps"
+      ],
+      "role": "per_skill_summary:defensive_extension",
+      "sha256": "a92abf7d9f0686349128ea44b1fcdfa86bfaa8714d58ad8eb1e2bca2b908c24a",
+      "size_bytes": 53980,
+      "source_path": "src/skills/defensive_extension/geometry_pretrain_summary.json"
+    },
+    {
+      "bundle_path": "skills/lead_intercept/geometry_pretrain_summary.json",
+      "json_top_level_fields": [
+        "dev_evaluations",
+        "selected_checkpoint",
+        "selected_gate",
+        "status",
+        "train_aggregate",
+        "training_steps"
+      ],
+      "role": "per_skill_summary:lead_intercept",
+      "sha256": "e6046432c75bc3de5835f9967e480c9414e8bedf58239a16253b2e96c7ad7f38",
+      "size_bytes": 55395,
+      "source_path": "src/skills/lead_intercept/geometry_pretrain_summary.json"
+    },
+    {
+      "bundle_path": "skills/pursuit_conversion/geometry_pretrain_summary.json",
+      "json_top_level_fields": [
+        "dev_evaluations",
+        "selected_checkpoint",
+        "selected_gate",
+        "status",
+        "train_aggregate",
+        "training_steps"
+      ],
+      "role": "per_skill_summary:pursuit_conversion",
+      "sha256": "7f0cdcda23f5e750bf64208831f0af43484eeaae1dae3f1430648eee1347e9a4",
+      "size_bytes": 57185,
+      "source_path": "src/skills/pursuit_conversion/geometry_pretrain_summary.json"
+    },
+    {
+      "bundle_path": "skills/reentry_recovery/geometry_pretrain_summary.json",
+      "json_top_level_fields": [
+        "dev_evaluations",
+        "selected_checkpoint",
+        "selected_gate",
+        "status",
+        "train_aggregate",
+        "training_steps"
+      ],
+      "role": "per_skill_summary:reentry_recovery",
+      "sha256": "69f95662f1d4fbae98c1388cb6922552e2be196be650b10e79b9faad4a2abe48",
+      "size_bytes": 60547,
+      "source_path": "src/skills/reentry_recovery/geometry_pretrain_summary.json"
+    },
+    {
+      "bundle_path": "thesis_five_state_shared_skill_registry_v1.yaml",
+      "json_top_level_fields": null,
+      "role": "registry_snapshot",
+      "sha256": "2a06c21b9a8af4a94b7e0c3b644b2e3298d2f5b5c95dbf992d61c0cbfd7b4f92",
+      "size_bytes": 7713,
+      "source_path": "config/experiment/thesis_five_state_shared_skill_registry_v1.yaml"
+    }
+  ],
+  "gate_thresholds": {
+    "minimum_geometry_phase_coverage_per_declared_cell": 2,
+    "minimum_intent_progress_fraction": 0.55
+  },
+  "gate_verdict": {
+    "all_skills_ready_for_combat_finetune": false,
+    "next_stage": "do_not_start_combat_finetune",
+    "p3_encoder_sha256": "385663281a9c48c0416ea4d1a1bb8dc08ed64a0cfebb0f01083cbbb8bcfbdc59"
+  },
+  "generated_utc": "2026-07-14T00:28:13.812677+00:00",
+  "provenance_boundaries": {
+    "declared_cells_source": "registry snapshot (provenance_unverified substitute for the missing frozen training_plan.json)",
+    "dev30_manifest": "provenance_unverified",
+    "note": "This bundle is NOT a reproduction of the original E: drive GEO-20260713-R1 run. The following frozen inputs are NOT available in the source repo and are recorded as provenance_unverified; the working-tree source is NEVER substituted for frozen run facts.",
+    "resolved_geometry_config.json": "provenance_unverified",
+    "run_commit": "provenance_unverified",
+    "training_plan.json": "provenance_unverified"
+  },
+  "reconciliation": {
+    "declared_count": 26,
+    "diff_count": 0,
+    "emitted_count": 26,
+    "extra_count": 0,
+    "per_skill": {
+      "defensive_extension": {
+        "declared": 6,
+        "diff": 0,
+        "emitted": 6,
+        "extra": 0
+      },
+      "lead_intercept": {
+        "declared": 6,
+        "diff": 0,
+        "emitted": 6,
+        "extra": 0
+      },
+      "pursuit_conversion": {
+        "declared": 6,
+        "diff": 0,
+        "emitted": 6,
+        "extra": 0
+      },
+      "reentry_recovery": {
+        "declared": 8,
+        "diff": 0,
+        "emitted": 8,
+        "extra": 0
+      }
+    }
+  },
+  "schema_version": "p4_evidence_bundle_v1",
+  "source_machine": {
+    "hostname": "DESKTOP-7E7D3T0",
+    "platform": "Windows-10-10.0.26100-SP0",
+    "python_version": "3.11.14"
+  },
+  "verify_hint": "python scripts/export_p4_evidence_bundle.py --verify --out-dir <this-dir>"
+}

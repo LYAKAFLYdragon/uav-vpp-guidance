@@ -1227,6 +1227,8 @@ AUDIT_ALLOWLIST = {
     "reports/thesis_five_state_p4_gate_failure_attribution_audit_20260714_zh.md",
     "reports/thesis_five_state_p4_gate_failure_attribution_matrix_20260714.csv",
     "reports/thesis_five_state_p4_gate_failure_attribution_matrix_20260714.json",
+    "reports/thesis_five_state_p4_v1_go_no_go_decision_20260714_zh.md",
+    "reports/thesis_five_state_p4_v2_sampler_feasibility_preflight_design_20260714_zh.md",
     "reports/thesis_five_state_shared_intent_v1_execution_checklist_20260713_zh.md",
     ".gitattributes",
     "reports/p4_evidence_bundle_20260714/evidence_manifest.json",

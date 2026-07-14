@@ -146,6 +146,10 @@ def test_canonical_snapshot_rejects_nonfinite_values_and_is_quantised():
     assert first == second
     with pytest.raises(r3.GlobalAdvantageP1R3ContractError, match="non-finite"):
         r3.snapshot_hash({"value": float("nan")}, 6)
+    cycle: dict[str, object] = {}
+    cycle["self"] = cycle
+    with pytest.raises(r3.GlobalAdvantageP1R3ContractError, match="cyclic runtime state"):
+        r3.canonicalize(cycle)
 
 
 def test_reset_envelope_records_nested_runtime_state_and_fdm_properties():

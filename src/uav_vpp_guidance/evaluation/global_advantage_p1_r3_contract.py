@@ -225,24 +225,12 @@ def build_p1_r3_plan(config: Mapping[str, Any]) -> GlobalAdvantageP1R3Plan:
 def canonicalize(value: Any, *, path: str = "root") -> Any:
     """Return a finite JSON-safe value or fail instead of hiding state drift."""
 
-    if isinstance(value, Mapping):
-        return {
-            str(key): canonicalize(item, path=f"{path}.{key}")
-            for key, item in sorted(value.items(), key=lambda pair: str(pair[0]))
-        }
-    if isinstance(value, (list, tuple, deque)):
-        return [canonicalize(item, path=f"{path}[{index}]") for index, item in enumerate(value)]
-    if isinstance(value, np.ndarray):
-        return canonicalize(value.tolist(), path=path)
-    if isinstance(value, np.generic):
-        return canonicalize(value.item(), path=path)
-    if isinstance(value, np.random.Generator):
-        return {
-            "bit_generator": value.bit_generator.__class__.__name__,
-            "state": canonicalize(value.bit_generator.state, path=f"{path}.state"),
-        }
-    if isinstance(value, Path):
-        return str(value)
+    return _canonicalize(value, path=path, active_ids=set())
+
+
+def _canonicalize(value: Any, *, path: str, active_ids: set[int]) -> Any:
+    """Canonicalize nested mutable state while rejecting cyclic object graphs."""
+
     if isinstance(value, bool) or value is None or isinstance(value, str):
         return value
     if isinstance(value, int):
@@ -251,9 +239,47 @@ def canonicalize(value: Any, *, path: str = "root") -> Any:
         if not math.isfinite(value):
             raise GlobalAdvantageP1R3ContractError(f"non-finite value at {path}")
         return float(value)
+    if isinstance(value, np.generic):
+        return _canonicalize(value.item(), path=path, active_ids=active_ids)
+    if isinstance(value, Path):
+        return str(value)
     if hasattr(value, "detach") and hasattr(value, "cpu") and hasattr(value, "numpy"):
-        return canonicalize(value.detach().cpu().numpy(), path=path)
-    if hasattr(value, "__dict__"):
+        return _canonicalize(
+            value.detach().cpu().numpy(), path=path, active_ids=active_ids
+        )
+    is_compound = (
+        isinstance(value, (Mapping, list, tuple, deque, np.ndarray, np.random.Generator))
+        or hasattr(value, "__dict__")
+    )
+    if not is_compound:
+        raise GlobalAdvantageP1R3ContractError(
+            f"unsupported runtime value at {path}: "
+            f"{value.__class__.__module__}.{value.__class__.__qualname__}"
+        )
+    object_id = id(value)
+    if object_id in active_ids:
+        raise GlobalAdvantageP1R3ContractError(f"cyclic runtime state at {path}")
+    active_ids.add(object_id)
+    try:
+        if isinstance(value, Mapping):
+            return {
+                str(key): _canonicalize(item, path=f"{path}.{key}", active_ids=active_ids)
+                for key, item in sorted(value.items(), key=lambda pair: str(pair[0]))
+            }
+        if isinstance(value, (list, tuple, deque)):
+            return [
+                _canonicalize(item, path=f"{path}[{index}]", active_ids=active_ids)
+                for index, item in enumerate(value)
+            ]
+        if isinstance(value, np.ndarray):
+            return _canonicalize(value.tolist(), path=path, active_ids=active_ids)
+        if isinstance(value, np.random.Generator):
+            return {
+                "bit_generator": value.bit_generator.__class__.__name__,
+                "state": _canonicalize(
+                    value.bit_generator.state, path=f"{path}.state", active_ids=active_ids
+                ),
+            }
         fields = {
             key: item
             for key, item in vars(value).items()
@@ -261,11 +287,12 @@ def canonicalize(value: Any, *, path: str = "root") -> Any:
         }
         return {
             "class": f"{value.__class__.__module__}.{value.__class__.__qualname__}",
-            "fields": canonicalize(fields, path=f"{path}.__dict__"),
+            "fields": _canonicalize(
+                fields, path=f"{path}.__dict__", active_ids=active_ids
+            ),
         }
-    raise GlobalAdvantageP1R3ContractError(
-        f"unsupported runtime value at {path}: {value.__class__.__module__}.{value.__class__.__qualname__}"
-    )
+    finally:
+        active_ids.remove(object_id)
 
 
 def snapshot_hash(payload: Mapping[str, Any], decimal_places: int) -> str:

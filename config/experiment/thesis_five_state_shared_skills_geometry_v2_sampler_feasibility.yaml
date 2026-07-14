@@ -1,0 +1,55 @@
+schema_version: 1
+source_id: THESIS-FIVE-STATE-P4-V2-SAMPLER-FEASIBILITY-DESIGN
+lane:
+  id: noncanonical_thesis_extension
+  family: thesis_five_state_shared_intent_v1
+  stage: p4_v2_sampler_feasibility
+authorization:
+  execution_permitted: false
+  jsbsim_probe_permitted: false
+  training_permitted: false
+  combat_finetune_permitted: false
+  high_level_ppo_permitted: false
+  require_explicit_future_authorization: true
+sources:
+  p4_evidence_bundle: reports/p4_evidence_bundle_20260714
+  skill_registry: config/experiment/thesis_five_state_shared_skill_registry_v1.yaml
+  train_candidate_manifest: config/experiment/manifests/thesis_five_state_p4_v2_sampler_train_candidates.yaml
+  dev_candidate_manifest: config/experiment/manifests/thesis_five_state_p4_v2_sampler_dev_candidates.yaml
+  opponent_registry: config/experiment/thesis_five_state_shared_intent_v1_opponent_registry.yaml
+observation_action_contract:
+  observation_dim: 66
+  action_dim: 3
+  policy_input_mutation: prohibited
+  dynamic_taxonomy_sidecar_only: true
+  frozen_p3_encoder_sha256: 385663281a9c48c0416ea4d1a1bb8dc08ed64a0cfebb0f01083cbbb8bcfbdc59
+dynamic_taxonomy:
+  source: evaluation.engagement_geometry_taxonomy
+  own_to_target_los_key: own_to_target_los_angle_deg
+  target_velocity_to_own_los_key: target_velocity_to_own_los_angle_deg
+  hemisphere_boundary_deg: 90.0
+  transition_half_width_deg: 5.0
+  transition_label: crossing_entry
+  unknown_label: unknown
+phase_entry_paths:
+  deterministic_run_in:
+    future_probe_candidate: true
+    learned_controller: prohibited
+  physical_snapshot_restore:
+    future_probe_candidate: true
+    require_full_state_restore_validation: true
+coverage_support_gate:
+  min_episodes_per_cell_per_opponent: 2
+  min_policy_steps_per_cell_per_opponent: 20
+  min_distinct_scenario_signatures: 2
+  require_train_dev_disjointness: true
+  require_strict_jsbsim_when_future_probe_runs: true
+  pass_condition: all_26_dynamic_state_phase_cells_supported_in_train_and_dev
+stop_rules:
+  - no_training_or_checkpoint_creation_in_this_stage
+  - no_jsbsim_probe_without_new_explicit_authorization
+  - no_backend_fallback_or_policy_input_mutation
+  - fail_any_missing_cell_or_train_dev_overlap
+outputs:
+  output_root: outputs/thesis_five_state_shared_intent_v1/p4_v2_sampler_feasibility_design_only
+  create_output_root: prohibited

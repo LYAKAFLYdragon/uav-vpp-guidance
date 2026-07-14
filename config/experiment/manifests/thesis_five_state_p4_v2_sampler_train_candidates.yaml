@@ -1,0 +1,25 @@
+schema_version: 1
+source_id: THESIS-FIVE-STATE-P4-V2-SAMPLER-TRAIN-CANDIDATES
+lane: noncanonical_thesis_extension
+split: train
+execution_permitted: false
+coverage_source: registry_dynamic_state_matrix
+scenario_signature_namespace: p4v2_train_physical_runin
+candidate_seed_range: [93000, 93999]
+distance_speed_package_ids:
+  - p4v2_train_transition_midrange_a
+  - p4v2_train_transition_midrange_b
+opponents:
+  - expert_rule_based
+  - end_to_end_neural
+  - independent_ppo_vpp
+reference_controllers:
+  - zero_vpp
+  - profile_compiled_fixed
+phase_entry_paths:
+  - deterministic_run_in
+  - physical_snapshot_restore
+prohibitions:
+  - no_learned_skill_or_high_level_policy
+  - no_heldout60_or_dev30_signature_reuse
+  - no_snapshot_restore_without_full_state_validation

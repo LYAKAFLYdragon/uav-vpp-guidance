@@ -1,0 +1,226 @@
+includes:
+  - ./jsbsim_hrl_thesis_taxonomy_ablation30_base.yaml
+
+experiment:
+  name: noncanonical_thesis_five_state_heldout_envelope_v1
+  description: >
+    Independent evaluation-only five-state held-out envelope. This family does
+    not train, tune, or replace the frozen canonical two-skill policy.
+
+heldout40_protocol:
+  source_id: THESIS-FIVE-STATE-HELDOUT40-V1
+  evaluation_only: true
+  training_permitted: false
+  tuning_permitted: false
+  primary_comparison: canonical_ppo_high_level_policy
+  privileged_reference: legacy_static_oracle_task_gate
+  fixed_controls:
+    - head_on_vpp_specialist_no_routing
+    - crossing_vpp_specialist_no_routing
+  opponents:
+    - expert
+    - end_to_end
+    - independent_ppo_vpp
+  paired_seed_contract: scenario_seed_shared_across_methods_per_opponent
+  episode_horizon_high_level_steps: 160
+  high_level_dt_s: 0.2
+  head_on_terminal_discriminability:
+    subset_initial_class: head_on
+    minimum_resolved_ratio: 0.6
+    required_methods:
+      - canonical_ppo_high_level_policy
+    at_least_one_fixed_method:
+      - head_on_vpp_specialist_no_routing
+      - crossing_vpp_specialist_no_routing
+    failure_label: terminal_win_rate_not_discriminative
+    interpretation: >
+      When this gate fails for an opponent, that opponent's head-on terminal
+      win-rate is descriptive only and cannot support routing-comparison claims.
+  required_episode_metrics:
+    - win_loss_draw_unresolved
+    - terminal_reason
+    - ego_hp_target_hp_hp_advantage
+    - ego_target_attack_zone_time_and_first_entry
+    - ego_crash_or_out_of_bounds
+    - phase_occupancy_pre_merge_post_merge_re_entry
+    - dynamic_taxonomy_occupancy
+    - vpp_forward_lateral_vertical_geometry
+  stop_rule: >
+    No training, tuning, reward/VPP/guidance/PID change, scenario replacement,
+    seed replacement, result-driven rerun, or canonical-asset modification is
+    permitted. Each opponent is reported separately and never pooled.
+
+env:
+  max_high_level_steps: 160
+  strict_backend: true
+
+# Preserve the frozen specialist meaning, not merely its vector length:
+# head-on/canonical use base16 + gains + task bit, while crossing removes only
+# the historical task bit through its method-level override (base16 + gains).
+observation:
+  include_gains: true
+  include_opponent_stage: false
+  include_task_type: true
+
+scenario_manifest:
+  path: ./manifests/thesis_five_state_heldout40_v1.yaml
+  source_id: THESIS-FIVE-STATE-HELDOUT40-V1
+  payload_sha256: 4ad749a29a09d4cdddcd0fd3a8dd53fb683e1c63cb466d1c73c42de5b11d74b6
+  task_key_field: task_registry_key
+  expected_task_counts:
+    head_on: 32
+    crossing_feasible: 8
+  task_labels:
+    head_on: "Heldout40: advantage, head-on, disadvantage, and neutral"
+    crossing_feasible: "Heldout40: crossing-entry"
+  use_scenario_seed: true
+
+frozen_assets:
+  source_worktree: E:/uav-vpp-guidance-thesis-five-state-v1-assets
+  source_git_sha: 9a9f9bf6d68560afa81560f5260b78f318dcd9b1
+  artifacts:
+    - id: canonical_ppo_high_level_policy
+      path: E:/uav-vpp-guidance-thesis-five-state-v1-assets/canonical_two_skill_commander_best.pt
+      sha256: 26280e0ccc40f9db51995ed5f90491cc0c91217337f291d7136cc28f5ed66694
+      expected_obs_dim: 19
+      expected_action_dim: 2
+    - id: head_on_vpp_specialist
+      path: E:/uav-vpp-guidance-thesis-five-state-v1-assets/canonical_head_on_specialist_best.pt
+      sha256: 0aeadd11cd8c7723c8963bcc5da21dd97c365e64f234d07b86c2b8f0d7ec5fb6
+      expected_obs_dim: 19
+      expected_action_dim: 3
+    - id: crossing_vpp_specialist
+      path: E:/uav-vpp-guidance-thesis-five-state-v1-assets/canonical_crossing_specialist_last.pt
+      sha256: 5eddc138bff55a5466da1129e840ef7dfb3677347a05276c3877746c8e89148b
+      expected_obs_dim: 18
+      expected_action_dim: 3
+    - id: trajectory_prediction_asset
+      path: E:/uav-vpp-guidance-thesis-five-state-v1-assets/frozen_trajectory_predictor_best_model.pt
+      sha256: 96bc8e5e1aebd32ca6a528fb3149cfd58aeff276c18bca66388d650f00495931
+    - id: end_to_end_neural_opponent
+      path: E:/uav-vpp-guidance-thesis-five-state-v1-assets/canonical_end_to_end_neural_opponent_best.pt
+      sha256: d38828338d5e7e22167129b2e9972d52ecf5fc3fda5d52caff95a8374c35b8bc
+      expected_obs_dim: 16
+      expected_action_dim: 3
+    - id: independent_ppo_vpp_opponent
+      path: E:/uav-vpp-guidance-thesis-five-state-v1-assets/independent_ppo_vpp_opponent_v1_step_32768.pt
+      sha256: 43cd37fc86c0eb01d96a693f68d30894de7e768de01aed6dba41fa4761edfc60
+      expected_obs_dim: 16
+      expected_action_dim: 3
+
+prediction:
+  learned_predictor_checkpoint: E:/uav-vpp-guidance-thesis-five-state-v1-assets/frozen_trajectory_predictor_best_model.pt
+
+# The canonical high-level checkpoint retains its original two learned actions.
+# Mode 2 is the pre-existing deterministic recovery override and deliberately
+# reuses the frozen head-on specialist rather than introducing a third learner.
+commander:
+  modes:
+    - id: 0
+      name: head_on_specialist
+      specialist_key: head_on
+      checkpoint: E:/uav-vpp-guidance-thesis-five-state-v1-assets/canonical_head_on_specialist_best.pt
+      config_path: config/experiment/train_prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp_combat_finetune_mixed_opponent_aware_32k_task_type_headon_weighted.yaml
+    - id: 1
+      name: crossing_specialist
+      specialist_key: crossing_feasible
+      checkpoint: E:/uav-vpp-guidance-thesis-five-state-v1-assets/canonical_crossing_specialist_last.pt
+      config_path: config/experiment/train_prediction_vpp_ppo_crossing_v3.yaml
+    - id: 2
+      name: post_merge_recovery_specialist
+      specialist_key: post_merge_recovery
+      source_specialist_key: head_on
+      specialist_profile: post_merge_recovery
+      checkpoint: E:/uav-vpp-guidance-thesis-five-state-v1-assets/canonical_head_on_specialist_best.pt
+      config_path: config/experiment/train_prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp_combat_finetune_mixed_opponent_aware_32k_task_type_headon_weighted.yaml
+
+methods:
+  canonical_ppo_high_level_policy:
+    checkpoint: E:/uav-vpp-guidance-thesis-five-state-v1-assets/canonical_two_skill_commander_best.pt
+  legacy_static_oracle_task_gate:
+    specialists:
+      head_on:
+        checkpoint: E:/uav-vpp-guidance-thesis-five-state-v1-assets/canonical_head_on_specialist_best.pt
+      crossing_feasible:
+        checkpoint: E:/uav-vpp-guidance-thesis-five-state-v1-assets/canonical_crossing_specialist_last.pt
+  head_on_vpp_specialist_no_routing:
+    checkpoint: E:/uav-vpp-guidance-thesis-five-state-v1-assets/canonical_head_on_specialist_best.pt
+  crossing_vpp_specialist_no_routing:
+    checkpoint: E:/uav-vpp-guidance-thesis-five-state-v1-assets/canonical_crossing_specialist_last.pt
+
+opponent_registry:
+  expert:
+    type: rule_based
+    class: uav_vpp_guidance.envs.expert_opponent.ExpertOpponent
+    config: {}
+  end_to_end:
+    type: neural_projected_base16
+    class: uav_vpp_guidance.evaluation.feature_name_projected_opponent.FeatureNameProjectedOpponent
+    checkpoint: E:/uav-vpp-guidance-thesis-five-state-v1-assets/canonical_end_to_end_neural_opponent_best.pt
+    checkpoint_sha256: d38828338d5e7e22167129b2e9972d52ecf5fc3fda5d52caff95a8374c35b8bc
+    device: cpu
+    config:
+      delegate_class: uav_vpp_guidance.envs.end_to_end_opponent.EndToEndOpponent
+      delegate_kwargs:
+        invert_observation: true
+      expected_feature_names:
+        - range_m
+        - range_rate_mps
+        - altitude_diff_m
+        - speed_diff_mps
+        - los_azimuth_sin
+        - los_azimuth_cos
+        - los_elevation_sin
+        - los_elevation_cos
+        - ata_sin
+        - ata_cos
+        - aa_sin
+        - aa_cos
+        - own_speed
+        - target_speed
+        - own_altitude
+        - target_altitude
+  independent_ppo_vpp:
+    type: continuous_vpp_projected_base16
+    class: uav_vpp_guidance.evaluation.feature_name_projected_opponent.FeatureNameProjectedOpponent
+    checkpoint: E:/uav-vpp-guidance-thesis-five-state-v1-assets/independent_ppo_vpp_opponent_v1_step_32768.pt
+    checkpoint_sha256: 43cd37fc86c0eb01d96a693f68d30894de7e768de01aed6dba41fa4761edfc60
+    device: cpu
+    config:
+      delegate_class: uav_vpp_guidance.envs.vpp_ppo_opponent.VPPPPOOpponent
+      expected_feature_names:
+        - range_m
+        - range_rate_mps
+        - altitude_diff_m
+        - speed_diff_mps
+        - los_azimuth_sin
+        - los_azimuth_cos
+        - los_elevation_sin
+        - los_elevation_cos
+        - ata_sin
+        - ata_cos
+        - aa_sin
+        - aa_cos
+        - own_speed
+        - target_speed
+        - own_altitude
+        - target_altitude
+
+run_defaults:
+  backend: jsbsim
+  tasks:
+    - head_on
+    - crossing_feasible
+  main_methods:
+    - canonical_ppo_high_level_policy
+    - legacy_static_oracle_task_gate
+    - head_on_vpp_specialist_no_routing
+    - crossing_vpp_specialist_no_routing
+  ablation_methods:
+    - canonical_ppo_high_level_policy
+    - legacy_static_oracle_task_gate
+    - head_on_vpp_specialist_no_routing
+    - crossing_vpp_specialist_no_routing
+  formal_small_seeds:
+    - 0
+  n_episodes: 1

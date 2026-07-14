@@ -1,0 +1,1483 @@
+source_id: THESIS-FIVE-STATE-HELDOUT40-V1
+manifest_version: 1
+status: preregistered_before_evaluation
+frozen_source:
+  git_sha: 9413834e96c60188bd8bef92c2d3177909ca53bb
+  clean_worktree_required: true
+protocol:
+  evaluation_only: true
+  training_permitted: false
+  tuning_permitted: false
+  episode_horizon_high_level_steps: 160
+  high_level_dt_s: 0.2
+  opponents:
+  - expert
+  - end_to_end
+  - independent_ppo_vpp
+  methods:
+  - canonical_ppo_high_level_policy
+  - legacy_static_oracle_task_gate
+  - head_on_vpp_specialist_no_routing
+  - crossing_vpp_specialist_no_routing
+  episodes_per_scenario_method_opponent: 1
+  episodes_total: 480
+  stop_rule: No training, tuning, scenario replacement, seed replacement, reward change,
+    VPP change, guidance change, PID change, or result-driven rerun is permitted.
+generation_contract:
+  taxonomy_version: v1
+  initial_classes:
+  - advantage
+  - head_on
+  - disadvantage
+  - neutral
+  - crossing_entry
+  height_offsets_target_minus_own_m:
+    own_below: 600.0
+    own_above: -600.0
+  mirror_signs:
+  - negative
+  - positive
+  distance_speed_packages:
+  - id: heldout40_closing_a
+    initial_range_m: 3000.0
+    own_speed_mps: 235.0
+    target_speed_mps: 260.0
+  - id: heldout40_closing_b
+    initial_range_m: 3900.0
+    own_speed_mps: 275.0
+    target_speed_mps: 225.0
+  own_altitude_m: 5200.0
+  los_azimuth_abs_deg: 24.0
+  transition_band_deg:
+  - 85.0
+  - 95.0
+  legacy_task_bit_contract:
+    crossing_entry: 1
+    advantage_head_on_disadvantage_neutral: 0
+scenarios:
+- name: heldout40_heldout40_closing_a_advantage_own_below_neg
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 235.0
+    heading_deg: 352.449485039
+  target_init:
+    position_m:
+    - 2685.264273674
+    - -1195.556682274
+    - 5800.0
+    velocity_mps: 260.0
+    heading_deg: 352.449485039
+  metadata:
+    manifest_family: noncanonical_thesis_five_state_heldout_envelope_v1
+    initial_class: advantage
+    height_condition: own_below
+    mirror_sign: negative
+    mirror_pair_id: heldout40_closing_a__advantage__own_below
+    distance_speed_package: heldout40_closing_a
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    ppo_task_bit: 0
+    crossing_context: false
+    scenario_seed: 78100
+    initial_range_m: 3000.0
+    altitude_diff_m: 600.0
+    own_speed_mps: 235.0
+    target_speed_mps: 260.0
+    los_azimuth_abs_deg: 24.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: advantage
+- name: heldout40_heldout40_closing_a_advantage_own_below_pos
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 235.0
+    heading_deg: 7.550514961
+  target_init:
+    position_m:
+    - 2685.264273674
+    - 1195.556682274
+    - 5800.0
+    velocity_mps: 260.0
+    heading_deg: 7.550514961
+  metadata:
+    manifest_family: noncanonical_thesis_five_state_heldout_envelope_v1
+    initial_class: advantage
+    height_condition: own_below
+    mirror_sign: positive
+    mirror_pair_id: heldout40_closing_a__advantage__own_below
+    distance_speed_package: heldout40_closing_a
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    ppo_task_bit: 0
+    crossing_context: false
+    scenario_seed: 78101
+    initial_range_m: 3000.0
+    altitude_diff_m: 600.0
+    own_speed_mps: 235.0
+    target_speed_mps: 260.0
+    los_azimuth_abs_deg: 24.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: advantage
+- name: heldout40_heldout40_closing_a_advantage_own_above_neg
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 235.0
+    heading_deg: 352.449485039
+  target_init:
+    position_m:
+    - 2685.264273674
+    - -1195.556682274
+    - 4600.0
+    velocity_mps: 260.0
+    heading_deg: 352.449485039
+  metadata:
+    manifest_family: noncanonical_thesis_five_state_heldout_envelope_v1
+    initial_class: advantage
+    height_condition: own_above
+    mirror_sign: negative
+    mirror_pair_id: heldout40_closing_a__advantage__own_above
+    distance_speed_package: heldout40_closing_a
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    ppo_task_bit: 0
+    crossing_context: false
+    scenario_seed: 78102
+    initial_range_m: 3000.0
+    altitude_diff_m: -600.0
+    own_speed_mps: 235.0
+    target_speed_mps: 260.0
+    los_azimuth_abs_deg: 24.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: advantage
+- name: heldout40_heldout40_closing_a_advantage_own_above_pos
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 235.0
+    heading_deg: 7.550514961
+  target_init:
+    position_m:
+    - 2685.264273674
+    - 1195.556682274
+    - 4600.0
+    velocity_mps: 260.0
+    heading_deg: 7.550514961
+  metadata:
+    manifest_family: noncanonical_thesis_five_state_heldout_envelope_v1
+    initial_class: advantage
+    height_condition: own_above
+    mirror_sign: positive
+    mirror_pair_id: heldout40_closing_a__advantage__own_above
+    distance_speed_package: heldout40_closing_a
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    ppo_task_bit: 0
+    crossing_context: false
+    scenario_seed: 78103
+    initial_range_m: 3000.0
+    altitude_diff_m: -600.0
+    own_speed_mps: 235.0
+    target_speed_mps: 260.0
+    los_azimuth_abs_deg: 24.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: advantage
+- name: heldout40_heldout40_closing_a_head_on_own_below_neg
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 235.0
+    heading_deg: 352.449485039
+  target_init:
+    position_m:
+    - 2685.264273674
+    - -1195.556682274
+    - 5800.0
+    velocity_mps: 260.0
+    heading_deg: 139.550514961
+  metadata:
+    manifest_family: noncanonical_thesis_five_state_heldout_envelope_v1
+    initial_class: head_on
+    height_condition: own_below
+    mirror_sign: negative
+    mirror_pair_id: heldout40_closing_a__head_on__own_below
+    distance_speed_package: heldout40_closing_a
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    ppo_task_bit: 0
+    crossing_context: false
+    scenario_seed: 78104
+    initial_range_m: 3000.0
+    altitude_diff_m: 600.0
+    own_speed_mps: 235.0
+    target_speed_mps: 260.0
+    los_azimuth_abs_deg: 24.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: head_on
+- name: heldout40_heldout40_closing_a_head_on_own_below_pos
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 235.0
+    heading_deg: 7.550514961
+  target_init:
+    position_m:
+    - 2685.264273674
+    - 1195.556682274
+    - 5800.0
+    velocity_mps: 260.0
+    heading_deg: 220.449485039
+  metadata:
+    manifest_family: noncanonical_thesis_five_state_heldout_envelope_v1
+    initial_class: head_on
+    height_condition: own_below
+    mirror_sign: positive
+    mirror_pair_id: heldout40_closing_a__head_on__own_below
+    distance_speed_package: heldout40_closing_a
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    ppo_task_bit: 0
+    crossing_context: false
+    scenario_seed: 78105
+    initial_range_m: 3000.0
+    altitude_diff_m: 600.0
+    own_speed_mps: 235.0
+    target_speed_mps: 260.0
+    los_azimuth_abs_deg: 24.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: head_on
+- name: heldout40_heldout40_closing_a_head_on_own_above_neg
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 235.0
+    heading_deg: 352.449485039
+  target_init:
+    position_m:
+    - 2685.264273674
+    - -1195.556682274
+    - 4600.0
+    velocity_mps: 260.0
+    heading_deg: 139.550514961
+  metadata:
+    manifest_family: noncanonical_thesis_five_state_heldout_envelope_v1
+    initial_class: head_on
+    height_condition: own_above
+    mirror_sign: negative
+    mirror_pair_id: heldout40_closing_a__head_on__own_above
+    distance_speed_package: heldout40_closing_a
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    ppo_task_bit: 0
+    crossing_context: false
+    scenario_seed: 78106
+    initial_range_m: 3000.0
+    altitude_diff_m: -600.0
+    own_speed_mps: 235.0
+    target_speed_mps: 260.0
+    los_azimuth_abs_deg: 24.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: head_on
+- name: heldout40_heldout40_closing_a_head_on_own_above_pos
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 235.0
+    heading_deg: 7.550514961
+  target_init:
+    position_m:
+    - 2685.264273674
+    - 1195.556682274
+    - 4600.0
+    velocity_mps: 260.0
+    heading_deg: 220.449485039
+  metadata:
+    manifest_family: noncanonical_thesis_five_state_heldout_envelope_v1
+    initial_class: head_on
+    height_condition: own_above
+    mirror_sign: positive
+    mirror_pair_id: heldout40_closing_a__head_on__own_above
+    distance_speed_package: heldout40_closing_a
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    ppo_task_bit: 0
+    crossing_context: false
+    scenario_seed: 78107
+    initial_range_m: 3000.0
+    altitude_diff_m: -600.0
+    own_speed_mps: 235.0
+    target_speed_mps: 260.0
+    los_azimuth_abs_deg: 24.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: head_on
+- name: heldout40_heldout40_closing_a_disadvantage_own_below_neg
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 235.0
+    heading_deg: 139.550514961
+  target_init:
+    position_m:
+    - 2685.264273674
+    - -1195.556682274
+    - 5800.0
+    velocity_mps: 260.0
+    heading_deg: 139.550514961
+  metadata:
+    manifest_family: noncanonical_thesis_five_state_heldout_envelope_v1
+    initial_class: disadvantage
+    height_condition: own_below
+    mirror_sign: negative
+    mirror_pair_id: heldout40_closing_a__disadvantage__own_below
+    distance_speed_package: heldout40_closing_a
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    ppo_task_bit: 0
+    crossing_context: false
+    scenario_seed: 78108
+    initial_range_m: 3000.0
+    altitude_diff_m: 600.0
+    own_speed_mps: 235.0
+    target_speed_mps: 260.0
+    los_azimuth_abs_deg: 24.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: disadvantage
+- name: heldout40_heldout40_closing_a_disadvantage_own_below_pos
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 235.0
+    heading_deg: 220.449485039
+  target_init:
+    position_m:
+    - 2685.264273674
+    - 1195.556682274
+    - 5800.0
+    velocity_mps: 260.0
+    heading_deg: 220.449485039
+  metadata:
+    manifest_family: noncanonical_thesis_five_state_heldout_envelope_v1
+    initial_class: disadvantage
+    height_condition: own_below
+    mirror_sign: positive
+    mirror_pair_id: heldout40_closing_a__disadvantage__own_below
+    distance_speed_package: heldout40_closing_a
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    ppo_task_bit: 0
+    crossing_context: false
+    scenario_seed: 78109
+    initial_range_m: 3000.0
+    altitude_diff_m: 600.0
+    own_speed_mps: 235.0
+    target_speed_mps: 260.0
+    los_azimuth_abs_deg: 24.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: disadvantage
+- name: heldout40_heldout40_closing_a_disadvantage_own_above_neg
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 235.0
+    heading_deg: 139.550514961
+  target_init:
+    position_m:
+    - 2685.264273674
+    - -1195.556682274
+    - 4600.0
+    velocity_mps: 260.0
+    heading_deg: 139.550514961
+  metadata:
+    manifest_family: noncanonical_thesis_five_state_heldout_envelope_v1
+    initial_class: disadvantage
+    height_condition: own_above
+    mirror_sign: negative
+    mirror_pair_id: heldout40_closing_a__disadvantage__own_above
+    distance_speed_package: heldout40_closing_a
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    ppo_task_bit: 0
+    crossing_context: false
+    scenario_seed: 78110
+    initial_range_m: 3000.0
+    altitude_diff_m: -600.0
+    own_speed_mps: 235.0
+    target_speed_mps: 260.0
+    los_azimuth_abs_deg: 24.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: disadvantage
+- name: heldout40_heldout40_closing_a_disadvantage_own_above_pos
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 235.0
+    heading_deg: 220.449485039
+  target_init:
+    position_m:
+    - 2685.264273674
+    - 1195.556682274
+    - 4600.0
+    velocity_mps: 260.0
+    heading_deg: 220.449485039
+  metadata:
+    manifest_family: noncanonical_thesis_five_state_heldout_envelope_v1
+    initial_class: disadvantage
+    height_condition: own_above
+    mirror_sign: positive
+    mirror_pair_id: heldout40_closing_a__disadvantage__own_above
+    distance_speed_package: heldout40_closing_a
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    ppo_task_bit: 0
+    crossing_context: false
+    scenario_seed: 78111
+    initial_range_m: 3000.0
+    altitude_diff_m: -600.0
+    own_speed_mps: 235.0
+    target_speed_mps: 260.0
+    los_azimuth_abs_deg: 24.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: disadvantage
+- name: heldout40_heldout40_closing_a_neutral_own_below_neg
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 235.0
+    heading_deg: 139.550514961
+  target_init:
+    position_m:
+    - 2685.264273674
+    - -1195.556682274
+    - 5800.0
+    velocity_mps: 260.0
+    heading_deg: 352.449485039
+  metadata:
+    manifest_family: noncanonical_thesis_five_state_heldout_envelope_v1
+    initial_class: neutral
+    height_condition: own_below
+    mirror_sign: negative
+    mirror_pair_id: heldout40_closing_a__neutral__own_below
+    distance_speed_package: heldout40_closing_a
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    ppo_task_bit: 0
+    crossing_context: false
+    scenario_seed: 78112
+    initial_range_m: 3000.0
+    altitude_diff_m: 600.0
+    own_speed_mps: 235.0
+    target_speed_mps: 260.0
+    los_azimuth_abs_deg: 24.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: neutral
+- name: heldout40_heldout40_closing_a_neutral_own_below_pos
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 235.0
+    heading_deg: 220.449485039
+  target_init:
+    position_m:
+    - 2685.264273674
+    - 1195.556682274
+    - 5800.0
+    velocity_mps: 260.0
+    heading_deg: 7.550514961
+  metadata:
+    manifest_family: noncanonical_thesis_five_state_heldout_envelope_v1
+    initial_class: neutral
+    height_condition: own_below
+    mirror_sign: positive
+    mirror_pair_id: heldout40_closing_a__neutral__own_below
+    distance_speed_package: heldout40_closing_a
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    ppo_task_bit: 0
+    crossing_context: false
+    scenario_seed: 78113
+    initial_range_m: 3000.0
+    altitude_diff_m: 600.0
+    own_speed_mps: 235.0
+    target_speed_mps: 260.0
+    los_azimuth_abs_deg: 24.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: neutral
+- name: heldout40_heldout40_closing_a_neutral_own_above_neg
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 235.0
+    heading_deg: 139.550514961
+  target_init:
+    position_m:
+    - 2685.264273674
+    - -1195.556682274
+    - 4600.0
+    velocity_mps: 260.0
+    heading_deg: 352.449485039
+  metadata:
+    manifest_family: noncanonical_thesis_five_state_heldout_envelope_v1
+    initial_class: neutral
+    height_condition: own_above
+    mirror_sign: negative
+    mirror_pair_id: heldout40_closing_a__neutral__own_above
+    distance_speed_package: heldout40_closing_a
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    ppo_task_bit: 0
+    crossing_context: false
+    scenario_seed: 78114
+    initial_range_m: 3000.0
+    altitude_diff_m: -600.0
+    own_speed_mps: 235.0
+    target_speed_mps: 260.0
+    los_azimuth_abs_deg: 24.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: neutral
+- name: heldout40_heldout40_closing_a_neutral_own_above_pos
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 235.0
+    heading_deg: 220.449485039
+  target_init:
+    position_m:
+    - 2685.264273674
+    - 1195.556682274
+    - 4600.0
+    velocity_mps: 260.0
+    heading_deg: 7.550514961
+  metadata:
+    manifest_family: noncanonical_thesis_five_state_heldout_envelope_v1
+    initial_class: neutral
+    height_condition: own_above
+    mirror_sign: positive
+    mirror_pair_id: heldout40_closing_a__neutral__own_above
+    distance_speed_package: heldout40_closing_a
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    ppo_task_bit: 0
+    crossing_context: false
+    scenario_seed: 78115
+    initial_range_m: 3000.0
+    altitude_diff_m: -600.0
+    own_speed_mps: 235.0
+    target_speed_mps: 260.0
+    los_azimuth_abs_deg: 24.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: neutral
+- name: heldout40_heldout40_closing_a_crossing_entry_own_below_neg
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 235.0
+    heading_deg: 352.449485039
+  target_init:
+    position_m:
+    - 2685.264273674
+    - -1195.556682274
+    - 5800.0
+    velocity_mps: 260.0
+    heading_deg: 66.0
+  metadata:
+    manifest_family: noncanonical_thesis_five_state_heldout_envelope_v1
+    initial_class: crossing_entry
+    height_condition: own_below
+    mirror_sign: negative
+    mirror_pair_id: heldout40_closing_a__crossing_entry__own_below
+    distance_speed_package: heldout40_closing_a
+    phase_at_reset: pre_merge
+    task_registry_key: crossing_feasible
+    ppo_task_bit: 1
+    crossing_context: true
+    scenario_seed: 78116
+    initial_range_m: 3000.0
+    altitude_diff_m: 600.0
+    own_speed_mps: 235.0
+    target_speed_mps: 260.0
+    los_azimuth_abs_deg: 24.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 90.0
+    taxonomy_geometry_state: transition
+- name: heldout40_heldout40_closing_a_crossing_entry_own_below_pos
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 235.0
+    heading_deg: 7.550514961
+  target_init:
+    position_m:
+    - 2685.264273674
+    - 1195.556682274
+    - 5800.0
+    velocity_mps: 260.0
+    heading_deg: 294.0
+  metadata:
+    manifest_family: noncanonical_thesis_five_state_heldout_envelope_v1
+    initial_class: crossing_entry
+    height_condition: own_below
+    mirror_sign: positive
+    mirror_pair_id: heldout40_closing_a__crossing_entry__own_below
+    distance_speed_package: heldout40_closing_a
+    phase_at_reset: pre_merge
+    task_registry_key: crossing_feasible
+    ppo_task_bit: 1
+    crossing_context: true
+    scenario_seed: 78117
+    initial_range_m: 3000.0
+    altitude_diff_m: 600.0
+    own_speed_mps: 235.0
+    target_speed_mps: 260.0
+    los_azimuth_abs_deg: 24.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 90.0
+    taxonomy_geometry_state: transition
+- name: heldout40_heldout40_closing_a_crossing_entry_own_above_neg
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 235.0
+    heading_deg: 352.449485039
+  target_init:
+    position_m:
+    - 2685.264273674
+    - -1195.556682274
+    - 4600.0
+    velocity_mps: 260.0
+    heading_deg: 66.0
+  metadata:
+    manifest_family: noncanonical_thesis_five_state_heldout_envelope_v1
+    initial_class: crossing_entry
+    height_condition: own_above
+    mirror_sign: negative
+    mirror_pair_id: heldout40_closing_a__crossing_entry__own_above
+    distance_speed_package: heldout40_closing_a
+    phase_at_reset: pre_merge
+    task_registry_key: crossing_feasible
+    ppo_task_bit: 1
+    crossing_context: true
+    scenario_seed: 78118
+    initial_range_m: 3000.0
+    altitude_diff_m: -600.0
+    own_speed_mps: 235.0
+    target_speed_mps: 260.0
+    los_azimuth_abs_deg: 24.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 90.0
+    taxonomy_geometry_state: transition
+- name: heldout40_heldout40_closing_a_crossing_entry_own_above_pos
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 235.0
+    heading_deg: 7.550514961
+  target_init:
+    position_m:
+    - 2685.264273674
+    - 1195.556682274
+    - 4600.0
+    velocity_mps: 260.0
+    heading_deg: 294.0
+  metadata:
+    manifest_family: noncanonical_thesis_five_state_heldout_envelope_v1
+    initial_class: crossing_entry
+    height_condition: own_above
+    mirror_sign: positive
+    mirror_pair_id: heldout40_closing_a__crossing_entry__own_above
+    distance_speed_package: heldout40_closing_a
+    phase_at_reset: pre_merge
+    task_registry_key: crossing_feasible
+    ppo_task_bit: 1
+    crossing_context: true
+    scenario_seed: 78119
+    initial_range_m: 3000.0
+    altitude_diff_m: -600.0
+    own_speed_mps: 235.0
+    target_speed_mps: 260.0
+    los_azimuth_abs_deg: 24.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 90.0
+    taxonomy_geometry_state: transition
+- name: heldout40_heldout40_closing_b_advantage_own_below_neg
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 275.0
+    heading_deg: 354.007765192
+  target_init:
+    position_m:
+    - 3520.411162381
+    - -1567.388033572
+    - 5800.0
+    velocity_mps: 225.0
+    heading_deg: 354.007765192
+  metadata:
+    manifest_family: noncanonical_thesis_five_state_heldout_envelope_v1
+    initial_class: advantage
+    height_condition: own_below
+    mirror_sign: negative
+    mirror_pair_id: heldout40_closing_b__advantage__own_below
+    distance_speed_package: heldout40_closing_b
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    ppo_task_bit: 0
+    crossing_context: false
+    scenario_seed: 78120
+    initial_range_m: 3900.0
+    altitude_diff_m: 600.0
+    own_speed_mps: 275.0
+    target_speed_mps: 225.0
+    los_azimuth_abs_deg: 24.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: advantage
+- name: heldout40_heldout40_closing_b_advantage_own_below_pos
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 275.0
+    heading_deg: 5.992234808
+  target_init:
+    position_m:
+    - 3520.411162381
+    - 1567.388033572
+    - 5800.0
+    velocity_mps: 225.0
+    heading_deg: 5.992234808
+  metadata:
+    manifest_family: noncanonical_thesis_five_state_heldout_envelope_v1
+    initial_class: advantage
+    height_condition: own_below
+    mirror_sign: positive
+    mirror_pair_id: heldout40_closing_b__advantage__own_below
+    distance_speed_package: heldout40_closing_b
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    ppo_task_bit: 0
+    crossing_context: false
+    scenario_seed: 78121
+    initial_range_m: 3900.0
+    altitude_diff_m: 600.0
+    own_speed_mps: 275.0
+    target_speed_mps: 225.0
+    los_azimuth_abs_deg: 24.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: advantage
+- name: heldout40_heldout40_closing_b_advantage_own_above_neg
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 275.0
+    heading_deg: 354.007765192
+  target_init:
+    position_m:
+    - 3520.411162381
+    - -1567.388033572
+    - 4600.0
+    velocity_mps: 225.0
+    heading_deg: 354.007765192
+  metadata:
+    manifest_family: noncanonical_thesis_five_state_heldout_envelope_v1
+    initial_class: advantage
+    height_condition: own_above
+    mirror_sign: negative
+    mirror_pair_id: heldout40_closing_b__advantage__own_above
+    distance_speed_package: heldout40_closing_b
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    ppo_task_bit: 0
+    crossing_context: false
+    scenario_seed: 78122
+    initial_range_m: 3900.0
+    altitude_diff_m: -600.0
+    own_speed_mps: 275.0
+    target_speed_mps: 225.0
+    los_azimuth_abs_deg: 24.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: advantage
+- name: heldout40_heldout40_closing_b_advantage_own_above_pos
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 275.0
+    heading_deg: 5.992234808
+  target_init:
+    position_m:
+    - 3520.411162381
+    - 1567.388033572
+    - 4600.0
+    velocity_mps: 225.0
+    heading_deg: 5.992234808
+  metadata:
+    manifest_family: noncanonical_thesis_five_state_heldout_envelope_v1
+    initial_class: advantage
+    height_condition: own_above
+    mirror_sign: positive
+    mirror_pair_id: heldout40_closing_b__advantage__own_above
+    distance_speed_package: heldout40_closing_b
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    ppo_task_bit: 0
+    crossing_context: false
+    scenario_seed: 78123
+    initial_range_m: 3900.0
+    altitude_diff_m: -600.0
+    own_speed_mps: 275.0
+    target_speed_mps: 225.0
+    los_azimuth_abs_deg: 24.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: advantage
+- name: heldout40_heldout40_closing_b_head_on_own_below_neg
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 275.0
+    heading_deg: 354.007765192
+  target_init:
+    position_m:
+    - 3520.411162381
+    - -1567.388033572
+    - 5800.0
+    velocity_mps: 225.0
+    heading_deg: 137.992234808
+  metadata:
+    manifest_family: noncanonical_thesis_five_state_heldout_envelope_v1
+    initial_class: head_on
+    height_condition: own_below
+    mirror_sign: negative
+    mirror_pair_id: heldout40_closing_b__head_on__own_below
+    distance_speed_package: heldout40_closing_b
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    ppo_task_bit: 0
+    crossing_context: false
+    scenario_seed: 78124
+    initial_range_m: 3900.0
+    altitude_diff_m: 600.0
+    own_speed_mps: 275.0
+    target_speed_mps: 225.0
+    los_azimuth_abs_deg: 24.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: head_on
+- name: heldout40_heldout40_closing_b_head_on_own_below_pos
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 275.0
+    heading_deg: 5.992234808
+  target_init:
+    position_m:
+    - 3520.411162381
+    - 1567.388033572
+    - 5800.0
+    velocity_mps: 225.0
+    heading_deg: 222.007765192
+  metadata:
+    manifest_family: noncanonical_thesis_five_state_heldout_envelope_v1
+    initial_class: head_on
+    height_condition: own_below
+    mirror_sign: positive
+    mirror_pair_id: heldout40_closing_b__head_on__own_below
+    distance_speed_package: heldout40_closing_b
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    ppo_task_bit: 0
+    crossing_context: false
+    scenario_seed: 78125
+    initial_range_m: 3900.0
+    altitude_diff_m: 600.0
+    own_speed_mps: 275.0
+    target_speed_mps: 225.0
+    los_azimuth_abs_deg: 24.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: head_on
+- name: heldout40_heldout40_closing_b_head_on_own_above_neg
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 275.0
+    heading_deg: 354.007765192
+  target_init:
+    position_m:
+    - 3520.411162381
+    - -1567.388033572
+    - 4600.0
+    velocity_mps: 225.0
+    heading_deg: 137.992234808
+  metadata:
+    manifest_family: noncanonical_thesis_five_state_heldout_envelope_v1
+    initial_class: head_on
+    height_condition: own_above
+    mirror_sign: negative
+    mirror_pair_id: heldout40_closing_b__head_on__own_above
+    distance_speed_package: heldout40_closing_b
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    ppo_task_bit: 0
+    crossing_context: false
+    scenario_seed: 78126
+    initial_range_m: 3900.0
+    altitude_diff_m: -600.0
+    own_speed_mps: 275.0
+    target_speed_mps: 225.0
+    los_azimuth_abs_deg: 24.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: head_on
+- name: heldout40_heldout40_closing_b_head_on_own_above_pos
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 275.0
+    heading_deg: 5.992234808
+  target_init:
+    position_m:
+    - 3520.411162381
+    - 1567.388033572
+    - 4600.0
+    velocity_mps: 225.0
+    heading_deg: 222.007765192
+  metadata:
+    manifest_family: noncanonical_thesis_five_state_heldout_envelope_v1
+    initial_class: head_on
+    height_condition: own_above
+    mirror_sign: positive
+    mirror_pair_id: heldout40_closing_b__head_on__own_above
+    distance_speed_package: heldout40_closing_b
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    ppo_task_bit: 0
+    crossing_context: false
+    scenario_seed: 78127
+    initial_range_m: 3900.0
+    altitude_diff_m: -600.0
+    own_speed_mps: 275.0
+    target_speed_mps: 225.0
+    los_azimuth_abs_deg: 24.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: head_on
+- name: heldout40_heldout40_closing_b_disadvantage_own_below_neg
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 275.0
+    heading_deg: 137.992234808
+  target_init:
+    position_m:
+    - 3520.411162381
+    - -1567.388033572
+    - 5800.0
+    velocity_mps: 225.0
+    heading_deg: 137.992234808
+  metadata:
+    manifest_family: noncanonical_thesis_five_state_heldout_envelope_v1
+    initial_class: disadvantage
+    height_condition: own_below
+    mirror_sign: negative
+    mirror_pair_id: heldout40_closing_b__disadvantage__own_below
+    distance_speed_package: heldout40_closing_b
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    ppo_task_bit: 0
+    crossing_context: false
+    scenario_seed: 78128
+    initial_range_m: 3900.0
+    altitude_diff_m: 600.0
+    own_speed_mps: 275.0
+    target_speed_mps: 225.0
+    los_azimuth_abs_deg: 24.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: disadvantage
+- name: heldout40_heldout40_closing_b_disadvantage_own_below_pos
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 275.0
+    heading_deg: 222.007765192
+  target_init:
+    position_m:
+    - 3520.411162381
+    - 1567.388033572
+    - 5800.0
+    velocity_mps: 225.0
+    heading_deg: 222.007765192
+  metadata:
+    manifest_family: noncanonical_thesis_five_state_heldout_envelope_v1
+    initial_class: disadvantage
+    height_condition: own_below
+    mirror_sign: positive
+    mirror_pair_id: heldout40_closing_b__disadvantage__own_below
+    distance_speed_package: heldout40_closing_b
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    ppo_task_bit: 0
+    crossing_context: false
+    scenario_seed: 78129
+    initial_range_m: 3900.0
+    altitude_diff_m: 600.0
+    own_speed_mps: 275.0
+    target_speed_mps: 225.0
+    los_azimuth_abs_deg: 24.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: disadvantage
+- name: heldout40_heldout40_closing_b_disadvantage_own_above_neg
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 275.0
+    heading_deg: 137.992234808
+  target_init:
+    position_m:
+    - 3520.411162381
+    - -1567.388033572
+    - 4600.0
+    velocity_mps: 225.0
+    heading_deg: 137.992234808
+  metadata:
+    manifest_family: noncanonical_thesis_five_state_heldout_envelope_v1
+    initial_class: disadvantage
+    height_condition: own_above
+    mirror_sign: negative
+    mirror_pair_id: heldout40_closing_b__disadvantage__own_above
+    distance_speed_package: heldout40_closing_b
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    ppo_task_bit: 0
+    crossing_context: false
+    scenario_seed: 78130
+    initial_range_m: 3900.0
+    altitude_diff_m: -600.0
+    own_speed_mps: 275.0
+    target_speed_mps: 225.0
+    los_azimuth_abs_deg: 24.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: disadvantage
+- name: heldout40_heldout40_closing_b_disadvantage_own_above_pos
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 275.0
+    heading_deg: 222.007765192
+  target_init:
+    position_m:
+    - 3520.411162381
+    - 1567.388033572
+    - 4600.0
+    velocity_mps: 225.0
+    heading_deg: 222.007765192
+  metadata:
+    manifest_family: noncanonical_thesis_five_state_heldout_envelope_v1
+    initial_class: disadvantage
+    height_condition: own_above
+    mirror_sign: positive
+    mirror_pair_id: heldout40_closing_b__disadvantage__own_above
+    distance_speed_package: heldout40_closing_b
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    ppo_task_bit: 0
+    crossing_context: false
+    scenario_seed: 78131
+    initial_range_m: 3900.0
+    altitude_diff_m: -600.0
+    own_speed_mps: 275.0
+    target_speed_mps: 225.0
+    los_azimuth_abs_deg: 24.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: disadvantage
+- name: heldout40_heldout40_closing_b_neutral_own_below_neg
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 275.0
+    heading_deg: 137.992234808
+  target_init:
+    position_m:
+    - 3520.411162381
+    - -1567.388033572
+    - 5800.0
+    velocity_mps: 225.0
+    heading_deg: 354.007765192
+  metadata:
+    manifest_family: noncanonical_thesis_five_state_heldout_envelope_v1
+    initial_class: neutral
+    height_condition: own_below
+    mirror_sign: negative
+    mirror_pair_id: heldout40_closing_b__neutral__own_below
+    distance_speed_package: heldout40_closing_b
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    ppo_task_bit: 0
+    crossing_context: false
+    scenario_seed: 78132
+    initial_range_m: 3900.0
+    altitude_diff_m: 600.0
+    own_speed_mps: 275.0
+    target_speed_mps: 225.0
+    los_azimuth_abs_deg: 24.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: neutral
+- name: heldout40_heldout40_closing_b_neutral_own_below_pos
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 275.0
+    heading_deg: 222.007765192
+  target_init:
+    position_m:
+    - 3520.411162381
+    - 1567.388033572
+    - 5800.0
+    velocity_mps: 225.0
+    heading_deg: 5.992234808
+  metadata:
+    manifest_family: noncanonical_thesis_five_state_heldout_envelope_v1
+    initial_class: neutral
+    height_condition: own_below
+    mirror_sign: positive
+    mirror_pair_id: heldout40_closing_b__neutral__own_below
+    distance_speed_package: heldout40_closing_b
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    ppo_task_bit: 0
+    crossing_context: false
+    scenario_seed: 78133
+    initial_range_m: 3900.0
+    altitude_diff_m: 600.0
+    own_speed_mps: 275.0
+    target_speed_mps: 225.0
+    los_azimuth_abs_deg: 24.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: neutral
+- name: heldout40_heldout40_closing_b_neutral_own_above_neg
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 275.0
+    heading_deg: 137.992234808
+  target_init:
+    position_m:
+    - 3520.411162381
+    - -1567.388033572
+    - 4600.0
+    velocity_mps: 225.0
+    heading_deg: 354.007765192
+  metadata:
+    manifest_family: noncanonical_thesis_five_state_heldout_envelope_v1
+    initial_class: neutral
+    height_condition: own_above
+    mirror_sign: negative
+    mirror_pair_id: heldout40_closing_b__neutral__own_above
+    distance_speed_package: heldout40_closing_b
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    ppo_task_bit: 0
+    crossing_context: false
+    scenario_seed: 78134
+    initial_range_m: 3900.0
+    altitude_diff_m: -600.0
+    own_speed_mps: 275.0
+    target_speed_mps: 225.0
+    los_azimuth_abs_deg: 24.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: neutral
+- name: heldout40_heldout40_closing_b_neutral_own_above_pos
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 275.0
+    heading_deg: 222.007765192
+  target_init:
+    position_m:
+    - 3520.411162381
+    - 1567.388033572
+    - 4600.0
+    velocity_mps: 225.0
+    heading_deg: 5.992234808
+  metadata:
+    manifest_family: noncanonical_thesis_five_state_heldout_envelope_v1
+    initial_class: neutral
+    height_condition: own_above
+    mirror_sign: positive
+    mirror_pair_id: heldout40_closing_b__neutral__own_above
+    distance_speed_package: heldout40_closing_b
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    ppo_task_bit: 0
+    crossing_context: false
+    scenario_seed: 78135
+    initial_range_m: 3900.0
+    altitude_diff_m: -600.0
+    own_speed_mps: 275.0
+    target_speed_mps: 225.0
+    los_azimuth_abs_deg: 24.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: neutral
+- name: heldout40_heldout40_closing_b_crossing_entry_own_below_neg
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 275.0
+    heading_deg: 354.007765192
+  target_init:
+    position_m:
+    - 3520.411162381
+    - -1567.388033572
+    - 5800.0
+    velocity_mps: 225.0
+    heading_deg: 66.0
+  metadata:
+    manifest_family: noncanonical_thesis_five_state_heldout_envelope_v1
+    initial_class: crossing_entry
+    height_condition: own_below
+    mirror_sign: negative
+    mirror_pair_id: heldout40_closing_b__crossing_entry__own_below
+    distance_speed_package: heldout40_closing_b
+    phase_at_reset: pre_merge
+    task_registry_key: crossing_feasible
+    ppo_task_bit: 1
+    crossing_context: true
+    scenario_seed: 78136
+    initial_range_m: 3900.0
+    altitude_diff_m: 600.0
+    own_speed_mps: 275.0
+    target_speed_mps: 225.0
+    los_azimuth_abs_deg: 24.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 90.0
+    taxonomy_geometry_state: transition
+- name: heldout40_heldout40_closing_b_crossing_entry_own_below_pos
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 275.0
+    heading_deg: 5.992234808
+  target_init:
+    position_m:
+    - 3520.411162381
+    - 1567.388033572
+    - 5800.0
+    velocity_mps: 225.0
+    heading_deg: 294.0
+  metadata:
+    manifest_family: noncanonical_thesis_five_state_heldout_envelope_v1
+    initial_class: crossing_entry
+    height_condition: own_below
+    mirror_sign: positive
+    mirror_pair_id: heldout40_closing_b__crossing_entry__own_below
+    distance_speed_package: heldout40_closing_b
+    phase_at_reset: pre_merge
+    task_registry_key: crossing_feasible
+    ppo_task_bit: 1
+    crossing_context: true
+    scenario_seed: 78137
+    initial_range_m: 3900.0
+    altitude_diff_m: 600.0
+    own_speed_mps: 275.0
+    target_speed_mps: 225.0
+    los_azimuth_abs_deg: 24.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 90.0
+    taxonomy_geometry_state: transition
+- name: heldout40_heldout40_closing_b_crossing_entry_own_above_neg
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 275.0
+    heading_deg: 354.007765192
+  target_init:
+    position_m:
+    - 3520.411162381
+    - -1567.388033572
+    - 4600.0
+    velocity_mps: 225.0
+    heading_deg: 66.0
+  metadata:
+    manifest_family: noncanonical_thesis_five_state_heldout_envelope_v1
+    initial_class: crossing_entry
+    height_condition: own_above
+    mirror_sign: negative
+    mirror_pair_id: heldout40_closing_b__crossing_entry__own_above
+    distance_speed_package: heldout40_closing_b
+    phase_at_reset: pre_merge
+    task_registry_key: crossing_feasible
+    ppo_task_bit: 1
+    crossing_context: true
+    scenario_seed: 78138
+    initial_range_m: 3900.0
+    altitude_diff_m: -600.0
+    own_speed_mps: 275.0
+    target_speed_mps: 225.0
+    los_azimuth_abs_deg: 24.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 90.0
+    taxonomy_geometry_state: transition
+- name: heldout40_heldout40_closing_b_crossing_entry_own_above_pos
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 275.0
+    heading_deg: 5.992234808
+  target_init:
+    position_m:
+    - 3520.411162381
+    - 1567.388033572
+    - 4600.0
+    velocity_mps: 225.0
+    heading_deg: 294.0
+  metadata:
+    manifest_family: noncanonical_thesis_five_state_heldout_envelope_v1
+    initial_class: crossing_entry
+    height_condition: own_above
+    mirror_sign: positive
+    mirror_pair_id: heldout40_closing_b__crossing_entry__own_above
+    distance_speed_package: heldout40_closing_b
+    phase_at_reset: pre_merge
+    task_registry_key: crossing_feasible
+    ppo_task_bit: 1
+    crossing_context: true
+    scenario_seed: 78139
+    initial_range_m: 3900.0
+    altitude_diff_m: -600.0
+    own_speed_mps: 275.0
+    target_speed_mps: 225.0
+    los_azimuth_abs_deg: 24.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 90.0
+    taxonomy_geometry_state: transition
+disjointness:
+  sources:
+  - source_id: THESIS-TAXONOMY-ABLATION30-V1
+    unique_signature_count: 30
+    intersection_count: 0
+  - source_id: THESIS-FIVE-STATE-SHARED-INTENT-V1-DEV30
+    unique_signature_count: 30
+    intersection_count: 0
+  - source_id: THESIS-FIVE-STATE-SHARED-INTENT-V1-HELDOUT60
+    unique_signature_count: 60
+    intersection_count: 0
+  intersection_count: 0
+  source_files:
+  - source_id: THESIS-TAXONOMY-ABLATION30-V1
+    path: E:\uav-vpp-guidance-five-state-heldout-envelope-v1\config\experiment\manifests\thesis_taxonomy_ablation30_v1.yaml
+    sha256: 79dddd3fa2585f99846330ad966220252acb80aa05fc6718ea873e5a1d801cf2
+  - source_id: THESIS-FIVE-STATE-SHARED-INTENT-V1-DEV30
+    path: E:\uav-vpp-guidance-five-state-heldout-envelope-v1\config\experiment\manifests\thesis_five_state_shared_intent_v1_dev30.yaml
+    sha256: 6bd9c4282a4aa9724dee350114293421287ce0f00387b5b298e7be067c30d130
+  - source_id: THESIS-FIVE-STATE-SHARED-INTENT-V1-HELDOUT60
+    path: E:\uav-vpp-guidance-five-state-heldout-envelope-v1\config\experiment\manifests\thesis_five_state_shared_intent_v1_heldout60.yaml
+    sha256: f96f3c927a0de4702dee62e2894fe784ff945a21f4e5728749fba20666603b5a
+integrity:
+  builder_code_sha256: 20853172946222084979cb840c3bd9be9b4629267e13d7829b01d96505ec68d9
+  classifier_code_sha256: 9736dd64b13d3f8bd51372f650b51d324f258626bc96439e9788524b6267f05b
+  payload_sha256: 4ad749a29a09d4cdddcd0fd3a8dd53fb683e1c63cb466d1c73c42de5b11d74b6

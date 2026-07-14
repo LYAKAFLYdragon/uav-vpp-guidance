@@ -3774,7 +3774,7 @@ def _parse_args() -> argparse.Namespace:
         "--opponent-stage",
         type=str,
         default="none",
-        choices=["none", "expert", "end_to_end", "curriculum"],
+        help="Named opponent_registry entry. The config validates the selected key.",
     )
     parser.add_argument(
         "--jsbsim-root",

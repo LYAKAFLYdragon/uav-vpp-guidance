@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import copy
 from pathlib import Path
 import sys
 
@@ -105,3 +106,24 @@ def test_v12_verifier_only_tolerates_serialization_scale_float_noise():
 
     assert module._equivalent({"value": 0.2499999999999}, {"value": 0.25})
     assert not module._equivalent({"value": 0.25}, {"value": 0.2501})
+
+
+def test_v13_requires_runtime_template_before_output_creation(tmp_path: Path):
+    path = ROOT / "scripts" / "run_thesis_five_state_reentry_v13_intent_controllability.py"
+    spec = importlib.util.spec_from_file_location("v13_runner", path)
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    config = yaml.safe_load((ROOT / "config/experiment/thesis_five_state_reentry_v13_intent_controllability_design.yaml").read_text(encoding="utf-8"))
+    config["outputs"]["root"] = str(tmp_path / "v13_output")
+    config_path = tmp_path / "v13_design.yaml"
+    config_path.write_text(yaml.safe_dump(config, sort_keys=False), encoding="utf-8")
+
+    assert module.validate_design(config_path)["runtime_contract_passed"] is True
+    invalid = copy.deepcopy(config)
+    invalid.pop("execution")
+    invalid_path = tmp_path / "v13_missing_execution.yaml"
+    invalid_path.write_text(yaml.safe_dump(invalid, sort_keys=False), encoding="utf-8")
+    with pytest.raises(module.V13RuntimeError, match="execution.runtime_template"):
+        module.validate_design(invalid_path)

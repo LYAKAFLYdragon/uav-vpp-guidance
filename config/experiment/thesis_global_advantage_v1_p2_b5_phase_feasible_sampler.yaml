@@ -1,11 +1,37 @@
 schema_version: 1
 source_id: THESIS-GLOBAL-ADVANTAGE-V1-P2-PHASE-FEASIBLE-SAMPLER-B5-R1
-status: preregistered_design_execution_not_authorised
+status: authorised_one_time_execution_open
 
 authorization:
-  execution_permitted: false
-  required_implementation_git_sha: null
-  authorized_code_files: []
+  execution_permitted: true
+  required_implementation_git_sha: 4f250ed2ea7cef394e500c080f48da598d052064
+  authorized_code_files:
+    - path: scripts/run_thesis_global_advantage_p2_b5_phase_feasible_sampler.py
+      sha256: ce64049baa04bb29c27753ec8a2d9df95fc1d0469e1896bfa7a6fa6011752ef2
+    - path: scripts/build_thesis_global_advantage_p2_b5_phase_feasible_sampler_manifest.py
+      sha256: af2b4f44962f34361653f0238bbadf3aa09b6225fd1f8d133f4419e729c66322
+    - path: src/uav_vpp_guidance/evaluation/global_advantage_p2_b5_phase_feasible_sampler.py
+      sha256: b6a9af37aee2349b293ed7f8776ae235fca1bf78842272cbefc0eb3040016348
+    - path: scripts/run_thesis_global_advantage_p2_b3_phase_observability.py
+      sha256: 808096729748c015f2d348dc09f2acacc3063afa427ed0e5090e49535c03d5ee
+    - path: src/uav_vpp_guidance/training/thesis_shared_skill_geometry.py
+      sha256: 4de550c2d405e657004dfb9aece07ecea8f8782f4efbac4b0d859b136a51d6a8
+    - path: src/uav_vpp_guidance/evaluation/single_motif_continuous_66d.py
+      sha256: 00ddb3ea0294681791cbe39a5194b71343510c29775db98b090e85954d671429
+    - path: src/uav_vpp_guidance/evaluation/p4_v2_sampler_feasibility.py
+      sha256: c2ad3e509d845ea690b64e4d9d13b9f027494eb5fa4eff6eb512dd646f69603c
+    - path: src/uav_vpp_guidance/hierarchy/five_state_observation_contract.py
+      sha256: 0ac8b3998348897db22305973feb3283ffc7178a490ebc975fd48270e6e86ce3
+    - path: src/uav_vpp_guidance/hierarchy/shared_intent_profiles.py
+      sha256: 0353b5afc6d3a6e0270b97d8b9c032087f425699660c382d67504fe5fa8351b3
+    - path: src/uav_vpp_guidance/hierarchy/shared_intent_validity.py
+      sha256: 06fadde7d9a286f6ee5f7c47e5218361fa1abb7e30c26af266b814d211b3b647
+    - path: src/uav_vpp_guidance/hierarchy/temporal_geometry_features.py
+      sha256: 92f03b9af8b52333235d2778bffed5aeecf786143006f6c4d408c7562862d95b
+    - path: src/uav_vpp_guidance/envs/tracking_env.py
+      sha256: 7596f6b7250c52f76db5c7612496a1f5afcbb2bdd2dba934ce066b9c4f3805a3
+    - path: src/uav_vpp_guidance/envs/jsbsim_env.py
+      sha256: e22464927bcf98db06c0d6fe97e0747a4454480deae2d9810a69bcc5305828bb
   training_permitted: false
   tuning_permitted: false
   candidate_policy_loading_permitted: false

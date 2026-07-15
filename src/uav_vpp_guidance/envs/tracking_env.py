@@ -501,6 +501,10 @@ class CloseRangeTrackingEnv:
         self._runtime_specialist_profile: Optional[str] = None
         self._runtime_specialist_mode_name: Optional[str] = None
         self._runtime_specialist_reason: Optional[str] = None
+        self._runtime_vpp_anchor_mode: Optional[str] = None
+        self._runtime_vpp_anchor_reason: Optional[str] = None
+        self._runtime_vpp_anchor_switch_count = 0
+        self._runtime_vpp_anchor_switch_step: Optional[int] = None
         self.sim_freq = self.env_config.get("sim_freq", 60)
         self.decision_freq = self.env_config.get("decision_freq", 5)
         self.max_steps = self.env_config.get("max_high_level_steps", 512)
@@ -2765,6 +2769,7 @@ class CloseRangeTrackingEnv:
             float("nan")
         )
         self.clear_runtime_specialist_context()
+        self.clear_runtime_vpp_anchor_mode()
 
         if self.trajectory_predictor_adapter is not None:
             self.trajectory_predictor_adapter.reset()
@@ -2805,6 +2810,27 @@ class CloseRangeTrackingEnv:
         self._runtime_specialist_profile = None
         self._runtime_specialist_mode_name = None
         self._runtime_specialist_reason = None
+
+    def set_runtime_vpp_anchor_mode(self, *, mode: str, reason: str) -> None:
+        """Apply a recorded VPP-anchor override without mutating the YAML config."""
+
+        if not self._use_virtual_point or self.virtual_point_generator is None:
+            raise RuntimeError("runtime VPP anchor override requires an active VPP generator")
+        if mode not in {"current_target", "predicted_target"}:
+            raise ValueError("runtime VPP anchor mode must be current_target or predicted_target")
+        if not str(reason).strip():
+            raise ValueError("runtime VPP anchor override requires a non-empty reason")
+        if self._runtime_vpp_anchor_mode != mode:
+            self._runtime_vpp_anchor_switch_count += 1
+            self._runtime_vpp_anchor_switch_step = int(self.current_step)
+        self._runtime_vpp_anchor_mode = mode
+        self._runtime_vpp_anchor_reason = str(reason)
+
+    def clear_runtime_vpp_anchor_mode(self) -> None:
+        self._runtime_vpp_anchor_mode = None
+        self._runtime_vpp_anchor_reason = None
+        self._runtime_vpp_anchor_switch_count = 0
+        self._runtime_vpp_anchor_switch_step = None
 
     def set_domain_rand_scale(self, scale: float):
         """Set the current domain randomization scale (0.0 = off)."""
@@ -3948,6 +3974,10 @@ class CloseRangeTrackingEnv:
             self._last_pid_gain_deltas = None
         self._last_aggressiveness = aggressiveness
 
+        # V21-style protocols override all tactical anchor heuristics explicitly.
+        if self._runtime_vpp_anchor_mode is not None:
+            anchor_mode = self._runtime_vpp_anchor_mode
+
         # 若 anchor_mode=predicted_target，获取预测位置
         predicted_target_pos = None
         lookahead_time_s = self.config.get("trajectory_prediction", {}).get("prediction", {}).get("lookahead_time_s", 1.0)
@@ -5059,6 +5089,10 @@ class CloseRangeTrackingEnv:
                 else np.nan
             ),
             "anchor_mode_requested": requested_anchor_mode,
+            "runtime_vpp_anchor_mode": self._runtime_vpp_anchor_mode,
+            "runtime_vpp_anchor_reason": self._runtime_vpp_anchor_reason,
+            "runtime_vpp_anchor_switch_count": self._runtime_vpp_anchor_switch_count,
+            "runtime_vpp_anchor_switch_step": self._runtime_vpp_anchor_switch_step,
             "predicted_target_blend": float(vp_info.get("predicted_target_blend", 1.0)),
             "predicted_target_forward_scale": float(
                 vp_info.get("predicted_target_forward_scale", 1.0)

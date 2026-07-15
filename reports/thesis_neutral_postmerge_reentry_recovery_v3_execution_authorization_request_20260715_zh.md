@@ -2,7 +2,7 @@
 
 **拟执行 Source ID：** `THESIS-NEUTRAL-POSTMERGE-REENTRY-RECOVERY-RUNTIME-FEASIBILITY-V3`  
 **当前状态：** `request_only_not_authorised`  
-**当前 canonical SHA：** `76d28f51882c6b3b69154fbc0dd268c03d05f6b4`  
+**当前 canonical SHA：** `a843f2cdc195d01136547660311516b63e62bbca`  
 **基准配置 SHA-256：** `363c8ab6c3443836f6e3d127feb0df0ea5cf471ce5ba6d23f6069c8558e98fc1`
 
 ## 请求的唯一操作
@@ -21,6 +21,12 @@ neutral_postmerge_reentry_recovery_v3_runtime_feasibility
 
 它必须在执行前不存在。该输出一律 `paper_safe=false`，只能回答 runtime phase support
 是否存在，不能写入论文结果。
+
+**授权路径预检：** 已在仓库外临时构造 overlay，以本节 SHA、base-config hash 和完整
+代码白名单运行 `--preflight`。结果为
+`authorized_preflight_no_jsbsim_no_output_creation`，确认 48 个场景、144 条计划 record、
+clean SHA 与 fresh output root 均可验证；临时 overlay 已删除，未生成正式授权配置、
+未创建 output root，亦未运行 JSBSim。
 
 ## 必须保持冻结的内容
 
@@ -46,7 +52,7 @@ authorized overlay 至少应 hash 绑定下列文件，且 `required_implementat
 
 | 文件 | SHA-256 |
 |---|---|
-| `scripts/run_thesis_neutral_postmerge_reentry_recovery_v3_runtime_feasibility.py` | `8660105f1a46cfaa75fda9add30d9e9ff1f994d925614679dc3d2b2349629d39` |
+| `scripts/run_thesis_neutral_postmerge_reentry_recovery_v3_runtime_feasibility.py` | `4fc8e180e49cffab61d1996353f2318c017e4449f94447f14f39d0fa0bb4dee3` |
 | `scripts/preflight_thesis_neutral_postmerge_reentry_recovery_v3_runtime_feasibility.py` | `694e0dd5f7a96607c0d41d19694dcd965a263f50a0c19e1a1fa32556c36539d4` |
 | `scripts/build_thesis_neutral_postmerge_reentry_recovery_v3_feasibility_manifest.py` | `35dc5fea3c8d18e49cf6b0b946f53f9b94d374d103d6b21cec7f41b5318ac861` |
 | `src/uav_vpp_guidance/evaluation/thesis_neutral_postmerge_v3_contract.py` | `286fdf9f39865a31773144a21ce621aa3287e4e8348d269ef3329c59477950de` |

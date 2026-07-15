@@ -91,3 +91,13 @@ def select_path_anchor(path_neu: Any, progress: float) -> tuple[int, np.ndarray]
         raise DynamicReferencePathError("progress must lie in [0, 1]")
     index = 0 if progress < 1.0 / 3.0 else 1 if progress < 2.0 / 3.0 else 2
     return index, path[index].copy()
+
+
+def semantic_profile_for_anchor(index: int) -> str:
+    """Map observable path progress to an existing, frozen VPP intent profile."""
+
+    if int(index) in (0, 1):
+        return "range_extension"
+    if int(index) == 2:
+        return "reentry_preparation"
+    raise DynamicReferencePathError("anchor index must be 0, 1, or 2")

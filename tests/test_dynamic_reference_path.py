@@ -8,6 +8,7 @@ from uav_vpp_guidance.virtual_point.dynamic_reference_path import (
     DynamicReferencePathError,
     build_three_anchor_path,
     path_progress_from_range_rate,
+    semantic_profile_for_anchor,
     select_path_anchor,
 )
 
@@ -31,6 +32,9 @@ def test_progress_selects_all_three_anchors_without_time_indexing():
     assert select_path_anchor(path, path_progress_from_range_rate(-10.0, config))[0] == 0
     assert select_path_anchor(path, path_progress_from_range_rate(30.0, config))[0] == 1
     assert select_path_anchor(path, path_progress_from_range_rate(90.0, config))[0] == 2
+    assert semantic_profile_for_anchor(0) == "range_extension"
+    assert semantic_profile_for_anchor(1) == "range_extension"
+    assert semantic_profile_for_anchor(2) == "reentry_preparation"
 
 
 def test_path_rejects_coincident_or_nonfinite_geometry():
@@ -51,3 +55,4 @@ def test_v16_design_keeps_path_progress_separate_from_training_and_terminal_sema
     assert config["contract"]["future_simulator_state"] == "prohibited"
     assert config["contract"]["synthetic_target"] == "prohibited"
     assert config["path"]["anchor_count"] == 3
+    assert config["path"]["semantic_profiles_by_anchor"] == ["range_extension", "range_extension", "reentry_preparation"]

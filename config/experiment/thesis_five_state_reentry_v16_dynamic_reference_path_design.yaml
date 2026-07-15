@@ -19,6 +19,7 @@ contract:
 path:
   anchor_count: 3
   anchor_roles: [escape, connector, predicted_reentry]
+  semantic_profiles_by_anchor: [range_extension, range_extension, reentry_preparation]
   escape_extent_m: 1200.0
   connector_fraction: 0.5
   opening_rate_start_mps: 0.0

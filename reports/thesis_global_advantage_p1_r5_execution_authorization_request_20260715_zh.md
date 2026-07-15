@@ -1,6 +1,6 @@
 # P1 R5 JSON Telemetry 一次性执行授权请求
 
-**状态：** `one_shot_execution_authorized_not_started`
+**状态：** `completed_p1_gate_passed`
 **Source ID：** `THESIS-GLOBAL-ADVANTAGE-V1-P1-R5-JSON-TELEMETRY-REPRO-V1`
 **输出根：** `E:/uav-vpp-guidance-five-state-heldout-envelope-v1-results/global_advantage_v1_p1_r5_json_telemetry`
 
@@ -25,3 +25,13 @@ R4 的首个 child 在 raw telemetry 由 `numpy.ndarray` 写入 JSON 时失败�
 R5 仍要求 90/90 cell 的 reset envelope、首个双方动作、trajectory、boundary 和 terminal 等价。任何 serialization、child、fallback 或 hash 问题均为 `runin_protocol_not_reproducible_do_not_train` 或 implementation failure，不允许在同一 Source ID 下重跑或训练。
 
 **授权记录（2026-07-15）：** 范围固定为 30 个 dev 场景、3 个对手和 3 个顺序 repeat，共 270 条 non-learning fresh-process episode。训练、调参、policy/VPP/guidance/PID 变更、snapshot restore、future-state injection 和 held-out evaluation 持续禁止。结果无论 PASS 或 NO-GO 都冻结，R5 下不重跑任何 cell。
+
+## R5 执行结果
+
+R5 已完成且通过 P1 gate：270/270 raw episode artifact 完整，按 `opponent x scenario_signature` 构成 90 个 cell、每个恰有 3 个 repeat。`p1_r3_gate_summary.json` 报告 `passed=true`、`failure_count=0` 和 `verdict=runin_protocol_reproducible`。每个 cell 的 reset envelope、首个双方动作、trajectory、boundary envelope 和 terminal reason 均相等；270/270 telemetry 完整、无 backend/runtime prediction fallback，artifact SHA-256 逐文件复核一致。
+
+- Gate SHA-256：`71d00a4997d277ccc179f3b8252a8078081a39ebe24c3858ee758448581fcc0b`
+- Run manifest SHA-256：`9195f0d7c38cf67ec6bd641e7b09f060529143681cec4e3dc475261f104d7631`
+- 输出规模：expert、end_to_end、independent_ppo_vpp 各 90 条 episode；完整 root 约 513.8 MB。
+
+R5 仅证明此冻结 run-in/repeat 协议在 dev30 和三对手下可重复。它不评价新方法性能，不自动授权 P2 训练、P4/P5 或 formal held-out。

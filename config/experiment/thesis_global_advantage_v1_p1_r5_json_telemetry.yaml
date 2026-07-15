@@ -1,6 +1,6 @@
 schema_version: 1
 source_id: THESIS-GLOBAL-ADVANTAGE-V1-P1-R5-JSON-TELEMETRY-REPRO-V1
-status: one_shot_execution_authorized_not_started
+status: completed_reproducible_p1_gate_passed
 
 experiment:
   name: noncanonical_thesis_global_advantage_v1_p1_r5_json_telemetry
@@ -10,7 +10,7 @@ experiment:
 global_advantage_p1_r3:
   source_id: THESIS-GLOBAL-ADVANTAGE-V1-P1-R5-JSON-TELEMETRY-REPRO-V1
   authorization:
-    execution_permitted: true
+    execution_permitted: false
     required_implementation_git_sha: e1e047ef6db2f38cefe009431f29ee8f48c6fa8a
     authorized_code_files:
       - path: scripts/run_thesis_global_advantage_p1_r3_fresh_environment.py

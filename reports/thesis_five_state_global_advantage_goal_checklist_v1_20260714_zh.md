@@ -176,6 +176,7 @@
 - [x] R4 已于 2026-07-15 一次性执行，但首个 child 的 raw telemetry 写盘遇到 `numpy.ndarray` serialization `TypeError`，`completed_episode_count=0`；已冻结为 `implementation_failure_not_experimental_evidence`，不得重跑或覆盖。
 - [x] R5 JSON-telemetry serialization 修复已实现：raw artifact 写盘前使用 R4 `canonicalize` 递归处理 NumPy arrays；writer regression 已纳入合同测试。
 - [x] R5 implementation 已冻结于 `e1e047ef6db2f38cefe009431f29ee8f48c6fa8a`；相关回归为 `156 passed, 2 skipped`，R5 output root 为空。
-- [x] R5 已于 2026-07-15 一次性授权：范围固定为 30 dev 场景 x 3 对手 x 3 repeat，输出根与 R4 不重合。
-- [ ] **当前唯一允许动作：执行已授权 R5，并按 90/90 gate 冻结 PASS 或 NO-GO；不得重跑、调参或开展任何训练。**
+- [x] R5 已于 2026-07-15 一次性执行并通过：270/270 raw artifact、90/90 cell、每 cell 3 repeat；reset/action/trajectory/boundary/terminal 全等价，无 telemetry 或 fallback 缺失。Gate SHA-256 为 `71d00a4997d277ccc179f3b8252a8078081a39ebe24c3858ee758448581fcc0b`。
+- [x] **P1 已通过：** `THESIS-GLOBAL-ADVANTAGE-V1-P1-R5-JSON-TELEMETRY-REPRO-V1` 已证明冻结 dev30 x 三对手 run-in 协议可重复；R1--R4 保持独立实现失败或负证据归档，不被覆盖。
+- [ ] **当前唯一允许动作：执行 P2 的场景/对手能力基线冻结与 disjointness/physical-reachability 审计；不得直接训练、调参或启动 formal held-out。**
 - [ ] P2--P8 均未授权；尤其不允许以“追求全场景优势”为由绕过 P1/P3 的负证据和 stop rule。

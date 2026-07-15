@@ -187,9 +187,13 @@ def test_b5_collector_preserves_first_pass_continuity_and_builds_66d_from_real_h
     assert last["action_identity_preserved"] is True
 
 
-def test_b5_design_preflight_is_nonexecuting_and_freezes_all_inputs():
+def test_b5_design_preflight_is_nonexecuting_and_freezes_all_inputs(tmp_path: Path):
     preflight = _load(PREFLIGHT, "p2_b5_preflight")
-    result = preflight.validate_design(CONFIG)
+    payload = yaml.safe_load(CONFIG.read_text(encoding="utf-8"))
+    payload["authorization"]["execution_permitted"] = False
+    design_config = tmp_path / "b5_design.yaml"
+    design_config.write_text(yaml.safe_dump(payload), encoding="utf-8")
+    result = preflight.validate_design(design_config)
 
     assert result["execution_permitted"] is False
     assert result["training_permitted"] is False
@@ -221,8 +225,12 @@ def test_b5_gate_requires_each_opponent_and_never_unlocks_training():
     assert missing_independent["training_unlocked"] is False
 
 
-def test_b5_runner_refuses_execution_before_a_separate_authorization():
+def test_b5_runner_refuses_execution_before_a_separate_authorization(tmp_path: Path):
     runner = _load(RUNNER, "p2_b5_runner")
+    payload = yaml.safe_load(CONFIG.read_text(encoding="utf-8"))
+    payload["authorization"]["execution_permitted"] = False
+    unauthorized_config = tmp_path / "b5_unauthorized.yaml"
+    unauthorized_config.write_text(yaml.safe_dump(payload), encoding="utf-8")
 
     with pytest.raises(runner.PhaseFeasibleSamplerError, match="not authorised"):
-        runner.run(CONFIG)
+        runner.run(unauthorized_config)

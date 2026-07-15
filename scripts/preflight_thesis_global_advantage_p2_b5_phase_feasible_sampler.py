@@ -60,8 +60,6 @@ def validate_design(config_path: Path = DEFAULT_CONFIG) -> dict[str, Any]:
 
     config = _load_yaml(config_path)
     plan = build_phase_feasible_sampler_plan(config)
-    if plan.execution_permitted:
-        raise PhaseFeasibleSamplerError("design preflight requires execution_permitted=false")
     inputs = config.get("inputs")
     if not isinstance(inputs, Mapping):
         raise PhaseFeasibleSamplerError("B5 inputs must be a mapping")
@@ -104,7 +102,7 @@ def validate_design(config_path: Path = DEFAULT_CONFIG) -> dict[str, Any]:
     return {
         "source_id": plan.source_id,
         "mode": "preflight_only_no_jsbsim_no_training",
-        "execution_permitted": False,
+        "execution_permitted": plan.execution_permitted,
         "training_permitted": False,
         "manifest": str(manifest_path),
         "manifest_sha256": sha256_file(manifest_path),

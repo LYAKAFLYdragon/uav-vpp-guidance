@@ -1,9 +1,9 @@
 schema_version: 1
 source_id: THESIS-GLOBAL-ADVANTAGE-V1-P2-PHYSICAL-PREFLIGHT-V1
-status: one_shot_execution_authorized
+status: completed_physical_pass_phase_observability_no_go
 
 authorization:
-  execution_permitted: true
+  execution_permitted: false
   required_implementation_git_sha: 7e9092caf3e109728ae7c863cfdc031c484715c8
   authorized_code_files:
     - path: scripts/run_thesis_global_advantage_p2_physical_preflight.py

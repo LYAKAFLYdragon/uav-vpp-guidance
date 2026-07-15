@@ -1,0 +1,360 @@
+{
+  "decision": "physical_pass_phase_observability_no_go",
+  "expected_record_count": 180,
+  "phase_observability": {
+    "expected_initial_phase_counts": {
+      "pre_merge": 180
+    },
+    "first_observed_phase_counts": {
+      "post_merge": 180
+    },
+    "first_pass_observed_episode_count": 66,
+    "initial_phase_match_count": 0,
+    "passed": false,
+    "phase_gaps": {
+      "end_to_end": [
+        "pre_merge",
+        "re_entry"
+      ],
+      "expert": [
+        "pre_merge",
+        "re_entry"
+      ],
+      "independent_ppo_vpp": [
+        "pre_merge",
+        "re_entry"
+      ]
+    },
+    "phase_matrix": {
+      "end_to_end": {
+        "post_merge": 14612,
+        "pre_merge": 0,
+        "re_entry": 0
+      },
+      "expert": {
+        "post_merge": 14742,
+        "pre_merge": 0,
+        "re_entry": 0
+      },
+      "independent_ppo_vpp": {
+        "post_merge": 15217,
+        "pre_merge": 0,
+        "re_entry": 0
+      }
+    },
+    "phase_predicate_observable_step_count": 0,
+    "total_step_count": 44571,
+    "training_unlocked": false
+  },
+  "physical_reachability": {
+    "backend_fallback_step_count": 0,
+    "finite_step_count": 44571,
+    "maximum_step_count": 260,
+    "minimum_step_count": 160,
+    "passed": true,
+    "prediction_fallback_step_count": 0,
+    "total_step_count": 44571,
+    "valid_record_count": 180
+  },
+  "provenance": {
+    "gate_sha256": "38a36badad27805e4f041b410caaccb2907453e85e466a640f91fe71ad7750d1",
+    "manifest_path": "E:\\uav-vpp-guidance-five-state-heldout-envelope-v1\\config\\experiment\\manifests\\thesis_global_advantage_v1_p2_physical_preflight60.yaml",
+    "manifest_sha256": "78d90d6ea32490cc777d13e0a809061ec300f94ff6d7d012f93a9e9895ba834f",
+    "result_root": "E:\\uav-vpp-guidance-five-state-heldout-envelope-v1-results\\global_advantage_v1_p2_physical_preflight",
+    "run_manifest_sha256": "9d8458a0bc893727b0d648879a2e8c3bc5e2fe525e5481c9c7483c689be73d9d"
+  },
+  "record_count": 180,
+  "source_id": "THESIS-GLOBAL-ADVANTAGE-V1-P2-PHYSICAL-PREFLIGHT-V1",
+  "state_opponent_phase_rows": [
+    {
+      "initial_state": "advantage",
+      "opponent": "expert",
+      "phase": "pre_merge",
+      "step_count": 0
+    },
+    {
+      "initial_state": "advantage",
+      "opponent": "expert",
+      "phase": "post_merge",
+      "step_count": 2871
+    },
+    {
+      "initial_state": "advantage",
+      "opponent": "expert",
+      "phase": "re_entry",
+      "step_count": 0
+    },
+    {
+      "initial_state": "advantage",
+      "opponent": "end_to_end",
+      "phase": "pre_merge",
+      "step_count": 0
+    },
+    {
+      "initial_state": "advantage",
+      "opponent": "end_to_end",
+      "phase": "post_merge",
+      "step_count": 2976
+    },
+    {
+      "initial_state": "advantage",
+      "opponent": "end_to_end",
+      "phase": "re_entry",
+      "step_count": 0
+    },
+    {
+      "initial_state": "advantage",
+      "opponent": "independent_ppo_vpp",
+      "phase": "pre_merge",
+      "step_count": 0
+    },
+    {
+      "initial_state": "advantage",
+      "opponent": "independent_ppo_vpp",
+      "phase": "post_merge",
+      "step_count": 3004
+    },
+    {
+      "initial_state": "advantage",
+      "opponent": "independent_ppo_vpp",
+      "phase": "re_entry",
+      "step_count": 0
+    },
+    {
+      "initial_state": "crossing_entry",
+      "opponent": "expert",
+      "phase": "pre_merge",
+      "step_count": 0
+    },
+    {
+      "initial_state": "crossing_entry",
+      "opponent": "expert",
+      "phase": "post_merge",
+      "step_count": 2943
+    },
+    {
+      "initial_state": "crossing_entry",
+      "opponent": "expert",
+      "phase": "re_entry",
+      "step_count": 0
+    },
+    {
+      "initial_state": "crossing_entry",
+      "opponent": "end_to_end",
+      "phase": "pre_merge",
+      "step_count": 0
+    },
+    {
+      "initial_state": "crossing_entry",
+      "opponent": "end_to_end",
+      "phase": "post_merge",
+      "step_count": 3006
+    },
+    {
+      "initial_state": "crossing_entry",
+      "opponent": "end_to_end",
+      "phase": "re_entry",
+      "step_count": 0
+    },
+    {
+      "initial_state": "crossing_entry",
+      "opponent": "independent_ppo_vpp",
+      "phase": "pre_merge",
+      "step_count": 0
+    },
+    {
+      "initial_state": "crossing_entry",
+      "opponent": "independent_ppo_vpp",
+      "phase": "post_merge",
+      "step_count": 2964
+    },
+    {
+      "initial_state": "crossing_entry",
+      "opponent": "independent_ppo_vpp",
+      "phase": "re_entry",
+      "step_count": 0
+    },
+    {
+      "initial_state": "disadvantage",
+      "opponent": "expert",
+      "phase": "pre_merge",
+      "step_count": 0
+    },
+    {
+      "initial_state": "disadvantage",
+      "opponent": "expert",
+      "phase": "post_merge",
+      "step_count": 3049
+    },
+    {
+      "initial_state": "disadvantage",
+      "opponent": "expert",
+      "phase": "re_entry",
+      "step_count": 0
+    },
+    {
+      "initial_state": "disadvantage",
+      "opponent": "end_to_end",
+      "phase": "pre_merge",
+      "step_count": 0
+    },
+    {
+      "initial_state": "disadvantage",
+      "opponent": "end_to_end",
+      "phase": "post_merge",
+      "step_count": 2939
+    },
+    {
+      "initial_state": "disadvantage",
+      "opponent": "end_to_end",
+      "phase": "re_entry",
+      "step_count": 0
+    },
+    {
+      "initial_state": "disadvantage",
+      "opponent": "independent_ppo_vpp",
+      "phase": "pre_merge",
+      "step_count": 0
+    },
+    {
+      "initial_state": "disadvantage",
+      "opponent": "independent_ppo_vpp",
+      "phase": "post_merge",
+      "step_count": 3040
+    },
+    {
+      "initial_state": "disadvantage",
+      "opponent": "independent_ppo_vpp",
+      "phase": "re_entry",
+      "step_count": 0
+    },
+    {
+      "initial_state": "head_on",
+      "opponent": "expert",
+      "phase": "pre_merge",
+      "step_count": 0
+    },
+    {
+      "initial_state": "head_on",
+      "opponent": "expert",
+      "phase": "post_merge",
+      "step_count": 2759
+    },
+    {
+      "initial_state": "head_on",
+      "opponent": "expert",
+      "phase": "re_entry",
+      "step_count": 0
+    },
+    {
+      "initial_state": "head_on",
+      "opponent": "end_to_end",
+      "phase": "pre_merge",
+      "step_count": 0
+    },
+    {
+      "initial_state": "head_on",
+      "opponent": "end_to_end",
+      "phase": "post_merge",
+      "step_count": 2889
+    },
+    {
+      "initial_state": "head_on",
+      "opponent": "end_to_end",
+      "phase": "re_entry",
+      "step_count": 0
+    },
+    {
+      "initial_state": "head_on",
+      "opponent": "independent_ppo_vpp",
+      "phase": "pre_merge",
+      "step_count": 0
+    },
+    {
+      "initial_state": "head_on",
+      "opponent": "independent_ppo_vpp",
+      "phase": "post_merge",
+      "step_count": 3089
+    },
+    {
+      "initial_state": "head_on",
+      "opponent": "independent_ppo_vpp",
+      "phase": "re_entry",
+      "step_count": 0
+    },
+    {
+      "initial_state": "neutral",
+      "opponent": "expert",
+      "phase": "pre_merge",
+      "step_count": 0
+    },
+    {
+      "initial_state": "neutral",
+      "opponent": "expert",
+      "phase": "post_merge",
+      "step_count": 3120
+    },
+    {
+      "initial_state": "neutral",
+      "opponent": "expert",
+      "phase": "re_entry",
+      "step_count": 0
+    },
+    {
+      "initial_state": "neutral",
+      "opponent": "end_to_end",
+      "phase": "pre_merge",
+      "step_count": 0
+    },
+    {
+      "initial_state": "neutral",
+      "opponent": "end_to_end",
+      "phase": "post_merge",
+      "step_count": 2802
+    },
+    {
+      "initial_state": "neutral",
+      "opponent": "end_to_end",
+      "phase": "re_entry",
+      "step_count": 0
+    },
+    {
+      "initial_state": "neutral",
+      "opponent": "independent_ppo_vpp",
+      "phase": "pre_merge",
+      "step_count": 0
+    },
+    {
+      "initial_state": "neutral",
+      "opponent": "independent_ppo_vpp",
+      "phase": "post_merge",
+      "step_count": 3120
+    },
+    {
+      "initial_state": "neutral",
+      "opponent": "independent_ppo_vpp",
+      "phase": "re_entry",
+      "step_count": 0
+    }
+  ],
+  "terminal_mix": {
+    "end_to_end": {
+      "target_crash_or_out_of_bounds": 27,
+      "timeout_hp_advantage": 25,
+      "timeout_hp_disadvantage": 8
+    },
+    "expert": {
+      "ego_crash_or_out_of_bounds": 4,
+      "target_crash_or_out_of_bounds": 16,
+      "timeout_hp_advantage": 25,
+      "timeout_hp_disadvantage": 15
+    },
+    "independent_ppo_vpp": {
+      "ego_crash_or_out_of_bounds": 2,
+      "target_crash_or_out_of_bounds": 11,
+      "timeout_draw": 3,
+      "timeout_hp_advantage": 25,
+      "timeout_hp_disadvantage": 19
+    }
+  }
+}

@@ -1,7 +1,7 @@
 # P2-B2 Strict JSBSim Physical Preflight 一次性执行授权
 
 **Source ID：** `THESIS-GLOBAL-ADVANTAGE-V1-P2-PHYSICAL-PREFLIGHT-V1`  
-**授权状态：** `one_shot_execution_authorized`  
+**授权状态：** `completed_execution_closed`
 **冻结实现 commit：** `7e9092caf3e109728ae7c863cfdc031c484715c8`
 
 ## 授权范围
@@ -34,3 +34,9 @@ python scripts/run_thesis_global_advantage_p2_physical_preflight.py --execute
 - `pre_merge/post_merge/re_entry` 覆盖矩阵独立输出；phase gap 是后续相关技能训练的阻塞证据，不能篡改或否定物理可达性记录。
 - 任何异常、输入哈希不一致、fallback、输出根已存在或磁盘不足均立即停止。不得删除失败输出、替换场景、增加 episode、重跑同一 Source ID，或以调参绕过结果。
 - 无论 gate 结果如何，运行结束后都将 `execution_permitted` 复位为 `false`，并将输出作为正面或负面证据归档；它不会自动解锁 P3--P7。
+
+## 已执行结果
+
+本授权已于 2026-07-15 执行一次并关闭。输出根为 `E:/uav-vpp-guidance-five-state-heldout-envelope-v1-results/global_advantage_v1_p2_physical_preflight`；gate SHA-256 为 `38a36badad27805e4f041b410caaccb2907453e85e466a640f91fe71ad7750d1`，run manifest SHA-256 为 `9d8458a0bc893727b0d648879a2e8c3bc5e2fe525e5481c9c7483c689be73d9d`。
+
+物理执行合同通过：`180/180` valid records、`44,571/44,571` 有限 action/own-state/target-state step、无 backend 或非 warmup prediction fallback，最短 episode 为 160 steps。phase 可观测性不通过：冻结 manifest 的 180 条均声明 reset 为 `pre_merge`，但 raw telemetry 的首个 phase 标签均为 `post_merge`；三个 opponent 下均无 `pre_merge` 或 `re_entry` step，且 raw step 未记录 range/range-rate，无法独立复算 PhaseTracker 的输入。故结果固定为 `physical_pass_phase_observability_no_go`，不解锁任何技能训练。完整审计见 `reports/thesis_global_advantage_p2_physical_preflight_completion_20260715_zh.md`。

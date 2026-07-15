@@ -1,0 +1,53 @@
+source_id: THESIS-FIVE-STATE-V19-WINDOWED-PHASE-TELEMETRY-AUDIT
+status: design_only_not_authorized
+purpose: >
+  Correct V18's observability-contract error by separating predictor warm-up from
+  analysis-ready telemetry while reproducing the frozen V17 envelope.
+authorization:
+  execution_permitted: false
+  training_permitted: false
+  tuning_permitted: false
+  reward_change_permitted: false
+  candidate_policy_loading_permitted: false
+  combat_finetune_permitted: false
+  heldout_claims_permitted: false
+inputs:
+  manifest: config/experiment/manifests/thesis_five_state_v17_path_context_preflight24.yaml
+  manifest_sha256: 87bb61c5837541d45e0213a6af5c7b5a4a55a0c172a7c19e6315de50d9d3ba16
+  v17_reference_gate: E:/uav-vpp-guidance-five-state-heldout-envelope-v1-results/five_state_v17_path_context_preflight/path_context_preflight_gate.json
+  v17_reference_gate_sha256: f6ab06dc25b99b392587338b58a8bf5d136c97ed71657d7b80a5b469457d58c5
+opponents:
+  order: [expert, end_to_end, independent_ppo_vpp]
+  pooled_gate: prohibited
+contract:
+  backend: jsbsim
+  strict_backend: true
+  one_continuous_episode: true
+  controller: frozen_fixed_head_on_only
+  training: prohibited
+  reward_change: prohibited
+  vpp_guidance_pid_change: prohibited
+  future_state_injection: prohibited
+windows:
+  warmup:
+    condition: history_length_less_than_10_or_prediction_valid_false
+    required: [base_observation_16d, phase, first_pass_complete, prediction_valid, prediction_fallback]
+    prediction_valid: report_only
+    prediction_fallback: prohibited
+  analysis_ready:
+    condition: history_length_equals_10_and_prediction_valid_true_and_prediction_fallback_false
+    required: [base_observation_16d, own_target_speed_altitude_energy, dynamic_taxonomy, phase, vpp_world_offset_m, guidance_command_normalized, actual_nz_g, saturation_flags]
+    telemetry_completeness: 1.0
+gates:
+  records_per_opponent: 24
+  exact_v17_handoff_replay: true
+  warmup_fallback_count: 0
+  analysis_ready_prediction_fallback_count: 0
+  per_opponent_analysis_ready_steps_min: 20
+  output_partitioning_required: true
+outputs:
+  root: E:/uav-vpp-guidance-five-state-heldout-envelope-v1-results/five_state_v19_windowed_phase_telemetry_audit
+  expected_records: 72
+stop_rule:
+  on_replay_mismatch_or_fallback: freeze_as_noncomparable_negative_evidence
+  prohibited_after_stop: [same_source_id_rerun, reward_tuning, training, policy_change]

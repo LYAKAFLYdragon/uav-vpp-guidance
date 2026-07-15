@@ -1,0 +1,75 @@
+base_config: config/experiment/thesis_neutral_postmerge_reentry_recovery_v4_runtime_feasibility.yaml
+status: authorized_one_time_execution
+authorization:
+  execution_permitted: true
+  training_permitted: false
+  tuning_permitted: false
+  candidate_policy_loading_permitted: false
+  high_level_ppo_training_permitted: false
+  four_skill_training_permitted: false
+  combat_finetune_permitted: false
+  vpp_change_permitted: false
+  guidance_change_permitted: false
+  pid_change_permitted: false
+  snapshot_restore: false
+  future_state_injection: false
+  history_padding_permitted: false
+  heldout_claims_permitted: false
+execution:
+  base_config_sha256: 95d1a8f60b5ebfa960a8ef572cc2cd3b0dd7b4f9647c4b0ec83948b319c343ec
+  required_implementation_git_sha: b51a723e7eaa4a26ca1ec9aef5ea27946828fea7
+  authorization_delta_paths:
+    - config/experiment/thesis_neutral_postmerge_reentry_recovery_v4_authorized.yaml
+  authorized_code_files:
+    - path: scripts/run_thesis_neutral_postmerge_reentry_recovery_v4_runtime_feasibility.py
+      sha256: 468640d96681fe73c819052c0a43c6ccc1175f67a0b0394508ecb85939db90a9
+    - path: scripts/preflight_thesis_neutral_postmerge_reentry_recovery_v4_runtime_feasibility.py
+      sha256: 9289b5decb7e112d390956f451e85d44e28cdb24edb00e96f64a89951b3af818
+    - path: scripts/build_thesis_neutral_postmerge_reentry_recovery_v4_feasibility_manifest.py
+      sha256: e8f196bb75bfe456765e27407af3528f9ff8ea48122cc53c0ae81cd2cfe5866c
+    - path: scripts/run_thesis_global_advantage_p2_b3_phase_observability.py
+      sha256: 808096729748c015f2d348dc09f2acacc3063afa427ed0e5090e49535c03d5ee
+    - path: src/uav_vpp_guidance/evaluation/thesis_neutral_postmerge_v4_contract.py
+      sha256: 1e9fb0132ee033e5171a26eed6fc2475f763e0c771b3de73ba3f1b37f81383e1
+    - path: src/uav_vpp_guidance/evaluation/thesis_neutral_postmerge_v4_record_only.py
+      sha256: 38244a571267be0b9e97d104f4e1e3bcb87a1820b62e774cf559b01352a78077
+    - path: src/uav_vpp_guidance/evaluation/global_advantage_runin_contract.py
+      sha256: 314b742c7417fce2fa7001965d69faba6f1934bf3e05d72ef5f3d9b7787b65df
+    - path: src/uav_vpp_guidance/evaluation/p4_v2_sampler_feasibility.py
+      sha256: c2ad3e509d845ea690b64e4d9d13b9f027494eb5fa4eff6eb512dd646f69603c
+    - path: src/uav_vpp_guidance/evaluation/single_motif_continuous_66d.py
+      sha256: 00ddb3ea0294681791cbe39a5194b71343510c29775db98b090e85954d671429
+    - path: src/uav_vpp_guidance/evaluation/thesis_neutral_postmerge_reentry_recovery_pilot.py
+      sha256: 4b1ce776d20c3211268eb679a52c300b21c4ada8f698bf0d0c2a079122303bb9
+    - path: src/uav_vpp_guidance/training/thesis_neutral_postmerge_reentry_recovery_pilot.py
+      sha256: dd55d0cca4f223f0d89deda6e4a45907f6bc8c6282e96e7b6f955f7221fcc49c
+    - path: src/uav_vpp_guidance/training/thesis_defext_rangeext_pilot.py
+      sha256: c598738dfd7a548d642079fef9eb23bdb9d71fb94a8d7575826ae56505d52fc5
+    - path: src/uav_vpp_guidance/training/thesis_shared_skill_geometry.py
+      sha256: 4de550c2d405e657004dfb9aece07ecea8f8782f4efbac4b0d859b136a51d6a8
+    - path: src/uav_vpp_guidance/training/thesis_shared_skill_policy.py
+      sha256: f3db1edb348b9e576e7b3551f96661407eb34de2d6f8f1bcf0d92ee226d1b5e9
+    - path: src/uav_vpp_guidance/training/thesis_temporal_geometry_encoder.py
+      sha256: 3fa1f659ef10bbe1a42d948c2bb5be57494ccc452cf9406baed268a562d54f3c
+    - path: src/uav_vpp_guidance/envs/tracking_env.py
+      sha256: 7596f6b7250c52f76db5c7612496a1f5afcbb2bdd2dba934ce066b9c4f3805a3
+    - path: src/uav_vpp_guidance/envs/expert_opponent.py
+      sha256: 01f440c97369c3490c6ba025d7d14a894958cd83a2fb2f92199171225a633614
+    - path: src/uav_vpp_guidance/envs/end_to_end_opponent.py
+      sha256: e3ae806fdfa674b7473adf7c6c77aae1e62edc8bbda66dd8b224887f6c79e97f
+    - path: src/uav_vpp_guidance/envs/vpp_ppo_opponent.py
+      sha256: 4853393892d00a2c48a40a6d2e49508f9918d2d69069b4f60c01723bed6a10e0
+    - path: src/uav_vpp_guidance/evaluation/feature_name_projected_opponent.py
+      sha256: dc374423711d012d98a54dd61aeaab285c370ef11f0671c4c7bef11c2c40e345
+    - path: src/uav_vpp_guidance/hierarchy/five_state_observation_contract.py
+      sha256: 0ac8b3998348897db22305973feb3283ffc7178a490ebc975fd48270e6e86ce3
+    - path: src/uav_vpp_guidance/hierarchy/temporal_geometry_features.py
+      sha256: 92f03b9af8b52333235d2778bffed5aeecf786143006f6c4d408c7562862d95b
+    - path: src/uav_vpp_guidance/hierarchy/specialist_policy.py
+      sha256: fbc64964a6056382602e3fbe3ca802be13e915677b597b8b0c03dd9b7e5ff3ce
+    - path: src/uav_vpp_guidance/hierarchy/shared_intent_profiles.py
+      sha256: 0353b5afc6d3a6e0270b97d8b9c032087f425699660c382d67504fe5fa8351b3
+    - path: src/uav_vpp_guidance/hierarchy/shared_intent_validity.py
+      sha256: 06fadde7d9a286f6ee5f7c47e5218361fa1abb7e30c26af266b814d211b3b647
+outputs:
+  creation_permitted_by_this_config: true

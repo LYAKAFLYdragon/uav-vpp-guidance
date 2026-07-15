@@ -1,0 +1,1187 @@
+source_id: THESIS-REENTRY-TERMINAL-REWARD-PILOT-V1-HELDOUT24
+manifest_version: 1
+status: preregistered_design_only
+protocol:
+  evaluation_only: true
+  training_permitted: false
+  reward_pilot_execution_permitted: false
+  opponents_reported_separately: true
+  continuous_physical_run_in: true
+  phase_contract: raw_physical_first_pass_aware_v1
+generation_contract:
+  initial_states:
+  - head_on
+  - crossing_entry
+  packages:
+  - id: reward_pilot_heldout_unseen_a
+    initial_range_m: 7040.0
+    own_speed_mps: 241.0
+    target_speed_mps: 374.0
+  - id: reward_pilot_heldout_unseen_b
+    initial_range_m: 7520.0
+    own_speed_mps: 297.0
+    target_speed_mps: 418.0
+  height_offsets_target_minus_own_m:
+    own_below: 600.0
+    co_altitude: 0.0
+    own_above: -600.0
+  mirror_signs:
+  - negative
+  - positive
+disjointness:
+  five_state_dev30:
+    path: config/experiment/manifests/thesis_five_state_shared_intent_v1_dev30.yaml
+    sha256: 6bd9c4282a4aa9724dee350114293421287ce0f00387b5b298e7be067c30d130
+    physical_intersection_count: 0
+  five_state_heldout60:
+    path: config/experiment/manifests/thesis_five_state_shared_intent_v1_heldout60.yaml
+    sha256: f96f3c927a0de4702dee62e2894fe784ff945a21f4e5728749fba20666603b5a
+    physical_intersection_count: 0
+  taxonomy30:
+    path: config/experiment/manifests/thesis_taxonomy_ablation30_v1.yaml
+    sha256: 79dddd3fa2585f99846330ad966220252acb80aa05fc6718ea873e5a1d801cf2
+    physical_intersection_count: 0
+  v1_dev12:
+    path: config/experiment/manifests/thesis_neutral_postmerge_reentry_recovery_pilot_v1_dev12.yaml
+    sha256: 652dbe209a0fc6b17a4a43f28996664ebb4ed4bd436e3292eb90e9ff9eca06e6
+    physical_intersection_count: 0
+  v1_heldout24:
+    path: config/experiment/manifests/thesis_neutral_postmerge_reentry_recovery_pilot_v1_heldout24.yaml
+    sha256: 025384fa92351e33671df724b04f6bec0c5e56ff425836a82df7c36127397852
+    physical_intersection_count: 0
+  v2_dev12:
+    path: config/experiment/manifests/thesis_neutral_postmerge_reentry_recovery_pilot_v2_dev12.yaml
+    sha256: 64b0566db71fa62096f51886d762bb99a52097d0e621df4a0e3cd5f6c2ae85ee
+    physical_intersection_count: 0
+  v2_heldout24:
+    path: config/experiment/manifests/thesis_neutral_postmerge_reentry_recovery_pilot_v2_heldout24.yaml
+    sha256: a239a32af2eef2374b84e0a33d97411843f3dfefd75b085ef2d64c53a7d82ebb
+    physical_intersection_count: 0
+  v3_runtime_design:
+    path: config/experiment/manifests/thesis_neutral_postmerge_reentry_recovery_v3_runtime_feasibility48.yaml
+    sha256: 0dbc1748e528dadd6112577f095d05a11a774eb33bc8b9f67c896e22ff49aa30
+    physical_intersection_count: 0
+  v4_runtime:
+    path: config/experiment/manifests/thesis_neutral_postmerge_reentry_recovery_v4_runtime_feasibility48.yaml
+    sha256: 8b83069c9e1949b1d5b59711936691dec413349471946c56d3c474c37f5410e4
+    physical_intersection_count: 0
+  p2_b2:
+    path: config/experiment/manifests/thesis_global_advantage_v1_p2_physical_preflight60.yaml
+    sha256: 78d90d6ea32490cc777d13e0a809061ec300f94ff6d7d012f93a9e9895ba834f
+    physical_intersection_count: 0
+  p2_b3:
+    path: config/experiment/manifests/thesis_global_advantage_v1_p2_b3_phase_observability30.yaml
+    sha256: d1e7c0e0750ec36eab6ef3ab7b6a353f7ceed8d88211d6d6535344c13e8a384c
+    physical_intersection_count: 0
+  p2_b4:
+    path: config/experiment/manifests/thesis_global_advantage_v1_p2_b4_raw_si_phase30.yaml
+    sha256: e709cdafd3ba6ba822454cdbd88ffa49988962cedeed310b15f071b87004fa81
+    physical_intersection_count: 0
+  p2_b5:
+    path: config/experiment/manifests/thesis_global_advantage_v1_p2_b5_phase_feasible_sampler12.yaml
+    sha256: 63acf19e57d5488f33fdef48df9b59ec9c7f892c5a70e1465cea9622bf3f798a
+    physical_intersection_count: 0
+  p2_b6:
+    path: config/experiment/manifests/thesis_global_advantage_v1_p2_b6_opponent_conditional_reachability60.yaml
+    sha256: 258bef67cddc66c4a8f4c04baeaee6a1c0152e5286035928244e0c21aebdd884
+    physical_intersection_count: 0
+  heldout240:
+    path: config/experiment/manifests/thesis_global_advantage_v1_heldout240.yaml
+    sha256: 81114a64cc7c589f496cff8869eac814f9919bfbc16a03b0aaba69bd5ba8bef3
+    physical_intersection_count: 0
+  v6:
+    path: config/experiment/manifests/thesis_five_state_reentry_v6_control12.yaml
+    sha256: 416c2c8fda9add71004c44bc0ddcf078ac27f40710646f5199b413dcf49af6cf
+    physical_intersection_count: 0
+  v7:
+    path: config/experiment/manifests/thesis_five_state_reentry_v7_teacher12.yaml
+    sha256: 81718778d493d10e3d2bbf7f73f4135d0148a0cdb2134377020ed330f577a7f9
+    physical_intersection_count: 0
+  v8:
+    path: config/experiment/manifests/thesis_five_state_reentry_v8_phase_contract12.yaml
+    sha256: 2e36a581c77122d847cf7ae18bd766f289231f29fe66e9483f01871ad27ba833
+    physical_intersection_count: 0
+scenarios:
+- name: reward_pilot_v1_heldout24_head_on__reward_pilot_heldout_unseen_a__own_below__negative_s160200
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 241.0
+    heading_deg: 1.416986031
+  target_init:
+    position_m:
+    - 6671.076770299
+    - -2167.564237752
+    - 5800.0
+    velocity_mps: 374.0
+    heading_deg: 142.583013969
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: heldout24
+    initial_class: head_on
+    height_condition: own_below
+    mirror_sign: negative
+    mirror_pair_id: reward_pilot_heldout_unseen_a__head_on__own_below
+    distance_speed_package: reward_pilot_heldout_unseen_a
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: false
+    scenario_seed: 160200
+    initial_range_m: 7040.0
+    altitude_diff_m: 600.0
+    own_speed_mps: 241.0
+    target_speed_mps: 374.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: head_on
+    pilot_family: THESIS-REENTRY-TERMINAL-REWARD-PILOT-V1
+    identity_kind: evaluation
+    geometry_cell_id: head_on__reward_pilot_heldout_unseen_a__own_below__negative
+    pair_key: head_on__reward_pilot_heldout_unseen_a__own_below__negative::seed=160200
+    scenario_signature: reward_pilot_v1::head_on__reward_pilot_heldout_unseen_a__own_below__negative::seed=160200
+    continuous_run_in: true
+    routing_enabled: false
+    fixed_profile: range_extension
+    raw_si_first_pass_event: three_closing_then_two_opening
+    phase_contract: raw_physical_first_pass_aware_v1
+- name: reward_pilot_v1_heldout24_head_on__reward_pilot_heldout_unseen_a__own_below__positive_s160201
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 241.0
+    heading_deg: 358.583013969
+  target_init:
+    position_m:
+    - 6671.076770299
+    - 2167.564237752
+    - 5800.0
+    velocity_mps: 374.0
+    heading_deg: 217.416986031
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: heldout24
+    initial_class: head_on
+    height_condition: own_below
+    mirror_sign: positive
+    mirror_pair_id: reward_pilot_heldout_unseen_a__head_on__own_below
+    distance_speed_package: reward_pilot_heldout_unseen_a
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: false
+    scenario_seed: 160201
+    initial_range_m: 7040.0
+    altitude_diff_m: 600.0
+    own_speed_mps: 241.0
+    target_speed_mps: 374.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: head_on
+    pilot_family: THESIS-REENTRY-TERMINAL-REWARD-PILOT-V1
+    identity_kind: evaluation
+    geometry_cell_id: head_on__reward_pilot_heldout_unseen_a__own_below__positive
+    pair_key: head_on__reward_pilot_heldout_unseen_a__own_below__positive::seed=160201
+    scenario_signature: reward_pilot_v1::head_on__reward_pilot_heldout_unseen_a__own_below__positive::seed=160201
+    continuous_run_in: true
+    routing_enabled: false
+    fixed_profile: range_extension
+    raw_si_first_pass_event: three_closing_then_two_opening
+    phase_contract: raw_physical_first_pass_aware_v1
+- name: reward_pilot_v1_heldout24_head_on__reward_pilot_heldout_unseen_a__co_altitude__negative_s160202
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 241.0
+    heading_deg: 2.0
+  target_init:
+    position_m:
+    - 6695.437874718
+    - -2175.4796404
+    - 5200.0
+    velocity_mps: 374.0
+    heading_deg: 142.0
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: heldout24
+    initial_class: head_on
+    height_condition: co_altitude
+    mirror_sign: negative
+    mirror_pair_id: reward_pilot_heldout_unseen_a__head_on__co_altitude
+    distance_speed_package: reward_pilot_heldout_unseen_a
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: false
+    scenario_seed: 160202
+    initial_range_m: 7040.0
+    altitude_diff_m: 0.0
+    own_speed_mps: 241.0
+    target_speed_mps: 374.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: head_on
+    pilot_family: THESIS-REENTRY-TERMINAL-REWARD-PILOT-V1
+    identity_kind: evaluation
+    geometry_cell_id: head_on__reward_pilot_heldout_unseen_a__co_altitude__negative
+    pair_key: head_on__reward_pilot_heldout_unseen_a__co_altitude__negative::seed=160202
+    scenario_signature: reward_pilot_v1::head_on__reward_pilot_heldout_unseen_a__co_altitude__negative::seed=160202
+    continuous_run_in: true
+    routing_enabled: false
+    fixed_profile: range_extension
+    raw_si_first_pass_event: three_closing_then_two_opening
+    phase_contract: raw_physical_first_pass_aware_v1
+- name: reward_pilot_v1_heldout24_head_on__reward_pilot_heldout_unseen_a__co_altitude__positive_s160203
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 241.0
+    heading_deg: 358.0
+  target_init:
+    position_m:
+    - 6695.437874718
+    - 2175.4796404
+    - 5200.0
+    velocity_mps: 374.0
+    heading_deg: 218.0
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: heldout24
+    initial_class: head_on
+    height_condition: co_altitude
+    mirror_sign: positive
+    mirror_pair_id: reward_pilot_heldout_unseen_a__head_on__co_altitude
+    distance_speed_package: reward_pilot_heldout_unseen_a
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: false
+    scenario_seed: 160203
+    initial_range_m: 7040.0
+    altitude_diff_m: 0.0
+    own_speed_mps: 241.0
+    target_speed_mps: 374.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: head_on
+    pilot_family: THESIS-REENTRY-TERMINAL-REWARD-PILOT-V1
+    identity_kind: evaluation
+    geometry_cell_id: head_on__reward_pilot_heldout_unseen_a__co_altitude__positive
+    pair_key: head_on__reward_pilot_heldout_unseen_a__co_altitude__positive::seed=160203
+    scenario_signature: reward_pilot_v1::head_on__reward_pilot_heldout_unseen_a__co_altitude__positive::seed=160203
+    continuous_run_in: true
+    routing_enabled: false
+    fixed_profile: range_extension
+    raw_si_first_pass_event: three_closing_then_two_opening
+    phase_contract: raw_physical_first_pass_aware_v1
+- name: reward_pilot_v1_heldout24_head_on__reward_pilot_heldout_unseen_a__own_above__negative_s160204
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 241.0
+    heading_deg: 1.416986031
+  target_init:
+    position_m:
+    - 6671.076770299
+    - -2167.564237752
+    - 4600.0
+    velocity_mps: 374.0
+    heading_deg: 142.583013969
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: heldout24
+    initial_class: head_on
+    height_condition: own_above
+    mirror_sign: negative
+    mirror_pair_id: reward_pilot_heldout_unseen_a__head_on__own_above
+    distance_speed_package: reward_pilot_heldout_unseen_a
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: false
+    scenario_seed: 160204
+    initial_range_m: 7040.0
+    altitude_diff_m: -600.0
+    own_speed_mps: 241.0
+    target_speed_mps: 374.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: head_on
+    pilot_family: THESIS-REENTRY-TERMINAL-REWARD-PILOT-V1
+    identity_kind: evaluation
+    geometry_cell_id: head_on__reward_pilot_heldout_unseen_a__own_above__negative
+    pair_key: head_on__reward_pilot_heldout_unseen_a__own_above__negative::seed=160204
+    scenario_signature: reward_pilot_v1::head_on__reward_pilot_heldout_unseen_a__own_above__negative::seed=160204
+    continuous_run_in: true
+    routing_enabled: false
+    fixed_profile: range_extension
+    raw_si_first_pass_event: three_closing_then_two_opening
+    phase_contract: raw_physical_first_pass_aware_v1
+- name: reward_pilot_v1_heldout24_head_on__reward_pilot_heldout_unseen_a__own_above__positive_s160205
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 241.0
+    heading_deg: 358.583013969
+  target_init:
+    position_m:
+    - 6671.076770299
+    - 2167.564237752
+    - 4600.0
+    velocity_mps: 374.0
+    heading_deg: 217.416986031
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: heldout24
+    initial_class: head_on
+    height_condition: own_above
+    mirror_sign: positive
+    mirror_pair_id: reward_pilot_heldout_unseen_a__head_on__own_above
+    distance_speed_package: reward_pilot_heldout_unseen_a
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: false
+    scenario_seed: 160205
+    initial_range_m: 7040.0
+    altitude_diff_m: -600.0
+    own_speed_mps: 241.0
+    target_speed_mps: 374.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: head_on
+    pilot_family: THESIS-REENTRY-TERMINAL-REWARD-PILOT-V1
+    identity_kind: evaluation
+    geometry_cell_id: head_on__reward_pilot_heldout_unseen_a__own_above__positive
+    pair_key: head_on__reward_pilot_heldout_unseen_a__own_above__positive::seed=160205
+    scenario_signature: reward_pilot_v1::head_on__reward_pilot_heldout_unseen_a__own_above__positive::seed=160205
+    continuous_run_in: true
+    routing_enabled: false
+    fixed_profile: range_extension
+    raw_si_first_pass_event: three_closing_then_two_opening
+    phase_contract: raw_physical_first_pass_aware_v1
+- name: reward_pilot_v1_heldout24_crossing_entry__reward_pilot_heldout_unseen_a__own_below__negative_s160206
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 241.0
+    heading_deg: 1.416986031
+  target_init:
+    position_m:
+    - 6671.076770299
+    - -2167.564237752
+    - 5800.0
+    velocity_mps: 374.0
+    heading_deg: 72.0
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: heldout24
+    initial_class: crossing_entry
+    height_condition: own_below
+    mirror_sign: negative
+    mirror_pair_id: reward_pilot_heldout_unseen_a__crossing_entry__own_below
+    distance_speed_package: reward_pilot_heldout_unseen_a
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: true
+    scenario_seed: 160206
+    initial_range_m: 7040.0
+    altitude_diff_m: 600.0
+    own_speed_mps: 241.0
+    target_speed_mps: 374.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 90.0
+    taxonomy_geometry_state: transition
+    pilot_family: THESIS-REENTRY-TERMINAL-REWARD-PILOT-V1
+    identity_kind: evaluation
+    geometry_cell_id: crossing_entry__reward_pilot_heldout_unseen_a__own_below__negative
+    pair_key: crossing_entry__reward_pilot_heldout_unseen_a__own_below__negative::seed=160206
+    scenario_signature: reward_pilot_v1::crossing_entry__reward_pilot_heldout_unseen_a__own_below__negative::seed=160206
+    continuous_run_in: true
+    routing_enabled: false
+    fixed_profile: range_extension
+    raw_si_first_pass_event: three_closing_then_two_opening
+    phase_contract: raw_physical_first_pass_aware_v1
+- name: reward_pilot_v1_heldout24_crossing_entry__reward_pilot_heldout_unseen_a__own_below__positive_s160207
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 241.0
+    heading_deg: 358.583013969
+  target_init:
+    position_m:
+    - 6671.076770299
+    - 2167.564237752
+    - 5800.0
+    velocity_mps: 374.0
+    heading_deg: 288.0
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: heldout24
+    initial_class: crossing_entry
+    height_condition: own_below
+    mirror_sign: positive
+    mirror_pair_id: reward_pilot_heldout_unseen_a__crossing_entry__own_below
+    distance_speed_package: reward_pilot_heldout_unseen_a
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: true
+    scenario_seed: 160207
+    initial_range_m: 7040.0
+    altitude_diff_m: 600.0
+    own_speed_mps: 241.0
+    target_speed_mps: 374.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 90.0
+    taxonomy_geometry_state: transition
+    pilot_family: THESIS-REENTRY-TERMINAL-REWARD-PILOT-V1
+    identity_kind: evaluation
+    geometry_cell_id: crossing_entry__reward_pilot_heldout_unseen_a__own_below__positive
+    pair_key: crossing_entry__reward_pilot_heldout_unseen_a__own_below__positive::seed=160207
+    scenario_signature: reward_pilot_v1::crossing_entry__reward_pilot_heldout_unseen_a__own_below__positive::seed=160207
+    continuous_run_in: true
+    routing_enabled: false
+    fixed_profile: range_extension
+    raw_si_first_pass_event: three_closing_then_two_opening
+    phase_contract: raw_physical_first_pass_aware_v1
+- name: reward_pilot_v1_heldout24_crossing_entry__reward_pilot_heldout_unseen_a__co_altitude__negative_s160208
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 241.0
+    heading_deg: 2.0
+  target_init:
+    position_m:
+    - 6695.437874718
+    - -2175.4796404
+    - 5200.0
+    velocity_mps: 374.0
+    heading_deg: 72.0
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: heldout24
+    initial_class: crossing_entry
+    height_condition: co_altitude
+    mirror_sign: negative
+    mirror_pair_id: reward_pilot_heldout_unseen_a__crossing_entry__co_altitude
+    distance_speed_package: reward_pilot_heldout_unseen_a
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: true
+    scenario_seed: 160208
+    initial_range_m: 7040.0
+    altitude_diff_m: 0.0
+    own_speed_mps: 241.0
+    target_speed_mps: 374.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 90.0
+    taxonomy_geometry_state: transition
+    pilot_family: THESIS-REENTRY-TERMINAL-REWARD-PILOT-V1
+    identity_kind: evaluation
+    geometry_cell_id: crossing_entry__reward_pilot_heldout_unseen_a__co_altitude__negative
+    pair_key: crossing_entry__reward_pilot_heldout_unseen_a__co_altitude__negative::seed=160208
+    scenario_signature: reward_pilot_v1::crossing_entry__reward_pilot_heldout_unseen_a__co_altitude__negative::seed=160208
+    continuous_run_in: true
+    routing_enabled: false
+    fixed_profile: range_extension
+    raw_si_first_pass_event: three_closing_then_two_opening
+    phase_contract: raw_physical_first_pass_aware_v1
+- name: reward_pilot_v1_heldout24_crossing_entry__reward_pilot_heldout_unseen_a__co_altitude__positive_s160209
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 241.0
+    heading_deg: 358.0
+  target_init:
+    position_m:
+    - 6695.437874718
+    - 2175.4796404
+    - 5200.0
+    velocity_mps: 374.0
+    heading_deg: 288.0
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: heldout24
+    initial_class: crossing_entry
+    height_condition: co_altitude
+    mirror_sign: positive
+    mirror_pair_id: reward_pilot_heldout_unseen_a__crossing_entry__co_altitude
+    distance_speed_package: reward_pilot_heldout_unseen_a
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: true
+    scenario_seed: 160209
+    initial_range_m: 7040.0
+    altitude_diff_m: 0.0
+    own_speed_mps: 241.0
+    target_speed_mps: 374.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 90.0
+    taxonomy_geometry_state: transition
+    pilot_family: THESIS-REENTRY-TERMINAL-REWARD-PILOT-V1
+    identity_kind: evaluation
+    geometry_cell_id: crossing_entry__reward_pilot_heldout_unseen_a__co_altitude__positive
+    pair_key: crossing_entry__reward_pilot_heldout_unseen_a__co_altitude__positive::seed=160209
+    scenario_signature: reward_pilot_v1::crossing_entry__reward_pilot_heldout_unseen_a__co_altitude__positive::seed=160209
+    continuous_run_in: true
+    routing_enabled: false
+    fixed_profile: range_extension
+    raw_si_first_pass_event: three_closing_then_two_opening
+    phase_contract: raw_physical_first_pass_aware_v1
+- name: reward_pilot_v1_heldout24_crossing_entry__reward_pilot_heldout_unseen_a__own_above__negative_s160210
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 241.0
+    heading_deg: 1.416986031
+  target_init:
+    position_m:
+    - 6671.076770299
+    - -2167.564237752
+    - 4600.0
+    velocity_mps: 374.0
+    heading_deg: 72.0
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: heldout24
+    initial_class: crossing_entry
+    height_condition: own_above
+    mirror_sign: negative
+    mirror_pair_id: reward_pilot_heldout_unseen_a__crossing_entry__own_above
+    distance_speed_package: reward_pilot_heldout_unseen_a
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: true
+    scenario_seed: 160210
+    initial_range_m: 7040.0
+    altitude_diff_m: -600.0
+    own_speed_mps: 241.0
+    target_speed_mps: 374.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 90.0
+    taxonomy_geometry_state: transition
+    pilot_family: THESIS-REENTRY-TERMINAL-REWARD-PILOT-V1
+    identity_kind: evaluation
+    geometry_cell_id: crossing_entry__reward_pilot_heldout_unseen_a__own_above__negative
+    pair_key: crossing_entry__reward_pilot_heldout_unseen_a__own_above__negative::seed=160210
+    scenario_signature: reward_pilot_v1::crossing_entry__reward_pilot_heldout_unseen_a__own_above__negative::seed=160210
+    continuous_run_in: true
+    routing_enabled: false
+    fixed_profile: range_extension
+    raw_si_first_pass_event: three_closing_then_two_opening
+    phase_contract: raw_physical_first_pass_aware_v1
+- name: reward_pilot_v1_heldout24_crossing_entry__reward_pilot_heldout_unseen_a__own_above__positive_s160211
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 241.0
+    heading_deg: 358.583013969
+  target_init:
+    position_m:
+    - 6671.076770299
+    - 2167.564237752
+    - 4600.0
+    velocity_mps: 374.0
+    heading_deg: 288.0
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: heldout24
+    initial_class: crossing_entry
+    height_condition: own_above
+    mirror_sign: positive
+    mirror_pair_id: reward_pilot_heldout_unseen_a__crossing_entry__own_above
+    distance_speed_package: reward_pilot_heldout_unseen_a
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: true
+    scenario_seed: 160211
+    initial_range_m: 7040.0
+    altitude_diff_m: -600.0
+    own_speed_mps: 241.0
+    target_speed_mps: 374.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 90.0
+    taxonomy_geometry_state: transition
+    pilot_family: THESIS-REENTRY-TERMINAL-REWARD-PILOT-V1
+    identity_kind: evaluation
+    geometry_cell_id: crossing_entry__reward_pilot_heldout_unseen_a__own_above__positive
+    pair_key: crossing_entry__reward_pilot_heldout_unseen_a__own_above__positive::seed=160211
+    scenario_signature: reward_pilot_v1::crossing_entry__reward_pilot_heldout_unseen_a__own_above__positive::seed=160211
+    continuous_run_in: true
+    routing_enabled: false
+    fixed_profile: range_extension
+    raw_si_first_pass_event: three_closing_then_two_opening
+    phase_contract: raw_physical_first_pass_aware_v1
+- name: reward_pilot_v1_heldout24_head_on__reward_pilot_heldout_unseen_b__own_below__negative_s160212
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 297.0
+    heading_deg: 1.490294756
+  target_init:
+    position_m:
+    - 7129.144006146
+    - -2316.399304878
+    - 5800.0
+    velocity_mps: 418.0
+    heading_deg: 142.509705244
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: heldout24
+    initial_class: head_on
+    height_condition: own_below
+    mirror_sign: negative
+    mirror_pair_id: reward_pilot_heldout_unseen_b__head_on__own_below
+    distance_speed_package: reward_pilot_heldout_unseen_b
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: false
+    scenario_seed: 160212
+    initial_range_m: 7520.0
+    altitude_diff_m: 600.0
+    own_speed_mps: 297.0
+    target_speed_mps: 418.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: head_on
+    pilot_family: THESIS-REENTRY-TERMINAL-REWARD-PILOT-V1
+    identity_kind: evaluation
+    geometry_cell_id: head_on__reward_pilot_heldout_unseen_b__own_below__negative
+    pair_key: head_on__reward_pilot_heldout_unseen_b__own_below__negative::seed=160212
+    scenario_signature: reward_pilot_v1::head_on__reward_pilot_heldout_unseen_b__own_below__negative::seed=160212
+    continuous_run_in: true
+    routing_enabled: false
+    fixed_profile: range_extension
+    raw_si_first_pass_event: three_closing_then_two_opening
+    phase_contract: raw_physical_first_pass_aware_v1
+- name: reward_pilot_v1_heldout24_head_on__reward_pilot_heldout_unseen_b__own_below__positive_s160213
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 297.0
+    heading_deg: 358.509705244
+  target_init:
+    position_m:
+    - 7129.144006146
+    - 2316.399304878
+    - 5800.0
+    velocity_mps: 418.0
+    heading_deg: 217.490294756
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: heldout24
+    initial_class: head_on
+    height_condition: own_below
+    mirror_sign: positive
+    mirror_pair_id: reward_pilot_heldout_unseen_b__head_on__own_below
+    distance_speed_package: reward_pilot_heldout_unseen_b
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: false
+    scenario_seed: 160213
+    initial_range_m: 7520.0
+    altitude_diff_m: 600.0
+    own_speed_mps: 297.0
+    target_speed_mps: 418.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: head_on
+    pilot_family: THESIS-REENTRY-TERMINAL-REWARD-PILOT-V1
+    identity_kind: evaluation
+    geometry_cell_id: head_on__reward_pilot_heldout_unseen_b__own_below__positive
+    pair_key: head_on__reward_pilot_heldout_unseen_b__own_below__positive::seed=160213
+    scenario_signature: reward_pilot_v1::head_on__reward_pilot_heldout_unseen_b__own_below__positive::seed=160213
+    continuous_run_in: true
+    routing_enabled: false
+    fixed_profile: range_extension
+    raw_si_first_pass_event: three_closing_then_two_opening
+    phase_contract: raw_physical_first_pass_aware_v1
+- name: reward_pilot_v1_heldout24_head_on__reward_pilot_heldout_unseen_b__co_altitude__negative_s160214
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 297.0
+    heading_deg: 2.0
+  target_init:
+    position_m:
+    - 7151.94500254
+    - -2323.8077977
+    - 5200.0
+    velocity_mps: 418.0
+    heading_deg: 142.0
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: heldout24
+    initial_class: head_on
+    height_condition: co_altitude
+    mirror_sign: negative
+    mirror_pair_id: reward_pilot_heldout_unseen_b__head_on__co_altitude
+    distance_speed_package: reward_pilot_heldout_unseen_b
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: false
+    scenario_seed: 160214
+    initial_range_m: 7520.000000001
+    altitude_diff_m: 0.0
+    own_speed_mps: 297.0
+    target_speed_mps: 418.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: head_on
+    pilot_family: THESIS-REENTRY-TERMINAL-REWARD-PILOT-V1
+    identity_kind: evaluation
+    geometry_cell_id: head_on__reward_pilot_heldout_unseen_b__co_altitude__negative
+    pair_key: head_on__reward_pilot_heldout_unseen_b__co_altitude__negative::seed=160214
+    scenario_signature: reward_pilot_v1::head_on__reward_pilot_heldout_unseen_b__co_altitude__negative::seed=160214
+    continuous_run_in: true
+    routing_enabled: false
+    fixed_profile: range_extension
+    raw_si_first_pass_event: three_closing_then_two_opening
+    phase_contract: raw_physical_first_pass_aware_v1
+- name: reward_pilot_v1_heldout24_head_on__reward_pilot_heldout_unseen_b__co_altitude__positive_s160215
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 297.0
+    heading_deg: 358.0
+  target_init:
+    position_m:
+    - 7151.94500254
+    - 2323.8077977
+    - 5200.0
+    velocity_mps: 418.0
+    heading_deg: 218.0
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: heldout24
+    initial_class: head_on
+    height_condition: co_altitude
+    mirror_sign: positive
+    mirror_pair_id: reward_pilot_heldout_unseen_b__head_on__co_altitude
+    distance_speed_package: reward_pilot_heldout_unseen_b
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: false
+    scenario_seed: 160215
+    initial_range_m: 7520.000000001
+    altitude_diff_m: 0.0
+    own_speed_mps: 297.0
+    target_speed_mps: 418.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: head_on
+    pilot_family: THESIS-REENTRY-TERMINAL-REWARD-PILOT-V1
+    identity_kind: evaluation
+    geometry_cell_id: head_on__reward_pilot_heldout_unseen_b__co_altitude__positive
+    pair_key: head_on__reward_pilot_heldout_unseen_b__co_altitude__positive::seed=160215
+    scenario_signature: reward_pilot_v1::head_on__reward_pilot_heldout_unseen_b__co_altitude__positive::seed=160215
+    continuous_run_in: true
+    routing_enabled: false
+    fixed_profile: range_extension
+    raw_si_first_pass_event: three_closing_then_two_opening
+    phase_contract: raw_physical_first_pass_aware_v1
+- name: reward_pilot_v1_heldout24_head_on__reward_pilot_heldout_unseen_b__own_above__negative_s160216
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 297.0
+    heading_deg: 1.490294756
+  target_init:
+    position_m:
+    - 7129.144006146
+    - -2316.399304878
+    - 4600.0
+    velocity_mps: 418.0
+    heading_deg: 142.509705244
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: heldout24
+    initial_class: head_on
+    height_condition: own_above
+    mirror_sign: negative
+    mirror_pair_id: reward_pilot_heldout_unseen_b__head_on__own_above
+    distance_speed_package: reward_pilot_heldout_unseen_b
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: false
+    scenario_seed: 160216
+    initial_range_m: 7520.0
+    altitude_diff_m: -600.0
+    own_speed_mps: 297.0
+    target_speed_mps: 418.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: head_on
+    pilot_family: THESIS-REENTRY-TERMINAL-REWARD-PILOT-V1
+    identity_kind: evaluation
+    geometry_cell_id: head_on__reward_pilot_heldout_unseen_b__own_above__negative
+    pair_key: head_on__reward_pilot_heldout_unseen_b__own_above__negative::seed=160216
+    scenario_signature: reward_pilot_v1::head_on__reward_pilot_heldout_unseen_b__own_above__negative::seed=160216
+    continuous_run_in: true
+    routing_enabled: false
+    fixed_profile: range_extension
+    raw_si_first_pass_event: three_closing_then_two_opening
+    phase_contract: raw_physical_first_pass_aware_v1
+- name: reward_pilot_v1_heldout24_head_on__reward_pilot_heldout_unseen_b__own_above__positive_s160217
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 297.0
+    heading_deg: 358.509705244
+  target_init:
+    position_m:
+    - 7129.144006146
+    - 2316.399304878
+    - 4600.0
+    velocity_mps: 418.0
+    heading_deg: 217.490294756
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: heldout24
+    initial_class: head_on
+    height_condition: own_above
+    mirror_sign: positive
+    mirror_pair_id: reward_pilot_heldout_unseen_b__head_on__own_above
+    distance_speed_package: reward_pilot_heldout_unseen_b
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: false
+    scenario_seed: 160217
+    initial_range_m: 7520.0
+    altitude_diff_m: -600.0
+    own_speed_mps: 297.0
+    target_speed_mps: 418.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: head_on
+    pilot_family: THESIS-REENTRY-TERMINAL-REWARD-PILOT-V1
+    identity_kind: evaluation
+    geometry_cell_id: head_on__reward_pilot_heldout_unseen_b__own_above__positive
+    pair_key: head_on__reward_pilot_heldout_unseen_b__own_above__positive::seed=160217
+    scenario_signature: reward_pilot_v1::head_on__reward_pilot_heldout_unseen_b__own_above__positive::seed=160217
+    continuous_run_in: true
+    routing_enabled: false
+    fixed_profile: range_extension
+    raw_si_first_pass_event: three_closing_then_two_opening
+    phase_contract: raw_physical_first_pass_aware_v1
+- name: reward_pilot_v1_heldout24_crossing_entry__reward_pilot_heldout_unseen_b__own_below__negative_s160218
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 297.0
+    heading_deg: 1.490294756
+  target_init:
+    position_m:
+    - 7129.144006146
+    - -2316.399304878
+    - 5800.0
+    velocity_mps: 418.0
+    heading_deg: 72.0
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: heldout24
+    initial_class: crossing_entry
+    height_condition: own_below
+    mirror_sign: negative
+    mirror_pair_id: reward_pilot_heldout_unseen_b__crossing_entry__own_below
+    distance_speed_package: reward_pilot_heldout_unseen_b
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: true
+    scenario_seed: 160218
+    initial_range_m: 7520.0
+    altitude_diff_m: 600.0
+    own_speed_mps: 297.0
+    target_speed_mps: 418.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 90.0
+    taxonomy_geometry_state: transition
+    pilot_family: THESIS-REENTRY-TERMINAL-REWARD-PILOT-V1
+    identity_kind: evaluation
+    geometry_cell_id: crossing_entry__reward_pilot_heldout_unseen_b__own_below__negative
+    pair_key: crossing_entry__reward_pilot_heldout_unseen_b__own_below__negative::seed=160218
+    scenario_signature: reward_pilot_v1::crossing_entry__reward_pilot_heldout_unseen_b__own_below__negative::seed=160218
+    continuous_run_in: true
+    routing_enabled: false
+    fixed_profile: range_extension
+    raw_si_first_pass_event: three_closing_then_two_opening
+    phase_contract: raw_physical_first_pass_aware_v1
+- name: reward_pilot_v1_heldout24_crossing_entry__reward_pilot_heldout_unseen_b__own_below__positive_s160219
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 297.0
+    heading_deg: 358.509705244
+  target_init:
+    position_m:
+    - 7129.144006146
+    - 2316.399304878
+    - 5800.0
+    velocity_mps: 418.0
+    heading_deg: 288.0
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: heldout24
+    initial_class: crossing_entry
+    height_condition: own_below
+    mirror_sign: positive
+    mirror_pair_id: reward_pilot_heldout_unseen_b__crossing_entry__own_below
+    distance_speed_package: reward_pilot_heldout_unseen_b
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: true
+    scenario_seed: 160219
+    initial_range_m: 7520.0
+    altitude_diff_m: 600.0
+    own_speed_mps: 297.0
+    target_speed_mps: 418.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 90.0
+    taxonomy_geometry_state: transition
+    pilot_family: THESIS-REENTRY-TERMINAL-REWARD-PILOT-V1
+    identity_kind: evaluation
+    geometry_cell_id: crossing_entry__reward_pilot_heldout_unseen_b__own_below__positive
+    pair_key: crossing_entry__reward_pilot_heldout_unseen_b__own_below__positive::seed=160219
+    scenario_signature: reward_pilot_v1::crossing_entry__reward_pilot_heldout_unseen_b__own_below__positive::seed=160219
+    continuous_run_in: true
+    routing_enabled: false
+    fixed_profile: range_extension
+    raw_si_first_pass_event: three_closing_then_two_opening
+    phase_contract: raw_physical_first_pass_aware_v1
+- name: reward_pilot_v1_heldout24_crossing_entry__reward_pilot_heldout_unseen_b__co_altitude__negative_s160220
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 297.0
+    heading_deg: 2.0
+  target_init:
+    position_m:
+    - 7151.94500254
+    - -2323.8077977
+    - 5200.0
+    velocity_mps: 418.0
+    heading_deg: 72.0
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: heldout24
+    initial_class: crossing_entry
+    height_condition: co_altitude
+    mirror_sign: negative
+    mirror_pair_id: reward_pilot_heldout_unseen_b__crossing_entry__co_altitude
+    distance_speed_package: reward_pilot_heldout_unseen_b
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: true
+    scenario_seed: 160220
+    initial_range_m: 7520.000000001
+    altitude_diff_m: 0.0
+    own_speed_mps: 297.0
+    target_speed_mps: 418.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 90.0
+    taxonomy_geometry_state: transition
+    pilot_family: THESIS-REENTRY-TERMINAL-REWARD-PILOT-V1
+    identity_kind: evaluation
+    geometry_cell_id: crossing_entry__reward_pilot_heldout_unseen_b__co_altitude__negative
+    pair_key: crossing_entry__reward_pilot_heldout_unseen_b__co_altitude__negative::seed=160220
+    scenario_signature: reward_pilot_v1::crossing_entry__reward_pilot_heldout_unseen_b__co_altitude__negative::seed=160220
+    continuous_run_in: true
+    routing_enabled: false
+    fixed_profile: range_extension
+    raw_si_first_pass_event: three_closing_then_two_opening
+    phase_contract: raw_physical_first_pass_aware_v1
+- name: reward_pilot_v1_heldout24_crossing_entry__reward_pilot_heldout_unseen_b__co_altitude__positive_s160221
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 297.0
+    heading_deg: 358.0
+  target_init:
+    position_m:
+    - 7151.94500254
+    - 2323.8077977
+    - 5200.0
+    velocity_mps: 418.0
+    heading_deg: 288.0
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: heldout24
+    initial_class: crossing_entry
+    height_condition: co_altitude
+    mirror_sign: positive
+    mirror_pair_id: reward_pilot_heldout_unseen_b__crossing_entry__co_altitude
+    distance_speed_package: reward_pilot_heldout_unseen_b
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: true
+    scenario_seed: 160221
+    initial_range_m: 7520.000000001
+    altitude_diff_m: 0.0
+    own_speed_mps: 297.0
+    target_speed_mps: 418.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 90.0
+    taxonomy_geometry_state: transition
+    pilot_family: THESIS-REENTRY-TERMINAL-REWARD-PILOT-V1
+    identity_kind: evaluation
+    geometry_cell_id: crossing_entry__reward_pilot_heldout_unseen_b__co_altitude__positive
+    pair_key: crossing_entry__reward_pilot_heldout_unseen_b__co_altitude__positive::seed=160221
+    scenario_signature: reward_pilot_v1::crossing_entry__reward_pilot_heldout_unseen_b__co_altitude__positive::seed=160221
+    continuous_run_in: true
+    routing_enabled: false
+    fixed_profile: range_extension
+    raw_si_first_pass_event: three_closing_then_two_opening
+    phase_contract: raw_physical_first_pass_aware_v1
+- name: reward_pilot_v1_heldout24_crossing_entry__reward_pilot_heldout_unseen_b__own_above__negative_s160222
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 297.0
+    heading_deg: 1.490294756
+  target_init:
+    position_m:
+    - 7129.144006146
+    - -2316.399304878
+    - 4600.0
+    velocity_mps: 418.0
+    heading_deg: 72.0
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: heldout24
+    initial_class: crossing_entry
+    height_condition: own_above
+    mirror_sign: negative
+    mirror_pair_id: reward_pilot_heldout_unseen_b__crossing_entry__own_above
+    distance_speed_package: reward_pilot_heldout_unseen_b
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: true
+    scenario_seed: 160222
+    initial_range_m: 7520.0
+    altitude_diff_m: -600.0
+    own_speed_mps: 297.0
+    target_speed_mps: 418.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 90.0
+    taxonomy_geometry_state: transition
+    pilot_family: THESIS-REENTRY-TERMINAL-REWARD-PILOT-V1
+    identity_kind: evaluation
+    geometry_cell_id: crossing_entry__reward_pilot_heldout_unseen_b__own_above__negative
+    pair_key: crossing_entry__reward_pilot_heldout_unseen_b__own_above__negative::seed=160222
+    scenario_signature: reward_pilot_v1::crossing_entry__reward_pilot_heldout_unseen_b__own_above__negative::seed=160222
+    continuous_run_in: true
+    routing_enabled: false
+    fixed_profile: range_extension
+    raw_si_first_pass_event: three_closing_then_two_opening
+    phase_contract: raw_physical_first_pass_aware_v1
+- name: reward_pilot_v1_heldout24_crossing_entry__reward_pilot_heldout_unseen_b__own_above__positive_s160223
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 297.0
+    heading_deg: 358.509705244
+  target_init:
+    position_m:
+    - 7129.144006146
+    - 2316.399304878
+    - 4600.0
+    velocity_mps: 418.0
+    heading_deg: 288.0
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: heldout24
+    initial_class: crossing_entry
+    height_condition: own_above
+    mirror_sign: positive
+    mirror_pair_id: reward_pilot_heldout_unseen_b__crossing_entry__own_above
+    distance_speed_package: reward_pilot_heldout_unseen_b
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: true
+    scenario_seed: 160223
+    initial_range_m: 7520.0
+    altitude_diff_m: -600.0
+    own_speed_mps: 297.0
+    target_speed_mps: 418.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 90.0
+    taxonomy_geometry_state: transition
+    pilot_family: THESIS-REENTRY-TERMINAL-REWARD-PILOT-V1
+    identity_kind: evaluation
+    geometry_cell_id: crossing_entry__reward_pilot_heldout_unseen_b__own_above__positive
+    pair_key: crossing_entry__reward_pilot_heldout_unseen_b__own_above__positive::seed=160223
+    scenario_signature: reward_pilot_v1::crossing_entry__reward_pilot_heldout_unseen_b__own_above__positive::seed=160223
+    continuous_run_in: true
+    routing_enabled: false
+    fixed_profile: range_extension
+    raw_si_first_pass_event: three_closing_then_two_opening
+    phase_contract: raw_physical_first_pass_aware_v1
+integrity:
+  builder_code_sha256: 50ef2d7aa02f2816a9b8e6bf074f4e636192a8f0e9124b6fa0c6fa89e6fed4ab
+  payload_sha256: fbab2e8715011c44b8ee262d14f527fb7c7264af2d2d1bab7706fac9da4feb4f

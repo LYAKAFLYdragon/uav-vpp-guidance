@@ -1,0 +1,19 @@
+source_id: THESIS-REENTRY-TERMINAL-REWARD-PILOT-V1-TRAIN-DISTRIBUTION
+status: preregistered_design_only
+continuous_physical_run_in: true
+phase_contract: raw_physical_first_pass_aware_v1
+initial_states: [head_on, crossing_entry]
+sampling:
+  initial_range_m: {distribution: uniform, minimum: 5700.0, maximum: 7900.0}
+  own_speed_mps: {distribution: uniform, minimum: 230.0, maximum: 310.0}
+  target_speed_mps: {distribution: uniform, minimum: 350.0, maximum: 430.0}
+  target_minus_own_altitude_m: {values: [-600.0, 0.0, 600.0]}
+  mirror_sign: {values: [negative, positive]}
+  scenario_seed_range: [161000, 199999]
+exclusions:
+  manifests:
+    - config/experiment/manifests/thesis_reentry_terminal_reward_pilot_v1_dev12.yaml
+    - config/experiment/manifests/thesis_reentry_terminal_reward_pilot_v1_heldout24.yaml
+    - config/experiment/manifests/thesis_five_state_reentry_v8_phase_contract12.yaml
+  exact_match_rule: reject any sampled physical_geometry_signature present in an evaluation manifest
+training_permitted: false

@@ -2,6 +2,7 @@ source_id: THESIS-REENTRY-TERMINAL-REWARD-PILOT-V1
 status: preregistered_design_only
 authorization:
   execution_permitted: false
+  preflight_execution_permitted: true
   training_permitted: false
   tuning_permitted: false
   reason: implementation_preflight_must_pass_after_v8_phase_contract
@@ -22,6 +23,16 @@ scope:
 inputs:
   phase_contract_source_id: THESIS-FIVE-STATE-REENTRY-PHASE-CONTRACT-PROBE-V8
   required_phase_tracker: raw_physical_first_pass_aware_v1
+  train_distribution: config/experiment/thesis_reentry_terminal_reward_pilot_v1_train_distribution.yaml
+  train_distribution_sha256: b82ec8173bb382aab046731b9866da1e1d93533f8b231e4c38ed9f7c1f4c0c01
+  dev_manifest: config/experiment/manifests/thesis_reentry_terminal_reward_pilot_v1_dev12.yaml
+  dev_manifest_sha256: 6dd87a03abaeaf7af4ef9868b01d1b245287eaad31361b4000d30f15594efd87
+  heldout_manifest: config/experiment/manifests/thesis_reentry_terminal_reward_pilot_v1_heldout24.yaml
+  heldout_manifest_sha256: dc505ebdfa4ccf057ff4d986317915b1f0f54ed919dd483b01e9849514b5aa4e
+  runtime_template: config/experiment/train_thesis_five_state_shared_skills_geometry_v1.yaml
+  runtime_template_sha256: 2a9fb82721d82cd67e13e08157d5cc9d9eac3deafa04b12e253c8b6098c38806
+  runtime_registry: config/experiment/thesis_neutral_postmerge_reentry_recovery_pilot_v1_execution_runtime_registry.yaml
+  runtime_registry_sha256: e3124120b33b55c1018da6d8d133ef15b5cf5e6c5c04361d6b90498b0b279ca8
   frozen_p3_encoder: E:/uav-vpp-guidance-thesis-five-state-v1-results/p3_temporal_encoder_phaseconditional_v2/checkpoints/best.pt
   frozen_p3_encoder_sha256: 385663281a9c48c0416ea4d1a1bb8dc08ed64a0cfebb0f01083cbbb8bcfbdc59
 training:
@@ -33,6 +44,17 @@ training:
   opponents_reported_separately: [expert, end_to_end, independent_ppo_vpp]
   total_steps: 20000
   checkpoint_selection: fixed dev-only schedule
+observability:
+  reference_profile: front_intercept
+  max_high_level_steps: 260
+  min_free_disk_gb: 120.0
+  raw_si_first_pass_event:
+    closing_rate_threshold_mps: 0.0
+    opening_rate_threshold_mps: 0.0
+    minimum_closing_steps: 3
+    minimum_opening_steps: 2
+execution:
+  runtime_template: config/experiment/train_thesis_five_state_shared_skills_geometry_v1.yaml
 reward:
   base_geometry_reward:
     source: frozen_profile_weighted_geometry_progress_v1
@@ -70,4 +92,5 @@ evaluation:
   safety_stop_rule: stop and freeze as negative evidence if any JSBSim/backend/checkpoint/history contract failure or ego crash/OOB exceeds frozen head-on baseline by more than 0.05
 outputs:
   root: E:/uav-vpp-guidance-five-state-heldout-envelope-v1-results/thesis_reentry_terminal_reward_pilot_v1
+  preflight_root: E:/uav-vpp-guidance-five-state-heldout-envelope-v1-results/thesis_reentry_terminal_reward_pilot_v1_preflight
   paper_safe: false

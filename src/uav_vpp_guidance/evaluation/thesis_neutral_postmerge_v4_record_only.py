@@ -200,9 +200,9 @@ def runtime_record(
     if "reward" in result:
         raise NeutralPostMergeV4RecordError("V4 runtime result must not contain reward")
     summary = ledger.get("summary") if isinstance(ledger.get("summary"), Mapping) else None
-    if summary is None or summary.get("no_backend_fallback") is not True:
+    if summary is None or not bool(summary.get("no_backend_fallback")):
         raise NeutralPostMergeV4RecordError("V4 ledger reports a backend fallback")
-    if summary.get("full_post_handoff_telemetry") is not True or result.get("telemetry_complete") is not True:
+    if not bool(summary.get("full_post_handoff_telemetry")) or not bool(result.get("telemetry_complete")):
         raise NeutralPostMergeV4RecordError("V4 runtime telemetry is incomplete")
     for key in (
         "scenario_application_passed",
@@ -210,7 +210,7 @@ def runtime_record(
         "initial_pre_merge_semantics_passed",
         "record_only_no_reward_terms",
     ):
-        if runtime_evidence.get(key) is not True:
+        if not bool(runtime_evidence.get(key)):
             raise NeutralPostMergeV4RecordError(f"V4 runtime evidence failed: {key}")
     return {
         "source_id": source_id,

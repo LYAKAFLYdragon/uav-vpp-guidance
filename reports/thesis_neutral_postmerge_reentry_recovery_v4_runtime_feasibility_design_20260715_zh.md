@@ -52,7 +52,11 @@ V1、V2 与 V3 都是 `implementation_failure_not_experimental_evidence`。尤�
 
 - `python scripts/build_thesis_neutral_postmerge_reentry_recovery_v4_feasibility_manifest.py --output <temp>` 与受控 manifest SHA-256 完全一致。
 - `python scripts/preflight_thesis_neutral_postmerge_reentry_recovery_v4_runtime_feasibility.py`：48 场景、144 计划 record、输出根不存在、约 291 GB 可用空间，满足 120 GB 门槛。
-- `pytest tests/test_thesis_neutral_postmerge_v4_runtime_feasibility.py tests/test_thesis_neutral_postmerge_v3_runtime_feasibility.py tests/test_common_provenance.py -q`：`21 passed`。
+- `pytest tests/test_thesis_neutral_postmerge_v4_runtime_feasibility.py tests/test_thesis_neutral_postmerge_v3_runtime_feasibility.py tests/test_common_provenance.py -q`：`23 passed`。
+
+正式运行若被单独授权，runner 会把 authorized overlay、frozen base config、frozen feasibility manifest 和 artifact provenance 复制到输出根。后续独立 verifier 将只读取这些快照与 raw episode records，而不会依赖运行后可能变化的工作树文件。
+
+独立 verifier 为 `scripts/verify_thesis_neutral_postmerge_reentry_recovery_v4_runtime_feasibility.py`。它必须重新计算 144 条 `opponent x pair_key` universe 与 per-opponent family gate，并验证 raw-SI phase replay、66-D/3-D telemetry、reward 字段隔离、serialized overlay/base/manifest 哈希，以及 runner gate 与独立 gate 一致。它不写入 bundle；可选 `--report` 才会写入用户指定位置。
 
 ## 下一步授权条件
 

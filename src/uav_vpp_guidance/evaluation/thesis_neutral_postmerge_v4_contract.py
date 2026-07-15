@@ -80,7 +80,7 @@ def build_plan(config: Mapping[str, Any]) -> RuntimeFeasibilityPlan:
         "history_padding_permitted",
         "heldout_claims_permitted",
     ):
-        if authorization.get(key) is not False:
+        if key not in authorization or bool(authorization.get(key)):
             raise NeutralPostMergeV4ContractError(f"authorization.{key} must remain false")
     opponents = tuple(config.get("opponents", {}).get("order", ()))
     if opponents != OPPONENTS:

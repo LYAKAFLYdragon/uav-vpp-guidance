@@ -309,6 +309,9 @@ def run(config_path: Path) -> dict[str, Any]:
     output.mkdir(parents=True, exist_ok=False)
     records: list[dict[str, Any]] = []
     try:
+        shutil.copy2(config_path, output / "authorized_overlay.yaml")
+        shutil.copy2(base_path, output / "frozen_base_config.yaml")
+        shutil.copy2(manifest_path, output / "frozen_feasibility_manifest.yaml")
         _write_json(output / "authorization_preflight.json", {
             "source_id": SOURCE_ID,
             "git_sha": _git_value("rev-parse", "HEAD"),
@@ -319,6 +322,19 @@ def run(config_path: Path) -> dict[str, Any]:
             "environment_reward_recording": "prohibited",
         })
         _write_json(output / "resolved_config.json", config)
+        _write_json(output / "artifact_provenance.json", {
+            "source_id": SOURCE_ID,
+            "git_sha": _git_value("rev-parse", "HEAD"),
+            "authorized_overlay_sha256": sha256_file(config_path),
+            "frozen_base_config_sha256": sha256_file(base_path),
+            "frozen_feasibility_manifest_sha256": sha256_file(manifest_path),
+            "runtime_template_sha256": config["inputs"]["runtime_template_sha256"],
+            "runtime_registry_sha256": config["inputs"]["runtime_registry_sha256"],
+            "frozen_p3_encoder_sha256": config["inputs"]["frozen_p3_encoder_sha256"],
+            "frozen_run_in_head_on_specialist_sha256": config["inputs"]["frozen_run_in_head_on_specialist_sha256"],
+            "training_reward": "prohibited",
+            "environment_reward_recording": "prohibited",
+        })
         for opponent in plan.opponents:
             for scenario in manifest["scenarios"]:
                 result, ledger, runtime_evidence = _run_episode(config, registry, scenario, opponent)

@@ -1,0 +1,93 @@
+base_config: config/experiment/thesis_neutral_postmerge_reentry_recovery_pilot_v1.yaml
+status: authorized_one_time_execution
+authorization:
+  execution_permitted: true
+  training_permitted: true
+  baseline_evaluation_permitted: true
+  heldout_evaluation_permitted: true
+  high_level_ppo_training_permitted: false
+  four_skill_training_permitted: false
+  combat_finetune_permitted: false
+  tuning_permitted: false
+  vpp_change_permitted: false
+  guidance_change_permitted: false
+  pid_change_permitted: false
+  snapshot_restore: false
+  future_state_injection: false
+  history_padding_permitted: false
+  scope: single_neutral_postmerge_reentry_recovery_pilot_only
+execution:
+  base_config_sha256: 9531dc936901816ced51c4af7f9062433050340fd5babc5f5ddcfe7c741736fd
+  required_implementation_git_sha: c50c554a659c9d68a68c1e01cb3b2afca6c39e3b
+  authorization_delta_paths:
+    - config/experiment/thesis_neutral_postmerge_reentry_recovery_pilot_v1_authorized.yaml
+  runtime_template: config/experiment/train_thesis_five_state_shared_skills_geometry_v1.yaml
+  runtime_template_sha256: 2a9fb82721d82cd67e13e08157d5cc9d9eac3deafa04b12e253c8b6098c38806
+  runtime_registry: config/experiment/thesis_neutral_postmerge_reentry_recovery_pilot_v1_execution_runtime_registry.yaml
+  runtime_registry_sha256: e3124120b33b55c1018da6d8d133ef15b5cf5e6c5c04361d6b90498b0b279ca8
+  authorized_code_files:
+    - path: scripts/run_thesis_neutral_postmerge_reentry_recovery_pilot_v1.py
+      sha256: 3a41be0c94c78a59308902b27bf837b686e285203cdded8fc7d94cb4422135cb
+    - path: src/uav_vpp_guidance/training/thesis_neutral_postmerge_reentry_recovery_pilot.py
+      sha256: dd55d0cca4f223f0d89deda6e4a45907f6bc8c6282e96e7b6f955f7221fcc49c
+    - path: src/uav_vpp_guidance/training/thesis_defext_rangeext_pilot.py
+      sha256: c598738dfd7a548d642079fef9eb23bdb9d71fb94a8d7575826ae56505d52fc5
+    - path: src/uav_vpp_guidance/training/thesis_shared_skill_policy.py
+      sha256: f3db1edb348b9e576e7b3551f96661407eb34de2d6f8f1bcf0d92ee226d1b5e9
+    - path: src/uav_vpp_guidance/training/thesis_shared_skill_geometry.py
+      sha256: 4de550c2d405e657004dfb9aece07ecea8f8782f4efbac4b0d859b136a51d6a8
+    - path: src/uav_vpp_guidance/evaluation/global_advantage_runin_contract.py
+      sha256: 314b742c7417fce2fa7001965d69faba6f1934bf3e05d72ef5f3d9b7787b65df
+    - path: src/uav_vpp_guidance/evaluation/thesis_neutral_postmerge_reentry_recovery_pilot.py
+      sha256: 4b1ce776d20c3211268eb679a52c300b21c4ada8f698bf0d0c2a079122303bb9
+    - path: src/uav_vpp_guidance/envs/tracking_env.py
+      sha256: 7596f6b7250c52f76db5c7612496a1f5afcbb2bdd2dba934ce066b9c4f3805a3
+    - path: src/uav_vpp_guidance/envs/expert_opponent.py
+      sha256: 01f440c97369c3490c6ba025d7d14a894958cd83a2fb2f92199171225a633614
+    - path: src/uav_vpp_guidance/envs/end_to_end_opponent.py
+      sha256: e3ae806fdfa674b7473adf7c6c77aae1e62edc8bbda66dd8b224887f6c79e97f
+    - path: src/uav_vpp_guidance/envs/vpp_ppo_opponent.py
+      sha256: 4853393892d00a2c48a40a6d2e49508f9918d2d69069b4f60c01723bed6a10e0
+    - path: src/uav_vpp_guidance/evaluation/feature_name_projected_opponent.py
+      sha256: dc374423711d012d98a54dd61aeaab285c370ef11f0671c4c7bef11c2c40e345
+    - path: src/uav_vpp_guidance/hierarchy/specialist_policy.py
+      sha256: fbc64964a6056382602e3fbe3ca802be13e915677b597b8b0c03dd9b7e5ff3ce
+    - path: src/uav_vpp_guidance/hierarchy/shared_intent_profiles.py
+      sha256: 0353b5afc6d3a6e0270b97d8b9c032087f425699660c382d67504fe5fa8351b3
+    - path: src/uav_vpp_guidance/hierarchy/shared_intent_validity.py
+      sha256: 06fadde7d9a286f6ee5f7c47e5218361fa1abb7e30c26af266b814d211b3b647
+fixed_contract:
+  attack_zone:
+    enabled: true
+    initial_hp: 100.0
+    damage_per_step: 0.5
+    close_range_max_km: 3.0
+    close_range_max_aoa_deg: 60.0
+    semantics: frozen_taxonomy_AoA60_mechanism_and_secondary_combat_telemetry
+proposed_training:
+  max_high_level_steps_per_episode: 260
+  max_episode_attempts: 2000
+  ppo:
+    rollout_steps: 2048
+    learning_rate: 0.0003
+    gamma: 0.99
+    gae_lambda: 0.95
+    clip_coef: 0.2
+    value_coef: 0.5
+    entropy_coef: 0.005
+    max_grad_norm: 0.5
+    update_epochs: 10
+    minibatch_size: 256
+  policy:
+    hidden_dim: 128
+  geometry_reward:
+    source: frozen_profile_weighted_geometry_progress_v1
+    progress_weight: 2.0
+    alignment_weight: 0.1
+    terminal_ego_crash_oob_penalty: 2.0
+    physical_command_saturation_penalty: 0.05
+    intent_error_clip: 2.0
+outputs:
+  root: E:/uav-vpp-guidance-five-state-heldout-envelope-v1-results/neutral_postmerge_reentry_recovery_pilot_v1
+  creation_permitted_by_this_config: true
+  paper_safe: false

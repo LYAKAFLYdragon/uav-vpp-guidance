@@ -1,7 +1,7 @@
 # P2-B4 Raw-SI Phase Preflight 一次性执行授权
 
 **Source ID：** `THESIS-GLOBAL-ADVANTAGE-V1-P2-RAW-SI-PHASE-PREFLIGHT-V1`
-**授权状态：** `one_shot_execution_authorized`
+**授权状态：** `completed_execution_closed`
 **冻结实现 commit：** `1a2f854583179b2f17917f60475dbb30aa6f29e3`
 
 唯一允许命令：
@@ -21,3 +21,9 @@ python scripts/run_thesis_global_advantage_p2_b4_raw_si_phase.py --execute
 - `re_entry` 覆盖不作为本轮通过门槛。输出根必须不存在，worktree 必须 clean，E 盘空闲空间至少 120 GB。
 
 任一 gate 失败都冻结为新 Source ID 的负证据；不得重跑同一 Source ID、改 reward、增训练步数或进入技能训练。无论结果如何，运行后把 `execution_permitted` 复位为 `false`。
+
+## 已执行结果
+
+本授权已于 2026-07-15 执行一次并关闭。`90/90` structural、scenario receipt、normalization diagnostic、phase replay 与 step-0 pre-merge 均通过；gate SHA-256 为 `9709639305e3db49c993f803eaf3640c34533c3d1ecd356322e243bc35a15302`，run manifest SHA-256 为 `4f24e61e2dcf81d31113f6a32edf47df175dda034f169eebc0612d6870ac3dd5`。
+
+raw range 位于 `3999.816--4000.183 m`，normalized policy range 位于 `0.799963--0.800037`，两者符合冻结的 5,000 m scale，但只有 raw-SI 输入进入 PhaseTracker。三 opponent 均观测到 pre-merge、post-merge 与 re-entry；它证明单位合同成立，不是候选策略性能结果。部分 state×opponent 仍缺少 re-entry，因此不解锁训练。详见 `reports/thesis_global_advantage_p2_b4_completion_20260715_zh.md`。

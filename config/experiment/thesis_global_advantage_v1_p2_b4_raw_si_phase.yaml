@@ -1,9 +1,9 @@
 schema_version: 1
 source_id: THESIS-GLOBAL-ADVANTAGE-V1-P2-RAW-SI-PHASE-PREFLIGHT-V1
-status: one_shot_execution_authorized
+status: completed_raw_si_phase_contract_passed
 
 authorization:
-  execution_permitted: true
+  execution_permitted: false
   required_implementation_git_sha: 1a2f854583179b2f17917f60475dbb30aa6f29e3
   authorized_code_files:
     - path: scripts/run_thesis_global_advantage_p2_b4_raw_si_phase.py

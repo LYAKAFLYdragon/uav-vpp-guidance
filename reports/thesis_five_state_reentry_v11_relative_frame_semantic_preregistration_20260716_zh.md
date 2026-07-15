@@ -1,7 +1,7 @@
 # V11 Relative-Frame Semantic VPP Transfer Probe 预注册
 
-**Source ID：** `THESIS-FIVE-STATE-REENTRY-RELATIVE-FRAME-SEMANTIC-V11`  
-**状态：** design-only；尚未授权执行  
+**Source ID：** `THESIS-FIVE-STATE-REENTRY-RELATIVE-FRAME-SEMANTIC-V11`
+**状态：** design-only；尚未授权执行
 **性质：** 非学习、非奖励、非论文主结果的机制验证
 
 ## 1. 问题与目的

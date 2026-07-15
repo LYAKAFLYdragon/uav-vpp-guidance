@@ -3,9 +3,14 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Mapping, Sequence
 
 import numpy as np
+
+from uav_vpp_guidance.virtual_point.coordinate_transform import (
+    offset_to_world,
+    world_to_offset_frame,
+)
 
 
 class DynamicReferencePathError(ValueError):
@@ -101,3 +106,124 @@ def semantic_profile_for_anchor(index: int) -> str:
     if int(index) == 2:
         return "reentry_preparation"
     raise DynamicReferencePathError("anchor index must be 0, 1, or 2")
+
+
+def _action_to_world_offset(
+    action: Any,
+    raw_action_ranges: Sequence[Sequence[float]],
+    raw_action_offset_frame: str,
+    own_state: Mapping[str, Any],
+    target_state: Mapping[str, Any],
+) -> np.ndarray:
+    normalized = _vector(action, name="semantic_action")
+    if np.any(np.abs(normalized) > 1.0 + 1e-6):
+        raise DynamicReferencePathError("semantic_action must lie in [-1, 1]")
+    if len(raw_action_ranges) != 3:
+        raise DynamicReferencePathError("raw_action_ranges must contain three ranges")
+    local_values: list[float] = []
+    for limits, value in zip(raw_action_ranges, normalized):
+        if len(limits) != 2:
+            raise DynamicReferencePathError("each raw action range must contain [min, max]")
+        lower, upper = float(limits[0]), float(limits[1])
+        if not np.isfinite([lower, upper]).all() or upper <= lower:
+            raise DynamicReferencePathError("raw action ranges must be finite and increasing")
+        local_values.append(lower + (float(value) + 1.0) * (upper - lower) / 2.0)
+    return offset_to_world(
+        np.asarray(local_values, dtype=np.float64),
+        raw_action_offset_frame,
+        own_state=dict(own_state),
+        target_state=dict(target_state),
+    )
+
+
+def _world_offset_to_action(
+    world_offset_neu: Any,
+    raw_action_ranges: Sequence[Sequence[float]],
+    raw_action_offset_frame: str,
+    own_state: Mapping[str, Any],
+    target_state: Mapping[str, Any],
+) -> np.ndarray:
+    world = _vector(world_offset_neu, name="world_offset_neu")
+    if len(raw_action_ranges) != 3:
+        raise DynamicReferencePathError("raw_action_ranges must contain three ranges")
+    local = world_to_offset_frame(
+        world,
+        raw_action_offset_frame,
+        own_state=dict(own_state),
+        target_state=dict(target_state),
+    )
+    values: list[float] = []
+    for limits, value in zip(raw_action_ranges, local):
+        if len(limits) != 2:
+            raise DynamicReferencePathError("each raw action range must contain [min, max]")
+        lower, upper = float(limits[0]), float(limits[1])
+        if not np.isfinite([lower, upper]).all() or upper <= lower:
+            raise DynamicReferencePathError("raw action ranges must be finite and increasing")
+        values.append(2.0 * (float(value) - lower) / (upper - lower) - 1.0)
+    result = np.asarray(values, dtype=np.float64)
+    if not np.isfinite(result).all():
+        raise DynamicReferencePathError("unclipped path action must be finite")
+    return result
+
+
+def compile_path_anchor_action(
+    *,
+    semantic_action: Any,
+    selected_anchor_neu: Any,
+    generator_anchor_neu: Any,
+    raw_action_ranges: Sequence[Sequence[float]],
+    raw_action_offset_frame: str,
+    own_state: Mapping[str, Any],
+    target_state: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Overlay one selected path anchor on the existing bounded VPP action head.
+
+    The existing generator still consumes one normalized 3-D action.  This
+    adapter turns a selected absolute path anchor into an additional world-frame
+    VPP offset relative to the generator's current predicted-target anchor.
+    It neither replaces the target dynamics nor modifies guidance/PID.
+    """
+
+    selected = _vector(selected_anchor_neu, name="selected_anchor_neu")
+    generator_anchor = _vector(generator_anchor_neu, name="generator_anchor_neu")
+    semantic_world = _action_to_world_offset(
+        semantic_action,
+        raw_action_ranges,
+        raw_action_offset_frame,
+        own_state,
+        target_state,
+    )
+    requested_path_delta = selected - generator_anchor
+    requested_world_offset = semantic_world + requested_path_delta
+    unclipped_action = _world_offset_to_action(
+        requested_world_offset,
+        raw_action_ranges,
+        raw_action_offset_frame,
+        own_state,
+        target_state,
+    )
+    applied_action = np.clip(unclipped_action, -1.0, 1.0)
+    applied_world_offset = _action_to_world_offset(
+        applied_action,
+        raw_action_ranges,
+        raw_action_offset_frame,
+        own_state,
+        target_state,
+    )
+    actual_path_delta = applied_world_offset - semantic_world
+    return {
+        "generator_anchor_neu": generator_anchor.tolist(),
+        "selected_anchor_neu": selected.tolist(),
+        "semantic_world_offset_m": semantic_world.tolist(),
+        "requested_path_world_delta_m": requested_path_delta.tolist(),
+        "actual_path_world_delta_m": actual_path_delta.tolist(),
+        "requested_path_delta_norm_m": float(np.linalg.norm(requested_path_delta)),
+        "actual_path_delta_norm_m": float(np.linalg.norm(actual_path_delta)),
+        "requested_vpp_world_offset_m": requested_world_offset.tolist(),
+        "applied_vpp_world_offset_m": applied_world_offset.tolist(),
+        "requested_vpp_position_neu": (generator_anchor + requested_world_offset).tolist(),
+        "applied_vpp_position_neu": (generator_anchor + applied_world_offset).tolist(),
+        "unclipped_action": unclipped_action.tolist(),
+        "applied_action": applied_action.tolist(),
+        "clipped": bool(not np.allclose(unclipped_action, applied_action, rtol=0.0, atol=1e-8)),
+    }

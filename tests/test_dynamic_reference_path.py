@@ -7,6 +7,7 @@ from uav_vpp_guidance.virtual_point.dynamic_reference_path import (
     DynamicReferencePathConfig,
     DynamicReferencePathError,
     build_three_anchor_path,
+    compile_path_anchor_action,
     path_progress_from_range_rate,
     semantic_profile_for_anchor,
     select_path_anchor,
@@ -46,6 +47,36 @@ def test_path_rejects_coincident_or_nonfinite_geometry():
             predicted_target_position_neu=[1.0, 0.0, 0.0],
             config=config,
         )
+
+
+def test_path_anchor_action_reuses_the_existing_bounded_vpp_action_head():
+    receipt = compile_path_anchor_action(
+        semantic_action=[0.0, 0.0, 0.0],
+        selected_anchor_neu=[100.0, -50.0, 25.0],
+        generator_anchor_neu=[0.0, 0.0, 0.0],
+        raw_action_ranges=[[-1000.0, 1000.0], [-1000.0, 1000.0], [-1000.0, 1000.0]],
+        raw_action_offset_frame="world_neu",
+        own_state={"position_neu": [0.0, 0.0, 0.0]},
+        target_state={"position_neu": [500.0, 0.0, 0.0]},
+    )
+    assert np.allclose(receipt["applied_action"], [0.1, -0.05, 0.025])
+    assert np.allclose(receipt["applied_vpp_position_neu"], [100.0, -50.0, 25.0])
+    assert receipt["clipped"] is False
+
+
+def test_path_anchor_action_reports_clipping_instead_of_expanding_the_interface():
+    receipt = compile_path_anchor_action(
+        semantic_action=[0.0, 0.0, 0.0],
+        selected_anchor_neu=[5000.0, 0.0, 0.0],
+        generator_anchor_neu=[0.0, 0.0, 0.0],
+        raw_action_ranges=[[-1000.0, 1000.0], [-1000.0, 1000.0], [-1000.0, 1000.0]],
+        raw_action_offset_frame="world_neu",
+        own_state={"position_neu": [0.0, 0.0, 0.0]},
+        target_state={"position_neu": [500.0, 0.0, 0.0]},
+    )
+    assert receipt["clipped"] is True
+    assert np.allclose(receipt["applied_action"], [1.0, 0.0, 0.0])
+    assert receipt["actual_path_delta_norm_m"] < receipt["requested_path_delta_norm_m"]
 
 
 def test_v16_design_keeps_path_progress_separate_from_training_and_terminal_semantics():

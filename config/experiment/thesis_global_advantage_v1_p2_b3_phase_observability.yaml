@@ -1,9 +1,9 @@
 schema_version: 1
 source_id: THESIS-GLOBAL-ADVANTAGE-V1-P2-PHASE-OBSERVABILITY-PREFLIGHT-V1
-status: one_shot_execution_authorized
+status: completed_normalized_phase_input_contract_no_go
 
 authorization:
-  execution_permitted: true
+  execution_permitted: false
   required_implementation_git_sha: d1ed7de3765f1801a98248bf4e994532b2ceacdd
   authorized_code_files:
     - path: scripts/run_thesis_global_advantage_p2_b3_phase_observability.py

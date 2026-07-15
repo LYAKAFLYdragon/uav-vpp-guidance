@@ -1,5 +1,12 @@
 # V7 Turn-back Teacher Feasibility 结果
 
+> **2026-07-15 phase-contract correction.** The turn-back teacher run is
+> preserved, but its legacy `re_entry=0` label is not physical negative
+> evidence: the tracker received normalized observations against physical-unit
+> thresholds and had no first-pass prerequisite. This report must not be used
+> to claim that re-entry was absent or infeasible. See
+> `reports/thesis_five_state_v5_v7_phase_contract_audit_20260715_zh.md`.
+
 `THESIS-FIVE-STATE-REENTRY-TEACHER-FEASIBILITY-V7` 在与 V1--V6 物理不相交的 12 场景中完成 72 条 strict-JSBSim record：两种预注册镜像 lateral turn-back gain（`-0.8`、`+0.8`）各对三个 opponent 运行 12 条。
 
 每个 `gain x opponent` 单元均为 0 条 re-entry episode、0 个连续 re-entry 66-D step，未满足最小 2 episode/20 step gate。teacher 在 raw-SI first-pass 后才激活，不读取 future state、不 reset、不训练；VPP、guidance、PID 与现有保护器未改变。

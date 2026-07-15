@@ -1,5 +1,12 @@
 # V5 五态势 Raw-SI 相位可观测性结果
 
+> **2026-07-15 phase-contract correction.** This report remains valid only as
+> evidence for continuous JSBSim recording and post-first-pass 66-D
+> observability. Its legacy `PhaseTracker` received normalized observations
+> although its thresholds are expressed in metres and metres per second; it
+> therefore cannot support a claim of zero physical `re_entry`. See
+> `reports/thesis_five_state_v5_v7_phase_contract_audit_20260715_zh.md`.
+
 ## 结论
 
 `THESIS-FIVE-STATE-RAW-SI-PHASE-OBSERVABILITY-V5` 的 R1 record run 完成并通过独立复核。五种初始态势、三类对手和固定 head-on reference controller 形成完整 `60 x 3 = 180` 条 strict-JSBSim record。所有 `initial state x opponent` 单元均通过预注册数据契约门槛，故结论为：**五态势下的连续 66-D/3-D VPP 观测与执行数据契约已经建立。**

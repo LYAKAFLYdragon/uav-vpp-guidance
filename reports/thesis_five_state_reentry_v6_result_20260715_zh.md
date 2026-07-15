@@ -1,5 +1,12 @@
 # V6 Re-entry Reachability Control Matrix 结果
 
+> **2026-07-15 phase-contract correction.** The frozen-controller results are
+> preserved, but their legacy `re_entry=0` label is not physical negative
+> evidence: the tracker received normalized observations against physical-unit
+> thresholds and had no first-pass prerequisite. This report must not be used
+> to claim that re-entry was absent or infeasible. See
+> `reports/thesis_five_state_v5_v7_phase_contract_audit_20260715_zh.md`.
+
 ## 结论
 
 在与既有 evaluation/train manifest 物理不相交的 12 个场景中，V6 完成 `12 scenarios x 3 opponents x 2 frozen controllers = 72` 条 strict-JSBSim record。固定 head-on 和显式 18-D 投影后的固定 crossing 均未在 raw-SI first pass 后产生任何 `re_entry`：所有 6 个 controller x opponent 单元都是 `0` qualifying episode、`0` re-entry 66-D step。

@@ -133,3 +133,31 @@ def test_v5_step_hash_canonicalizes_ndarray_telemetry_without_losing_the_record(
 
     assert isinstance(first, str) and len(first) == 64
     assert first == second
+
+
+def test_v5_verifier_accepts_the_existing_writer_boolean_encoding():
+    verifier = _load(
+        ROOT / "scripts" / "verify_thesis_five_state_raw_si_v5_observability.py",
+        "v5_verifier",
+    )
+    config = _yaml(CONFIG)
+    steps = []
+    for index, rate in enumerate((-1.0, -1.0, -1.0, 1.0, 1.0)):
+        latched = int(index == 4)
+        steps.append(
+            {
+                "raw_si_phase_input": {"range_m": 3000.0 - index, "range_rate_mps": rate},
+                "history_padding_used": 0,
+                "base_observation_16d": [0.0] * 16,
+                "normalized_vpp_action": [0.0] * 3,
+                "observation_66d": [0.0] * 66 if latched else None,
+                "history_length": 10 if latched else index + 1,
+                "post_event_66d_valid": latched,
+                "raw_si_first_pass_latched": latched,
+                "taxonomy_angle_order": ["ATA", "AA"],
+            }
+        )
+    ledger = {"steps": steps, "summary": {"raw_si_event_replay_passed": 1}}
+    record = {"result": {"raw_event_reached": 1, "post_event_66d_steps": 1}}
+
+    verifier._validate_ledger(ledger, record, config)

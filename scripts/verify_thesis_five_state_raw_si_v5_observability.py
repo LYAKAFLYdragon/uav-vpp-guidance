@@ -112,7 +112,7 @@ def _validate_ledger(ledger: Mapping[str, Any], record: Mapping[str, Any], confi
         raise V5ArtifactVerificationError("raw-SI replay disagrees with V5 record event")
     post_event_66d = 0
     for step in steps:
-        if "reward" in step or step.get("history_padding_used") is not False:
+        if "reward" in step or step.get("history_padding_used") not in (False, 0):
             raise V5ArtifactVerificationError("V5 ledger leaked reward or history padding")
         base = np.asarray(step.get("base_observation_16d"), dtype=np.float64).reshape(-1)
         action = np.asarray(step.get("normalized_vpp_action"), dtype=np.float64).reshape(-1)
@@ -158,13 +158,18 @@ def verify_bundle(output_dir: Path) -> dict[str, Any]:
                 raise V5ArtifactVerificationError("V5 episode payload lacks record or ledger")
             if record.get("source_id") != SOURCE_ID or record.get("opponent") != opponent:
                 raise V5ArtifactVerificationError("V5 record identity drifted")
+            runtime_evidence = dict(record["runtime_evidence"])
+            for key in ("scenario_application_passed", "raw_si_event_replay_passed", "fixed_head_on_action_only"):
+                if runtime_evidence.get(key) not in (True, 1):
+                    raise V5ArtifactVerificationError("V5 runtime evidence is not a true boolean: {0}".format(key))
+                runtime_evidence[key] = True
             try:
                 runtime_record(
                     opponent=opponent,
                     scenario={"metadata": record["metadata"]},
                     result=record["result"],
                     ledger=ledger,
-                    runtime_evidence=record["runtime_evidence"],
+                    runtime_evidence=runtime_evidence,
                 )
             except (FiveStateRawSIV5RecordError, KeyError, TypeError) as error:
                 raise V5ArtifactVerificationError("V5 runtime record is invalid: {0}".format(error)) from error

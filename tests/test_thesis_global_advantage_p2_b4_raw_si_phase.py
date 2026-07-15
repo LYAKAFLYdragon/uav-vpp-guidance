@@ -52,6 +52,9 @@ def test_raw_si_input_is_separate_from_normalized_policy_diagnostic():
 def test_raw_si_config_validates_without_execution_authorization(tmp_path: Path):
     runner = _module()
     payload = yaml.safe_load(CONFIG.read_text(encoding="utf-8"))
+    payload["authorization"]["execution_permitted"] = False
+    payload["authorization"]["required_implementation_git_sha"] = None
+    payload["authorization"]["authorized_code_files"] = []
     path = tmp_path / "p2_b4.yaml"
     path.write_text(yaml.safe_dump(payload), encoding="utf-8")
     config, manifest, _runtime, _registry, scenarios = runner._validate_sources(path)

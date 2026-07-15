@@ -191,5 +191,6 @@
 - [x] **B6 设计预注册：** 已建立 independent opponent-conditional target-geometry reachability atlas 的方法、60 场景范围、逐 opponent candidate gate 与无候选 stop rule。见 `reports/thesis_global_advantage_p2_b6_opponent_conditional_reachability_design_20260715_zh.md`。
 - [x] **B6 设计态实现：** manifest builder、profile-free collector、七 profile 66-D finite 检查、candidate gate、runner、read-only analyzer 与 preflight 已实现并在 `execution_permitted=false` 下验证；未运行任何 B6 episode。
 - [x] **B6 独立复核：** manifest、profile-free collector、candidate selection rule、output capacity 与 non-authorized runner 均已通过合同测试；B6 尚未执行。
-- [ ] **当前唯一允许动作：执行一次 B6 已授权 reachability atlas。** 只能使用 `reports/thesis_global_advantage_p2_b6_reachability_execution_authorization_20260715_zh.md` 的唯一命令；执行后关闭授权并按分 opponent candidate gate 判定。不得重跑、调参或修补 B5，也不得进入四共享技能或 formal held-out。
+- [x] **B6 已一次性执行并关闭：** 180/180 strict-JSBSim record 的 scenario receipt、raw-SI replay 与 step-0 phase 全通过；按预注册排序，`neutral -> post_merge` 在三 opponent 分别有 1,461/1,247/1,430 valid step，成为唯一 pilot-input candidate，`training_unlocked=false`。详见 `reports/thesis_global_advantage_p2_b6_reachability_completion_20260715_zh.md`。
+- [ ] **当前唯一允许动作：起草并独立复核 neutral -> post_merge 单一 pilot 输入预注册。** 必须为新 Source ID、新 train/dev/heldout continuous manifests 与新 output root；不得重跑或修补 B6，也不得直接训练、扩成四共享技能或启动 formal held-out。
 - [ ] P2--P8 均未授权；尤其不允许以“追求全场景优势”为由绕过 P1/P3 的负证据和 stop rule。

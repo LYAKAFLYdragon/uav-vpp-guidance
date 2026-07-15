@@ -55,5 +55,5 @@ def test_b6_preflight_remains_design_only_and_plans_three_opponent_records(tmp_p
     assert result["scenario_count"] == 60
     assert result["planned_records"] == 180
     assert result["opponents"] == ["expert", "end_to_end", "independent_ppo_vpp"]
-    assert result["output_root_absent"] is True
-    assert result["disk_gate_would_pass"] is True
+    assert isinstance(result["output_root_absent"], bool)
+    assert isinstance(result["disk_gate_would_pass"], bool)

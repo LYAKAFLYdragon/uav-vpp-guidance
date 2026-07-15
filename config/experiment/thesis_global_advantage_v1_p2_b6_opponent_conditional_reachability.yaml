@@ -1,9 +1,9 @@
 schema_version: 1
 source_id: THESIS-GLOBAL-ADVANTAGE-V1-P2-OPPONENT-CONDITIONAL-REACHABILITY-B6-R1
-status: authorised_one_time_execution_open
+status: completed_candidate_identified_execution_closed
 
 authorization:
-  execution_permitted: true
+  execution_permitted: false
   required_implementation_git_sha: 1477b75b6152900c1848b53c8c360e4f743a6c4e
   authorized_code_files:
     - path: scripts/run_thesis_global_advantage_p2_b6_reachability.py

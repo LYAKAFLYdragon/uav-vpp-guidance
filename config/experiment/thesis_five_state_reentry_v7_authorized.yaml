@@ -1,0 +1,17 @@
+source_id: THESIS-FIVE-STATE-REENTRY-TEACHER-FEASIBILITY-V7
+authorization: {execution_permitted: true, training_permitted: false, tuning_permitted: false}
+inputs:
+  manifest: config/experiment/manifests/thesis_five_state_reentry_v7_teacher12.yaml
+  manifest_sha256: 81718778d493d10e3d2bbf7f73f4135d0148a0cdb2134377020ed330f577a7f9
+  runtime_registry: config/experiment/thesis_neutral_postmerge_reentry_recovery_pilot_v1_execution_runtime_registry.yaml
+  runtime_template: config/experiment/train_thesis_five_state_shared_skills_geometry_v1.yaml
+  frozen_p3_encoder: E:/uav-vpp-guidance-thesis-five-state-v1-results/p3_temporal_encoder_phaseconditional_v2/checkpoints/best.pt
+  frozen_p3_encoder_sha256: 385663281a9c48c0416ea4d1a1bb8dc08ed64a0cfebb0f01083cbbb8bcfbdc59
+execution: {runtime_template: config/experiment/train_thesis_five_state_shared_skills_geometry_v1.yaml}
+observability:
+  reference_profile: front_intercept
+  max_high_level_steps: 260
+  min_free_disk_gb: 120.0
+  raw_si_first_pass_event: {closing_rate_threshold_mps: 0.0, opening_rate_threshold_mps: 0.0, minimum_closing_steps: 3, minimum_opening_steps: 2}
+teacher_grid: {lateral_gains: [-0.8, 0.8], forward_action: 0.0, vertical_action: 0.0, reentry_rate_threshold_mps: -25.0}
+outputs: {root: E:/uav-vpp-guidance-five-state-heldout-envelope-v1-results/five_state_reentry_v7_teacher}

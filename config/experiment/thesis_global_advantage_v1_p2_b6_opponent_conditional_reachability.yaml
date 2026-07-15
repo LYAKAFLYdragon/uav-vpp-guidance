@@ -38,6 +38,11 @@ contract:
   taxonomy_angle_order: [ATA, AA]
   max_high_level_steps: 260
   min_free_disk_gb: 120.0
+  scenario_application_tolerances:
+    position_error_m: 10.0
+    velocity_error_mps: 5.0
+    heading_error_deg: 3.0
+    altitude_error_m: 5.0
   observation_capture:
     base_dim: 16
     real_history_window_steps: 10
@@ -45,6 +50,9 @@ contract:
     record_profile_free: true
     record_all_profile_masks: true
     raw_action_dim: 3
+  context_bands:
+    specific_energy_height_band_m: 100.0
+    altitude_band_m: 100.0
   candidate_gate_per_opponent:
     qualifying_episodes: 2
     valid_steps: 20

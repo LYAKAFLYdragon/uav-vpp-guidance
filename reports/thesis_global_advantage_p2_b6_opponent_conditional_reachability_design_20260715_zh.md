@@ -1,7 +1,7 @@
 # P2-B6 Opponent-Conditional Target-Geometry Reachability Atlas 设计预注册
 
 **拟议 Source ID：** `THESIS-GLOBAL-ADVANTAGE-V1-P2-OPPONENT-CONDITIONAL-REACHABILITY-B6-R1`
-**状态：** `design_only_not_authorised`
+**状态：** `implementation_complete_execution_not_authorised`
 **前置证据：** `THESIS-GLOBAL-ADVANTAGE-V1-P2-PHASE-FEASIBLE-SAMPLER-B5-R1` 已完成且为跨对手数据契约负证据。
 
 ## 1. 设计动机
@@ -49,7 +49,14 @@ strict-JSBSim/continuity/prediction/66-D/action 合同失败时，才成为 `pil
 
 若没有 candidate，B6 也是明确负证据：当前固定 reference 与五态势包线尚不能给共享技能训练建立跨对手输入输出契约。不得改 reward、增加训练步数、重跑或以单一 opponent 结果开始训练。
 
-## 5. 允许的下一步
+## 5. 已完成的设计态实现
+
+- 60 场景 manifest builder、独立 config 和 fail-closed preflight 已实现；preflight 确认 180 条计划 record、输出根为空、可用空间高于 120 GB，且 execution/training 均为 false。
+- profile-free collector 已实现：记录 16-D base、10 帧真实历史、6-D 显式历史、32-D P3 embedding 与原始 3-D action，得到 54-D profile-free payload；同时对所有七个 profile 分别组合并检查 66-D 向量有限性。
+- runner、artifact hash verifier 和独立 read-only candidate analyzer 已实现，但当前只能 `validated_not_executed`。
+- 合同测试覆盖 5 态 manifest、crossing 的 `transition -> crossing_entry` 映射、ATA/AA 参数顺序、连续 handoff、所有 profile 的 66-D finite，以及三 opponent 不得 pooled；设计态回归通过。
+
+## 6. 允许的下一步
 
 B6 当前只允许实现 manifest builder、只读 collector、analysis、tests 与一次性授权前 preflight。必须先单独复核
 manifest 物理不相交性、ATA/AA 约定、raw-SI phase input、输出容量与 selection rule，才可能申请一轮执行授权。

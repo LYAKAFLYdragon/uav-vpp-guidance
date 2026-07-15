@@ -1,0 +1,712 @@
+{
+  "source_id": "THESIS-FIVE-STATE-PATH-CONTEXT-PREFLIGHT-V17",
+  "matrix": {
+    "end_to_end": {
+      "records": 24,
+      "handoff_reached": 4,
+      "first_pass_latched": 24,
+      "episodes_with_post_merge": 4,
+      "episodes_with_re_entry": 4,
+      "first_pass_without_post_merge": 20,
+      "phase_steps": {
+        "post_merge": 451,
+        "pre_merge": 5537,
+        "re_entry": 197
+      },
+      "terminal_reasons": {
+        "target_crash_or_out_of_bounds": 1,
+        "target_killed": 1,
+        "timeout_hp_advantage": 22
+      },
+      "records_by_pair": [
+        {
+          "pair_key": "crossing_entry__v17_path_context_a__co_altitude__negative::seed=199108",
+          "handoff_reached": false,
+          "window_steps": 0,
+          "first_pass_latched": true,
+          "post_merge_observed": false,
+          "re_entry_observed": false,
+          "terminal_reason": "timeout_hp_advantage"
+        },
+        {
+          "pair_key": "crossing_entry__v17_path_context_a__co_altitude__positive::seed=199109",
+          "handoff_reached": false,
+          "window_steps": 0,
+          "first_pass_latched": true,
+          "post_merge_observed": false,
+          "re_entry_observed": false,
+          "terminal_reason": "timeout_hp_advantage"
+        },
+        {
+          "pair_key": "crossing_entry__v17_path_context_a__own_above__negative::seed=199110",
+          "handoff_reached": false,
+          "window_steps": 0,
+          "first_pass_latched": true,
+          "post_merge_observed": false,
+          "re_entry_observed": false,
+          "terminal_reason": "timeout_hp_advantage"
+        },
+        {
+          "pair_key": "crossing_entry__v17_path_context_a__own_above__positive::seed=199111",
+          "handoff_reached": false,
+          "window_steps": 0,
+          "first_pass_latched": true,
+          "post_merge_observed": false,
+          "re_entry_observed": false,
+          "terminal_reason": "timeout_hp_advantage"
+        },
+        {
+          "pair_key": "crossing_entry__v17_path_context_a__own_below__negative::seed=199106",
+          "handoff_reached": false,
+          "window_steps": 0,
+          "first_pass_latched": true,
+          "post_merge_observed": false,
+          "re_entry_observed": false,
+          "terminal_reason": "timeout_hp_advantage"
+        },
+        {
+          "pair_key": "crossing_entry__v17_path_context_a__own_below__positive::seed=199107",
+          "handoff_reached": false,
+          "window_steps": 0,
+          "first_pass_latched": true,
+          "post_merge_observed": false,
+          "re_entry_observed": false,
+          "terminal_reason": "timeout_hp_advantage"
+        },
+        {
+          "pair_key": "crossing_entry__v17_path_context_b__co_altitude__negative::seed=199208",
+          "handoff_reached": false,
+          "window_steps": 0,
+          "first_pass_latched": true,
+          "post_merge_observed": false,
+          "re_entry_observed": false,
+          "terminal_reason": "timeout_hp_advantage"
+        },
+        {
+          "pair_key": "crossing_entry__v17_path_context_b__co_altitude__positive::seed=199209",
+          "handoff_reached": false,
+          "window_steps": 0,
+          "first_pass_latched": true,
+          "post_merge_observed": false,
+          "re_entry_observed": false,
+          "terminal_reason": "timeout_hp_advantage"
+        },
+        {
+          "pair_key": "crossing_entry__v17_path_context_b__own_above__negative::seed=199210",
+          "handoff_reached": true,
+          "window_steps": 20,
+          "first_pass_latched": true,
+          "post_merge_observed": true,
+          "re_entry_observed": true,
+          "terminal_reason": "timeout_hp_advantage"
+        },
+        {
+          "pair_key": "crossing_entry__v17_path_context_b__own_above__positive::seed=199211",
+          "handoff_reached": false,
+          "window_steps": 0,
+          "first_pass_latched": true,
+          "post_merge_observed": false,
+          "re_entry_observed": false,
+          "terminal_reason": "target_killed"
+        },
+        {
+          "pair_key": "crossing_entry__v17_path_context_b__own_below__negative::seed=199206",
+          "handoff_reached": false,
+          "window_steps": 0,
+          "first_pass_latched": true,
+          "post_merge_observed": false,
+          "re_entry_observed": false,
+          "terminal_reason": "timeout_hp_advantage"
+        },
+        {
+          "pair_key": "crossing_entry__v17_path_context_b__own_below__positive::seed=199207",
+          "handoff_reached": false,
+          "window_steps": 0,
+          "first_pass_latched": true,
+          "post_merge_observed": false,
+          "re_entry_observed": false,
+          "terminal_reason": "timeout_hp_advantage"
+        },
+        {
+          "pair_key": "head_on__v17_path_context_a__co_altitude__negative::seed=199102",
+          "handoff_reached": true,
+          "window_steps": 20,
+          "first_pass_latched": true,
+          "post_merge_observed": true,
+          "re_entry_observed": true,
+          "terminal_reason": "timeout_hp_advantage"
+        },
+        {
+          "pair_key": "head_on__v17_path_context_a__co_altitude__positive::seed=199103",
+          "handoff_reached": false,
+          "window_steps": 0,
+          "first_pass_latched": true,
+          "post_merge_observed": false,
+          "re_entry_observed": false,
+          "terminal_reason": "timeout_hp_advantage"
+        },
+        {
+          "pair_key": "head_on__v17_path_context_a__own_above__negative::seed=199104",
+          "handoff_reached": false,
+          "window_steps": 0,
+          "first_pass_latched": true,
+          "post_merge_observed": false,
+          "re_entry_observed": false,
+          "terminal_reason": "timeout_hp_advantage"
+        },
+        {
+          "pair_key": "head_on__v17_path_context_a__own_above__positive::seed=199105",
+          "handoff_reached": false,
+          "window_steps": 0,
+          "first_pass_latched": true,
+          "post_merge_observed": false,
+          "re_entry_observed": false,
+          "terminal_reason": "timeout_hp_advantage"
+        },
+        {
+          "pair_key": "head_on__v17_path_context_a__own_below__negative::seed=199100",
+          "handoff_reached": false,
+          "window_steps": 0,
+          "first_pass_latched": true,
+          "post_merge_observed": false,
+          "re_entry_observed": false,
+          "terminal_reason": "target_crash_or_out_of_bounds"
+        },
+        {
+          "pair_key": "head_on__v17_path_context_a__own_below__positive::seed=199101",
+          "handoff_reached": true,
+          "window_steps": 20,
+          "first_pass_latched": true,
+          "post_merge_observed": true,
+          "re_entry_observed": true,
+          "terminal_reason": "timeout_hp_advantage"
+        },
+        {
+          "pair_key": "head_on__v17_path_context_b__co_altitude__negative::seed=199202",
+          "handoff_reached": true,
+          "window_steps": 20,
+          "first_pass_latched": true,
+          "post_merge_observed": true,
+          "re_entry_observed": true,
+          "terminal_reason": "timeout_hp_advantage"
+        },
+        {
+          "pair_key": "head_on__v17_path_context_b__co_altitude__positive::seed=199203",
+          "handoff_reached": false,
+          "window_steps": 0,
+          "first_pass_latched": true,
+          "post_merge_observed": false,
+          "re_entry_observed": false,
+          "terminal_reason": "timeout_hp_advantage"
+        },
+        {
+          "pair_key": "head_on__v17_path_context_b__own_above__negative::seed=199204",
+          "handoff_reached": false,
+          "window_steps": 0,
+          "first_pass_latched": true,
+          "post_merge_observed": false,
+          "re_entry_observed": false,
+          "terminal_reason": "timeout_hp_advantage"
+        },
+        {
+          "pair_key": "head_on__v17_path_context_b__own_above__positive::seed=199205",
+          "handoff_reached": false,
+          "window_steps": 0,
+          "first_pass_latched": true,
+          "post_merge_observed": false,
+          "re_entry_observed": false,
+          "terminal_reason": "timeout_hp_advantage"
+        },
+        {
+          "pair_key": "head_on__v17_path_context_b__own_below__negative::seed=199200",
+          "handoff_reached": false,
+          "window_steps": 0,
+          "first_pass_latched": true,
+          "post_merge_observed": false,
+          "re_entry_observed": false,
+          "terminal_reason": "timeout_hp_advantage"
+        },
+        {
+          "pair_key": "head_on__v17_path_context_b__own_below__positive::seed=199201",
+          "handoff_reached": false,
+          "window_steps": 0,
+          "first_pass_latched": true,
+          "post_merge_observed": false,
+          "re_entry_observed": false,
+          "terminal_reason": "timeout_hp_advantage"
+        }
+      ]
+    },
+    "expert": {
+      "records": 24,
+      "handoff_reached": 9,
+      "first_pass_latched": 24,
+      "episodes_with_post_merge": 9,
+      "episodes_with_re_entry": 9,
+      "first_pass_without_post_merge": 15,
+      "phase_steps": {
+        "post_merge": 904,
+        "pre_merge": 4659,
+        "re_entry": 526
+      },
+      "terminal_reasons": {
+        "target_crash_or_out_of_bounds": 4,
+        "timeout_draw": 1,
+        "timeout_hp_advantage": 19
+      },
+      "records_by_pair": [
+        {
+          "pair_key": "crossing_entry__v17_path_context_a__co_altitude__negative::seed=199108",
+          "handoff_reached": false,
+          "window_steps": 0,
+          "first_pass_latched": true,
+          "post_merge_observed": false,
+          "re_entry_observed": false,
+          "terminal_reason": "timeout_hp_advantage"
+        },
+        {
+          "pair_key": "crossing_entry__v17_path_context_a__co_altitude__positive::seed=199109",
+          "handoff_reached": false,
+          "window_steps": 0,
+          "first_pass_latched": true,
+          "post_merge_observed": false,
+          "re_entry_observed": false,
+          "terminal_reason": "timeout_hp_advantage"
+        },
+        {
+          "pair_key": "crossing_entry__v17_path_context_a__own_above__negative::seed=199110",
+          "handoff_reached": true,
+          "window_steps": 20,
+          "first_pass_latched": true,
+          "post_merge_observed": true,
+          "re_entry_observed": true,
+          "terminal_reason": "timeout_hp_advantage"
+        },
+        {
+          "pair_key": "crossing_entry__v17_path_context_a__own_above__positive::seed=199111",
+          "handoff_reached": true,
+          "window_steps": 20,
+          "first_pass_latched": true,
+          "post_merge_observed": true,
+          "re_entry_observed": true,
+          "terminal_reason": "timeout_hp_advantage"
+        },
+        {
+          "pair_key": "crossing_entry__v17_path_context_a__own_below__negative::seed=199106",
+          "handoff_reached": false,
+          "window_steps": 0,
+          "first_pass_latched": true,
+          "post_merge_observed": false,
+          "re_entry_observed": false,
+          "terminal_reason": "timeout_hp_advantage"
+        },
+        {
+          "pair_key": "crossing_entry__v17_path_context_a__own_below__positive::seed=199107",
+          "handoff_reached": false,
+          "window_steps": 0,
+          "first_pass_latched": true,
+          "post_merge_observed": false,
+          "re_entry_observed": false,
+          "terminal_reason": "timeout_hp_advantage"
+        },
+        {
+          "pair_key": "crossing_entry__v17_path_context_b__co_altitude__negative::seed=199208",
+          "handoff_reached": false,
+          "window_steps": 0,
+          "first_pass_latched": true,
+          "post_merge_observed": false,
+          "re_entry_observed": false,
+          "terminal_reason": "timeout_hp_advantage"
+        },
+        {
+          "pair_key": "crossing_entry__v17_path_context_b__co_altitude__positive::seed=199209",
+          "handoff_reached": false,
+          "window_steps": 0,
+          "first_pass_latched": true,
+          "post_merge_observed": false,
+          "re_entry_observed": false,
+          "terminal_reason": "timeout_hp_advantage"
+        },
+        {
+          "pair_key": "crossing_entry__v17_path_context_b__own_above__negative::seed=199210",
+          "handoff_reached": false,
+          "window_steps": 0,
+          "first_pass_latched": true,
+          "post_merge_observed": false,
+          "re_entry_observed": false,
+          "terminal_reason": "timeout_hp_advantage"
+        },
+        {
+          "pair_key": "crossing_entry__v17_path_context_b__own_above__positive::seed=199211",
+          "handoff_reached": false,
+          "window_steps": 0,
+          "first_pass_latched": true,
+          "post_merge_observed": false,
+          "re_entry_observed": false,
+          "terminal_reason": "timeout_hp_advantage"
+        },
+        {
+          "pair_key": "crossing_entry__v17_path_context_b__own_below__negative::seed=199206",
+          "handoff_reached": false,
+          "window_steps": 0,
+          "first_pass_latched": true,
+          "post_merge_observed": false,
+          "re_entry_observed": false,
+          "terminal_reason": "timeout_hp_advantage"
+        },
+        {
+          "pair_key": "crossing_entry__v17_path_context_b__own_below__positive::seed=199207",
+          "handoff_reached": false,
+          "window_steps": 0,
+          "first_pass_latched": true,
+          "post_merge_observed": false,
+          "re_entry_observed": false,
+          "terminal_reason": "timeout_hp_advantage"
+        },
+        {
+          "pair_key": "head_on__v17_path_context_a__co_altitude__negative::seed=199102",
+          "handoff_reached": true,
+          "window_steps": 20,
+          "first_pass_latched": true,
+          "post_merge_observed": true,
+          "re_entry_observed": true,
+          "terminal_reason": "timeout_hp_advantage"
+        },
+        {
+          "pair_key": "head_on__v17_path_context_a__co_altitude__positive::seed=199103",
+          "handoff_reached": true,
+          "window_steps": 20,
+          "first_pass_latched": true,
+          "post_merge_observed": true,
+          "re_entry_observed": true,
+          "terminal_reason": "timeout_hp_advantage"
+        },
+        {
+          "pair_key": "head_on__v17_path_context_a__own_above__negative::seed=199104",
+          "handoff_reached": false,
+          "window_steps": 0,
+          "first_pass_latched": true,
+          "post_merge_observed": false,
+          "re_entry_observed": false,
+          "terminal_reason": "timeout_hp_advantage"
+        },
+        {
+          "pair_key": "head_on__v17_path_context_a__own_above__positive::seed=199105",
+          "handoff_reached": true,
+          "window_steps": 20,
+          "first_pass_latched": true,
+          "post_merge_observed": true,
+          "re_entry_observed": true,
+          "terminal_reason": "timeout_hp_advantage"
+        },
+        {
+          "pair_key": "head_on__v17_path_context_a__own_below__negative::seed=199100",
+          "handoff_reached": false,
+          "window_steps": 0,
+          "first_pass_latched": true,
+          "post_merge_observed": false,
+          "re_entry_observed": false,
+          "terminal_reason": "target_crash_or_out_of_bounds"
+        },
+        {
+          "pair_key": "head_on__v17_path_context_a__own_below__positive::seed=199101",
+          "handoff_reached": false,
+          "window_steps": 0,
+          "first_pass_latched": true,
+          "post_merge_observed": false,
+          "re_entry_observed": false,
+          "terminal_reason": "target_crash_or_out_of_bounds"
+        },
+        {
+          "pair_key": "head_on__v17_path_context_b__co_altitude__negative::seed=199202",
+          "handoff_reached": true,
+          "window_steps": 20,
+          "first_pass_latched": true,
+          "post_merge_observed": true,
+          "re_entry_observed": true,
+          "terminal_reason": "timeout_hp_advantage"
+        },
+        {
+          "pair_key": "head_on__v17_path_context_b__co_altitude__positive::seed=199203",
+          "handoff_reached": true,
+          "window_steps": 20,
+          "first_pass_latched": true,
+          "post_merge_observed": true,
+          "re_entry_observed": true,
+          "terminal_reason": "timeout_hp_advantage"
+        },
+        {
+          "pair_key": "head_on__v17_path_context_b__own_above__negative::seed=199204",
+          "handoff_reached": true,
+          "window_steps": 20,
+          "first_pass_latched": true,
+          "post_merge_observed": true,
+          "re_entry_observed": true,
+          "terminal_reason": "timeout_hp_advantage"
+        },
+        {
+          "pair_key": "head_on__v17_path_context_b__own_above__positive::seed=199205",
+          "handoff_reached": true,
+          "window_steps": 20,
+          "first_pass_latched": true,
+          "post_merge_observed": true,
+          "re_entry_observed": true,
+          "terminal_reason": "timeout_draw"
+        },
+        {
+          "pair_key": "head_on__v17_path_context_b__own_below__negative::seed=199200",
+          "handoff_reached": false,
+          "window_steps": 0,
+          "first_pass_latched": true,
+          "post_merge_observed": false,
+          "re_entry_observed": false,
+          "terminal_reason": "target_crash_or_out_of_bounds"
+        },
+        {
+          "pair_key": "head_on__v17_path_context_b__own_below__positive::seed=199201",
+          "handoff_reached": false,
+          "window_steps": 0,
+          "first_pass_latched": true,
+          "post_merge_observed": false,
+          "re_entry_observed": false,
+          "terminal_reason": "target_crash_or_out_of_bounds"
+        }
+      ]
+    },
+    "independent_ppo_vpp": {
+      "records": 24,
+      "handoff_reached": 11,
+      "first_pass_latched": 24,
+      "episodes_with_post_merge": 11,
+      "episodes_with_re_entry": 11,
+      "first_pass_without_post_merge": 13,
+      "phase_steps": {
+        "post_merge": 1027,
+        "pre_merge": 4708,
+        "re_entry": 492
+      },
+      "terminal_reasons": {
+        "target_crash_or_out_of_bounds": 2,
+        "timeout_hp_advantage": 22
+      },
+      "records_by_pair": [
+        {
+          "pair_key": "crossing_entry__v17_path_context_a__co_altitude__negative::seed=199108",
+          "handoff_reached": false,
+          "window_steps": 0,
+          "first_pass_latched": true,
+          "post_merge_observed": false,
+          "re_entry_observed": false,
+          "terminal_reason": "timeout_hp_advantage"
+        },
+        {
+          "pair_key": "crossing_entry__v17_path_context_a__co_altitude__positive::seed=199109",
+          "handoff_reached": false,
+          "window_steps": 0,
+          "first_pass_latched": true,
+          "post_merge_observed": false,
+          "re_entry_observed": false,
+          "terminal_reason": "timeout_hp_advantage"
+        },
+        {
+          "pair_key": "crossing_entry__v17_path_context_a__own_above__negative::seed=199110",
+          "handoff_reached": true,
+          "window_steps": 20,
+          "first_pass_latched": true,
+          "post_merge_observed": true,
+          "re_entry_observed": true,
+          "terminal_reason": "timeout_hp_advantage"
+        },
+        {
+          "pair_key": "crossing_entry__v17_path_context_a__own_above__positive::seed=199111",
+          "handoff_reached": true,
+          "window_steps": 20,
+          "first_pass_latched": true,
+          "post_merge_observed": true,
+          "re_entry_observed": true,
+          "terminal_reason": "timeout_hp_advantage"
+        },
+        {
+          "pair_key": "crossing_entry__v17_path_context_a__own_below__negative::seed=199106",
+          "handoff_reached": false,
+          "window_steps": 0,
+          "first_pass_latched": true,
+          "post_merge_observed": false,
+          "re_entry_observed": false,
+          "terminal_reason": "timeout_hp_advantage"
+        },
+        {
+          "pair_key": "crossing_entry__v17_path_context_a__own_below__positive::seed=199107",
+          "handoff_reached": false,
+          "window_steps": 0,
+          "first_pass_latched": true,
+          "post_merge_observed": false,
+          "re_entry_observed": false,
+          "terminal_reason": "timeout_hp_advantage"
+        },
+        {
+          "pair_key": "crossing_entry__v17_path_context_b__co_altitude__negative::seed=199208",
+          "handoff_reached": false,
+          "window_steps": 0,
+          "first_pass_latched": true,
+          "post_merge_observed": false,
+          "re_entry_observed": false,
+          "terminal_reason": "timeout_hp_advantage"
+        },
+        {
+          "pair_key": "crossing_entry__v17_path_context_b__co_altitude__positive::seed=199209",
+          "handoff_reached": false,
+          "window_steps": 0,
+          "first_pass_latched": true,
+          "post_merge_observed": false,
+          "re_entry_observed": false,
+          "terminal_reason": "timeout_hp_advantage"
+        },
+        {
+          "pair_key": "crossing_entry__v17_path_context_b__own_above__negative::seed=199210",
+          "handoff_reached": true,
+          "window_steps": 20,
+          "first_pass_latched": true,
+          "post_merge_observed": true,
+          "re_entry_observed": true,
+          "terminal_reason": "timeout_hp_advantage"
+        },
+        {
+          "pair_key": "crossing_entry__v17_path_context_b__own_above__positive::seed=199211",
+          "handoff_reached": false,
+          "window_steps": 0,
+          "first_pass_latched": true,
+          "post_merge_observed": false,
+          "re_entry_observed": false,
+          "terminal_reason": "timeout_hp_advantage"
+        },
+        {
+          "pair_key": "crossing_entry__v17_path_context_b__own_below__negative::seed=199206",
+          "handoff_reached": false,
+          "window_steps": 0,
+          "first_pass_latched": true,
+          "post_merge_observed": false,
+          "re_entry_observed": false,
+          "terminal_reason": "target_crash_or_out_of_bounds"
+        },
+        {
+          "pair_key": "crossing_entry__v17_path_context_b__own_below__positive::seed=199207",
+          "handoff_reached": false,
+          "window_steps": 0,
+          "first_pass_latched": true,
+          "post_merge_observed": false,
+          "re_entry_observed": false,
+          "terminal_reason": "timeout_hp_advantage"
+        },
+        {
+          "pair_key": "head_on__v17_path_context_a__co_altitude__negative::seed=199102",
+          "handoff_reached": true,
+          "window_steps": 20,
+          "first_pass_latched": true,
+          "post_merge_observed": true,
+          "re_entry_observed": true,
+          "terminal_reason": "timeout_hp_advantage"
+        },
+        {
+          "pair_key": "head_on__v17_path_context_a__co_altitude__positive::seed=199103",
+          "handoff_reached": true,
+          "window_steps": 20,
+          "first_pass_latched": true,
+          "post_merge_observed": true,
+          "re_entry_observed": true,
+          "terminal_reason": "timeout_hp_advantage"
+        },
+        {
+          "pair_key": "head_on__v17_path_context_a__own_above__negative::seed=199104",
+          "handoff_reached": false,
+          "window_steps": 0,
+          "first_pass_latched": true,
+          "post_merge_observed": false,
+          "re_entry_observed": false,
+          "terminal_reason": "timeout_hp_advantage"
+        },
+        {
+          "pair_key": "head_on__v17_path_context_a__own_above__positive::seed=199105",
+          "handoff_reached": true,
+          "window_steps": 20,
+          "first_pass_latched": true,
+          "post_merge_observed": true,
+          "re_entry_observed": true,
+          "terminal_reason": "timeout_hp_advantage"
+        },
+        {
+          "pair_key": "head_on__v17_path_context_a__own_below__negative::seed=199100",
+          "handoff_reached": false,
+          "window_steps": 0,
+          "first_pass_latched": true,
+          "post_merge_observed": false,
+          "re_entry_observed": false,
+          "terminal_reason": "timeout_hp_advantage"
+        },
+        {
+          "pair_key": "head_on__v17_path_context_a__own_below__positive::seed=199101",
+          "handoff_reached": false,
+          "window_steps": 0,
+          "first_pass_latched": true,
+          "post_merge_observed": false,
+          "re_entry_observed": false,
+          "terminal_reason": "timeout_hp_advantage"
+        },
+        {
+          "pair_key": "head_on__v17_path_context_b__co_altitude__negative::seed=199202",
+          "handoff_reached": true,
+          "window_steps": 20,
+          "first_pass_latched": true,
+          "post_merge_observed": true,
+          "re_entry_observed": true,
+          "terminal_reason": "timeout_hp_advantage"
+        },
+        {
+          "pair_key": "head_on__v17_path_context_b__co_altitude__positive::seed=199203",
+          "handoff_reached": true,
+          "window_steps": 20,
+          "first_pass_latched": true,
+          "post_merge_observed": true,
+          "re_entry_observed": true,
+          "terminal_reason": "timeout_hp_advantage"
+        },
+        {
+          "pair_key": "head_on__v17_path_context_b__own_above__negative::seed=199204",
+          "handoff_reached": true,
+          "window_steps": 20,
+          "first_pass_latched": true,
+          "post_merge_observed": true,
+          "re_entry_observed": true,
+          "terminal_reason": "timeout_hp_advantage"
+        },
+        {
+          "pair_key": "head_on__v17_path_context_b__own_above__positive::seed=199205",
+          "handoff_reached": true,
+          "window_steps": 20,
+          "first_pass_latched": true,
+          "post_merge_observed": true,
+          "re_entry_observed": true,
+          "terminal_reason": "timeout_hp_advantage"
+        },
+        {
+          "pair_key": "head_on__v17_path_context_b__own_below__negative::seed=199200",
+          "handoff_reached": true,
+          "window_steps": 20,
+          "first_pass_latched": true,
+          "post_merge_observed": true,
+          "re_entry_observed": true,
+          "terminal_reason": "timeout_hp_advantage"
+        },
+        {
+          "pair_key": "head_on__v17_path_context_b__own_below__positive::seed=199201",
+          "handoff_reached": false,
+          "window_steps": 0,
+          "first_pass_latched": true,
+          "post_merge_observed": false,
+          "re_entry_observed": false,
+          "terminal_reason": "target_crash_or_out_of_bounds"
+        }
+      ]
+    }
+  }
+}

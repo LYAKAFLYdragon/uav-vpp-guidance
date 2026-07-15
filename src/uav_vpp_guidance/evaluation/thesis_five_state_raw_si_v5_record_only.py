@@ -149,9 +149,14 @@ class FiveStateRawSIV5Episode:
         fixed_head_on: FrozenSpecialistPolicy,
         encoder: FrozenP3Encoder,
         config: Mapping[str, Any],
+        *,
+        controller_method: str = "frozen_fixed_head_on",
+        action_adapter: Any | None = None,
     ) -> None:
         self.env = env
         self.fixed_head_on = fixed_head_on
+        self.controller_method = controller_method
+        self.action_adapter = action_adapter
         self.encoder = encoder
         self.config = config
         self.contract = FiveStateObservationContract()
@@ -217,11 +222,12 @@ class FiveStateRawSIV5Episode:
         observation = self.env.reset(scenario=copy.deepcopy(dict(scenario)), seed=int(seed))
         if self.env._backend != "jsbsim":
             raise FiveStateRawSIV5RecordError("V5 strict JSBSim backend was not selected")
+        specialist_key = "head_on" if self.controller_method == "frozen_fixed_head_on" else "crossing_feasible"
         self.env.set_runtime_specialist_context(
-            specialist_key="head_on",
+            specialist_key=specialist_key,
             specialist_profile=None,
-            specialist_mode_name="frozen_fixed_head_on",
-            specialist_reason="v5_raw_si_observability_reference_controller",
+            specialist_mode_name=self.controller_method,
+            specialist_reason="raw_si_observability_reference_controller",
         )
         self.observation_schema = copy.deepcopy(observation["observation_schema"])
         self._observe(observation)
@@ -235,7 +241,14 @@ class FiveStateRawSIV5Episode:
             values = _base_map(pre_base)
             raw_event = self.raw_tracker.update(values["range_rate_mps"], step_index=self.total_steps)
             reference_66d = self._reference_observation()
-            action = _finite_action(self.fixed_head_on.get_deterministic_action(self.observation["observation_vector"]))
+            if self.action_adapter is None:
+                action = _finite_action(self.fixed_head_on.get_deterministic_action(self.observation["observation_vector"]))
+                adapter_receipt = {"adapter": "legacy_identity_v5", "implicit_truncation_or_padding": False}
+            else:
+                action, adapter_receipt = self.action_adapter(
+                    self.fixed_head_on, self.observation["observation_vector"], self.observation_schema, self.controller_method
+                )
+                action = _finite_action(action)
             next_observation, _environment_reward, terminated, truncated, info = self.env.step(action)
             self.total_steps += 1
             self.last_info = info
@@ -262,6 +275,8 @@ class FiveStateRawSIV5Episode:
                 "profile_changes_actions": False,
                 "profile_validity_gate": False,
                 "normalized_vpp_action": [float(value) for value in action],
+                "controller_method": self.controller_method,
+                "controller_projection": adapter_receipt,
                 "post_event_66d_valid": bool(post_raw_event and reference_66d is not None),
                 "prediction_valid": bool(info.get("prediction_valid", False)),
                 "prediction_fallback": bool(info.get("prediction_fallback", False)),
@@ -320,7 +335,7 @@ class FiveStateRawSIV5Episode:
                 "initial_state": scenario["metadata"]["initial_class"],
                 "mirror_sign": scenario["metadata"]["mirror_sign"],
                 "height_condition": scenario["metadata"]["height_condition"],
-                "reference_controller": "frozen_fixed_head_on",
+                "reference_controller": self.controller_method,
                 "reference_profile": str(self.config["observability"]["reference_profile"]),
             },
             "steps": self.steps,

@@ -1,0 +1,44 @@
+source_id: THESIS-FIVE-STATE-REENTRY-REACHABILITY-CONTROL-MATRIX-V6
+status: authorized_one_time_execution
+authorization:
+  execution_permitted: true
+  training_permitted: false
+  tuning_permitted: false
+  candidate_policy_loading_permitted: false
+  high_level_ppo_training_permitted: false
+  four_skill_training_permitted: false
+  combat_finetune_permitted: false
+  vpp_change_permitted: false
+  guidance_change_permitted: false
+  pid_change_permitted: false
+  snapshot_restore: false
+  future_state_injection: false
+  history_padding_permitted: false
+  heldout_claims_permitted: false
+inputs:
+  manifest: config/experiment/manifests/thesis_five_state_reentry_v6_control12.yaml
+  manifest_sha256: 416c2c8fda9add71004c44bc0ddcf078ac27f40710646f5199b413dcf49af6cf
+  runtime_template: config/experiment/train_thesis_five_state_shared_skills_geometry_v1.yaml
+  runtime_template_sha256: 2a9fb82721d82cd67e13e08157d5cc9d9eac3deafa04b12e253c8b6098c38806
+  runtime_registry: config/experiment/thesis_neutral_postmerge_reentry_recovery_pilot_v1_execution_runtime_registry.yaml
+  runtime_registry_sha256: e3124120b33b55c1018da6d8d133ef15b5cf5e6c5c04361d6b90498b0b279ca8
+  frozen_p3_encoder: E:/uav-vpp-guidance-thesis-five-state-v1-results/p3_temporal_encoder_phaseconditional_v2/checkpoints/best.pt
+  frozen_p3_encoder_sha256: 385663281a9c48c0416ea4d1a1bb8dc08ed64a0cfebb0f01083cbbb8bcfbdc59
+opponents:
+  order: [expert, end_to_end, independent_ppo_vpp]
+execution:
+  runtime_template: config/experiment/train_thesis_five_state_shared_skills_geometry_v1.yaml
+observability:
+  reference_profile: front_intercept
+  max_high_level_steps: 260
+  min_free_disk_gb: 120.0
+  raw_si_first_pass_event: {closing_rate_threshold_mps: 0.0, opening_rate_threshold_mps: 0.0, minimum_closing_steps: 3, minimum_opening_steps: 2}
+contract:
+  backend: jsbsim
+  strict_backend: true
+  one_continuous_episode: true
+  history_window_steps: 10
+  observation_dim: 66
+  action_dim: 3
+outputs:
+  root: E:/uav-vpp-guidance-five-state-heldout-envelope-v1-results/five_state_reentry_v6_control_matrix

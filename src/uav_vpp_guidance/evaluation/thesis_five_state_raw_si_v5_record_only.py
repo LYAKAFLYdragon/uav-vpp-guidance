@@ -67,8 +67,31 @@ def _history_frame(base: np.ndarray) -> dict[str, float]:
     }
 
 
+def _canonical(value: Any) -> Any:
+    """Make telemetry hashable without changing the recorded physical values."""
+
+    if isinstance(value, Mapping):
+        return {str(key): _canonical(item) for key, item in value.items()}
+    if isinstance(value, (tuple, list)):
+        return [_canonical(item) for item in value]
+    if isinstance(value, np.ndarray):
+        return _canonical(value.tolist())
+    if isinstance(value, (np.floating, float)):
+        number = float(value)
+        if math.isnan(number):
+            return "NaN"
+        if math.isinf(number):
+            return "Infinity" if number > 0.0 else "-Infinity"
+        return number
+    if isinstance(value, (np.integer, int)):
+        return int(value)
+    if isinstance(value, (str, bool)) or value is None:
+        return value
+    return repr(value)
+
+
 def _stable_hash(payload: Mapping[str, Any]) -> str:
-    encoded = json.dumps(payload, sort_keys=True, separators=(",", ":"), allow_nan=False).encode("utf-8")
+    encoded = json.dumps(_canonical(payload), sort_keys=True, separators=(",", ":"), allow_nan=False).encode("utf-8")
     return hashlib.sha256(encoded).hexdigest()
 
 

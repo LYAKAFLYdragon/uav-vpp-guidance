@@ -1,0 +1,85 @@
+schema_version: 1
+source_id: THESIS-FIVE-STATE-RAW-SI-PHASE-OBSERVABILITY-V5
+execution_attempt_id: V5-R1-canonical-telemetry-serializer
+status: preregistered_design_execution_not_authorised
+parent_attempt:
+  output_root: E:/uav-vpp-guidance-five-state-heldout-envelope-v1-results/five_state_raw_si_v5_observability
+  disposition: implementation_failure_before_any_completed_record
+  completed_record_count: 0
+  failure: ndarray telemetry was not canonicalized before step hashing
+  physical_or_policy_interpretation: prohibited
+authorization:
+  execution_permitted: false
+  training_permitted: false
+  tuning_permitted: false
+  candidate_policy_loading_permitted: false
+  high_level_ppo_training_permitted: false
+  four_skill_training_permitted: false
+  combat_finetune_permitted: false
+  vpp_change_permitted: false
+  guidance_change_permitted: false
+  pid_change_permitted: false
+  snapshot_restore: false
+  future_state_injection: false
+  history_padding_permitted: false
+  heldout_claims_permitted: false
+inputs:
+  observability_manifest: config/experiment/manifests/thesis_five_state_raw_si_v5_observability60.yaml
+  observability_manifest_sha256: f4edf91589d6931da9b33fcf0b49b693dd640a12903ca65476425f84ef4b36b5
+  runtime_template: config/experiment/train_thesis_five_state_shared_skills_geometry_v1.yaml
+  runtime_template_sha256: 2a9fb82721d82cd67e13e08157d5cc9d9eac3deafa04b12e253c8b6098c38806
+  runtime_registry: config/experiment/thesis_neutral_postmerge_reentry_recovery_pilot_v1_execution_runtime_registry.yaml
+  runtime_registry_sha256: e3124120b33b55c1018da6d8d133ef15b5cf5e6c5c04361d6b90498b0b279ca8
+  frozen_p3_encoder: E:/uav-vpp-guidance-thesis-five-state-v1-results/p3_temporal_encoder_phaseconditional_v2/checkpoints/best.pt
+  frozen_p3_encoder_sha256: 385663281a9c48c0416ea4d1a1bb8dc08ed64a0cfebb0f01083cbbb8bcfbdc59
+  frozen_fixed_head_on_sha256: 0aeadd11cd8c7723c8963bcc5da21dd97c365e64f234d07b86c2b8f0d7ec5fb6
+opponents:
+  order: [expert, end_to_end, independent_ppo_vpp]
+  report_separately: true
+  pooled_gate: prohibited
+observability:
+  initial_state_order: [advantage, head_on, disadvantage, neutral, crossing_entry]
+  reference_controller: frozen_fixed_head_on
+  reference_profile: front_intercept
+  profile_changes_actions: false
+  profile_validity_gate: false
+  max_high_level_steps: 260
+  min_free_disk_gb: 120.0
+  training_reward: prohibited
+  environment_reward_recording: prohibited
+  raw_si_first_pass_event:
+    closing_rate_threshold_mps: 0.0
+    opening_rate_threshold_mps: 0.0
+    minimum_closing_steps: 3
+    minimum_opening_steps: 2
+  per_initial_state_per_opponent_gate:
+    raw_event_episodes: 2
+    post_event_66d_steps: 20
+    distinct_mirror_signs: 2
+    distinct_height_conditions: 2
+contract:
+  backend: jsbsim
+  strict_backend: true
+  one_continuous_episode: true
+  reset_at_handoff: false
+  phase_input_unit_contract: raw_SI_from_observation.relative_state
+  taxonomy_angle_order: [ATA, AA]
+  history_window_steps: 10
+  observation_dim: 66
+  action_dim: 3
+  training_reward: prohibited
+  environment_reward_recording: prohibited
+  checkpoint_fallback: prohibited
+  backend_fallback: prohibited
+  scenario_application_tolerances:
+    position_error_m: 10.0
+    velocity_error_mps: 5.0
+    heading_error_deg: 3.0
+    altitude_error_m: 5.0
+execution:
+  runtime_template: config/experiment/train_thesis_five_state_shared_skills_geometry_v1.yaml
+  runtime_registry: config/experiment/thesis_neutral_postmerge_reentry_recovery_pilot_v1_execution_runtime_registry.yaml
+outputs:
+  root: E:/uav-vpp-guidance-five-state-heldout-envelope-v1-results/five_state_raw_si_v5_observability_r1
+  creation_permitted_by_this_config: false
+  paper_safe: false

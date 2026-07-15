@@ -76,11 +76,14 @@ def test_v5_manifest_is_rebuildable_disjoint_and_preserves_the_60_cell_contract(
     assert all(item["seed_intersection_count"] == 0 for item in tracked["disjointness"].values())
 
 
-def test_v5_design_preflight_is_nonexecuting_and_prohibits_training():
+def test_v5_design_preflight_is_nonexecuting_and_prohibits_training(tmp_path: Path):
     config = _yaml(CONFIG)
     preflight = _load(PREFLIGHT, "v5_preflight")
 
-    result = preflight.validate_design(CONFIG)
+    config["outputs"]["root"] = str(tmp_path / "fresh_v5_preflight_output")
+    design_path = tmp_path / "v5_design.yaml"
+    design_path.write_text(yaml.safe_dump(config, sort_keys=False), encoding="utf-8")
+    result = preflight.validate_design(design_path)
     assert result["planned_records"] == 180
     assert result["reference_controller"] == "frozen_fixed_head_on"
     assert config["authorization"]["execution_permitted"] is False
@@ -118,3 +121,15 @@ def test_v5_runner_requires_a_separate_authorized_overlay():
     runner = _load(RUNNER, "v5_runner")
     with pytest.raises(RuntimeError, match="separate authorized overlay"):
         runner.authorized_preflight(CONFIG)
+
+
+def test_v5_step_hash_canonicalizes_ndarray_telemetry_without_losing_the_record():
+    recorder = _load(
+        ROOT / "src" / "uav_vpp_guidance" / "evaluation" / "thesis_five_state_raw_si_v5_record_only.py",
+        "v5_record_only",
+    )
+    first = recorder._stable_hash({"guidance_command": recorder.np.asarray([1.0, float("nan")])})
+    second = recorder._stable_hash({"guidance_command": [1.0, float("nan")]})
+
+    assert isinstance(first, str) and len(first) == 64
+    assert first == second

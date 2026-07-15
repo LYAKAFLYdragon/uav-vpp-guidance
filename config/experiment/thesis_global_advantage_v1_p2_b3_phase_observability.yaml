@@ -1,0 +1,43 @@
+schema_version: 1
+source_id: THESIS-GLOBAL-ADVANTAGE-V1-P2-PHASE-OBSERVABILITY-PREFLIGHT-V1
+status: implementation_freeze_pending_authorization
+
+authorization:
+  execution_permitted: false
+  required_implementation_git_sha: null
+  authorized_code_files: []
+  training_permitted: false
+  tuning_permitted: false
+  candidate_policy_loading_permitted: false
+  heldout_claims_permitted: false
+
+inputs:
+  manifest: config/experiment/manifests/thesis_global_advantage_v1_p2_b3_phase_observability30.yaml
+  manifest_source_id: THESIS-GLOBAL-ADVANTAGE-V1-P2-PHASE-OBSERVABILITY-MANIFEST30-V1
+  manifest_sha256: d1e7c0e0750ec36eab6ef3ab7b6a353f7ceed8d88211d6d6535344c13e8a384c
+  runtime_config: config/experiment/thesis_defext_rangeext_feasibility_pilot_v1.yaml
+  runtime_config_sha256: 3a050de1eac5258fb68ae52dea71fc9cc8c9ad1bea69a73c0cd403a56e40b1f2
+  runtime_registry: config/experiment/thesis_defext_rangeext_feasibility_pilot_v1_runtime_registry.yaml
+  runtime_registry_sha256: c87edfed4be69a8293a889c9caa55c520fdab7dd93c44c9c6e057be869f435c5
+  reference_specialist: run_in_head_on
+
+contract:
+  backend: jsbsim
+  strict_backend: true
+  fresh_environment_per_episode: true
+  opponents: [expert, end_to_end, independent_ppo_vpp]
+  geometry_cells: 30
+  max_high_level_steps: 260
+  min_valid_steps: 20
+  min_free_disk_gb: 120.0
+  scenario_application_tolerances:
+    position_error_m: 10.0
+    velocity_error_mps: 5.0
+    heading_error_deg: 3.0
+    altitude_error_m: 5.0
+  learning_or_selection: prohibited
+  reentry_coverage_is_gate: false
+
+outputs:
+  root: E:/uav-vpp-guidance-five-state-heldout-envelope-v1-results/global_advantage_v1_p2_b3_phase_observability
+  fresh_output_required: true

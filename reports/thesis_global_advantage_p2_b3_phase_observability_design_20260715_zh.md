@@ -1,7 +1,7 @@
 # P2-B3 Phase-Observability Preflight 设计预注册
 
 **拟议 Source ID：** `THESIS-GLOBAL-ADVANTAGE-V1-P2-PHASE-OBSERVABILITY-PREFLIGHT-V1`
-**状态：** `design_only_not_authorised`
+**状态：** `implementation_frozen_execution_not_authorised`
 **前置证据：** P2-B2 的 `physical_pass_phase_observability_no_go`
 
 ## 目标与非目标
@@ -9,6 +9,8 @@
 P2-B3 只回答一个实现与测量问题：冻结 scenario 的几何是否进入 JSBSim reset，以及 raw telemetry 是否足以独立重建 `PhaseTracker` 的 phase 判断。它不是 P2-B2 的 rerun，不复用其 source ID 或 seed，不训练、不调参、不加载候选五态势策略，也不输出 win rate、优越性或 opponent 排名。
 
 P2-B2 已证明 reference chain 的 180 条记录在 strict JSBSim 下可完成，但 manifest 的 180 条 `pre_merge` reset 与 raw 的 180 条首个 `post_merge` 标签矛盾，且 raw 缺少 range/range-rate。因此 B3 必须先建立**测量契约**，再讨论任何 phase coverage。
+
+实现已落地于 `scripts/run_thesis_global_advantage_p2_b3_phase_observability.py`，执行开关仍为 `false`。当前 manifest SHA-256 为 `d1e7c0e0750ec36eab6ef3ab7b6a353f7ceed8d88211d6d6535344c13e8a384c`，runtime config 与 registry 分别为 `3a050de1eac5258fb68ae52dea71fc9cc8c9ad1bea69a73c0cd403a56e40b1f2` 和 `c87edfed4be69a8293a889c9caa55c520fdab7dd93c44c9c6e057be869f435c5`。定向合同测试 `6 passed`；真正执行仍必须等 implementation commit、clean-worktree 复核和独立授权。
 
 ## 冻结方法
 

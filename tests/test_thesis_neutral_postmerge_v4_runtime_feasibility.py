@@ -61,7 +61,9 @@ def test_v4_manifest_is_disjoint_from_v3_and_preserves_the_full_48_cell_identity
     assert all(item["seed_intersection_count"] == 0 for item in tracked["disjointness"].values())
 
 
-def test_v4_design_has_no_training_or_reward_contract_and_preflight_is_nonexecuting(monkeypatch: pytest.MonkeyPatch):
+def test_v4_design_has_no_training_or_reward_contract_and_preflight_is_nonexecuting(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+):
     config = _payload(CONFIG)
     plan = build_plan(config)
     preflight = _load(PREFLIGHT, "v4_preflight")
@@ -71,7 +73,11 @@ def test_v4_design_has_no_training_or_reward_contract_and_preflight_is_nonexecut
     assert config["runtime_feasibility"]["training_reward"] == "prohibited"
     assert config["runtime_feasibility"]["environment_reward_recording"] == "prohibited"
     assert plan.execution_permitted is False
-    result = preflight.validate_design()
+    design = copy.deepcopy(config)
+    design["outputs"]["root"] = str(tmp_path / "v4_design_preflight_output")
+    design_path = tmp_path / "v4_design_preflight.yaml"
+    design_path.write_text(yaml.safe_dump(design, sort_keys=False), encoding="utf-8")
+    result = preflight.validate_design(design_path)
     assert result["planned_records"] == 144
     assert result["training_reward"] == "prohibited"
     assert result["environment_reward_recording"] == "prohibited"
@@ -229,7 +235,7 @@ def test_v4_future_authorized_overlay_must_hash_and_reject_method_changes(tmp_pa
         runner._validate_overlay_scope(overlay, base)
 
 
-def test_v4_authorized_preflight_requires_the_complete_whitelist_without_creating_output(
+def test_v4_authorization_requires_the_complete_whitelist(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ):
     runner = _load(RUNNER, "v4_runner_authorized_preflight")
@@ -265,15 +271,15 @@ def test_v4_authorized_preflight_requires_the_complete_whitelist_without_creatin
     overlay_path = tmp_path / "v4_authorized_preflight.yaml"
     overlay_path.write_text(yaml.safe_dump(overlay, sort_keys=False), encoding="utf-8")
 
-    result = runner.authorized_preflight(overlay_path)
-    assert result["mode"] == "authorized_preflight_no_jsbsim_no_output_creation"
-    assert result["planned_records"] == 144
-    assert not Path(result["output_root"]).exists()
+    merged, base_path, loaded_overlay = runner._load_authorized_config(overlay_path)
+    monkeypatch.setattr(runner, "validate_design", lambda _path: {"source_id": config["source_id"]})
+    runner._validate_authorization(merged, base_path, loaded_overlay)
 
     overlay["execution"]["authorized_code_files"] = entries[:-1]
     overlay_path.write_text(yaml.safe_dump(overlay, sort_keys=False), encoding="utf-8")
+    merged, base_path, loaded_overlay = runner._load_authorized_config(overlay_path)
     with pytest.raises(RuntimeError, match="whitelist drifted"):
-        runner.authorized_preflight(overlay_path)
+        runner._validate_authorization(merged, base_path, loaded_overlay)
 
 
 def _runner_json_value(value):

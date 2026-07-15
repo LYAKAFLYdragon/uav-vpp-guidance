@@ -42,6 +42,10 @@ windows:
     condition: history_length_equals_10_and_prediction_valid_true_and_prediction_fallback_false
     required: [base_observation_16d, own_target_speed_altitude_energy, dynamic_taxonomy, phase, vpp_world_offset_m, guidance_command_normalized, actual_nz_g, saturation_flags]
     telemetry_completeness: 1.0
+expected_v17_phase_replay:
+  expert: {handoff_reached: 9, valid_path_context_steps: 180}
+  end_to_end: {handoff_reached: 4, valid_path_context_steps: 80}
+  independent_ppo_vpp: {handoff_reached: 11, valid_path_context_steps: 220}
 gates:
   records_per_opponent: 24
   exact_v17_handoff_replay: true

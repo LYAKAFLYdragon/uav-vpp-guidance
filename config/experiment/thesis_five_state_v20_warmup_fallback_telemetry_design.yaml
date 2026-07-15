@@ -1,0 +1,46 @@
+source_id: THESIS-FIVE-STATE-V20-WARMUP-FALLBACK-TELEMETRY-AUDIT
+status: design_only_not_authorized
+purpose: record the known predicted-target warm-up fallback without relaxing post-warm-up safety.
+authorization:
+  execution_permitted: false
+  training_permitted: false
+  tuning_permitted: false
+  reward_change_permitted: false
+  candidate_policy_loading_permitted: false
+  combat_finetune_permitted: false
+inputs:
+  manifest: config/experiment/manifests/thesis_five_state_v17_path_context_preflight24.yaml
+  manifest_sha256: 87bb61c5837541d45e0213a6af5c7b5a4a55a0c172a7c19e6315de50d9d3ba16
+  runtime_template: config/experiment/thesis_five_state_v17_path_context_preflight_design.yaml
+  runtime_template_sha256: 5aa9fbc1420cf7e690f76e1d5306fa6a0b5e2eb11c6802da50f7ec285ad57cc3
+  runtime_registry: config/experiment/thesis_neutral_postmerge_reentry_recovery_pilot_v1_execution_runtime_registry.yaml
+  runtime_registry_sha256: e3124120b33b55c1018da6d8d133ef15b5cf5e6c5c04361d6b90498b0b279ca8
+opponents:
+  order: [expert, end_to_end, independent_ppo_vpp]
+  pooled_gate: prohibited
+contract:
+  backend: jsbsim
+  strict_backend: true
+  controller: frozen_fixed_head_on_only
+  training: prohibited
+  control_change: prohibited
+warmup_exception:
+  only_when: history_length_less_than_10_or_prediction_valid_false
+  allowed_prediction_fallback_reason: fallback_to_current_target
+  allowed_prediction_fallback_phase: configured_current_target
+  record_reason_and_phase: true
+  allowed_for_analysis_ready: false
+analysis_ready:
+  condition: history_length_equals_10_and_prediction_valid_true_and_prediction_fallback_false
+  required_complete_telemetry: true
+  per_opponent_min_steps: 20
+expected_v17_phase_replay:
+  expert: {handoff_reached: 9, valid_path_context_steps: 180}
+  end_to_end: {handoff_reached: 4, valid_path_context_steps: 80}
+  independent_ppo_vpp: {handoff_reached: 11, valid_path_context_steps: 220}
+outputs:
+  root: E:/uav-vpp-guidance-five-state-heldout-envelope-v1-results/five_state_v20_warmup_fallback_telemetry_audit
+  expected_records: 72
+stop_rule:
+  on_unexpected_warmup_fallback_or_any_analysis_ready_fallback: freeze_as_predictor_contract_failure
+  prohibited_after_stop: [same_source_id_rerun, training, reward_tuning, policy_change]

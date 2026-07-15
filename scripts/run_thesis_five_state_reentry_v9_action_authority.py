@@ -112,6 +112,32 @@ def _write_json(path: Path, value: Mapping[str, Any]) -> None:
     path.write_text(json.dumps(value, ensure_ascii=False, indent=2, allow_nan=False) + "\n", encoding="utf-8")
 
 
+def _finite_or_none(value: Any) -> float | None:
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    return number if math.isfinite(number) else None
+
+
+def _json_safe(value: Any) -> Any:
+    if isinstance(value, Mapping):
+        return {str(key): _json_safe(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple, np.ndarray)):
+        return [_json_safe(item) for item in value]
+    if isinstance(value, (float, np.floating)):
+        return _finite_or_none(value)
+    if isinstance(value, np.integer):
+        return int(value)
+    if isinstance(value, (str, int, bool)) or value is None:
+        return value
+    return repr(value)
+
+
+def _is_finite(value: Any) -> bool:
+    return _finite_or_none(value) is not None
+
+
 def _methods(config: Mapping[str, Any]) -> dict[str, np.ndarray]:
     values = config.get("methods")
     if not isinstance(values, Mapping) or REFERENCE_METHOD not in values or len(values) != 7:
@@ -326,12 +352,14 @@ class ActionAuthorityEpisode:
                 "observation_66d": handoff_observation.tolist() if not window else self._observation66d().tolist(),
                 "before_intent_loss": before_loss,
                 "after_intent_loss": float(intent_loss(self.observation, str(self.config["observability"]["profile"]), clip=2.0)),
-                "vp_forward_bias_m": float(info.get("vp_forward_bias_m", math.nan)),
-                "vp_lateral_bias_m": float(info.get("vp_lateral_bias_m", math.nan)),
-                "vp_vertical_bias_m": float(info.get("vp_vertical_bias_m", math.nan)),
-                "nz_cmd": float(info.get("nz_cmd", math.nan)),
-                "actual_nz_g": float(own_state.get("nz_g", info.get("nz_g", math.nan))),
-                "ego_attack_aoa_deg": float(info.get("ego_attack_aoa_deg", math.nan)),
+                "vp_forward_bias_m": _finite_or_none(info.get("vp_forward_bias_m")),
+                "vp_lateral_bias_m": _finite_or_none(info.get("vp_lateral_bias_m")),
+                "vp_vertical_bias_m": _finite_or_none(info.get("vp_vertical_bias_m")),
+                "nz_cmd": _finite_or_none(info.get("nz_cmd")),
+                "actual_nz_g": _finite_or_none(own_state.get("nz_g", info.get("nz_g"))),
+                "ego_attack_aoa_deg": _finite_or_none(info.get("ego_attack_aoa_deg")),
+                "guidance_command": _json_safe(info.get("guidance_command")),
+                "altitude_diff_observation": float(legacy._base_map(self.base)["altitude_diff_m"]),
                 "saturated": any(bool(info.get(key, False)) for key in ("nz_saturated", "roll_rate_saturated", "throttle_saturated")),
             })
             done = bool(terminated or truncated or self.total_steps >= int(self.config["observability"]["max_high_level_steps"]))
@@ -344,8 +372,8 @@ class ActionAuthorityEpisode:
         finite_window = all(
             np.isfinite(np.asarray(step["observation_66d"], dtype=np.float64)).all()
             and math.isfinite(float(step["after_intent_loss"]))
-            and all(math.isfinite(float(step[key])) for key in (
-                "vp_forward_bias_m", "vp_lateral_bias_m", "vp_vertical_bias_m",
+            and all(_is_finite(step[key]) for key in (
+                "vp_forward_bias_m", "vp_lateral_bias_m",
                 "nz_cmd", "actual_nz_g", "ego_attack_aoa_deg",
             ))
             for step in window

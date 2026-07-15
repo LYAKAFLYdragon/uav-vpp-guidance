@@ -1,0 +1,76 @@
+source_id: THESIS-FIVE-STATE-REENTRY-VPP-ACTION-AUTHORITY-V10
+status: preregistered_design_execution_not_authorised
+authorization:
+  execution_permitted: false
+  training_permitted: false
+  tuning_permitted: false
+  reward_change_permitted: false
+  candidate_policy_loading_permitted: false
+  high_level_ppo_training_permitted: false
+  four_skill_training_permitted: false
+  combat_finetune_permitted: false
+  heldout_claims_permitted: false
+  snapshot_restore: false
+  future_state_injection: false
+  history_padding_permitted: false
+inputs:
+  manifest: config/experiment/manifests/thesis_five_state_reentry_v10_action_authority12.yaml
+  manifest_sha256: 8f6edca5903da7e4fbbb0175fd7996f340b67548d5a18719ac9773e8616b4446
+  runtime_template: config/experiment/train_thesis_five_state_shared_skills_geometry_v1.yaml
+  runtime_template_sha256: 2a9fb82721d82cd67e13e08157d5cc9d9eac3deafa04b12e253c8b6098c38806
+  runtime_registry: config/experiment/thesis_neutral_postmerge_reentry_recovery_pilot_v1_execution_runtime_registry.yaml
+  runtime_registry_sha256: e3124120b33b55c1018da6d8d133ef15b5cf5e6c5c04361d6b90498b0b279ca8
+  frozen_p3_encoder: E:/uav-vpp-guidance-thesis-five-state-v1-results/p3_temporal_encoder_phaseconditional_v2/checkpoints/best.pt
+  frozen_p3_encoder_sha256: 385663281a9c48c0416ea4d1a1bb8dc08ed64a0cfebb0f01083cbbb8bcfbdc59
+opponents:
+  order: [expert, end_to_end, independent_ppo_vpp]
+  report_separately: true
+  pooled_gate: prohibited
+execution:
+  runtime_template: config/experiment/train_thesis_five_state_shared_skills_geometry_v1.yaml
+observability:
+  profile: range_extension
+  max_high_level_steps: 260
+  local_window_steps: 20
+  min_free_disk_gb: 120.0
+  raw_si_first_pass_event:
+    closing_rate_threshold_mps: 0.0
+    opening_rate_threshold_mps: 0.0
+    minimum_closing_steps: 3
+    minimum_opening_steps: 2
+methods:
+  frozen_fixed_head_on: [0.0, 0.0, 0.0]
+  forward_positive: [0.25, 0.0, 0.0]
+  forward_negative: [-0.25, 0.0, 0.0]
+  lateral_positive: [0.0, 0.25, 0.0]
+  lateral_negative: [0.0, -0.25, 0.0]
+  vertical_positive: [0.0, 0.0, 0.25]
+  vertical_negative: [0.0, 0.0, -0.25]
+telemetry_contract:
+  required_finite: [vp_forward_bias_m, vp_lateral_bias_m, nz_cmd, actual_nz_g, ego_attack_aoa_deg]
+  guidance_command_required_finite: [nz_cmd, roll_rate_cmd, throttle_cmd]
+  backend_unobserved: [vp_vertical_bias_m]
+  vertical_response_proxies: [applied_vertical_action, altitude_diff_observation, nz_cmd, actual_nz_g]
+gates:
+  min_qualifying_pairs_per_opponent: 4
+  min_applied_delta_norm: 0.15
+  practical_intent_loss_delta_vs_reference_max: -0.02
+  ego_crash_oob_delta_vs_reference_max: 0.05
+  min_mirrors: 2
+  min_height_conditions: 2
+contract:
+  backend: jsbsim
+  strict_backend: true
+  one_continuous_episode: true
+  reset_at_handoff: false
+  observation_dim: 66
+  action_dim: 3
+  phase_contract: raw_physical_first_pass_aware_v1
+  reward_recording: prohibited
+  checkpoint_fallback: prohibited
+  backend_fallback: prohibited
+  prediction_fallback: prohibited
+outputs:
+  root: E:/uav-vpp-guidance-five-state-heldout-envelope-v1-results/five_state_reentry_v10_action_authority
+  paper_safe: false
+  creation_permitted_by_this_config: false

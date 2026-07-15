@@ -1,7 +1,7 @@
 # P2-B5 Phase-Feasible Sampler 一次性执行授权
 
 **Source ID：** `THESIS-GLOBAL-ADVANTAGE-V1-P2-PHASE-FEASIBLE-SAMPLER-B5-R1`
-**授权状态：** `open_once_not_yet_executed`
+**授权状态：** `completed_gate_failed_execution_closed`
 **冻结实现 commit：** `4f250ed2ea7cef394e500c080f48da598d052064`
 
 ## 唯一允许命令
@@ -25,3 +25,7 @@ python scripts/run_thesis_global_advantage_p2_b5_phase_feasible_sampler.py --exe
 每个 opponent 分别要求至少 2 条 qualifying episode、20 个有效 target step、2 个不同场景 signature、两个镜像方向，以及 strict JSBSim、无 fallback/reset/padding、raw-SI phase replay、连续 handoff 和有限 66-D/3-D action。不得池化 opponent 结果。
 
 无论结果正负，执行后立即关闭 `execution_permitted`。若任意 opponent 未通过，B5 固定为负证据；不得用调参、增加训练步数、更换场景、snapshot restore 或重跑同一 Source ID 修补。即使三 opponent 均通过，也只允许起草单一 defensive-extension pilot 的执行授权，不能直接训练或启动 formal held-out。
+
+## 已执行结果
+
+该授权已于 2026-07-15 使用一次并关闭。36/36 条 strict-JSBSim record 已完成；scenario application、raw-SI phase replay 与 step-0 `pre_merge` 均为 true，但 overall gate 为 false：expert 仅 1 条 qualifying episode/12 个 valid target step，end-to-end 通过，independent PPO/VPP 为 0/0。`training_unlocked=false`，因此 defensive-extension pilot 与四共享技能训练仍不允许启动。详见 `reports/thesis_global_advantage_p2_b5_phase_feasible_sampler_completion_20260715_zh.md`。

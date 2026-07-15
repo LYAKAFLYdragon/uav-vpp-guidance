@@ -56,6 +56,6 @@ V1、V2 与 V3 都是 `implementation_failure_not_experimental_evidence`。尤�
 
 ## 下一步授权条件
 
-当前配置的 `execution_permitted=false`。如需运行，必须在**新的干净提交**上单独创建 authorized overlay；它只能改变 `status`、authorization、execution hash whitelist 与 output-root creation permission。overlay 必须以创建前 clean HEAD 作为 `required_implementation_git_sha`，并重新绑定 base config、runner、preflight、manifest builder、V4 contract、V4 record-only path、run-in engine、环境与对手适配器的 SHA-256。
+当前配置的 `execution_permitted=false`。如需运行，必须在**新的干净提交**上单独创建 authorized overlay；它只能改变 `status`、authorization、execution hash whitelist 与 output-root creation permission。overlay 必须以创建前 clean HEAD 作为 `required_implementation_git_sha`，并重新绑定 base config、runner、preflight、manifest builder、V4 contract、V4 record-only path、run-in engine、环境与对手适配器的 SHA-256。runner 会拒绝缺失或额外的白名单路径，不能以部分哈希列表执行。
 
 在获得该独立授权前，唯一允许动作是只读审计和静态测试；不得执行 V4 JSBSim、训练或调参。

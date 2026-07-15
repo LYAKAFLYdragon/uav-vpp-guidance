@@ -224,3 +224,50 @@ def test_v4_future_authorized_overlay_must_hash_and_reject_method_changes(tmp_pa
     overlay["fixed_contract"] = {"action_dim": 9}
     with pytest.raises(RuntimeError, match="cannot alter frozen method fields"):
         runner._validate_overlay_scope(overlay, base)
+
+
+def test_v4_authorized_preflight_requires_the_complete_whitelist_without_creating_output(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+):
+    runner = _load(RUNNER, "v4_runner_authorized_preflight")
+    config = _payload(CONFIG)
+    base_sha = hashlib.sha256(CONFIG.read_bytes()).hexdigest()
+    head = runner._git_value("rev-parse", "HEAD")
+    original_git_value = runner._git_value
+
+    def _clean_git_value(*args: str) -> str:
+        if args == ("status", "--porcelain") or args[0] == "diff":
+            return ""
+        return original_git_value(*args)
+
+    monkeypatch.setattr(runner, "_git_value", _clean_git_value)
+    entries = [
+        {"path": path, "sha256": hashlib.sha256((ROOT / path).read_bytes()).hexdigest()}
+        for path in runner.REQUIRED_AUTHORIZED_CODE_PATHS
+    ]
+    authorization = dict(config["authorization"])
+    authorization["execution_permitted"] = True
+    overlay = {
+        "base_config": str(CONFIG.relative_to(ROOT)).replace("\\", "/"),
+        "status": "authorized_one_time_execution",
+        "authorization": authorization,
+        "execution": {
+            "base_config_sha256": base_sha,
+            "required_implementation_git_sha": head,
+            "authorization_delta_paths": [],
+            "authorized_code_files": entries,
+        },
+        "outputs": {"creation_permitted_by_this_config": True},
+    }
+    overlay_path = tmp_path / "v4_authorized_preflight.yaml"
+    overlay_path.write_text(yaml.safe_dump(overlay, sort_keys=False), encoding="utf-8")
+
+    result = runner.authorized_preflight(overlay_path)
+    assert result["mode"] == "authorized_preflight_no_jsbsim_no_output_creation"
+    assert result["planned_records"] == 144
+    assert not Path(result["output_root"]).exists()
+
+    overlay["execution"]["authorized_code_files"] = entries[:-1]
+    overlay_path.write_text(yaml.safe_dump(overlay, sort_keys=False), encoding="utf-8")
+    with pytest.raises(RuntimeError, match="whitelist drifted"):
+        runner.authorized_preflight(overlay_path)

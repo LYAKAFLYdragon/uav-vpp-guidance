@@ -46,6 +46,35 @@ if ROOT != PREFLIGHT_ROOT:
     raise RuntimeError("V4 runner and preflight disagree on repository root")
 
 
+REQUIRED_AUTHORIZED_CODE_PATHS = (
+    "scripts/run_thesis_neutral_postmerge_reentry_recovery_v4_runtime_feasibility.py",
+    "scripts/preflight_thesis_neutral_postmerge_reentry_recovery_v4_runtime_feasibility.py",
+    "scripts/build_thesis_neutral_postmerge_reentry_recovery_v4_feasibility_manifest.py",
+    "scripts/run_thesis_global_advantage_p2_b3_phase_observability.py",
+    "src/uav_vpp_guidance/evaluation/thesis_neutral_postmerge_v4_contract.py",
+    "src/uav_vpp_guidance/evaluation/thesis_neutral_postmerge_v4_record_only.py",
+    "src/uav_vpp_guidance/evaluation/global_advantage_runin_contract.py",
+    "src/uav_vpp_guidance/evaluation/p4_v2_sampler_feasibility.py",
+    "src/uav_vpp_guidance/evaluation/single_motif_continuous_66d.py",
+    "src/uav_vpp_guidance/evaluation/thesis_neutral_postmerge_reentry_recovery_pilot.py",
+    "src/uav_vpp_guidance/training/thesis_neutral_postmerge_reentry_recovery_pilot.py",
+    "src/uav_vpp_guidance/training/thesis_defext_rangeext_pilot.py",
+    "src/uav_vpp_guidance/training/thesis_shared_skill_geometry.py",
+    "src/uav_vpp_guidance/training/thesis_shared_skill_policy.py",
+    "src/uav_vpp_guidance/training/thesis_temporal_geometry_encoder.py",
+    "src/uav_vpp_guidance/envs/tracking_env.py",
+    "src/uav_vpp_guidance/envs/expert_opponent.py",
+    "src/uav_vpp_guidance/envs/end_to_end_opponent.py",
+    "src/uav_vpp_guidance/envs/vpp_ppo_opponent.py",
+    "src/uav_vpp_guidance/evaluation/feature_name_projected_opponent.py",
+    "src/uav_vpp_guidance/hierarchy/five_state_observation_contract.py",
+    "src/uav_vpp_guidance/hierarchy/temporal_geometry_features.py",
+    "src/uav_vpp_guidance/hierarchy/specialist_policy.py",
+    "src/uav_vpp_guidance/hierarchy/shared_intent_profiles.py",
+    "src/uav_vpp_guidance/hierarchy/shared_intent_validity.py",
+)
+
+
 def _merge(base: Mapping[str, Any], overlay: Mapping[str, Any]) -> dict[str, Any]:
     result = copy.deepcopy(dict(base))
     for key, value in overlay.items():
@@ -139,6 +168,16 @@ def _validate_authorization(config: Mapping[str, Any], base_path: Path, overlay:
     files = execution.get("authorized_code_files")
     if not isinstance(files, list) or not files:
         raise RuntimeError("V4 execution requires authorised code hashes")
+    declared_paths = {
+        str(entry.get("path", "")).replace("\\", "/")
+        for entry in files
+        if isinstance(entry, Mapping)
+    }
+    required_paths = set(REQUIRED_AUTHORIZED_CODE_PATHS)
+    if declared_paths != required_paths or len(files) != len(required_paths):
+        missing = sorted(required_paths - declared_paths)
+        extra = sorted(declared_paths - required_paths)
+        raise RuntimeError(f"V4 authorised code whitelist drifted: missing={missing}, extra={extra}")
     for entry in files:
         if not isinstance(entry, Mapping):
             raise RuntimeError("V4 authorised code entry must be a mapping")

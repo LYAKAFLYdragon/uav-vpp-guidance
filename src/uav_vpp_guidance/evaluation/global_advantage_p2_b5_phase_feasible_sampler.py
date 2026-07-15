@@ -371,7 +371,8 @@ class PhaseFeasibleSamplerCollector:
         explicit_history = self.history_features.update(_history_frame(base))
         aa_deg = abs(math.degrees(math.atan2(values["aa_sin"], values["aa_cos"])))
         ata_deg = abs(math.degrees(math.atan2(values["ata_sin"], values["ata_cos"])))
-        dynamic_state = classify_dynamic_state(aa_deg, ata_deg)
+        # The taxonomy contract is (own ATA, target AA), not the policy-vector order.
+        dynamic_state = classify_dynamic_state(ata_deg, aa_deg)
         if dynamic_state == "unknown":
             raise PhaseFeasibleSamplerError("dynamic taxonomy is unknown")
         phase = self.phase_tracker.update(raw_phase["range_m"], raw_phase["range_rate_mps"])

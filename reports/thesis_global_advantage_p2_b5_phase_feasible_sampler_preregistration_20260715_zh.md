@@ -21,6 +21,7 @@ opponent 下分别提供足够的目标 motif 66-D observation 与原始 3-D VPP
 - 观测合同：真实 16-D base、10 帧无 padding 历史、6-D 显式短时统计、固定 `range_extension` intent profile、6-D targets、6-D weights、32-D P3 embedding，合成为 66-D。
 - 动作合同：记录参考控制器输出的 normalized 3-D VPP action；collector 只比较 action 前后哈希，不替换 action。
 - 相位合同：只有 raw-SI `observation.relative_state.range_m/range_rate_mps` 可以驱动 `PhaseTracker`；policy vector 的 `range_m/5000` 和 `range_rate/200` 只作为诊断对照。
+- Taxonomy 合同：动态分类器严格以 `(ATA, AA)` 顺序接收我机视线角与目标姿态角；已用 `ATA=160°、AA=20° -> disadvantage` 的逐步 collector 回归测试锁定，禁止按 policy vector 的特征排列颠倒两者。
 - 连续性：每 episode 只 reset 一次。只有在真实 first-pass 后的物理下一步才记为 handoff；禁止 reset、snapshot restore、future-state injection 和 history padding。
 
 ## 3. 新包线与独立性

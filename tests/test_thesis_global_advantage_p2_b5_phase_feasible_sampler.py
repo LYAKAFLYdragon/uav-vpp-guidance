@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import importlib.util
+import math
 from pathlib import Path
 
+import numpy as np
 import pytest
 import yaml
 
@@ -53,6 +55,42 @@ def _ledger(opponent: str, index: int):
     }
 
 
+class _Encoder:
+    def encode(self, history: np.ndarray) -> np.ndarray:
+        assert history.shape == (10, 16)
+        return np.zeros(32, dtype=np.float32)
+
+
+def _observation(raw_range_m: float, raw_range_rate_mps: float) -> dict:
+    from uav_vpp_guidance.hierarchy.five_state_observation_contract import BASE_GEOMETRY_FEATURES
+
+    ata = math.radians(160.0)
+    aa = math.radians(20.0)
+    values = {
+        "range_m": raw_range_m / 5000.0,
+        "range_rate_mps": raw_range_rate_mps / 200.0,
+        "altitude_diff_m": 0.0,
+        "speed_diff_mps": 0.0,
+        "los_azimuth_sin": 0.0,
+        "los_azimuth_cos": 1.0,
+        "los_elevation_sin": 0.0,
+        "los_elevation_cos": 1.0,
+        "ata_sin": math.sin(ata),
+        "ata_cos": math.cos(ata),
+        "aa_sin": math.sin(aa),
+        "aa_cos": math.cos(aa),
+        "own_speed": 0.5,
+        "target_speed": 0.5,
+        "own_altitude": 0.5,
+        "target_altitude": 0.5,
+    }
+    return {
+        "relative_state": {"range_m": raw_range_m, "range_rate_mps": raw_range_rate_mps},
+        "observation_schema": {"feature_names": list(BASE_GEOMETRY_FEATURES)},
+        "observation_vector": [values[name] for name in BASE_GEOMETRY_FEATURES],
+    }
+
+
 def test_b5_manifest_is_unique_disadvantage_only_and_disjoint():
     builder = _load(BUILDER, "p2_b5_builder")
     sources = {label: builder._load_yaml(path) for label, path in builder.DISJOINT_MANIFESTS}
@@ -89,6 +127,64 @@ def test_b5_raw_si_phase_input_cannot_use_normalized_policy_vector():
     assert raw["range_rate_mps"] == -100.0
     assert normalization_is_consistent(raw, diagnostic, plan)
     assert PhaseTracker().update(raw["range_m"], raw["range_rate_mps"]) == "pre_merge"
+
+
+def test_b5_collector_preserves_first_pass_continuity_and_builds_66d_from_real_history():
+    from uav_vpp_guidance.evaluation.global_advantage_p2_b5_phase_feasible_sampler import (
+        PhaseFeasibleSamplerCollector,
+    )
+
+    plan = _plan()
+    collector = PhaseFeasibleSamplerCollector(
+        plan=plan,
+        opponent="expert",
+        scenario_name="b5_collector_contract",
+        scenario_metadata={
+            "distance_speed_package": "unit_a",
+            "height_condition": "co_altitude",
+            "mirror_sign": "negative",
+        },
+        seed=15101,
+        environment_episode=7,
+        observation_schema=_observation(4000.0, -100.0)["observation_schema"],
+        encoder=_Encoder(),
+    )
+    action = np.asarray([0.2, -0.1, 0.3], dtype=np.float32)
+    for step in range(1, 11):
+        raw_range = 4000.0 if step == 1 else 900.0
+        collector.begin_step(
+            step=step,
+            observation=_observation(raw_range, -50.0),
+            action=action,
+        )
+        collector.finish_step(
+            step=step,
+            action=action.copy(),
+            info={
+                "backend": "jsbsim",
+                "backend_fallback_occurred": False,
+                "prediction_valid": True,
+                "prediction_fallback": False,
+                "first_pass_complete": True,
+            },
+        )
+    ledger = collector.ledger()
+    last = ledger["steps"][-1]
+
+    assert ledger["summary"]["continuity_valid"] is True
+    assert ledger["first_pass_boundary"]["step"] == 1
+    assert ledger["continuity_receipt"]["sampler_step"] == 2
+    assert last["raw_si_phase_input"]["range_m"] == 900.0
+    assert last["policy_normalization_diagnostic"]["range_m_normalized"] == pytest.approx(0.18)
+    assert last["ata_deg"] == pytest.approx(160.0)
+    assert last["aa_deg"] == pytest.approx(20.0)
+    assert last["dynamic_state"] == "disadvantage"
+    assert last["phase"] == "re_entry"
+    assert last["target_motif_step"] is True
+    assert last["valid_target_step"] is True
+    assert len(last["observed_history_10x16"]) == 10
+    assert len(last["observation_66d"]) == 66
+    assert last["action_identity_preserved"] is True
 
 
 def test_b5_design_preflight_is_nonexecuting_and_freezes_all_inputs():

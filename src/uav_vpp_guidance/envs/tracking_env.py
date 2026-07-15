@@ -6711,6 +6711,10 @@ class CloseRangeTrackingEnv:
             "opponent_stage": self._opponent_stage,
             "opponent_config": self.opponent_config,
             "attack_zone_enabled": bool(self.combat_hp.enabled),
+            "runtime_vpp_anchor_mode": self._runtime_vpp_anchor_mode,
+            "runtime_vpp_anchor_reason": self._runtime_vpp_anchor_reason,
+            "runtime_vpp_anchor_switch_count": self._runtime_vpp_anchor_switch_count,
+            "runtime_vpp_anchor_switch_step": self._runtime_vpp_anchor_switch_step,
         }
         if self._backend_fallback_occurred:
             provenance["backend_fallback_reason"] = self._backend_fallback_reason

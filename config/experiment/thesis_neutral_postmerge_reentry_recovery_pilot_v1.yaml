@@ -26,7 +26,7 @@ implementation_freeze:
   design_only_not_execution_authorization: true
 sources:
   train_distribution: config/experiment/thesis_neutral_postmerge_reentry_recovery_pilot_v1_train_distribution.yaml
-  train_distribution_sha256: 1959db34466b087198b9818f6a38c1e4735552ef432aca80fa914e3e12eb5ba3
+  train_distribution_sha256: ef6ca3bdbe5cffe4eaf7ee5ac100c716fec947ebe4d725f5de02b852b39fb4c0
   dev_manifest: config/experiment/manifests/thesis_neutral_postmerge_reentry_recovery_pilot_v1_dev12.yaml
   dev_manifest_sha256: 652dbe209a0fc6b17a4a43f28996664ebb4ed4bd436e3292eb90e9ff9eca06e6
   heldout_manifest: config/experiment/manifests/thesis_neutral_postmerge_reentry_recovery_pilot_v1_heldout24.yaml
@@ -148,6 +148,8 @@ gates:
   practical_improvement_vs_best_existing_specialist:
     paired_intent_loss_auc20_delta_max: -0.02
     minimum_opponents_passing: 2
+  remaining_opponent_noninferiority_vs_best_existing_specialist:
+    paired_intent_loss_auc20_delta_max: 0.02
 safety_stop_rule:
   immediate_abort_on:
     - nonfinite_66d_observation

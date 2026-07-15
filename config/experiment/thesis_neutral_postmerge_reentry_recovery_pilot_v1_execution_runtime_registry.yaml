@@ -1,0 +1,60 @@
+schema_version: 1
+source_id: THESIS-NEUTRAL-POSTMERGE-REENTRY-RECOVERY-PILOT-V1-EXECUTION-RUNTIME-REGISTRY
+status: frozen_execution_asset_snapshot_not_authorization
+opponents:
+  expert:
+    type: rule_based
+    class: uav_vpp_guidance.envs.expert_opponent.ExpertOpponent
+    config: {}
+  end_to_end:
+    type: neural_projected_base16
+    class: uav_vpp_guidance.evaluation.feature_name_projected_opponent.FeatureNameProjectedOpponent
+    checkpoint: E:/uav-vpp-guidance-thesis-five-state-v1-assets/canonical_end_to_end_neural_opponent_best.pt
+    checkpoint_sha256: d38828338d5e7e22167129b2e9972d52ecf5fc3fda5d52caff95a8374c35b8bc
+    device: cpu
+    config:
+      delegate_class: uav_vpp_guidance.envs.end_to_end_opponent.EndToEndOpponent
+      delegate_kwargs:
+        invert_observation: true
+      expected_feature_names: &base16
+        - range_m
+        - range_rate_mps
+        - altitude_diff_m
+        - speed_diff_mps
+        - los_azimuth_sin
+        - los_azimuth_cos
+        - los_elevation_sin
+        - los_elevation_cos
+        - ata_sin
+        - ata_cos
+        - aa_sin
+        - aa_cos
+        - own_speed
+        - target_speed
+        - own_altitude
+        - target_altitude
+  independent_ppo_vpp:
+    type: continuous_vpp_projected_base16
+    class: uav_vpp_guidance.evaluation.feature_name_projected_opponent.FeatureNameProjectedOpponent
+    checkpoint: E:/uav-vpp-guidance-thesis-five-state-v1-assets/independent_ppo_vpp_opponent_v1_step_32768.pt
+    checkpoint_sha256: 43cd37fc86c0eb01d96a693f68d30894de7e768de01aed6dba41fa4761edfc60
+    device: cpu
+    config:
+      delegate_class: uav_vpp_guidance.envs.vpp_ppo_opponent.VPPPPOOpponent
+      expected_feature_names: *base16
+specialists:
+  run_in_head_on:
+    checkpoint: E:/uav-vpp-guidance-thesis-five-state-v1-assets/canonical_head_on_specialist_best.pt
+    checkpoint_sha256: 0aeadd11cd8c7723c8963bcc5da21dd97c365e64f234d07b86c2b8f0d7ec5fb6
+    config_path: config/experiment/train_prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp_combat_finetune_mixed_opponent_aware_32k_task_type_headon_weighted.yaml
+    specialist_key: head_on
+  frozen_fixed_head_on:
+    checkpoint: E:/uav-vpp-guidance-thesis-five-state-v1-assets/canonical_head_on_specialist_best.pt
+    checkpoint_sha256: 0aeadd11cd8c7723c8963bcc5da21dd97c365e64f234d07b86c2b8f0d7ec5fb6
+    config_path: config/experiment/train_prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp_combat_finetune_mixed_opponent_aware_32k_task_type_headon_weighted.yaml
+    specialist_key: head_on
+  frozen_fixed_crossing:
+    checkpoint: E:/uav-vpp-guidance-thesis-five-state-v1-assets/canonical_crossing_specialist_last.pt
+    checkpoint_sha256: 5eddc138bff55a5466da1129e840ef7dfb3677347a05276c3877746c8e89148b
+    config_path: config/experiment/train_prediction_vpp_ppo_crossing_v3.yaml
+    specialist_key: crossing_feasible

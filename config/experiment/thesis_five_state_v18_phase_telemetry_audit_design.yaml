@@ -1,0 +1,98 @@
+source_id: THESIS-FIVE-STATE-V18-PHASE-TELEMETRY-AUDIT
+status: design_only_not_authorized
+purpose: >
+  Reproduce the frozen V17 record universe with observation-only telemetry so that
+  post-first-pass phase occupancy can be attributed without training or tuning.
+authorization:
+  execution_permitted: false
+  training_permitted: false
+  tuning_permitted: false
+  reward_change_permitted: false
+  candidate_policy_loading_permitted: false
+  combat_finetune_permitted: false
+  high_level_ppo_training_permitted: false
+  heldout_claims_permitted: false
+  future_state_injection: false
+  history_padding_permitted: false
+  snapshot_restore: false
+inputs:
+  manifest: config/experiment/manifests/thesis_five_state_v17_path_context_preflight24.yaml
+  manifest_sha256: 87bb61c5837541d45e0213a6af5c7b5a4a55a0c172a7c19e6315de50d9d3ba16
+  runtime_template: config/experiment/thesis_five_state_v17_path_context_preflight_design.yaml
+  runtime_template_sha256: 5aa9fbc1420cf7e690f76e1d5306fa6a0b5e2eb11c6802da50f7ec285ad57cc3
+  runtime_registry: config/experiment/thesis_neutral_postmerge_reentry_recovery_pilot_v1_execution_runtime_registry.yaml
+  runtime_registry_sha256: e3124120b33b55c1018da6d8d133ef15b5cf5e6c5c04361d6b90498b0b279ca8
+  v17_reference:
+    gate: E:/uav-vpp-guidance-five-state-heldout-envelope-v1-results/five_state_v17_path_context_preflight/path_context_preflight_gate.json
+    gate_sha256: f6ab06dc25b99b392587338b58a8bf5d136c97ed71657d7b80a5b469457d58c5
+    run_manifest: E:/uav-vpp-guidance-five-state-heldout-envelope-v1-results/five_state_v17_path_context_preflight/run_manifest.json
+    run_manifest_sha256: 08f4d5640eb52f19c08c1a3ba85999a1028870af3d77e50a2a83585c34ebf8a6
+opponents:
+  order: [expert, end_to_end, independent_ppo_vpp]
+  pooled_gate: prohibited
+contract:
+  backend: jsbsim
+  strict_backend: true
+  one_continuous_episode: true
+  controller: frozen_fixed_head_on_only
+  training: prohibited
+  reward_recording: prohibited
+  vpp_change: prohibited
+  guidance_change: prohibited
+  pid_change: prohibited
+  action_dim: 3
+  telemetry_only: true
+telemetry:
+  per_step_required:
+    - base_observation_16d
+    - raw_range_m
+    - raw_range_rate_mps
+    - ata_rad
+    - aa_rad
+    - los_azimuth_rad
+    - los_elevation_rad
+    - own_speed_mps
+    - target_speed_mps
+    - own_altitude_m
+    - target_altitude_m
+    - own_specific_energy_j_per_kg
+    - target_specific_energy_j_per_kg
+    - dynamic_taxonomy
+    - phase
+    - first_pass_complete
+    - vpp_world_offset_m
+    - guidance_command_normalized
+    - actual_nz_g
+    - saturation_flags
+  derived_metrics:
+    - first_pass_to_post_merge_steps
+    - post_merge_steps
+    - re_entry_steps
+    - target_speed_delta_from_first_pass_mps
+    - target_energy_delta_from_first_pass_j_per_kg
+    - phase_conditioned_range_rate_mps
+expected_v17_phase_replay:
+  expert: {handoff_reached: 9, valid_path_context_steps: 180}
+  end_to_end: {handoff_reached: 4, valid_path_context_steps: 80}
+  independent_ppo_vpp: {handoff_reached: 11, valid_path_context_steps: 220}
+gates:
+  records_per_opponent: 24
+  required_phase_replay_match: exact
+  required_telemetry_completeness: 1.0
+  prediction_fallback: prohibited
+  backend_fallback: prohibited
+  checkpoint_fallback: prohibited
+  ego_crash_oob: report_only_not_selection_metric
+outputs:
+  root: E:/uav-vpp-guidance-five-state-heldout-envelope-v1-results/five_state_v18_phase_telemetry_audit
+  expected_records: 72
+  record_format: one_json_per_opponent_scenario_with_step_telemetry
+stop_rule:
+  on_v17_replay_mismatch: freeze_as_noncomparable_negative_evidence
+  on_missing_telemetry: freeze_as_observability_contract_failure
+  prohibited_after_stop:
+    - reward_tuning
+    - training_step_increase
+    - scenario_replacement
+    - same_source_id_rerun
+    - policy_or_controller_change

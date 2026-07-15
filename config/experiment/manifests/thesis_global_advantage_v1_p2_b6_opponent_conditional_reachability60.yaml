@@ -1,0 +1,2960 @@
+source_id: THESIS-GLOBAL-ADVANTAGE-V1-P2-OPPONENT-CONDITIONAL-REACHABILITY-B6-MANIFEST60-R1
+manifest_version: 1
+status: preregistered_before_b6_execution
+lane: noncanonical_thesis_extension
+protocol:
+  evaluation_only: true
+  training_permitted: false
+  tuning_permitted: false
+  action_replacement_permitted: false
+  reference_controller: frozen_fixed_head_on_specialist
+  opponents:
+  - expert
+  - end_to_end
+  - independent_ppo_vpp
+  episodes_per_scenario_opponent: 1
+  purpose: profile_free_opponent_conditional_dynamic_state_phase_reachability
+  stop_rule: A B6 result never authorises training automatically; no same-source rerun,
+    tuning, scenario replacement, snapshot restore, or future-state injection.
+generation_contract:
+  initial_states:
+  - advantage
+  - head_on
+  - disadvantage
+  - neutral
+  - crossing_entry
+  height_offsets_target_minus_own_m:
+    own_below: 600.0
+    co_altitude: 0.0
+    own_above: -600.0
+  mirror_signs:
+  - negative
+  - positive
+  distance_speed_packages:
+  - id: b6_midrange_fast_target_a
+    initial_range_m: 3400.0
+    own_speed_mps: 240.0
+    target_speed_mps: 350.0
+  - id: b6_farrange_fast_target_b
+    initial_range_m: 4200.0
+    own_speed_mps: 265.0
+    target_speed_mps: 370.0
+  scenario_count: 60
+  seed_base: 16201
+  raw_si_phase_at_reset: pre_merge
+disjointness:
+  p2_b2:
+    path: config/experiment/manifests/thesis_global_advantage_v1_p2_physical_preflight60.yaml
+    sha256: 78d90d6ea32490cc777d13e0a809061ec300f94ff6d7d012f93a9e9895ba834f
+    physical_intersection_count: 0
+  p2_b3:
+    path: config/experiment/manifests/thesis_global_advantage_v1_p2_b3_phase_observability30.yaml
+    sha256: d1e7c0e0750ec36eab6ef3ab7b6a353f7ceed8d88211d6d6535344c13e8a384c
+    physical_intersection_count: 0
+  p2_b4:
+    path: config/experiment/manifests/thesis_global_advantage_v1_p2_b4_raw_si_phase30.yaml
+    sha256: e709cdafd3ba6ba822454cdbd88ffa49988962cedeed310b15f071b87004fa81
+    physical_intersection_count: 0
+  p2_b5:
+    path: config/experiment/manifests/thesis_global_advantage_v1_p2_b5_phase_feasible_sampler12.yaml
+    sha256: 63acf19e57d5488f33fdef48df9b59ec9c7f892c5a70e1465cea9622bf3f798a
+    physical_intersection_count: 0
+  heldout240:
+    path: config/experiment/manifests/thesis_global_advantage_v1_heldout240.yaml
+    sha256: 81114a64cc7c589f496cff8869eac814f9919bfbc16a03b0aaba69bd5ba8bef3
+    physical_intersection_count: 0
+  dev30:
+    path: config/experiment/manifests/thesis_five_state_shared_intent_v1_dev30.yaml
+    sha256: 6bd9c4282a4aa9724dee350114293421287ce0f00387b5b298e7be067c30d130
+    physical_intersection_count: 0
+  historical_heldout60:
+    path: config/experiment/manifests/thesis_five_state_shared_intent_v1_heldout60.yaml
+    sha256: f96f3c927a0de4702dee62e2894fe784ff945a21f4e5728749fba20666603b5a
+    physical_intersection_count: 0
+  phase_v2:
+    path: config/experiment/manifests/thesis_phase_reachability_v2_run_in_handoff_r1.yaml
+    sha256: d2c7f97f4f7cc99fd14649cc27866557784b27fbeba9f729f1a87b406b31c6e6
+    physical_intersection_count: 0
+scenarios:
+- name: global_advantage_p2_b6_b6_midrange_fast_target_a__advantage__own_below__negative_s16201
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 240.0
+    heading_deg: 359.316450607
+  target_init:
+    position_m:
+    - 3182.843880636
+    - -1034.168666853
+    - 5800.0
+    velocity_mps: 350.0
+    heading_deg: 359.316450607
+  metadata:
+    manifest_family: noncanonical_thesis_global_advantage_p2_b6_reachability
+    split: p2_b6_opponent_conditional_reachability60
+    initial_class: advantage
+    height_condition: own_below
+    mirror_sign: negative
+    mirror_pair_id: b6_midrange_fast_target_a__advantage__own_below
+    distance_speed_package: b6_midrange_fast_target_a
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: false
+    scenario_seed: 16201
+    initial_range_m: 3400.0
+    altitude_diff_m: 600.0
+    own_speed_mps: 240.0
+    target_speed_mps: 350.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: advantage
+    geometry_cell_id: b6_midrange_fast_target_a__advantage__own_below__negative
+    b6_protocol: profile_free_dynamic_state_phase_reachability_only
+    physical_geometry_signature:
+    - - 0.0
+      - 0.0
+      - 5200.0
+    - 240.0
+    - 359.316451
+    - - 3182.843881
+      - -1034.168667
+      - 5800.0
+    - 350.0
+    - 359.316451
+- name: global_advantage_p2_b6_b6_midrange_fast_target_a__advantage__own_below__positive_s16202
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 240.0
+    heading_deg: 0.683549393
+  target_init:
+    position_m:
+    - 3182.843880636
+    - 1034.168666853
+    - 5800.0
+    velocity_mps: 350.0
+    heading_deg: 0.683549393
+  metadata:
+    manifest_family: noncanonical_thesis_global_advantage_p2_b6_reachability
+    split: p2_b6_opponent_conditional_reachability60
+    initial_class: advantage
+    height_condition: own_below
+    mirror_sign: positive
+    mirror_pair_id: b6_midrange_fast_target_a__advantage__own_below
+    distance_speed_package: b6_midrange_fast_target_a
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: false
+    scenario_seed: 16202
+    initial_range_m: 3400.0
+    altitude_diff_m: 600.0
+    own_speed_mps: 240.0
+    target_speed_mps: 350.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: advantage
+    geometry_cell_id: b6_midrange_fast_target_a__advantage__own_below__positive
+    b6_protocol: profile_free_dynamic_state_phase_reachability_only
+    physical_geometry_signature:
+    - - 0.0
+      - 0.0
+      - 5200.0
+    - 240.0
+    - 0.683549
+    - - 3182.843881
+      - 1034.168667
+      - 5800.0
+    - 350.0
+    - 0.683549
+- name: global_advantage_p2_b6_b6_midrange_fast_target_a__advantage__co_altitude__negative_s16203
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 240.0
+    heading_deg: 2.0
+  target_init:
+    position_m:
+    - 3233.592155404
+    - -1050.657780875
+    - 5200.0
+    velocity_mps: 350.0
+    heading_deg: 2.0
+  metadata:
+    manifest_family: noncanonical_thesis_global_advantage_p2_b6_reachability
+    split: p2_b6_opponent_conditional_reachability60
+    initial_class: advantage
+    height_condition: co_altitude
+    mirror_sign: negative
+    mirror_pair_id: b6_midrange_fast_target_a__advantage__co_altitude
+    distance_speed_package: b6_midrange_fast_target_a
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: false
+    scenario_seed: 16203
+    initial_range_m: 3400.000000001
+    altitude_diff_m: 0.0
+    own_speed_mps: 240.0
+    target_speed_mps: 350.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: advantage
+    geometry_cell_id: b6_midrange_fast_target_a__advantage__co_altitude__negative
+    b6_protocol: profile_free_dynamic_state_phase_reachability_only
+    physical_geometry_signature:
+    - - 0.0
+      - 0.0
+      - 5200.0
+    - 240.0
+    - 2.0
+    - - 3233.592155
+      - -1050.657781
+      - 5200.0
+    - 350.0
+    - 2.0
+- name: global_advantage_p2_b6_b6_midrange_fast_target_a__advantage__co_altitude__positive_s16204
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 240.0
+    heading_deg: 358.0
+  target_init:
+    position_m:
+    - 3233.592155404
+    - 1050.657780875
+    - 5200.0
+    velocity_mps: 350.0
+    heading_deg: 358.0
+  metadata:
+    manifest_family: noncanonical_thesis_global_advantage_p2_b6_reachability
+    split: p2_b6_opponent_conditional_reachability60
+    initial_class: advantage
+    height_condition: co_altitude
+    mirror_sign: positive
+    mirror_pair_id: b6_midrange_fast_target_a__advantage__co_altitude
+    distance_speed_package: b6_midrange_fast_target_a
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: false
+    scenario_seed: 16204
+    initial_range_m: 3400.000000001
+    altitude_diff_m: 0.0
+    own_speed_mps: 240.0
+    target_speed_mps: 350.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: advantage
+    geometry_cell_id: b6_midrange_fast_target_a__advantage__co_altitude__positive
+    b6_protocol: profile_free_dynamic_state_phase_reachability_only
+    physical_geometry_signature:
+    - - 0.0
+      - 0.0
+      - 5200.0
+    - 240.0
+    - 358.0
+    - - 3233.592155
+      - 1050.657781
+      - 5200.0
+    - 350.0
+    - 358.0
+- name: global_advantage_p2_b6_b6_midrange_fast_target_a__advantage__own_above__negative_s16205
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 240.0
+    heading_deg: 359.316450607
+  target_init:
+    position_m:
+    - 3182.843880636
+    - -1034.168666853
+    - 4600.0
+    velocity_mps: 350.0
+    heading_deg: 359.316450607
+  metadata:
+    manifest_family: noncanonical_thesis_global_advantage_p2_b6_reachability
+    split: p2_b6_opponent_conditional_reachability60
+    initial_class: advantage
+    height_condition: own_above
+    mirror_sign: negative
+    mirror_pair_id: b6_midrange_fast_target_a__advantage__own_above
+    distance_speed_package: b6_midrange_fast_target_a
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: false
+    scenario_seed: 16205
+    initial_range_m: 3400.0
+    altitude_diff_m: -600.0
+    own_speed_mps: 240.0
+    target_speed_mps: 350.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: advantage
+    geometry_cell_id: b6_midrange_fast_target_a__advantage__own_above__negative
+    b6_protocol: profile_free_dynamic_state_phase_reachability_only
+    physical_geometry_signature:
+    - - 0.0
+      - 0.0
+      - 5200.0
+    - 240.0
+    - 359.316451
+    - - 3182.843881
+      - -1034.168667
+      - 4600.0
+    - 350.0
+    - 359.316451
+- name: global_advantage_p2_b6_b6_midrange_fast_target_a__advantage__own_above__positive_s16206
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 240.0
+    heading_deg: 0.683549393
+  target_init:
+    position_m:
+    - 3182.843880636
+    - 1034.168666853
+    - 4600.0
+    velocity_mps: 350.0
+    heading_deg: 0.683549393
+  metadata:
+    manifest_family: noncanonical_thesis_global_advantage_p2_b6_reachability
+    split: p2_b6_opponent_conditional_reachability60
+    initial_class: advantage
+    height_condition: own_above
+    mirror_sign: positive
+    mirror_pair_id: b6_midrange_fast_target_a__advantage__own_above
+    distance_speed_package: b6_midrange_fast_target_a
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: false
+    scenario_seed: 16206
+    initial_range_m: 3400.0
+    altitude_diff_m: -600.0
+    own_speed_mps: 240.0
+    target_speed_mps: 350.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: advantage
+    geometry_cell_id: b6_midrange_fast_target_a__advantage__own_above__positive
+    b6_protocol: profile_free_dynamic_state_phase_reachability_only
+    physical_geometry_signature:
+    - - 0.0
+      - 0.0
+      - 5200.0
+    - 240.0
+    - 0.683549
+    - - 3182.843881
+      - 1034.168667
+      - 4600.0
+    - 350.0
+    - 0.683549
+- name: global_advantage_p2_b6_b6_midrange_fast_target_a__head_on__own_below__negative_s16207
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 240.0
+    heading_deg: 359.316450607
+  target_init:
+    position_m:
+    - 3182.843880636
+    - -1034.168666853
+    - 5800.0
+    velocity_mps: 350.0
+    heading_deg: 144.683549393
+  metadata:
+    manifest_family: noncanonical_thesis_global_advantage_p2_b6_reachability
+    split: p2_b6_opponent_conditional_reachability60
+    initial_class: head_on
+    height_condition: own_below
+    mirror_sign: negative
+    mirror_pair_id: b6_midrange_fast_target_a__head_on__own_below
+    distance_speed_package: b6_midrange_fast_target_a
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: false
+    scenario_seed: 16207
+    initial_range_m: 3400.0
+    altitude_diff_m: 600.0
+    own_speed_mps: 240.0
+    target_speed_mps: 350.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: head_on
+    geometry_cell_id: b6_midrange_fast_target_a__head_on__own_below__negative
+    b6_protocol: profile_free_dynamic_state_phase_reachability_only
+    physical_geometry_signature:
+    - - 0.0
+      - 0.0
+      - 5200.0
+    - 240.0
+    - 359.316451
+    - - 3182.843881
+      - -1034.168667
+      - 5800.0
+    - 350.0
+    - 144.683549
+- name: global_advantage_p2_b6_b6_midrange_fast_target_a__head_on__own_below__positive_s16208
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 240.0
+    heading_deg: 0.683549393
+  target_init:
+    position_m:
+    - 3182.843880636
+    - 1034.168666853
+    - 5800.0
+    velocity_mps: 350.0
+    heading_deg: 215.316450607
+  metadata:
+    manifest_family: noncanonical_thesis_global_advantage_p2_b6_reachability
+    split: p2_b6_opponent_conditional_reachability60
+    initial_class: head_on
+    height_condition: own_below
+    mirror_sign: positive
+    mirror_pair_id: b6_midrange_fast_target_a__head_on__own_below
+    distance_speed_package: b6_midrange_fast_target_a
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: false
+    scenario_seed: 16208
+    initial_range_m: 3400.0
+    altitude_diff_m: 600.0
+    own_speed_mps: 240.0
+    target_speed_mps: 350.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: head_on
+    geometry_cell_id: b6_midrange_fast_target_a__head_on__own_below__positive
+    b6_protocol: profile_free_dynamic_state_phase_reachability_only
+    physical_geometry_signature:
+    - - 0.0
+      - 0.0
+      - 5200.0
+    - 240.0
+    - 0.683549
+    - - 3182.843881
+      - 1034.168667
+      - 5800.0
+    - 350.0
+    - 215.316451
+- name: global_advantage_p2_b6_b6_midrange_fast_target_a__head_on__co_altitude__negative_s16209
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 240.0
+    heading_deg: 2.0
+  target_init:
+    position_m:
+    - 3233.592155404
+    - -1050.657780875
+    - 5200.0
+    velocity_mps: 350.0
+    heading_deg: 142.0
+  metadata:
+    manifest_family: noncanonical_thesis_global_advantage_p2_b6_reachability
+    split: p2_b6_opponent_conditional_reachability60
+    initial_class: head_on
+    height_condition: co_altitude
+    mirror_sign: negative
+    mirror_pair_id: b6_midrange_fast_target_a__head_on__co_altitude
+    distance_speed_package: b6_midrange_fast_target_a
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: false
+    scenario_seed: 16209
+    initial_range_m: 3400.000000001
+    altitude_diff_m: 0.0
+    own_speed_mps: 240.0
+    target_speed_mps: 350.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: head_on
+    geometry_cell_id: b6_midrange_fast_target_a__head_on__co_altitude__negative
+    b6_protocol: profile_free_dynamic_state_phase_reachability_only
+    physical_geometry_signature:
+    - - 0.0
+      - 0.0
+      - 5200.0
+    - 240.0
+    - 2.0
+    - - 3233.592155
+      - -1050.657781
+      - 5200.0
+    - 350.0
+    - 142.0
+- name: global_advantage_p2_b6_b6_midrange_fast_target_a__head_on__co_altitude__positive_s16210
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 240.0
+    heading_deg: 358.0
+  target_init:
+    position_m:
+    - 3233.592155404
+    - 1050.657780875
+    - 5200.0
+    velocity_mps: 350.0
+    heading_deg: 218.0
+  metadata:
+    manifest_family: noncanonical_thesis_global_advantage_p2_b6_reachability
+    split: p2_b6_opponent_conditional_reachability60
+    initial_class: head_on
+    height_condition: co_altitude
+    mirror_sign: positive
+    mirror_pair_id: b6_midrange_fast_target_a__head_on__co_altitude
+    distance_speed_package: b6_midrange_fast_target_a
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: false
+    scenario_seed: 16210
+    initial_range_m: 3400.000000001
+    altitude_diff_m: 0.0
+    own_speed_mps: 240.0
+    target_speed_mps: 350.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: head_on
+    geometry_cell_id: b6_midrange_fast_target_a__head_on__co_altitude__positive
+    b6_protocol: profile_free_dynamic_state_phase_reachability_only
+    physical_geometry_signature:
+    - - 0.0
+      - 0.0
+      - 5200.0
+    - 240.0
+    - 358.0
+    - - 3233.592155
+      - 1050.657781
+      - 5200.0
+    - 350.0
+    - 218.0
+- name: global_advantage_p2_b6_b6_midrange_fast_target_a__head_on__own_above__negative_s16211
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 240.0
+    heading_deg: 359.316450607
+  target_init:
+    position_m:
+    - 3182.843880636
+    - -1034.168666853
+    - 4600.0
+    velocity_mps: 350.0
+    heading_deg: 144.683549393
+  metadata:
+    manifest_family: noncanonical_thesis_global_advantage_p2_b6_reachability
+    split: p2_b6_opponent_conditional_reachability60
+    initial_class: head_on
+    height_condition: own_above
+    mirror_sign: negative
+    mirror_pair_id: b6_midrange_fast_target_a__head_on__own_above
+    distance_speed_package: b6_midrange_fast_target_a
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: false
+    scenario_seed: 16211
+    initial_range_m: 3400.0
+    altitude_diff_m: -600.0
+    own_speed_mps: 240.0
+    target_speed_mps: 350.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: head_on
+    geometry_cell_id: b6_midrange_fast_target_a__head_on__own_above__negative
+    b6_protocol: profile_free_dynamic_state_phase_reachability_only
+    physical_geometry_signature:
+    - - 0.0
+      - 0.0
+      - 5200.0
+    - 240.0
+    - 359.316451
+    - - 3182.843881
+      - -1034.168667
+      - 4600.0
+    - 350.0
+    - 144.683549
+- name: global_advantage_p2_b6_b6_midrange_fast_target_a__head_on__own_above__positive_s16212
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 240.0
+    heading_deg: 0.683549393
+  target_init:
+    position_m:
+    - 3182.843880636
+    - 1034.168666853
+    - 4600.0
+    velocity_mps: 350.0
+    heading_deg: 215.316450607
+  metadata:
+    manifest_family: noncanonical_thesis_global_advantage_p2_b6_reachability
+    split: p2_b6_opponent_conditional_reachability60
+    initial_class: head_on
+    height_condition: own_above
+    mirror_sign: positive
+    mirror_pair_id: b6_midrange_fast_target_a__head_on__own_above
+    distance_speed_package: b6_midrange_fast_target_a
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: false
+    scenario_seed: 16212
+    initial_range_m: 3400.0
+    altitude_diff_m: -600.0
+    own_speed_mps: 240.0
+    target_speed_mps: 350.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: head_on
+    geometry_cell_id: b6_midrange_fast_target_a__head_on__own_above__positive
+    b6_protocol: profile_free_dynamic_state_phase_reachability_only
+    physical_geometry_signature:
+    - - 0.0
+      - 0.0
+      - 5200.0
+    - 240.0
+    - 0.683549
+    - - 3182.843881
+      - 1034.168667
+      - 4600.0
+    - 350.0
+    - 215.316451
+- name: global_advantage_p2_b6_b6_midrange_fast_target_a__disadvantage__own_below__negative_s16213
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 240.0
+    heading_deg: 144.683549393
+  target_init:
+    position_m:
+    - 3182.843880636
+    - -1034.168666853
+    - 5800.0
+    velocity_mps: 350.0
+    heading_deg: 144.683549393
+  metadata:
+    manifest_family: noncanonical_thesis_global_advantage_p2_b6_reachability
+    split: p2_b6_opponent_conditional_reachability60
+    initial_class: disadvantage
+    height_condition: own_below
+    mirror_sign: negative
+    mirror_pair_id: b6_midrange_fast_target_a__disadvantage__own_below
+    distance_speed_package: b6_midrange_fast_target_a
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: false
+    scenario_seed: 16213
+    initial_range_m: 3400.0
+    altitude_diff_m: 600.0
+    own_speed_mps: 240.0
+    target_speed_mps: 350.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: disadvantage
+    geometry_cell_id: b6_midrange_fast_target_a__disadvantage__own_below__negative
+    b6_protocol: profile_free_dynamic_state_phase_reachability_only
+    physical_geometry_signature:
+    - - 0.0
+      - 0.0
+      - 5200.0
+    - 240.0
+    - 144.683549
+    - - 3182.843881
+      - -1034.168667
+      - 5800.0
+    - 350.0
+    - 144.683549
+- name: global_advantage_p2_b6_b6_midrange_fast_target_a__disadvantage__own_below__positive_s16214
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 240.0
+    heading_deg: 215.316450607
+  target_init:
+    position_m:
+    - 3182.843880636
+    - 1034.168666853
+    - 5800.0
+    velocity_mps: 350.0
+    heading_deg: 215.316450607
+  metadata:
+    manifest_family: noncanonical_thesis_global_advantage_p2_b6_reachability
+    split: p2_b6_opponent_conditional_reachability60
+    initial_class: disadvantage
+    height_condition: own_below
+    mirror_sign: positive
+    mirror_pair_id: b6_midrange_fast_target_a__disadvantage__own_below
+    distance_speed_package: b6_midrange_fast_target_a
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: false
+    scenario_seed: 16214
+    initial_range_m: 3400.0
+    altitude_diff_m: 600.0
+    own_speed_mps: 240.0
+    target_speed_mps: 350.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: disadvantage
+    geometry_cell_id: b6_midrange_fast_target_a__disadvantage__own_below__positive
+    b6_protocol: profile_free_dynamic_state_phase_reachability_only
+    physical_geometry_signature:
+    - - 0.0
+      - 0.0
+      - 5200.0
+    - 240.0
+    - 215.316451
+    - - 3182.843881
+      - 1034.168667
+      - 5800.0
+    - 350.0
+    - 215.316451
+- name: global_advantage_p2_b6_b6_midrange_fast_target_a__disadvantage__co_altitude__negative_s16215
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 240.0
+    heading_deg: 142.0
+  target_init:
+    position_m:
+    - 3233.592155404
+    - -1050.657780875
+    - 5200.0
+    velocity_mps: 350.0
+    heading_deg: 142.0
+  metadata:
+    manifest_family: noncanonical_thesis_global_advantage_p2_b6_reachability
+    split: p2_b6_opponent_conditional_reachability60
+    initial_class: disadvantage
+    height_condition: co_altitude
+    mirror_sign: negative
+    mirror_pair_id: b6_midrange_fast_target_a__disadvantage__co_altitude
+    distance_speed_package: b6_midrange_fast_target_a
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: false
+    scenario_seed: 16215
+    initial_range_m: 3400.000000001
+    altitude_diff_m: 0.0
+    own_speed_mps: 240.0
+    target_speed_mps: 350.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: disadvantage
+    geometry_cell_id: b6_midrange_fast_target_a__disadvantage__co_altitude__negative
+    b6_protocol: profile_free_dynamic_state_phase_reachability_only
+    physical_geometry_signature:
+    - - 0.0
+      - 0.0
+      - 5200.0
+    - 240.0
+    - 142.0
+    - - 3233.592155
+      - -1050.657781
+      - 5200.0
+    - 350.0
+    - 142.0
+- name: global_advantage_p2_b6_b6_midrange_fast_target_a__disadvantage__co_altitude__positive_s16216
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 240.0
+    heading_deg: 218.0
+  target_init:
+    position_m:
+    - 3233.592155404
+    - 1050.657780875
+    - 5200.0
+    velocity_mps: 350.0
+    heading_deg: 218.0
+  metadata:
+    manifest_family: noncanonical_thesis_global_advantage_p2_b6_reachability
+    split: p2_b6_opponent_conditional_reachability60
+    initial_class: disadvantage
+    height_condition: co_altitude
+    mirror_sign: positive
+    mirror_pair_id: b6_midrange_fast_target_a__disadvantage__co_altitude
+    distance_speed_package: b6_midrange_fast_target_a
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: false
+    scenario_seed: 16216
+    initial_range_m: 3400.000000001
+    altitude_diff_m: 0.0
+    own_speed_mps: 240.0
+    target_speed_mps: 350.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: disadvantage
+    geometry_cell_id: b6_midrange_fast_target_a__disadvantage__co_altitude__positive
+    b6_protocol: profile_free_dynamic_state_phase_reachability_only
+    physical_geometry_signature:
+    - - 0.0
+      - 0.0
+      - 5200.0
+    - 240.0
+    - 218.0
+    - - 3233.592155
+      - 1050.657781
+      - 5200.0
+    - 350.0
+    - 218.0
+- name: global_advantage_p2_b6_b6_midrange_fast_target_a__disadvantage__own_above__negative_s16217
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 240.0
+    heading_deg: 144.683549393
+  target_init:
+    position_m:
+    - 3182.843880636
+    - -1034.168666853
+    - 4600.0
+    velocity_mps: 350.0
+    heading_deg: 144.683549393
+  metadata:
+    manifest_family: noncanonical_thesis_global_advantage_p2_b6_reachability
+    split: p2_b6_opponent_conditional_reachability60
+    initial_class: disadvantage
+    height_condition: own_above
+    mirror_sign: negative
+    mirror_pair_id: b6_midrange_fast_target_a__disadvantage__own_above
+    distance_speed_package: b6_midrange_fast_target_a
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: false
+    scenario_seed: 16217
+    initial_range_m: 3400.0
+    altitude_diff_m: -600.0
+    own_speed_mps: 240.0
+    target_speed_mps: 350.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: disadvantage
+    geometry_cell_id: b6_midrange_fast_target_a__disadvantage__own_above__negative
+    b6_protocol: profile_free_dynamic_state_phase_reachability_only
+    physical_geometry_signature:
+    - - 0.0
+      - 0.0
+      - 5200.0
+    - 240.0
+    - 144.683549
+    - - 3182.843881
+      - -1034.168667
+      - 4600.0
+    - 350.0
+    - 144.683549
+- name: global_advantage_p2_b6_b6_midrange_fast_target_a__disadvantage__own_above__positive_s16218
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 240.0
+    heading_deg: 215.316450607
+  target_init:
+    position_m:
+    - 3182.843880636
+    - 1034.168666853
+    - 4600.0
+    velocity_mps: 350.0
+    heading_deg: 215.316450607
+  metadata:
+    manifest_family: noncanonical_thesis_global_advantage_p2_b6_reachability
+    split: p2_b6_opponent_conditional_reachability60
+    initial_class: disadvantage
+    height_condition: own_above
+    mirror_sign: positive
+    mirror_pair_id: b6_midrange_fast_target_a__disadvantage__own_above
+    distance_speed_package: b6_midrange_fast_target_a
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: false
+    scenario_seed: 16218
+    initial_range_m: 3400.0
+    altitude_diff_m: -600.0
+    own_speed_mps: 240.0
+    target_speed_mps: 350.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: disadvantage
+    geometry_cell_id: b6_midrange_fast_target_a__disadvantage__own_above__positive
+    b6_protocol: profile_free_dynamic_state_phase_reachability_only
+    physical_geometry_signature:
+    - - 0.0
+      - 0.0
+      - 5200.0
+    - 240.0
+    - 215.316451
+    - - 3182.843881
+      - 1034.168667
+      - 4600.0
+    - 350.0
+    - 215.316451
+- name: global_advantage_p2_b6_b6_midrange_fast_target_a__neutral__own_below__negative_s16219
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 240.0
+    heading_deg: 144.683549393
+  target_init:
+    position_m:
+    - 3182.843880636
+    - -1034.168666853
+    - 5800.0
+    velocity_mps: 350.0
+    heading_deg: 359.316450607
+  metadata:
+    manifest_family: noncanonical_thesis_global_advantage_p2_b6_reachability
+    split: p2_b6_opponent_conditional_reachability60
+    initial_class: neutral
+    height_condition: own_below
+    mirror_sign: negative
+    mirror_pair_id: b6_midrange_fast_target_a__neutral__own_below
+    distance_speed_package: b6_midrange_fast_target_a
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: false
+    scenario_seed: 16219
+    initial_range_m: 3400.0
+    altitude_diff_m: 600.0
+    own_speed_mps: 240.0
+    target_speed_mps: 350.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: neutral
+    geometry_cell_id: b6_midrange_fast_target_a__neutral__own_below__negative
+    b6_protocol: profile_free_dynamic_state_phase_reachability_only
+    physical_geometry_signature:
+    - - 0.0
+      - 0.0
+      - 5200.0
+    - 240.0
+    - 144.683549
+    - - 3182.843881
+      - -1034.168667
+      - 5800.0
+    - 350.0
+    - 359.316451
+- name: global_advantage_p2_b6_b6_midrange_fast_target_a__neutral__own_below__positive_s16220
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 240.0
+    heading_deg: 215.316450607
+  target_init:
+    position_m:
+    - 3182.843880636
+    - 1034.168666853
+    - 5800.0
+    velocity_mps: 350.0
+    heading_deg: 0.683549393
+  metadata:
+    manifest_family: noncanonical_thesis_global_advantage_p2_b6_reachability
+    split: p2_b6_opponent_conditional_reachability60
+    initial_class: neutral
+    height_condition: own_below
+    mirror_sign: positive
+    mirror_pair_id: b6_midrange_fast_target_a__neutral__own_below
+    distance_speed_package: b6_midrange_fast_target_a
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: false
+    scenario_seed: 16220
+    initial_range_m: 3400.0
+    altitude_diff_m: 600.0
+    own_speed_mps: 240.0
+    target_speed_mps: 350.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: neutral
+    geometry_cell_id: b6_midrange_fast_target_a__neutral__own_below__positive
+    b6_protocol: profile_free_dynamic_state_phase_reachability_only
+    physical_geometry_signature:
+    - - 0.0
+      - 0.0
+      - 5200.0
+    - 240.0
+    - 215.316451
+    - - 3182.843881
+      - 1034.168667
+      - 5800.0
+    - 350.0
+    - 0.683549
+- name: global_advantage_p2_b6_b6_midrange_fast_target_a__neutral__co_altitude__negative_s16221
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 240.0
+    heading_deg: 142.0
+  target_init:
+    position_m:
+    - 3233.592155404
+    - -1050.657780875
+    - 5200.0
+    velocity_mps: 350.0
+    heading_deg: 2.0
+  metadata:
+    manifest_family: noncanonical_thesis_global_advantage_p2_b6_reachability
+    split: p2_b6_opponent_conditional_reachability60
+    initial_class: neutral
+    height_condition: co_altitude
+    mirror_sign: negative
+    mirror_pair_id: b6_midrange_fast_target_a__neutral__co_altitude
+    distance_speed_package: b6_midrange_fast_target_a
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: false
+    scenario_seed: 16221
+    initial_range_m: 3400.000000001
+    altitude_diff_m: 0.0
+    own_speed_mps: 240.0
+    target_speed_mps: 350.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: neutral
+    geometry_cell_id: b6_midrange_fast_target_a__neutral__co_altitude__negative
+    b6_protocol: profile_free_dynamic_state_phase_reachability_only
+    physical_geometry_signature:
+    - - 0.0
+      - 0.0
+      - 5200.0
+    - 240.0
+    - 142.0
+    - - 3233.592155
+      - -1050.657781
+      - 5200.0
+    - 350.0
+    - 2.0
+- name: global_advantage_p2_b6_b6_midrange_fast_target_a__neutral__co_altitude__positive_s16222
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 240.0
+    heading_deg: 218.0
+  target_init:
+    position_m:
+    - 3233.592155404
+    - 1050.657780875
+    - 5200.0
+    velocity_mps: 350.0
+    heading_deg: 358.0
+  metadata:
+    manifest_family: noncanonical_thesis_global_advantage_p2_b6_reachability
+    split: p2_b6_opponent_conditional_reachability60
+    initial_class: neutral
+    height_condition: co_altitude
+    mirror_sign: positive
+    mirror_pair_id: b6_midrange_fast_target_a__neutral__co_altitude
+    distance_speed_package: b6_midrange_fast_target_a
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: false
+    scenario_seed: 16222
+    initial_range_m: 3400.000000001
+    altitude_diff_m: 0.0
+    own_speed_mps: 240.0
+    target_speed_mps: 350.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: neutral
+    geometry_cell_id: b6_midrange_fast_target_a__neutral__co_altitude__positive
+    b6_protocol: profile_free_dynamic_state_phase_reachability_only
+    physical_geometry_signature:
+    - - 0.0
+      - 0.0
+      - 5200.0
+    - 240.0
+    - 218.0
+    - - 3233.592155
+      - 1050.657781
+      - 5200.0
+    - 350.0
+    - 358.0
+- name: global_advantage_p2_b6_b6_midrange_fast_target_a__neutral__own_above__negative_s16223
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 240.0
+    heading_deg: 144.683549393
+  target_init:
+    position_m:
+    - 3182.843880636
+    - -1034.168666853
+    - 4600.0
+    velocity_mps: 350.0
+    heading_deg: 359.316450607
+  metadata:
+    manifest_family: noncanonical_thesis_global_advantage_p2_b6_reachability
+    split: p2_b6_opponent_conditional_reachability60
+    initial_class: neutral
+    height_condition: own_above
+    mirror_sign: negative
+    mirror_pair_id: b6_midrange_fast_target_a__neutral__own_above
+    distance_speed_package: b6_midrange_fast_target_a
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: false
+    scenario_seed: 16223
+    initial_range_m: 3400.0
+    altitude_diff_m: -600.0
+    own_speed_mps: 240.0
+    target_speed_mps: 350.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: neutral
+    geometry_cell_id: b6_midrange_fast_target_a__neutral__own_above__negative
+    b6_protocol: profile_free_dynamic_state_phase_reachability_only
+    physical_geometry_signature:
+    - - 0.0
+      - 0.0
+      - 5200.0
+    - 240.0
+    - 144.683549
+    - - 3182.843881
+      - -1034.168667
+      - 4600.0
+    - 350.0
+    - 359.316451
+- name: global_advantage_p2_b6_b6_midrange_fast_target_a__neutral__own_above__positive_s16224
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 240.0
+    heading_deg: 215.316450607
+  target_init:
+    position_m:
+    - 3182.843880636
+    - 1034.168666853
+    - 4600.0
+    velocity_mps: 350.0
+    heading_deg: 0.683549393
+  metadata:
+    manifest_family: noncanonical_thesis_global_advantage_p2_b6_reachability
+    split: p2_b6_opponent_conditional_reachability60
+    initial_class: neutral
+    height_condition: own_above
+    mirror_sign: positive
+    mirror_pair_id: b6_midrange_fast_target_a__neutral__own_above
+    distance_speed_package: b6_midrange_fast_target_a
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: false
+    scenario_seed: 16224
+    initial_range_m: 3400.0
+    altitude_diff_m: -600.0
+    own_speed_mps: 240.0
+    target_speed_mps: 350.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: neutral
+    geometry_cell_id: b6_midrange_fast_target_a__neutral__own_above__positive
+    b6_protocol: profile_free_dynamic_state_phase_reachability_only
+    physical_geometry_signature:
+    - - 0.0
+      - 0.0
+      - 5200.0
+    - 240.0
+    - 215.316451
+    - - 3182.843881
+      - 1034.168667
+      - 4600.0
+    - 350.0
+    - 0.683549
+- name: global_advantage_p2_b6_b6_midrange_fast_target_a__crossing_entry__own_below__negative_s16225
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 240.0
+    heading_deg: 359.316450607
+  target_init:
+    position_m:
+    - 3182.843880636
+    - -1034.168666853
+    - 5800.0
+    velocity_mps: 350.0
+    heading_deg: 72.0
+  metadata:
+    manifest_family: noncanonical_thesis_global_advantage_p2_b6_reachability
+    split: p2_b6_opponent_conditional_reachability60
+    initial_class: crossing_entry
+    height_condition: own_below
+    mirror_sign: negative
+    mirror_pair_id: b6_midrange_fast_target_a__crossing_entry__own_below
+    distance_speed_package: b6_midrange_fast_target_a
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: true
+    scenario_seed: 16225
+    initial_range_m: 3400.0
+    altitude_diff_m: 600.0
+    own_speed_mps: 240.0
+    target_speed_mps: 350.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 90.0
+    taxonomy_geometry_state: transition
+    geometry_cell_id: b6_midrange_fast_target_a__crossing_entry__own_below__negative
+    b6_protocol: profile_free_dynamic_state_phase_reachability_only
+    physical_geometry_signature:
+    - - 0.0
+      - 0.0
+      - 5200.0
+    - 240.0
+    - 359.316451
+    - - 3182.843881
+      - -1034.168667
+      - 5800.0
+    - 350.0
+    - 72.0
+- name: global_advantage_p2_b6_b6_midrange_fast_target_a__crossing_entry__own_below__positive_s16226
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 240.0
+    heading_deg: 0.683549393
+  target_init:
+    position_m:
+    - 3182.843880636
+    - 1034.168666853
+    - 5800.0
+    velocity_mps: 350.0
+    heading_deg: 288.0
+  metadata:
+    manifest_family: noncanonical_thesis_global_advantage_p2_b6_reachability
+    split: p2_b6_opponent_conditional_reachability60
+    initial_class: crossing_entry
+    height_condition: own_below
+    mirror_sign: positive
+    mirror_pair_id: b6_midrange_fast_target_a__crossing_entry__own_below
+    distance_speed_package: b6_midrange_fast_target_a
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: true
+    scenario_seed: 16226
+    initial_range_m: 3400.0
+    altitude_diff_m: 600.0
+    own_speed_mps: 240.0
+    target_speed_mps: 350.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 90.0
+    taxonomy_geometry_state: transition
+    geometry_cell_id: b6_midrange_fast_target_a__crossing_entry__own_below__positive
+    b6_protocol: profile_free_dynamic_state_phase_reachability_only
+    physical_geometry_signature:
+    - - 0.0
+      - 0.0
+      - 5200.0
+    - 240.0
+    - 0.683549
+    - - 3182.843881
+      - 1034.168667
+      - 5800.0
+    - 350.0
+    - 288.0
+- name: global_advantage_p2_b6_b6_midrange_fast_target_a__crossing_entry__co_altitude__negative_s16227
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 240.0
+    heading_deg: 2.0
+  target_init:
+    position_m:
+    - 3233.592155404
+    - -1050.657780875
+    - 5200.0
+    velocity_mps: 350.0
+    heading_deg: 72.0
+  metadata:
+    manifest_family: noncanonical_thesis_global_advantage_p2_b6_reachability
+    split: p2_b6_opponent_conditional_reachability60
+    initial_class: crossing_entry
+    height_condition: co_altitude
+    mirror_sign: negative
+    mirror_pair_id: b6_midrange_fast_target_a__crossing_entry__co_altitude
+    distance_speed_package: b6_midrange_fast_target_a
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: true
+    scenario_seed: 16227
+    initial_range_m: 3400.000000001
+    altitude_diff_m: 0.0
+    own_speed_mps: 240.0
+    target_speed_mps: 350.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 90.0
+    taxonomy_geometry_state: transition
+    geometry_cell_id: b6_midrange_fast_target_a__crossing_entry__co_altitude__negative
+    b6_protocol: profile_free_dynamic_state_phase_reachability_only
+    physical_geometry_signature:
+    - - 0.0
+      - 0.0
+      - 5200.0
+    - 240.0
+    - 2.0
+    - - 3233.592155
+      - -1050.657781
+      - 5200.0
+    - 350.0
+    - 72.0
+- name: global_advantage_p2_b6_b6_midrange_fast_target_a__crossing_entry__co_altitude__positive_s16228
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 240.0
+    heading_deg: 358.0
+  target_init:
+    position_m:
+    - 3233.592155404
+    - 1050.657780875
+    - 5200.0
+    velocity_mps: 350.0
+    heading_deg: 288.0
+  metadata:
+    manifest_family: noncanonical_thesis_global_advantage_p2_b6_reachability
+    split: p2_b6_opponent_conditional_reachability60
+    initial_class: crossing_entry
+    height_condition: co_altitude
+    mirror_sign: positive
+    mirror_pair_id: b6_midrange_fast_target_a__crossing_entry__co_altitude
+    distance_speed_package: b6_midrange_fast_target_a
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: true
+    scenario_seed: 16228
+    initial_range_m: 3400.000000001
+    altitude_diff_m: 0.0
+    own_speed_mps: 240.0
+    target_speed_mps: 350.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 90.0
+    taxonomy_geometry_state: transition
+    geometry_cell_id: b6_midrange_fast_target_a__crossing_entry__co_altitude__positive
+    b6_protocol: profile_free_dynamic_state_phase_reachability_only
+    physical_geometry_signature:
+    - - 0.0
+      - 0.0
+      - 5200.0
+    - 240.0
+    - 358.0
+    - - 3233.592155
+      - 1050.657781
+      - 5200.0
+    - 350.0
+    - 288.0
+- name: global_advantage_p2_b6_b6_midrange_fast_target_a__crossing_entry__own_above__negative_s16229
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 240.0
+    heading_deg: 359.316450607
+  target_init:
+    position_m:
+    - 3182.843880636
+    - -1034.168666853
+    - 4600.0
+    velocity_mps: 350.0
+    heading_deg: 72.0
+  metadata:
+    manifest_family: noncanonical_thesis_global_advantage_p2_b6_reachability
+    split: p2_b6_opponent_conditional_reachability60
+    initial_class: crossing_entry
+    height_condition: own_above
+    mirror_sign: negative
+    mirror_pair_id: b6_midrange_fast_target_a__crossing_entry__own_above
+    distance_speed_package: b6_midrange_fast_target_a
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: true
+    scenario_seed: 16229
+    initial_range_m: 3400.0
+    altitude_diff_m: -600.0
+    own_speed_mps: 240.0
+    target_speed_mps: 350.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 90.0
+    taxonomy_geometry_state: transition
+    geometry_cell_id: b6_midrange_fast_target_a__crossing_entry__own_above__negative
+    b6_protocol: profile_free_dynamic_state_phase_reachability_only
+    physical_geometry_signature:
+    - - 0.0
+      - 0.0
+      - 5200.0
+    - 240.0
+    - 359.316451
+    - - 3182.843881
+      - -1034.168667
+      - 4600.0
+    - 350.0
+    - 72.0
+- name: global_advantage_p2_b6_b6_midrange_fast_target_a__crossing_entry__own_above__positive_s16230
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 240.0
+    heading_deg: 0.683549393
+  target_init:
+    position_m:
+    - 3182.843880636
+    - 1034.168666853
+    - 4600.0
+    velocity_mps: 350.0
+    heading_deg: 288.0
+  metadata:
+    manifest_family: noncanonical_thesis_global_advantage_p2_b6_reachability
+    split: p2_b6_opponent_conditional_reachability60
+    initial_class: crossing_entry
+    height_condition: own_above
+    mirror_sign: positive
+    mirror_pair_id: b6_midrange_fast_target_a__crossing_entry__own_above
+    distance_speed_package: b6_midrange_fast_target_a
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: true
+    scenario_seed: 16230
+    initial_range_m: 3400.0
+    altitude_diff_m: -600.0
+    own_speed_mps: 240.0
+    target_speed_mps: 350.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 90.0
+    taxonomy_geometry_state: transition
+    geometry_cell_id: b6_midrange_fast_target_a__crossing_entry__own_above__positive
+    b6_protocol: profile_free_dynamic_state_phase_reachability_only
+    physical_geometry_signature:
+    - - 0.0
+      - 0.0
+      - 5200.0
+    - 240.0
+    - 0.683549
+    - - 3182.843881
+      - 1034.168667
+      - 4600.0
+    - 350.0
+    - 288.0
+- name: global_advantage_p2_b6_b6_farrange_fast_target_b__advantage__own_below__negative_s16231
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 265.0
+    heading_deg: 0.299060121
+  target_init:
+    position_m:
+    - 3953.467697022
+    - -1284.559523183
+    - 5800.0
+    velocity_mps: 370.0
+    heading_deg: 0.299060121
+  metadata:
+    manifest_family: noncanonical_thesis_global_advantage_p2_b6_reachability
+    split: p2_b6_opponent_conditional_reachability60
+    initial_class: advantage
+    height_condition: own_below
+    mirror_sign: negative
+    mirror_pair_id: b6_farrange_fast_target_b__advantage__own_below
+    distance_speed_package: b6_farrange_fast_target_b
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: false
+    scenario_seed: 16231
+    initial_range_m: 4200.0
+    altitude_diff_m: 600.0
+    own_speed_mps: 265.0
+    target_speed_mps: 370.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: advantage
+    geometry_cell_id: b6_farrange_fast_target_b__advantage__own_below__negative
+    b6_protocol: profile_free_dynamic_state_phase_reachability_only
+    physical_geometry_signature:
+    - - 0.0
+      - 0.0
+      - 5200.0
+    - 265.0
+    - 0.29906
+    - - 3953.467697
+      - -1284.559523
+      - 5800.0
+    - 370.0
+    - 0.29906
+- name: global_advantage_p2_b6_b6_farrange_fast_target_b__advantage__own_below__positive_s16232
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 265.0
+    heading_deg: 359.700939879
+  target_init:
+    position_m:
+    - 3953.467697022
+    - 1284.559523183
+    - 5800.0
+    velocity_mps: 370.0
+    heading_deg: 359.700939879
+  metadata:
+    manifest_family: noncanonical_thesis_global_advantage_p2_b6_reachability
+    split: p2_b6_opponent_conditional_reachability60
+    initial_class: advantage
+    height_condition: own_below
+    mirror_sign: positive
+    mirror_pair_id: b6_farrange_fast_target_b__advantage__own_below
+    distance_speed_package: b6_farrange_fast_target_b
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: false
+    scenario_seed: 16232
+    initial_range_m: 4200.0
+    altitude_diff_m: 600.0
+    own_speed_mps: 265.0
+    target_speed_mps: 370.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: advantage
+    geometry_cell_id: b6_farrange_fast_target_b__advantage__own_below__positive
+    b6_protocol: profile_free_dynamic_state_phase_reachability_only
+    physical_geometry_signature:
+    - - 0.0
+      - 0.0
+      - 5200.0
+    - 265.0
+    - 359.70094
+    - - 3953.467697
+      - 1284.559523
+      - 5800.0
+    - 370.0
+    - 359.70094
+- name: global_advantage_p2_b6_b6_farrange_fast_target_b__advantage__co_altitude__negative_s16233
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 265.0
+    heading_deg: 2.0
+  target_init:
+    position_m:
+    - 3994.43736844
+    - -1297.871376375
+    - 5200.0
+    velocity_mps: 370.0
+    heading_deg: 2.0
+  metadata:
+    manifest_family: noncanonical_thesis_global_advantage_p2_b6_reachability
+    split: p2_b6_opponent_conditional_reachability60
+    initial_class: advantage
+    height_condition: co_altitude
+    mirror_sign: negative
+    mirror_pair_id: b6_farrange_fast_target_b__advantage__co_altitude
+    distance_speed_package: b6_farrange_fast_target_b
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: false
+    scenario_seed: 16233
+    initial_range_m: 4200.0
+    altitude_diff_m: 0.0
+    own_speed_mps: 265.0
+    target_speed_mps: 370.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: advantage
+    geometry_cell_id: b6_farrange_fast_target_b__advantage__co_altitude__negative
+    b6_protocol: profile_free_dynamic_state_phase_reachability_only
+    physical_geometry_signature:
+    - - 0.0
+      - 0.0
+      - 5200.0
+    - 265.0
+    - 2.0
+    - - 3994.437368
+      - -1297.871376
+      - 5200.0
+    - 370.0
+    - 2.0
+- name: global_advantage_p2_b6_b6_farrange_fast_target_b__advantage__co_altitude__positive_s16234
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 265.0
+    heading_deg: 358.0
+  target_init:
+    position_m:
+    - 3994.43736844
+    - 1297.871376375
+    - 5200.0
+    velocity_mps: 370.0
+    heading_deg: 358.0
+  metadata:
+    manifest_family: noncanonical_thesis_global_advantage_p2_b6_reachability
+    split: p2_b6_opponent_conditional_reachability60
+    initial_class: advantage
+    height_condition: co_altitude
+    mirror_sign: positive
+    mirror_pair_id: b6_farrange_fast_target_b__advantage__co_altitude
+    distance_speed_package: b6_farrange_fast_target_b
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: false
+    scenario_seed: 16234
+    initial_range_m: 4200.0
+    altitude_diff_m: 0.0
+    own_speed_mps: 265.0
+    target_speed_mps: 370.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: advantage
+    geometry_cell_id: b6_farrange_fast_target_b__advantage__co_altitude__positive
+    b6_protocol: profile_free_dynamic_state_phase_reachability_only
+    physical_geometry_signature:
+    - - 0.0
+      - 0.0
+      - 5200.0
+    - 265.0
+    - 358.0
+    - - 3994.437368
+      - 1297.871376
+      - 5200.0
+    - 370.0
+    - 358.0
+- name: global_advantage_p2_b6_b6_farrange_fast_target_b__advantage__own_above__negative_s16235
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 265.0
+    heading_deg: 0.299060121
+  target_init:
+    position_m:
+    - 3953.467697022
+    - -1284.559523183
+    - 4600.0
+    velocity_mps: 370.0
+    heading_deg: 0.299060121
+  metadata:
+    manifest_family: noncanonical_thesis_global_advantage_p2_b6_reachability
+    split: p2_b6_opponent_conditional_reachability60
+    initial_class: advantage
+    height_condition: own_above
+    mirror_sign: negative
+    mirror_pair_id: b6_farrange_fast_target_b__advantage__own_above
+    distance_speed_package: b6_farrange_fast_target_b
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: false
+    scenario_seed: 16235
+    initial_range_m: 4200.0
+    altitude_diff_m: -600.0
+    own_speed_mps: 265.0
+    target_speed_mps: 370.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: advantage
+    geometry_cell_id: b6_farrange_fast_target_b__advantage__own_above__negative
+    b6_protocol: profile_free_dynamic_state_phase_reachability_only
+    physical_geometry_signature:
+    - - 0.0
+      - 0.0
+      - 5200.0
+    - 265.0
+    - 0.29906
+    - - 3953.467697
+      - -1284.559523
+      - 4600.0
+    - 370.0
+    - 0.29906
+- name: global_advantage_p2_b6_b6_farrange_fast_target_b__advantage__own_above__positive_s16236
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 265.0
+    heading_deg: 359.700939879
+  target_init:
+    position_m:
+    - 3953.467697022
+    - 1284.559523183
+    - 4600.0
+    velocity_mps: 370.0
+    heading_deg: 359.700939879
+  metadata:
+    manifest_family: noncanonical_thesis_global_advantage_p2_b6_reachability
+    split: p2_b6_opponent_conditional_reachability60
+    initial_class: advantage
+    height_condition: own_above
+    mirror_sign: positive
+    mirror_pair_id: b6_farrange_fast_target_b__advantage__own_above
+    distance_speed_package: b6_farrange_fast_target_b
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: false
+    scenario_seed: 16236
+    initial_range_m: 4200.0
+    altitude_diff_m: -600.0
+    own_speed_mps: 265.0
+    target_speed_mps: 370.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: advantage
+    geometry_cell_id: b6_farrange_fast_target_b__advantage__own_above__positive
+    b6_protocol: profile_free_dynamic_state_phase_reachability_only
+    physical_geometry_signature:
+    - - 0.0
+      - 0.0
+      - 5200.0
+    - 265.0
+    - 359.70094
+    - - 3953.467697
+      - 1284.559523
+      - 4600.0
+    - 370.0
+    - 359.70094
+- name: global_advantage_p2_b6_b6_farrange_fast_target_b__head_on__own_below__negative_s16237
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 265.0
+    heading_deg: 0.299060121
+  target_init:
+    position_m:
+    - 3953.467697022
+    - -1284.559523183
+    - 5800.0
+    velocity_mps: 370.0
+    heading_deg: 143.700939879
+  metadata:
+    manifest_family: noncanonical_thesis_global_advantage_p2_b6_reachability
+    split: p2_b6_opponent_conditional_reachability60
+    initial_class: head_on
+    height_condition: own_below
+    mirror_sign: negative
+    mirror_pair_id: b6_farrange_fast_target_b__head_on__own_below
+    distance_speed_package: b6_farrange_fast_target_b
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: false
+    scenario_seed: 16237
+    initial_range_m: 4200.0
+    altitude_diff_m: 600.0
+    own_speed_mps: 265.0
+    target_speed_mps: 370.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: head_on
+    geometry_cell_id: b6_farrange_fast_target_b__head_on__own_below__negative
+    b6_protocol: profile_free_dynamic_state_phase_reachability_only
+    physical_geometry_signature:
+    - - 0.0
+      - 0.0
+      - 5200.0
+    - 265.0
+    - 0.29906
+    - - 3953.467697
+      - -1284.559523
+      - 5800.0
+    - 370.0
+    - 143.70094
+- name: global_advantage_p2_b6_b6_farrange_fast_target_b__head_on__own_below__positive_s16238
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 265.0
+    heading_deg: 359.700939879
+  target_init:
+    position_m:
+    - 3953.467697022
+    - 1284.559523183
+    - 5800.0
+    velocity_mps: 370.0
+    heading_deg: 216.299060121
+  metadata:
+    manifest_family: noncanonical_thesis_global_advantage_p2_b6_reachability
+    split: p2_b6_opponent_conditional_reachability60
+    initial_class: head_on
+    height_condition: own_below
+    mirror_sign: positive
+    mirror_pair_id: b6_farrange_fast_target_b__head_on__own_below
+    distance_speed_package: b6_farrange_fast_target_b
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: false
+    scenario_seed: 16238
+    initial_range_m: 4200.0
+    altitude_diff_m: 600.0
+    own_speed_mps: 265.0
+    target_speed_mps: 370.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: head_on
+    geometry_cell_id: b6_farrange_fast_target_b__head_on__own_below__positive
+    b6_protocol: profile_free_dynamic_state_phase_reachability_only
+    physical_geometry_signature:
+    - - 0.0
+      - 0.0
+      - 5200.0
+    - 265.0
+    - 359.70094
+    - - 3953.467697
+      - 1284.559523
+      - 5800.0
+    - 370.0
+    - 216.29906
+- name: global_advantage_p2_b6_b6_farrange_fast_target_b__head_on__co_altitude__negative_s16239
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 265.0
+    heading_deg: 2.0
+  target_init:
+    position_m:
+    - 3994.43736844
+    - -1297.871376375
+    - 5200.0
+    velocity_mps: 370.0
+    heading_deg: 142.0
+  metadata:
+    manifest_family: noncanonical_thesis_global_advantage_p2_b6_reachability
+    split: p2_b6_opponent_conditional_reachability60
+    initial_class: head_on
+    height_condition: co_altitude
+    mirror_sign: negative
+    mirror_pair_id: b6_farrange_fast_target_b__head_on__co_altitude
+    distance_speed_package: b6_farrange_fast_target_b
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: false
+    scenario_seed: 16239
+    initial_range_m: 4200.0
+    altitude_diff_m: 0.0
+    own_speed_mps: 265.0
+    target_speed_mps: 370.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: head_on
+    geometry_cell_id: b6_farrange_fast_target_b__head_on__co_altitude__negative
+    b6_protocol: profile_free_dynamic_state_phase_reachability_only
+    physical_geometry_signature:
+    - - 0.0
+      - 0.0
+      - 5200.0
+    - 265.0
+    - 2.0
+    - - 3994.437368
+      - -1297.871376
+      - 5200.0
+    - 370.0
+    - 142.0
+- name: global_advantage_p2_b6_b6_farrange_fast_target_b__head_on__co_altitude__positive_s16240
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 265.0
+    heading_deg: 358.0
+  target_init:
+    position_m:
+    - 3994.43736844
+    - 1297.871376375
+    - 5200.0
+    velocity_mps: 370.0
+    heading_deg: 218.0
+  metadata:
+    manifest_family: noncanonical_thesis_global_advantage_p2_b6_reachability
+    split: p2_b6_opponent_conditional_reachability60
+    initial_class: head_on
+    height_condition: co_altitude
+    mirror_sign: positive
+    mirror_pair_id: b6_farrange_fast_target_b__head_on__co_altitude
+    distance_speed_package: b6_farrange_fast_target_b
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: false
+    scenario_seed: 16240
+    initial_range_m: 4200.0
+    altitude_diff_m: 0.0
+    own_speed_mps: 265.0
+    target_speed_mps: 370.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: head_on
+    geometry_cell_id: b6_farrange_fast_target_b__head_on__co_altitude__positive
+    b6_protocol: profile_free_dynamic_state_phase_reachability_only
+    physical_geometry_signature:
+    - - 0.0
+      - 0.0
+      - 5200.0
+    - 265.0
+    - 358.0
+    - - 3994.437368
+      - 1297.871376
+      - 5200.0
+    - 370.0
+    - 218.0
+- name: global_advantage_p2_b6_b6_farrange_fast_target_b__head_on__own_above__negative_s16241
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 265.0
+    heading_deg: 0.299060121
+  target_init:
+    position_m:
+    - 3953.467697022
+    - -1284.559523183
+    - 4600.0
+    velocity_mps: 370.0
+    heading_deg: 143.700939879
+  metadata:
+    manifest_family: noncanonical_thesis_global_advantage_p2_b6_reachability
+    split: p2_b6_opponent_conditional_reachability60
+    initial_class: head_on
+    height_condition: own_above
+    mirror_sign: negative
+    mirror_pair_id: b6_farrange_fast_target_b__head_on__own_above
+    distance_speed_package: b6_farrange_fast_target_b
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: false
+    scenario_seed: 16241
+    initial_range_m: 4200.0
+    altitude_diff_m: -600.0
+    own_speed_mps: 265.0
+    target_speed_mps: 370.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: head_on
+    geometry_cell_id: b6_farrange_fast_target_b__head_on__own_above__negative
+    b6_protocol: profile_free_dynamic_state_phase_reachability_only
+    physical_geometry_signature:
+    - - 0.0
+      - 0.0
+      - 5200.0
+    - 265.0
+    - 0.29906
+    - - 3953.467697
+      - -1284.559523
+      - 4600.0
+    - 370.0
+    - 143.70094
+- name: global_advantage_p2_b6_b6_farrange_fast_target_b__head_on__own_above__positive_s16242
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 265.0
+    heading_deg: 359.700939879
+  target_init:
+    position_m:
+    - 3953.467697022
+    - 1284.559523183
+    - 4600.0
+    velocity_mps: 370.0
+    heading_deg: 216.299060121
+  metadata:
+    manifest_family: noncanonical_thesis_global_advantage_p2_b6_reachability
+    split: p2_b6_opponent_conditional_reachability60
+    initial_class: head_on
+    height_condition: own_above
+    mirror_sign: positive
+    mirror_pair_id: b6_farrange_fast_target_b__head_on__own_above
+    distance_speed_package: b6_farrange_fast_target_b
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: false
+    scenario_seed: 16242
+    initial_range_m: 4200.0
+    altitude_diff_m: -600.0
+    own_speed_mps: 265.0
+    target_speed_mps: 370.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: head_on
+    geometry_cell_id: b6_farrange_fast_target_b__head_on__own_above__positive
+    b6_protocol: profile_free_dynamic_state_phase_reachability_only
+    physical_geometry_signature:
+    - - 0.0
+      - 0.0
+      - 5200.0
+    - 265.0
+    - 359.70094
+    - - 3953.467697
+      - 1284.559523
+      - 4600.0
+    - 370.0
+    - 216.29906
+- name: global_advantage_p2_b6_b6_farrange_fast_target_b__disadvantage__own_below__negative_s16243
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 265.0
+    heading_deg: 143.700939879
+  target_init:
+    position_m:
+    - 3953.467697022
+    - -1284.559523183
+    - 5800.0
+    velocity_mps: 370.0
+    heading_deg: 143.700939879
+  metadata:
+    manifest_family: noncanonical_thesis_global_advantage_p2_b6_reachability
+    split: p2_b6_opponent_conditional_reachability60
+    initial_class: disadvantage
+    height_condition: own_below
+    mirror_sign: negative
+    mirror_pair_id: b6_farrange_fast_target_b__disadvantage__own_below
+    distance_speed_package: b6_farrange_fast_target_b
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: false
+    scenario_seed: 16243
+    initial_range_m: 4200.0
+    altitude_diff_m: 600.0
+    own_speed_mps: 265.0
+    target_speed_mps: 370.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: disadvantage
+    geometry_cell_id: b6_farrange_fast_target_b__disadvantage__own_below__negative
+    b6_protocol: profile_free_dynamic_state_phase_reachability_only
+    physical_geometry_signature:
+    - - 0.0
+      - 0.0
+      - 5200.0
+    - 265.0
+    - 143.70094
+    - - 3953.467697
+      - -1284.559523
+      - 5800.0
+    - 370.0
+    - 143.70094
+- name: global_advantage_p2_b6_b6_farrange_fast_target_b__disadvantage__own_below__positive_s16244
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 265.0
+    heading_deg: 216.299060121
+  target_init:
+    position_m:
+    - 3953.467697022
+    - 1284.559523183
+    - 5800.0
+    velocity_mps: 370.0
+    heading_deg: 216.299060121
+  metadata:
+    manifest_family: noncanonical_thesis_global_advantage_p2_b6_reachability
+    split: p2_b6_opponent_conditional_reachability60
+    initial_class: disadvantage
+    height_condition: own_below
+    mirror_sign: positive
+    mirror_pair_id: b6_farrange_fast_target_b__disadvantage__own_below
+    distance_speed_package: b6_farrange_fast_target_b
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: false
+    scenario_seed: 16244
+    initial_range_m: 4200.0
+    altitude_diff_m: 600.0
+    own_speed_mps: 265.0
+    target_speed_mps: 370.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: disadvantage
+    geometry_cell_id: b6_farrange_fast_target_b__disadvantage__own_below__positive
+    b6_protocol: profile_free_dynamic_state_phase_reachability_only
+    physical_geometry_signature:
+    - - 0.0
+      - 0.0
+      - 5200.0
+    - 265.0
+    - 216.29906
+    - - 3953.467697
+      - 1284.559523
+      - 5800.0
+    - 370.0
+    - 216.29906
+- name: global_advantage_p2_b6_b6_farrange_fast_target_b__disadvantage__co_altitude__negative_s16245
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 265.0
+    heading_deg: 142.0
+  target_init:
+    position_m:
+    - 3994.43736844
+    - -1297.871376375
+    - 5200.0
+    velocity_mps: 370.0
+    heading_deg: 142.0
+  metadata:
+    manifest_family: noncanonical_thesis_global_advantage_p2_b6_reachability
+    split: p2_b6_opponent_conditional_reachability60
+    initial_class: disadvantage
+    height_condition: co_altitude
+    mirror_sign: negative
+    mirror_pair_id: b6_farrange_fast_target_b__disadvantage__co_altitude
+    distance_speed_package: b6_farrange_fast_target_b
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: false
+    scenario_seed: 16245
+    initial_range_m: 4200.0
+    altitude_diff_m: 0.0
+    own_speed_mps: 265.0
+    target_speed_mps: 370.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: disadvantage
+    geometry_cell_id: b6_farrange_fast_target_b__disadvantage__co_altitude__negative
+    b6_protocol: profile_free_dynamic_state_phase_reachability_only
+    physical_geometry_signature:
+    - - 0.0
+      - 0.0
+      - 5200.0
+    - 265.0
+    - 142.0
+    - - 3994.437368
+      - -1297.871376
+      - 5200.0
+    - 370.0
+    - 142.0
+- name: global_advantage_p2_b6_b6_farrange_fast_target_b__disadvantage__co_altitude__positive_s16246
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 265.0
+    heading_deg: 218.0
+  target_init:
+    position_m:
+    - 3994.43736844
+    - 1297.871376375
+    - 5200.0
+    velocity_mps: 370.0
+    heading_deg: 218.0
+  metadata:
+    manifest_family: noncanonical_thesis_global_advantage_p2_b6_reachability
+    split: p2_b6_opponent_conditional_reachability60
+    initial_class: disadvantage
+    height_condition: co_altitude
+    mirror_sign: positive
+    mirror_pair_id: b6_farrange_fast_target_b__disadvantage__co_altitude
+    distance_speed_package: b6_farrange_fast_target_b
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: false
+    scenario_seed: 16246
+    initial_range_m: 4200.0
+    altitude_diff_m: 0.0
+    own_speed_mps: 265.0
+    target_speed_mps: 370.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: disadvantage
+    geometry_cell_id: b6_farrange_fast_target_b__disadvantage__co_altitude__positive
+    b6_protocol: profile_free_dynamic_state_phase_reachability_only
+    physical_geometry_signature:
+    - - 0.0
+      - 0.0
+      - 5200.0
+    - 265.0
+    - 218.0
+    - - 3994.437368
+      - 1297.871376
+      - 5200.0
+    - 370.0
+    - 218.0
+- name: global_advantage_p2_b6_b6_farrange_fast_target_b__disadvantage__own_above__negative_s16247
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 265.0
+    heading_deg: 143.700939879
+  target_init:
+    position_m:
+    - 3953.467697022
+    - -1284.559523183
+    - 4600.0
+    velocity_mps: 370.0
+    heading_deg: 143.700939879
+  metadata:
+    manifest_family: noncanonical_thesis_global_advantage_p2_b6_reachability
+    split: p2_b6_opponent_conditional_reachability60
+    initial_class: disadvantage
+    height_condition: own_above
+    mirror_sign: negative
+    mirror_pair_id: b6_farrange_fast_target_b__disadvantage__own_above
+    distance_speed_package: b6_farrange_fast_target_b
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: false
+    scenario_seed: 16247
+    initial_range_m: 4200.0
+    altitude_diff_m: -600.0
+    own_speed_mps: 265.0
+    target_speed_mps: 370.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: disadvantage
+    geometry_cell_id: b6_farrange_fast_target_b__disadvantage__own_above__negative
+    b6_protocol: profile_free_dynamic_state_phase_reachability_only
+    physical_geometry_signature:
+    - - 0.0
+      - 0.0
+      - 5200.0
+    - 265.0
+    - 143.70094
+    - - 3953.467697
+      - -1284.559523
+      - 4600.0
+    - 370.0
+    - 143.70094
+- name: global_advantage_p2_b6_b6_farrange_fast_target_b__disadvantage__own_above__positive_s16248
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 265.0
+    heading_deg: 216.299060121
+  target_init:
+    position_m:
+    - 3953.467697022
+    - 1284.559523183
+    - 4600.0
+    velocity_mps: 370.0
+    heading_deg: 216.299060121
+  metadata:
+    manifest_family: noncanonical_thesis_global_advantage_p2_b6_reachability
+    split: p2_b6_opponent_conditional_reachability60
+    initial_class: disadvantage
+    height_condition: own_above
+    mirror_sign: positive
+    mirror_pair_id: b6_farrange_fast_target_b__disadvantage__own_above
+    distance_speed_package: b6_farrange_fast_target_b
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: false
+    scenario_seed: 16248
+    initial_range_m: 4200.0
+    altitude_diff_m: -600.0
+    own_speed_mps: 265.0
+    target_speed_mps: 370.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: disadvantage
+    geometry_cell_id: b6_farrange_fast_target_b__disadvantage__own_above__positive
+    b6_protocol: profile_free_dynamic_state_phase_reachability_only
+    physical_geometry_signature:
+    - - 0.0
+      - 0.0
+      - 5200.0
+    - 265.0
+    - 216.29906
+    - - 3953.467697
+      - 1284.559523
+      - 4600.0
+    - 370.0
+    - 216.29906
+- name: global_advantage_p2_b6_b6_farrange_fast_target_b__neutral__own_below__negative_s16249
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 265.0
+    heading_deg: 143.700939879
+  target_init:
+    position_m:
+    - 3953.467697022
+    - -1284.559523183
+    - 5800.0
+    velocity_mps: 370.0
+    heading_deg: 0.299060121
+  metadata:
+    manifest_family: noncanonical_thesis_global_advantage_p2_b6_reachability
+    split: p2_b6_opponent_conditional_reachability60
+    initial_class: neutral
+    height_condition: own_below
+    mirror_sign: negative
+    mirror_pair_id: b6_farrange_fast_target_b__neutral__own_below
+    distance_speed_package: b6_farrange_fast_target_b
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: false
+    scenario_seed: 16249
+    initial_range_m: 4200.0
+    altitude_diff_m: 600.0
+    own_speed_mps: 265.0
+    target_speed_mps: 370.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: neutral
+    geometry_cell_id: b6_farrange_fast_target_b__neutral__own_below__negative
+    b6_protocol: profile_free_dynamic_state_phase_reachability_only
+    physical_geometry_signature:
+    - - 0.0
+      - 0.0
+      - 5200.0
+    - 265.0
+    - 143.70094
+    - - 3953.467697
+      - -1284.559523
+      - 5800.0
+    - 370.0
+    - 0.29906
+- name: global_advantage_p2_b6_b6_farrange_fast_target_b__neutral__own_below__positive_s16250
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 265.0
+    heading_deg: 216.299060121
+  target_init:
+    position_m:
+    - 3953.467697022
+    - 1284.559523183
+    - 5800.0
+    velocity_mps: 370.0
+    heading_deg: 359.700939879
+  metadata:
+    manifest_family: noncanonical_thesis_global_advantage_p2_b6_reachability
+    split: p2_b6_opponent_conditional_reachability60
+    initial_class: neutral
+    height_condition: own_below
+    mirror_sign: positive
+    mirror_pair_id: b6_farrange_fast_target_b__neutral__own_below
+    distance_speed_package: b6_farrange_fast_target_b
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: false
+    scenario_seed: 16250
+    initial_range_m: 4200.0
+    altitude_diff_m: 600.0
+    own_speed_mps: 265.0
+    target_speed_mps: 370.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: neutral
+    geometry_cell_id: b6_farrange_fast_target_b__neutral__own_below__positive
+    b6_protocol: profile_free_dynamic_state_phase_reachability_only
+    physical_geometry_signature:
+    - - 0.0
+      - 0.0
+      - 5200.0
+    - 265.0
+    - 216.29906
+    - - 3953.467697
+      - 1284.559523
+      - 5800.0
+    - 370.0
+    - 359.70094
+- name: global_advantage_p2_b6_b6_farrange_fast_target_b__neutral__co_altitude__negative_s16251
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 265.0
+    heading_deg: 142.0
+  target_init:
+    position_m:
+    - 3994.43736844
+    - -1297.871376375
+    - 5200.0
+    velocity_mps: 370.0
+    heading_deg: 2.0
+  metadata:
+    manifest_family: noncanonical_thesis_global_advantage_p2_b6_reachability
+    split: p2_b6_opponent_conditional_reachability60
+    initial_class: neutral
+    height_condition: co_altitude
+    mirror_sign: negative
+    mirror_pair_id: b6_farrange_fast_target_b__neutral__co_altitude
+    distance_speed_package: b6_farrange_fast_target_b
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: false
+    scenario_seed: 16251
+    initial_range_m: 4200.0
+    altitude_diff_m: 0.0
+    own_speed_mps: 265.0
+    target_speed_mps: 370.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: neutral
+    geometry_cell_id: b6_farrange_fast_target_b__neutral__co_altitude__negative
+    b6_protocol: profile_free_dynamic_state_phase_reachability_only
+    physical_geometry_signature:
+    - - 0.0
+      - 0.0
+      - 5200.0
+    - 265.0
+    - 142.0
+    - - 3994.437368
+      - -1297.871376
+      - 5200.0
+    - 370.0
+    - 2.0
+- name: global_advantage_p2_b6_b6_farrange_fast_target_b__neutral__co_altitude__positive_s16252
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 265.0
+    heading_deg: 218.0
+  target_init:
+    position_m:
+    - 3994.43736844
+    - 1297.871376375
+    - 5200.0
+    velocity_mps: 370.0
+    heading_deg: 358.0
+  metadata:
+    manifest_family: noncanonical_thesis_global_advantage_p2_b6_reachability
+    split: p2_b6_opponent_conditional_reachability60
+    initial_class: neutral
+    height_condition: co_altitude
+    mirror_sign: positive
+    mirror_pair_id: b6_farrange_fast_target_b__neutral__co_altitude
+    distance_speed_package: b6_farrange_fast_target_b
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: false
+    scenario_seed: 16252
+    initial_range_m: 4200.0
+    altitude_diff_m: 0.0
+    own_speed_mps: 265.0
+    target_speed_mps: 370.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: neutral
+    geometry_cell_id: b6_farrange_fast_target_b__neutral__co_altitude__positive
+    b6_protocol: profile_free_dynamic_state_phase_reachability_only
+    physical_geometry_signature:
+    - - 0.0
+      - 0.0
+      - 5200.0
+    - 265.0
+    - 218.0
+    - - 3994.437368
+      - 1297.871376
+      - 5200.0
+    - 370.0
+    - 358.0
+- name: global_advantage_p2_b6_b6_farrange_fast_target_b__neutral__own_above__negative_s16253
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 265.0
+    heading_deg: 143.700939879
+  target_init:
+    position_m:
+    - 3953.467697022
+    - -1284.559523183
+    - 4600.0
+    velocity_mps: 370.0
+    heading_deg: 0.299060121
+  metadata:
+    manifest_family: noncanonical_thesis_global_advantage_p2_b6_reachability
+    split: p2_b6_opponent_conditional_reachability60
+    initial_class: neutral
+    height_condition: own_above
+    mirror_sign: negative
+    mirror_pair_id: b6_farrange_fast_target_b__neutral__own_above
+    distance_speed_package: b6_farrange_fast_target_b
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: false
+    scenario_seed: 16253
+    initial_range_m: 4200.0
+    altitude_diff_m: -600.0
+    own_speed_mps: 265.0
+    target_speed_mps: 370.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: neutral
+    geometry_cell_id: b6_farrange_fast_target_b__neutral__own_above__negative
+    b6_protocol: profile_free_dynamic_state_phase_reachability_only
+    physical_geometry_signature:
+    - - 0.0
+      - 0.0
+      - 5200.0
+    - 265.0
+    - 143.70094
+    - - 3953.467697
+      - -1284.559523
+      - 4600.0
+    - 370.0
+    - 0.29906
+- name: global_advantage_p2_b6_b6_farrange_fast_target_b__neutral__own_above__positive_s16254
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 265.0
+    heading_deg: 216.299060121
+  target_init:
+    position_m:
+    - 3953.467697022
+    - 1284.559523183
+    - 4600.0
+    velocity_mps: 370.0
+    heading_deg: 359.700939879
+  metadata:
+    manifest_family: noncanonical_thesis_global_advantage_p2_b6_reachability
+    split: p2_b6_opponent_conditional_reachability60
+    initial_class: neutral
+    height_condition: own_above
+    mirror_sign: positive
+    mirror_pair_id: b6_farrange_fast_target_b__neutral__own_above
+    distance_speed_package: b6_farrange_fast_target_b
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: false
+    scenario_seed: 16254
+    initial_range_m: 4200.0
+    altitude_diff_m: -600.0
+    own_speed_mps: 265.0
+    target_speed_mps: 370.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: neutral
+    geometry_cell_id: b6_farrange_fast_target_b__neutral__own_above__positive
+    b6_protocol: profile_free_dynamic_state_phase_reachability_only
+    physical_geometry_signature:
+    - - 0.0
+      - 0.0
+      - 5200.0
+    - 265.0
+    - 216.29906
+    - - 3953.467697
+      - 1284.559523
+      - 4600.0
+    - 370.0
+    - 359.70094
+- name: global_advantage_p2_b6_b6_farrange_fast_target_b__crossing_entry__own_below__negative_s16255
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 265.0
+    heading_deg: 0.299060121
+  target_init:
+    position_m:
+    - 3953.467697022
+    - -1284.559523183
+    - 5800.0
+    velocity_mps: 370.0
+    heading_deg: 72.0
+  metadata:
+    manifest_family: noncanonical_thesis_global_advantage_p2_b6_reachability
+    split: p2_b6_opponent_conditional_reachability60
+    initial_class: crossing_entry
+    height_condition: own_below
+    mirror_sign: negative
+    mirror_pair_id: b6_farrange_fast_target_b__crossing_entry__own_below
+    distance_speed_package: b6_farrange_fast_target_b
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: true
+    scenario_seed: 16255
+    initial_range_m: 4200.0
+    altitude_diff_m: 600.0
+    own_speed_mps: 265.0
+    target_speed_mps: 370.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 90.0
+    taxonomy_geometry_state: transition
+    geometry_cell_id: b6_farrange_fast_target_b__crossing_entry__own_below__negative
+    b6_protocol: profile_free_dynamic_state_phase_reachability_only
+    physical_geometry_signature:
+    - - 0.0
+      - 0.0
+      - 5200.0
+    - 265.0
+    - 0.29906
+    - - 3953.467697
+      - -1284.559523
+      - 5800.0
+    - 370.0
+    - 72.0
+- name: global_advantage_p2_b6_b6_farrange_fast_target_b__crossing_entry__own_below__positive_s16256
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 265.0
+    heading_deg: 359.700939879
+  target_init:
+    position_m:
+    - 3953.467697022
+    - 1284.559523183
+    - 5800.0
+    velocity_mps: 370.0
+    heading_deg: 288.0
+  metadata:
+    manifest_family: noncanonical_thesis_global_advantage_p2_b6_reachability
+    split: p2_b6_opponent_conditional_reachability60
+    initial_class: crossing_entry
+    height_condition: own_below
+    mirror_sign: positive
+    mirror_pair_id: b6_farrange_fast_target_b__crossing_entry__own_below
+    distance_speed_package: b6_farrange_fast_target_b
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: true
+    scenario_seed: 16256
+    initial_range_m: 4200.0
+    altitude_diff_m: 600.0
+    own_speed_mps: 265.0
+    target_speed_mps: 370.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 90.0
+    taxonomy_geometry_state: transition
+    geometry_cell_id: b6_farrange_fast_target_b__crossing_entry__own_below__positive
+    b6_protocol: profile_free_dynamic_state_phase_reachability_only
+    physical_geometry_signature:
+    - - 0.0
+      - 0.0
+      - 5200.0
+    - 265.0
+    - 359.70094
+    - - 3953.467697
+      - 1284.559523
+      - 5800.0
+    - 370.0
+    - 288.0
+- name: global_advantage_p2_b6_b6_farrange_fast_target_b__crossing_entry__co_altitude__negative_s16257
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 265.0
+    heading_deg: 2.0
+  target_init:
+    position_m:
+    - 3994.43736844
+    - -1297.871376375
+    - 5200.0
+    velocity_mps: 370.0
+    heading_deg: 72.0
+  metadata:
+    manifest_family: noncanonical_thesis_global_advantage_p2_b6_reachability
+    split: p2_b6_opponent_conditional_reachability60
+    initial_class: crossing_entry
+    height_condition: co_altitude
+    mirror_sign: negative
+    mirror_pair_id: b6_farrange_fast_target_b__crossing_entry__co_altitude
+    distance_speed_package: b6_farrange_fast_target_b
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: true
+    scenario_seed: 16257
+    initial_range_m: 4200.0
+    altitude_diff_m: 0.0
+    own_speed_mps: 265.0
+    target_speed_mps: 370.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 90.0
+    taxonomy_geometry_state: transition
+    geometry_cell_id: b6_farrange_fast_target_b__crossing_entry__co_altitude__negative
+    b6_protocol: profile_free_dynamic_state_phase_reachability_only
+    physical_geometry_signature:
+    - - 0.0
+      - 0.0
+      - 5200.0
+    - 265.0
+    - 2.0
+    - - 3994.437368
+      - -1297.871376
+      - 5200.0
+    - 370.0
+    - 72.0
+- name: global_advantage_p2_b6_b6_farrange_fast_target_b__crossing_entry__co_altitude__positive_s16258
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 265.0
+    heading_deg: 358.0
+  target_init:
+    position_m:
+    - 3994.43736844
+    - 1297.871376375
+    - 5200.0
+    velocity_mps: 370.0
+    heading_deg: 288.0
+  metadata:
+    manifest_family: noncanonical_thesis_global_advantage_p2_b6_reachability
+    split: p2_b6_opponent_conditional_reachability60
+    initial_class: crossing_entry
+    height_condition: co_altitude
+    mirror_sign: positive
+    mirror_pair_id: b6_farrange_fast_target_b__crossing_entry__co_altitude
+    distance_speed_package: b6_farrange_fast_target_b
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: true
+    scenario_seed: 16258
+    initial_range_m: 4200.0
+    altitude_diff_m: 0.0
+    own_speed_mps: 265.0
+    target_speed_mps: 370.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 90.0
+    taxonomy_geometry_state: transition
+    geometry_cell_id: b6_farrange_fast_target_b__crossing_entry__co_altitude__positive
+    b6_protocol: profile_free_dynamic_state_phase_reachability_only
+    physical_geometry_signature:
+    - - 0.0
+      - 0.0
+      - 5200.0
+    - 265.0
+    - 358.0
+    - - 3994.437368
+      - 1297.871376
+      - 5200.0
+    - 370.0
+    - 288.0
+- name: global_advantage_p2_b6_b6_farrange_fast_target_b__crossing_entry__own_above__negative_s16259
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 265.0
+    heading_deg: 0.299060121
+  target_init:
+    position_m:
+    - 3953.467697022
+    - -1284.559523183
+    - 4600.0
+    velocity_mps: 370.0
+    heading_deg: 72.0
+  metadata:
+    manifest_family: noncanonical_thesis_global_advantage_p2_b6_reachability
+    split: p2_b6_opponent_conditional_reachability60
+    initial_class: crossing_entry
+    height_condition: own_above
+    mirror_sign: negative
+    mirror_pair_id: b6_farrange_fast_target_b__crossing_entry__own_above
+    distance_speed_package: b6_farrange_fast_target_b
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: true
+    scenario_seed: 16259
+    initial_range_m: 4200.0
+    altitude_diff_m: -600.0
+    own_speed_mps: 265.0
+    target_speed_mps: 370.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 90.0
+    taxonomy_geometry_state: transition
+    geometry_cell_id: b6_farrange_fast_target_b__crossing_entry__own_above__negative
+    b6_protocol: profile_free_dynamic_state_phase_reachability_only
+    physical_geometry_signature:
+    - - 0.0
+      - 0.0
+      - 5200.0
+    - 265.0
+    - 0.29906
+    - - 3953.467697
+      - -1284.559523
+      - 4600.0
+    - 370.0
+    - 72.0
+- name: global_advantage_p2_b6_b6_farrange_fast_target_b__crossing_entry__own_above__positive_s16260
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 265.0
+    heading_deg: 359.700939879
+  target_init:
+    position_m:
+    - 3953.467697022
+    - 1284.559523183
+    - 4600.0
+    velocity_mps: 370.0
+    heading_deg: 288.0
+  metadata:
+    manifest_family: noncanonical_thesis_global_advantage_p2_b6_reachability
+    split: p2_b6_opponent_conditional_reachability60
+    initial_class: crossing_entry
+    height_condition: own_above
+    mirror_sign: positive
+    mirror_pair_id: b6_farrange_fast_target_b__crossing_entry__own_above
+    distance_speed_package: b6_farrange_fast_target_b
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: true
+    scenario_seed: 16260
+    initial_range_m: 4200.0
+    altitude_diff_m: -600.0
+    own_speed_mps: 265.0
+    target_speed_mps: 370.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 90.0
+    taxonomy_geometry_state: transition
+    geometry_cell_id: b6_farrange_fast_target_b__crossing_entry__own_above__positive
+    b6_protocol: profile_free_dynamic_state_phase_reachability_only
+    physical_geometry_signature:
+    - - 0.0
+      - 0.0
+      - 5200.0
+    - 265.0
+    - 359.70094
+    - - 3953.467697
+      - 1284.559523
+      - 4600.0
+    - 370.0
+    - 288.0
+integrity:
+  payload_sha256: 23890e346ff490a3ecb7a2db96b0980283ad4750c73a36fd83750d419481bcb1

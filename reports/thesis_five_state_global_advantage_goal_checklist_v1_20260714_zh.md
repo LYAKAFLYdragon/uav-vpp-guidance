@@ -187,5 +187,7 @@
 - [x] **P2-B5 设计与实现：** 已建立 `THESIS-GLOBAL-ADVANTAGE-V1-P2-PHASE-FEASIBLE-SAMPLER-B5-R1` 的独立 12 场景 manifest、raw-SI collector、fail-closed runner/preflight 与 tests；设计预检通过。详见 `reports/thesis_global_advantage_p2_b5_phase_feasible_sampler_preregistration_20260715_zh.md`。
 - [x] **P2-B5 独立复核：** 已补齐连续 handoff/真实 66-D 路径测试，并修正 dynamic taxonomy 的 `(ATA, AA)` 参数顺序；当前 `14 passed`，不涉及 JSBSim 实验结果。
 - [x] **P2-B5 已一次性执行并关闭：** 36/36 strict-JSBSim record 的 scenario receipt、raw-SI replay 和 step-0 phase 均通过，但 expert 为 1/12、independent PPO/VPP 为 0/0，故 `phase_feasible_data_contract_not_established`，`training_unlocked=false`。详见 `reports/thesis_global_advantage_p2_b5_phase_feasible_sampler_completion_20260715_zh.md`。
-- [ ] **当前唯一允许动作：冻结 B5 为跨对手数据契约负证据，并设计独立的 opponent-conditional target-geometry reachability 路线。** 不得重跑、调参或修补 B5，也不得进入 defensive-extension pilot、四共享技能或 formal held-out。
+- [x] **B5 只读 atlas：** `analysis_b5/b5_reachability_atlas_zh.md` 证明 B5 包线没有任何 state x phase 满足三个 opponent 的最小覆盖门槛，禁止从单一 opponent 或 aggregate 反选训练目标。
+- [x] **B6 设计预注册：** 已建立 independent opponent-conditional target-geometry reachability atlas 的方法、60 场景范围、逐 opponent candidate gate 与无候选 stop rule。见 `reports/thesis_global_advantage_p2_b6_opponent_conditional_reachability_design_20260715_zh.md`。
+- [ ] **当前唯一允许动作：实现并独立复核 B6 的 manifest builder、profile-free collector、analysis 与 preflight。** 不得重跑、调参或修补 B5，也不得进入 defensive-extension pilot、四共享技能或 formal held-out。
 - [ ] P2--P8 均未授权；尤其不允许以“追求全场景优势”为由绕过 P1/P3 的负证据和 stop rule。

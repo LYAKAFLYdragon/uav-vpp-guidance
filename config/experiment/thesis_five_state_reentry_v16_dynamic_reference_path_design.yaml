@@ -1,0 +1,25 @@
+source_id: THESIS-FIVE-STATE-REENTRY-DYNAMIC-REFERENCE-PATH-V16
+status: preregistered_design_only
+authorization:
+  execution_permitted: false
+  training_permitted: false
+  reward_change_permitted: false
+  combat_finetune_permitted: false
+  heldout_claims_permitted: false
+contract:
+  backend: jsbsim
+  strict_backend: true
+  opponents: [expert, end_to_end, independent_ppo_vpp]
+  pooled_gate: prohibited
+  source_of_future_geometry: frozen_predictor_only
+  future_simulator_state: prohibited
+  synthetic_target: prohibited
+  terminal_semantics_change: prohibited
+  guidance_pid_change: prohibited
+path:
+  anchor_count: 3
+  anchor_roles: [escape, connector, predicted_reentry]
+  escape_extent_m: 1200.0
+  connector_fraction: 0.5
+  opening_rate_start_mps: 0.0
+  opening_rate_full_mps: 80.0

@@ -1,0 +1,36 @@
+source_id: THESIS-REENTRY-TERMINAL-REWARD-PILOT-V1
+base_config: config/experiment/thesis_reentry_terminal_reward_pilot_v1_preregistered.yaml
+base_config_sha256: 41293505e5750da297ecc4fb80c522101f312310a968a23e92867990d9ce1454
+authorization:
+  execution_permitted: false
+  training_permitted: false
+  tuning_permitted: false
+  reason: runtime_implementation_and_tests_must_pass_before_authorization
+proposed_training:
+  training_seed: 2026071501
+  total_timesteps: 20000
+  max_episode_attempts: 3000
+  max_high_level_steps_per_episode: 260
+  checkpoint_evaluation_steps: [10000, 20000]
+  checkpoint_selection_split: dev12_only
+  ppo:
+    rollout_steps: 2048
+    learning_rate: 0.0003
+    gamma: 0.99
+    gae_lambda: 0.95
+    clip_coef: 0.2
+    value_coef: 0.5
+    entropy_coef: 0.005
+    max_grad_norm: 0.5
+    update_epochs: 10
+    minibatch_size: 256
+  policy:
+    hidden_dim: 128
+gates:
+  dev_safety_ego_crash_oob_delta_max: 0.05
+  selection_primary: worst_opponent_mean_paired_intent_loss_delta_vs_head_on
+  practical_improvement_delta_max: -0.05
+  no_candidate_checkpoint_result: negative_evidence
+outputs:
+  runtime_root: E:/uav-vpp-guidance-five-state-heldout-envelope-v1-results/thesis_reentry_terminal_reward_pilot_v1
+  heldout_execution_permitted: false

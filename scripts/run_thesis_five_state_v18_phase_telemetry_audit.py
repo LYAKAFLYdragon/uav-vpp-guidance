@@ -9,6 +9,7 @@ import json
 import math
 from pathlib import Path
 import shutil
+import subprocess
 import sys
 from typing import Any, Mapping
 
@@ -125,16 +126,36 @@ def _record(scenario: Mapping[str, Any], opponent: str, result: Mapping[str, Any
     return {"source_id": SOURCE_ID, "opponent": opponent, "pair_key": scenario["metadata"]["pair_key"], **dict(result)}
 
 
+def _require_execution_authorization(design: Mapping[str, Any], scenario_count: int) -> None:
+    execution = design.get("execution")
+    if design.get("authorization", {}).get("execution_permitted") is not True or not isinstance(execution, Mapping):
+        raise V18RuntimeError("V18 execution is not authorized")
+    if int(execution.get("expected_records", -1)) != len(OPPONENTS) * scenario_count:
+        raise V18RuntimeError("V18 authorization record universe drifted")
+    required_sha = str(execution.get("required_implementation_git_sha") or "")
+    if not required_sha or subprocess.run(["git", "merge-base", "--is-ancestor", required_sha, "HEAD"], cwd=ROOT, check=False).returncode:
+        raise V18RuntimeError("V18 implementation SHA is not an ancestor of HEAD")
+    files = execution.get("authorized_code_files")
+    if not isinstance(files, list) or not files:
+        raise V18RuntimeError("V18 authorization file whitelist is missing")
+    for item in files:
+        path = v17._resolve(str(item.get("path") or ""))
+        if not path.is_file() or v17._hash(path) != str(item.get("sha256") or ""):
+            raise V18RuntimeError(f"V18 authorized code hash mismatch: {path}")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__); parser.add_argument("--config", type=Path, required=True); parser.add_argument("--execute", action="store_true"); args = parser.parse_args()
     design = _load_design(args.config); preflight = validate_design(args.config)
     if not args.execute:
         print(json.dumps(preflight, ensure_ascii=False, indent=2)); return 0
-    if design.get("authorization", {}).get("execution_permitted") is not True:
-        raise V18RuntimeError("V18 execution is not authorized")
+    manifest = v17._load(v17._resolve(str(design["inputs"]["manifest"])))
+    _require_execution_authorization(design, len(manifest["scenarios"]))
     if not preflight["output_root_absent"]:
         raise V18RuntimeError("V18 output root is not empty")
-    runtime = _runtime_config(design); manifest = v17._load(v17._resolve(str(design["inputs"]["manifest"]))); registry = v17._load(v17._resolve(str(design["inputs"]["runtime_registry"])))
+    if subprocess.check_output(["git", "status", "--porcelain"], cwd=ROOT, text=True).strip():
+        raise V18RuntimeError("V18 requires a clean worktree")
+    runtime = _runtime_config(design); registry = v17._load(v17._resolve(str(design["inputs"]["runtime_registry"])))
     output = v17._resolve(str(design["outputs"]["root"])); output.mkdir(parents=True)
     records: list[dict[str, Any]] = []
     try:

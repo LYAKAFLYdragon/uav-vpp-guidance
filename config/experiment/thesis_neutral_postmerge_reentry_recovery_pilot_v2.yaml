@@ -1,0 +1,86 @@
+schema_version: 2
+source_id: THESIS-NEUTRAL-POSTMERGE-REENTRY-RECOVERY-PILOT-V2
+status: preregistered_design_only_not_authorised
+parent_source:
+  source_id: THESIS-NEUTRAL-POSTMERGE-REENTRY-RECOVERY-PILOT-V1
+  disposition: implementation_failure_not_experimental_evidence
+  reuse_of_v1_results: prohibited
+authorization:
+  execution_permitted: false
+  training_permitted: false
+  baseline_evaluation_permitted: false
+  heldout_evaluation_permitted: false
+  high_level_ppo_training_permitted: false
+  four_skill_training_permitted: false
+  combat_finetune_permitted: false
+  tuning_permitted: false
+  vpp_change_permitted: false
+  guidance_change_permitted: false
+  pid_change_permitted: false
+  snapshot_restore: false
+  future_state_injection: false
+  history_padding_permitted: false
+sources:
+  train_distribution: config/experiment/thesis_neutral_postmerge_reentry_recovery_pilot_v2_train_distribution.yaml
+  train_distribution_sha256: fe5c60e65079e9a399bd824abd3f1f97ebc3f7cd132268628dc7f8723a650da0
+  dev_manifest: config/experiment/manifests/thesis_neutral_postmerge_reentry_recovery_pilot_v2_dev12.yaml
+  dev_manifest_sha256: 64b0566db71fa62096f51886d762bb99a52097d0e621df4a0e3cd5f6c2ae85ee
+  heldout_manifest: config/experiment/manifests/thesis_neutral_postmerge_reentry_recovery_pilot_v2_heldout24.yaml
+  heldout_manifest_sha256: a239a32af2eef2374b84e0a33d97411843f3dfefd75b085ef2d64c53a7d82ebb
+  manifest_builder: scripts/build_thesis_neutral_postmerge_reentry_recovery_pilot_v2_manifests.py
+  manifest_builder_sha256: ad2a50f37a6bff1d2dc15718b6dafd22679c2d31c0672ac0599271eb6ce722b5
+  pairing_contract: src/uav_vpp_guidance/evaluation/thesis_neutral_postmerge_pairing_v2.py
+  pairing_contract_sha256: 87581aa1d1451495678cf9552d9fe790765518ea107ef07914bd1704046306e8
+  preflight: scripts/preflight_thesis_neutral_postmerge_reentry_recovery_pilot_v2.py
+  preflight_sha256: 7b552ab8db36e94c8b760165d6e01a95c128ebc3ce8342a9ba34c5bad0d200de
+  execution_runtime_registry: config/experiment/thesis_neutral_postmerge_reentry_recovery_pilot_v1_execution_runtime_registry.yaml
+  execution_runtime_registry_sha256: e3124120b33b55c1018da6d8d133ef15b5cf5e6c5c04361d6b90498b0b279ca8
+fixed_contract:
+  skill: reentry_recovery
+  profile: reentry_preparation
+  profile_targets: [30.0, 130.0, 2200.0, -30.0, 100.0, 0.0]
+  profile_weights: [0.8, 0.8, 1.0, 0.8, 0.7, 0.4]
+  routing_enabled: false
+  high_level_policy_present: false
+  observation_dim: 66
+  action_dim: 3
+  encoder:
+    checkpoint: E:/uav-vpp-guidance-thesis-five-state-v1-results/p3_temporal_encoder_phaseconditional_v2/checkpoints/best.pt
+    sha256: 385663281a9c48c0416ea4d1a1bb8dc08ed64a0cfebb0f01083cbbb8bcfbdc59
+    trainable: false
+    fallback: prohibited
+  prediction_reward: prohibited
+pairing_contract:
+  primary_key: metadata.geometry_cell_id + metadata.scenario_seed
+  serialized_field: metadata.pair_key
+  required_before_paired_delta: true
+  missing_or_mismatched_key: contract_failure_not_performance_result
+opponents:
+  order: [expert, end_to_end, independent_ppo_vpp]
+  report_separately: true
+  pooled_gate: prohibited
+gates:
+  per_opponent_contract_minimum:
+    qualifying_paired_episodes: 2
+    valid_target_steps: 20
+    distinct_scenario_signatures: 2
+    distinct_mirror_signs: 2
+  per_opponent_claim_ready_coverage:
+    qualifying_paired_episodes: 8
+    valid_target_steps: 160
+  safety_noninferiority_vs_head_on:
+    ego_crash_oob_rate_delta_max: 0.05
+  geometry_noninferiority_vs_head_on:
+    paired_intent_loss_auc20_delta_max: 0.02
+  practical_improvement_vs_head_on:
+    paired_intent_loss_auc20_delta_max: -0.05
+    minimum_opponents_passing: 2
+  practical_improvement_vs_best_existing_specialist:
+    paired_intent_loss_auc20_delta_max: -0.02
+    minimum_opponents_passing: 2
+  remaining_opponent_noninferiority_vs_best_existing_specialist:
+    paired_intent_loss_auc20_delta_max: 0.02
+outputs:
+  root: E:/uav-vpp-guidance-five-state-heldout-envelope-v1-results/neutral_postmerge_reentry_recovery_pilot_v2
+  creation_permitted_by_this_config: false
+  paper_safe: false

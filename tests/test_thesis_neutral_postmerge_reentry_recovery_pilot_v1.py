@@ -64,8 +64,12 @@ def test_design_locks_the_single_skill_profile_and_disables_execution():
     assert config["opponents"]["pooled_gate"] == "prohibited"
 
 
-def test_neutral_postmerge_validity_mask_allows_the_preregistered_action():
-    result = pilot.validate_design(CONFIG)
+def test_neutral_postmerge_validity_mask_allows_the_preregistered_action(tmp_path: Path):
+    config = yaml.safe_load(CONFIG.read_text(encoding="utf-8"))
+    config["outputs"]["root"] = str(tmp_path / "v1_design_only_output")
+    config_path = tmp_path / "v1_design.yaml"
+    config_path.write_text(yaml.safe_dump(config, sort_keys=False), encoding="utf-8")
+    result = pilot.validate_design(config_path)
     assert result["execution_permitted"] is False
     assert result["training_permitted"] is False
     assert result["target_window"] == "neutral->post_merge"

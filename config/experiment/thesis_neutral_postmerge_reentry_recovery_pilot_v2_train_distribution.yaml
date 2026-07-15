@@ -1,0 +1,30 @@
+schema_version: 1
+source_id: THESIS-NEUTRAL-POSTMERGE-REENTRY-RECOVERY-PILOT-V2-TRAIN
+status: preregistered_design_only
+training_permitted: false
+sampling_contract:
+  sampler: continuous_physical_run_in_neutral_postmerge_v2
+  seed: 2026071601
+  initial_class: neutral
+  own_to_target_los_angle_deg: [148.0, 165.0]
+  target_velocity_to_own_los_angle_deg: [148.0, 165.0]
+  los_azimuth_abs_deg: [12.0, 26.0]
+  own_altitude_m: [5000.0, 5400.0]
+  target_minus_own_altitude_m: [-600.0, 600.0]
+  initial_range_m: [2950.0, 5000.0]
+  own_speed_mps: [218.0, 310.0]
+  target_speed_mps: [330.0, 425.0]
+  require_target_faster_than_own_by_mps: 75.0
+  mirror_signs: [negative, positive]
+  phase_path: legal_reset_to_first_pass_to_neutral_post_merge
+  continuous_physical_run_in: true
+  opponents: [expert, end_to_end, independent_ppo_vpp]
+  balanced_opponent_sampling: true
+  candidate_skill: reentry_recovery
+  fixed_profile: reentry_preparation
+leakage_controls:
+  v1_result_reuse: prohibited
+  v1_manifest_and_seed_reuse: prohibited
+  b2_to_b6_trajectory_reuse: prohibited
+  heldout240_dev30_heldout60_trajectory_reuse: prohibited
+  normalization_fit_split: train_only

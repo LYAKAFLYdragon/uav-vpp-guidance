@@ -11,6 +11,7 @@ from contextlib import contextmanager
 import shutil
 import subprocess
 from pathlib import Path
+import sys
 from typing import Any, Iterator, Mapping, Sequence
 
 import numpy as np
@@ -23,6 +24,12 @@ from uav_vpp_guidance.training import thesis_neutral_postmerge_reentry_recovery_
 
 ROOT = Path(__file__).resolve().parents[3]
 SOURCE_ID = "THESIS-NEUTRAL-POSTMERGE-REENTRY-RECOVERY-PILOT-V2"
+
+# The runner is invoked as ``python scripts/...`` and only adds ``src``.
+# Keep the design-preflight module importable without relying on the caller's
+# working-directory-dependent module path.
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
 
 class NeutralPostMergePilotV2Error(v1.NeutralPostMergePilotError):

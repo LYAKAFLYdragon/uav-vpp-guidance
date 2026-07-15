@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import pytest
 import yaml
+import importlib.util
 from pathlib import Path
+import sys
 
 from uav_vpp_guidance.evaluation.thesis_reentry_v9_action_authority import (
     ActionAuthorityContractError,
@@ -11,6 +13,19 @@ from uav_vpp_guidance.evaluation.thesis_reentry_v9_action_authority import (
     is_ego_failure,
     summarize_records,
 )
+
+
+ROOT = Path(__file__).resolve().parent.parent
+
+
+def _load_runner():
+    path = ROOT / "scripts" / "run_thesis_five_state_reentry_v9_action_authority.py"
+    spec = importlib.util.spec_from_file_location("v9_action_authority_runner", path)
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
 
 
 def test_apply_perturbation_records_clipping_and_actual_delta():
@@ -87,8 +102,7 @@ def test_summary_rejects_nonmatching_handoff_hashes():
 
 
 def test_v9_design_remains_nonlearning_and_has_the_complete_axis_grid():
-    root = Path(__file__).resolve().parent.parent
-    config = yaml.safe_load((root / "config/experiment/thesis_five_state_reentry_v9_action_authority_design.yaml").read_text(encoding="utf-8"))
+    config = yaml.safe_load((ROOT / "config/experiment/thesis_five_state_reentry_v9_action_authority_design.yaml").read_text(encoding="utf-8"))
 
     assert config["authorization"]["execution_permitted"] is False
     assert config["authorization"]["training_permitted"] is False
@@ -97,3 +111,21 @@ def test_v9_design_remains_nonlearning_and_has_the_complete_axis_grid():
         "frozen_fixed_head_on", "forward_positive", "forward_negative",
         "lateral_positive", "lateral_negative", "vertical_positive", "vertical_negative",
     }
+
+
+def test_authorization_overlay_can_only_replace_authorization_fields(tmp_path: Path):
+    module = _load_runner()
+    base = ROOT / "config/experiment/thesis_five_state_reentry_v9_action_authority_design.yaml"
+    overlay = tmp_path / "authorized.yaml"
+    overlay.write_text(yaml.safe_dump({
+        "base_config": str(base),
+        "base_config_sha256": module._hash(base),
+        "authorization": {"execution_permitted": True, "training_permitted": False, "reward_change_permitted": False},
+        "execution": {"required_implementation_git_sha": "placeholder", "authorized_code_files": []},
+    }), encoding="utf-8")
+
+    resolved = module._load_runtime_config(overlay)
+
+    assert resolved["authorization"]["execution_permitted"] is True
+    assert resolved["methods"]["forward_positive"] == [0.25, 0.0, 0.0]
+    assert resolved["_authorization_execution"]["required_implementation_git_sha"] == "placeholder"

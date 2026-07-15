@@ -1,7 +1,7 @@
 # V9 Re-entry 3-D VPP 动作可控性 Probe 预注册
 
-**Source ID：** `THESIS-FIVE-STATE-REENTRY-VPP-ACTION-AUTHORITY-V9`  
-**状态：** `preregistered_design_execution_not_authorised`  
+**Source ID：** `THESIS-FIVE-STATE-REENTRY-VPP-ACTION-AUTHORITY-V9`
+**状态：** `preregistered_design_execution_not_authorised`
 **性质：** 非学习、非论文主结果的机制可行性 probe。
 
 ## 问题

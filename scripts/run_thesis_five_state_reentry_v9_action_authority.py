@@ -68,6 +68,41 @@ def _resolve(value: str | Path) -> Path:
     return path if path.is_absolute() else ROOT / path
 
 
+def _load_runtime_config(path: Path) -> dict[str, Any]:
+    """Resolve a minimal authorization overlay without permitting method drift."""
+    overlay = _load(path)
+    if "base_config" not in overlay:
+        return overlay
+    base_path = _resolve(overlay["base_config"])
+    if _hash(base_path) != overlay.get("base_config_sha256"):
+        raise V9RuntimeError("V9 authorization overlay base config hash mismatch")
+    config = copy.deepcopy(_load(base_path))
+    config["authorization"] = copy.deepcopy(overlay.get("authorization", {}))
+    config["_authorization_execution"] = copy.deepcopy(overlay.get("execution", {}))
+    config["_authorized_overlay_path"] = str(path)
+    return config
+
+
+def _require_execution_authorization(config: Mapping[str, Any]) -> None:
+    if config.get("authorization", {}).get("execution_permitted") is not True:
+        raise V9RuntimeError("V9 execution is not authorized")
+    execution = config.get("_authorization_execution")
+    if not isinstance(execution, Mapping):
+        raise V9RuntimeError("V9 execution requires a hash-bound authorization overlay")
+    required_sha = str(execution.get("required_implementation_git_sha") or "")
+    if not required_sha or subprocess.run(["git", "cat-file", "-e", required_sha], cwd=ROOT, check=False).returncode:
+        raise V9RuntimeError("V9 required implementation SHA is unavailable")
+    files = execution.get("authorized_code_files")
+    if not isinstance(files, list) or not files:
+        raise V9RuntimeError("V9 authorization code whitelist is missing")
+    for item in files:
+        if not isinstance(item, Mapping):
+            raise V9RuntimeError("V9 authorization code whitelist is invalid")
+        code_path = _resolve(str(item.get("path") or ""))
+        if not code_path.is_file() or _hash(code_path) != item.get("sha256"):
+            raise V9RuntimeError(f"V9 authorized code hash mismatch: {code_path}")
+
+
 def _write_json(path: Path, value: Mapping[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(value, ensure_ascii=False, indent=2, allow_nan=False) + "\n", encoding="utf-8")
@@ -96,7 +131,7 @@ def _methods(config: Mapping[str, Any]) -> dict[str, np.ndarray]:
 
 def validate_design(config_path: Path) -> dict[str, Any]:
     """Validate V9 inputs without instantiating JSBSim or creating outputs."""
-    config = _load(config_path)
+    config = _load_runtime_config(config_path)
     if config.get("source_id") != SOURCE_ID:
         raise V9RuntimeError("V9 source ID drifted")
     if config.get("authorization", {}).get("training_permitted") is not False:
@@ -345,13 +380,12 @@ def main() -> int:
     parser.add_argument("--config", type=Path, required=True)
     parser.add_argument("--execute", action="store_true")
     args = parser.parse_args()
-    config = _load(args.config)
+    config = _load_runtime_config(args.config)
     preflight = validate_design(args.config)
     if not args.execute:
         print(json.dumps(preflight, ensure_ascii=False, indent=2))
         return 0
-    if config.get("authorization", {}).get("execution_permitted") is not True:
-        raise V9RuntimeError("V9 execution is not authorized")
+    _require_execution_authorization(config)
     if subprocess.check_output(["git", "status", "--porcelain"], cwd=ROOT, text=True).strip():
         raise V9RuntimeError("V9 requires a clean worktree")
 

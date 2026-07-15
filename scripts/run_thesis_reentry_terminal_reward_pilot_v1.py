@@ -404,6 +404,16 @@ def run_pilot(config: Mapping[str, Any], output_root: Path) -> dict[str, Any]:
     return result
 
 
+def _emit_completion_result(result: Mapping[str, Any]) -> None:
+    """Best-effort stdout reporting after the authoritative files are written."""
+    try:
+        print(json.dumps(result, indent=2))
+    except OSError:
+        # A supervising shell may have closed stdout after timing out.  The
+        # completed manifest and summary must remain the authoritative result.
+        return
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--config", type=Path, required=True)
@@ -436,11 +446,13 @@ def main() -> int:
             "training_permitted": True,
             "heldout_executed": False,
         })
-        print(json.dumps(result, indent=2))
-        return 0
     except Exception as error:
         engine.write_json(output_root / "failure.json", {"source_id": SOURCE_ID, "error": repr(error)})
         raise
+    # The completed run is already persisted above.  A closed parent stdout pipe
+    # must not manufacture a failure artifact after a valid scientific result.
+    _emit_completion_result(result)
+    return 0
 
 
 if __name__ == "__main__":

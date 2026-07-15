@@ -1,0 +1,101 @@
+{
+  "classification": "post_completion_output_channel_failure",
+  "completion_artifacts_precede_failure": true,
+  "completion_timestamps_ns": {
+    "failure.json": 1784131675267580600,
+    "run_manifest.json": 1784131675267580600,
+    "training_summary.json": 1784131674970093500
+  },
+  "decision": {
+    "dev_safety_pass": true,
+    "heldout_must_remain_locked": true,
+    "heldout_permitted": false,
+    "practical_improvement_opponents": [],
+    "practical_improvement_threshold": -0.05
+  },
+  "dev_recomputation": [
+    {
+      "artifact": "E:\\uav-vpp-guidance-five-state-heldout-envelope-v1-results\\thesis_reentry_terminal_reward_pilot_v1\\dev_candidate\\step_10000.json",
+      "recomputed": {
+        "per_opponent": {
+          "end_to_end": {
+            "ego_crash_oob_delta_vs_head_on": 0.0,
+            "mean_paired_intent_loss_delta_vs_head_on": -0.0009231855471928396,
+            "paired_count": 4,
+            "safety_pass": true
+          },
+          "expert": {
+            "ego_crash_oob_delta_vs_head_on": 0.0,
+            "mean_paired_intent_loss_delta_vs_head_on": -0.00020769039789832652,
+            "paired_count": 6,
+            "safety_pass": true
+          },
+          "independent_ppo_vpp": {
+            "ego_crash_oob_delta_vs_head_on": 0.0,
+            "mean_paired_intent_loss_delta_vs_head_on": 0.0005013567430002067,
+            "paired_count": 6,
+            "safety_pass": true
+          }
+        },
+        "safety_pass": true,
+        "selection_score_worst_opponent_mean_delta": 0.0005013567430002067
+      },
+      "step": 10000,
+      "stored_summary_matches_recomputed": true
+    },
+    {
+      "artifact": "E:\\uav-vpp-guidance-five-state-heldout-envelope-v1-results\\thesis_reentry_terminal_reward_pilot_v1\\dev_candidate\\step_20000.json",
+      "recomputed": {
+        "per_opponent": {
+          "end_to_end": {
+            "ego_crash_oob_delta_vs_head_on": 0.0,
+            "mean_paired_intent_loss_delta_vs_head_on": -0.0009740322828291903,
+            "paired_count": 4,
+            "safety_pass": true
+          },
+          "expert": {
+            "ego_crash_oob_delta_vs_head_on": 0.0,
+            "mean_paired_intent_loss_delta_vs_head_on": 1.423116083506167e-05,
+            "paired_count": 6,
+            "safety_pass": true
+          },
+          "independent_ppo_vpp": {
+            "ego_crash_oob_delta_vs_head_on": 0.0,
+            "mean_paired_intent_loss_delta_vs_head_on": 0.0003087171801814022,
+            "paired_count": 6,
+            "safety_pass": true
+          }
+        },
+        "safety_pass": true,
+        "selection_score_worst_opponent_mean_delta": 0.0003087171801814022
+      },
+      "step": 20000,
+      "stored_summary_matches_recomputed": true
+    }
+  ],
+  "failure": {
+    "error": "OSError(22, 'Invalid argument')",
+    "source_id": "THESIS-REENTRY-TERMINAL-REWARD-PILOT-V1"
+  },
+  "result_root": "E:\\uav-vpp-guidance-five-state-heldout-envelope-v1-results\\thesis_reentry_terminal_reward_pilot_v1",
+  "runner_stdout_hypothesis": {
+    "checked": true,
+    "reason": "manifest_then_stdout_inside_exception_handler",
+    "runner_git_sha": "2be1888bb903c0950fdac9551c39bf4b781d5b86",
+    "supported": true
+  },
+  "selected_checkpoint": {
+    "best_matches_selected_sha256": true,
+    "best_sha256": "60a5c4521953008646c46c9ae8984956bf4211623c0d2e4c09b9dab94dd4d64b",
+    "step": 20000
+  },
+  "source_id": "THESIS-REENTRY-TERMINAL-REWARD-PILOT-V1",
+  "training": {
+    "attempts": 351,
+    "expected_steps": 20000,
+    "heldout_executed": false,
+    "recorded_steps": 20000,
+    "stop_reason": null,
+    "stopped": false
+  }
+}

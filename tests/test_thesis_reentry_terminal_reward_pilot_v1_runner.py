@@ -62,3 +62,13 @@ def test_authorized_overlay_requires_the_existing_independently_verified_preflig
     module._require_frozen_inputs(config)
     assert config["authorization"]["training_permitted"] is True
     assert config["authorization"]["heldout_execution_permitted"] is False
+
+
+def test_completed_result_tolerates_a_closed_stdout_pipe(monkeypatch):
+    module = _load()
+
+    def closed_stdout(*_args, **_kwargs):
+        raise OSError(22, "Invalid argument")
+
+    monkeypatch.setattr(module, "print", closed_stdout, raising=False)
+    module._emit_completion_result({"source_id": "test"})

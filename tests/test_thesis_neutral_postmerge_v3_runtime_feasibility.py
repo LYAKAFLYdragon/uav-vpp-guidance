@@ -199,6 +199,7 @@ def test_v3_future_authorized_overlay_must_hash_and_merge_a_design_base(tmp_path
     assert resolved_base == base
     assert merged["nested"] == {"frozen": 1, "authorization_only": 2}
     assert loaded_overlay["status"] == "authorized_one_time_execution"
+    assert loaded_overlay["base_config"] == str(base)
 
 
 def test_v3_authorized_overlay_scope_cannot_change_frozen_method_fields(tmp_path: Path):

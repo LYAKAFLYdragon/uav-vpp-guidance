@@ -68,13 +68,15 @@ def _git_value(*args: str) -> str:
 
 def _load_authorized_config(path: Path) -> tuple[dict[str, Any], Path, dict[str, Any]]:
     overlay = load_yaml(path)
-    base_value = overlay.pop("base_config", None)
+    base_value = overlay.get("base_config")
     if not base_value:
         raise RuntimeError("V3 execution requires a separate authorised overlay with base_config")
     base_path = _repo_path(str(base_value))
     execution = overlay.get("execution") if isinstance(overlay.get("execution"), Mapping) else {}
     _require_hash(base_path, execution.get("base_config_sha256"), "V3 base config")
-    return _merge(load_yaml(base_path), overlay), base_path, overlay
+    merge_overlay = dict(overlay)
+    merge_overlay.pop("base_config", None)
+    return _merge(load_yaml(base_path), merge_overlay), base_path, overlay
 
 
 def _validate_overlay_scope(overlay: Mapping[str, Any], base_path: Path) -> None:

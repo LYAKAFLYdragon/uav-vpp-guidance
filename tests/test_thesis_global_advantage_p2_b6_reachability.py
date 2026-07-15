@@ -147,12 +147,16 @@ def test_b6_candidate_gate_requires_each_opponent_independently():
     assert no_independent["selected_candidate"] is None
 
 
-def test_b6_runner_validates_design_but_refuses_unauthorised_execution():
+def test_b6_runner_validates_design_but_refuses_unauthorised_execution(tmp_path: Path):
     runner = _runner()
-    config, plan, _runtime, _registry, scenarios = runner.validate_sources(CONFIG)
+    payload = yaml.safe_load(CONFIG.read_text(encoding="utf-8"))
+    payload["authorization"]["execution_permitted"] = False
+    unauthorized_config = tmp_path / "b6_unauthorized.yaml"
+    unauthorized_config.write_text(yaml.safe_dump(payload), encoding="utf-8")
+    config, plan, _runtime, _registry, scenarios = runner.validate_sources(unauthorized_config)
 
     assert config["authorization"]["execution_permitted"] is False
     assert plan.execution_permitted is False
     assert len(scenarios) == 60
     with pytest.raises(runner.B6ReachabilityError, match="not authorised"):
-        runner.run(CONFIG)
+        runner.run(unauthorized_config)

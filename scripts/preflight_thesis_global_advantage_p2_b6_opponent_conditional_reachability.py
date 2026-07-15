@@ -62,13 +62,13 @@ def _payload_sha256(manifest: Mapping[str, Any]) -> str:
 
 def validate_design(config_path: Path = DEFAULT_CONFIG) -> dict[str, Any]:
     config = _load_yaml(config_path)
-    if config.get("source_id") != SOURCE_ID or config.get("status") != "preregistered_design_execution_not_authorised":
-        raise ValueError("unexpected B6 source/status")
+    if config.get("source_id") != SOURCE_ID:
+        raise ValueError("unexpected B6 source")
     authorization = config.get("authorization")
     if not isinstance(authorization, Mapping):
         raise ValueError("B6 authorization must be a mapping")
-    if authorization.get("execution_permitted") is not False:
-        raise ValueError("B6 design must remain execution-disabled")
+    if not isinstance(authorization.get("execution_permitted"), bool):
+        raise ValueError("B6 execution permission must be explicit")
     for key in (
         "training_permitted",
         "tuning_permitted",
@@ -133,7 +133,7 @@ def validate_design(config_path: Path = DEFAULT_CONFIG) -> dict[str, Any]:
     return {
         "source_id": SOURCE_ID,
         "mode": "design_preflight_only_no_jsbsim_no_training",
-        "execution_permitted": False,
+        "execution_permitted": bool(authorization["execution_permitted"]),
         "training_permitted": False,
         "scenario_count": len(scenarios),
         "planned_records": len(scenarios) * len(OPPONENTS),

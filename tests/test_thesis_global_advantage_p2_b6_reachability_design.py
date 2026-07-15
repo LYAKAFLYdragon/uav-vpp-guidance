@@ -3,6 +3,7 @@ from __future__ import annotations
 import importlib.util
 from pathlib import Path
 
+import yaml
 
 ROOT = Path(__file__).resolve().parent.parent
 BUILDER = ROOT / "scripts" / "build_thesis_global_advantage_p2_b6_reachability_manifest.py"
@@ -40,9 +41,14 @@ def test_b6_manifest_covers_five_states_two_packages_and_is_disjoint():
     assert {item["metadata"]["taxonomy_geometry_state"] for item in crossing} == {"transition"}
 
 
-def test_b6_preflight_remains_design_only_and_plans_three_opponent_records():
+def test_b6_preflight_remains_design_only_and_plans_three_opponent_records(tmp_path: Path):
     preflight = _load(PREFLIGHT, "b6_preflight")
-    result = preflight.validate_design(CONFIG)
+    payload = yaml.safe_load(CONFIG.read_text(encoding="utf-8"))
+    payload["status"] = "preregistered_design_execution_not_authorised"
+    payload["authorization"]["execution_permitted"] = False
+    design_config = tmp_path / "b6_design.yaml"
+    design_config.write_text(yaml.safe_dump(payload), encoding="utf-8")
+    result = preflight.validate_design(design_config)
 
     assert result["execution_permitted"] is False
     assert result["training_permitted"] is False

@@ -15,6 +15,8 @@ inputs:
   runtime_template_sha256: 5aa9fbc1420cf7e690f76e1d5306fa6a0b5e2eb11c6802da50f7ec285ad57cc3
   runtime_registry: config/experiment/thesis_neutral_postmerge_reentry_recovery_pilot_v1_execution_runtime_registry.yaml
   runtime_registry_sha256: e3124120b33b55c1018da6d8d133ef15b5cf5e6c5c04361d6b90498b0b279ca8
+  v17_reference_gate: E:/uav-vpp-guidance-five-state-heldout-envelope-v1-results/five_state_v17_path_context_preflight/path_context_preflight_gate.json
+  v17_reference_gate_sha256: f6ab06dc25b99b392587338b58a8bf5d136c97ed71657d7b80a5b469457d58c5
 opponents:
   order: [expert, end_to_end, independent_ppo_vpp]
   pooled_gate: prohibited
@@ -34,6 +36,9 @@ analysis_ready:
   condition: history_length_equals_10_and_prediction_valid_true_and_prediction_fallback_false
   required_complete_telemetry: true
   per_opponent_min_steps: 20
+gates:
+  records_per_opponent: 24
+  per_opponent_analysis_ready_steps_min: 20
 expected_v17_phase_replay:
   expert: {handoff_reached: 9, valid_path_context_steps: 180}
   end_to_end: {handoff_reached: 4, valid_path_context_steps: 80}

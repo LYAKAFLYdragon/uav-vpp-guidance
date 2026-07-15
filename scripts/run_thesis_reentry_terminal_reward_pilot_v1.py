@@ -91,6 +91,37 @@ def _checkpoint_metadata(config: Mapping[str, Any]) -> dict[str, Any]:
     }
 
 
+def _require_verified_preflight(config: Mapping[str, Any]) -> None:
+    authorization = config["authorization"]
+    expected_source = authorization["required_preflight_source_id"]
+    gate_path = Path(authorization["required_preflight_gate"])
+    verification_path = Path(authorization["required_preflight_verification"])
+    if not gate_path.is_file() or not verification_path.is_file():
+        raise ValueError("required preflight artifacts are missing")
+    gate = json.loads(gate_path.read_text(encoding="utf-8"))
+    verification = json.loads(verification_path.read_text(encoding="utf-8"))
+    gate_passes = gate.get("passes")
+    gate_passes = gate_passes is True or (
+        isinstance(gate_passes, int) and not isinstance(gate_passes, bool) and gate_passes == 1
+    )
+    if gate.get("source_id") != expected_source or not gate_passes:
+        raise ValueError("preflight gate did not pass")
+    if verification.get("source_id") != expected_source or verification.get("verification_status") != "pass" or verification.get("passes") is not True:
+        raise ValueError("preflight independent verification did not pass")
+
+
+def _require_frozen_inputs(config: Mapping[str, Any]) -> None:
+    for label in ("train_distribution", "dev_manifest", "heldout_manifest", "runtime_template", "runtime_registry"):
+        path = _resolve(config["inputs"][label])
+        expected = str(config["inputs"][f"{label}_sha256"]).lower()
+        if not path.is_file() or _hash(path) != expected:
+            raise ValueError(f"{label} hash mismatch")
+    encoder = Path(config["inputs"]["frozen_p3_encoder"])
+    expected_encoder = str(config["inputs"]["frozen_p3_encoder_sha256"]).lower()
+    if not encoder.is_file() or _hash(encoder) != expected_encoder:
+        raise ValueError("frozen P3 encoder hash mismatch")
+
+
 def _sample_train_scenario(distribution: Mapping[str, Any], episode_index: int) -> dict[str, Any]:
     """Sample a deterministic continuous geometry without touching dev/heldout."""
 
@@ -384,11 +415,17 @@ def main() -> int:
         return 0
     if config["authorization"]["execution_permitted"] is not True or config["authorization"]["training_permitted"] is not True:
         raise ValueError("pilot execution is not authorized")
+    if config["authorization"].get("heldout_execution_permitted") is not False:
+        raise ValueError("dev-only pilot must prohibit heldout execution")
+    _require_verified_preflight(config)
+    _require_frozen_inputs(config)
     if subprocess.check_output(["git", "status", "--porcelain"], cwd=ROOT, text=True).strip():
         raise ValueError("pilot requires clean worktree")
     output_root = Path(config["outputs"]["runtime_root"])
     if output_root.exists():
         raise ValueError("pilot output root already exists")
+    if shutil.disk_usage(output_root.parent).free / 1024 ** 3 < float(config["observability"]["min_free_disk_gb"]):
+        raise ValueError("insufficient free disk")
     output_root.mkdir(parents=True)
     try:
         result = run_pilot(config, output_root)

@@ -1,0 +1,20 @@
+source_id: THESIS-REENTRY-TERMINAL-REWARD-PILOT-V1
+base_config: config/experiment/thesis_reentry_terminal_reward_pilot_v1_runtime_design.yaml
+base_config_sha256: 96690566202530fa6a5568b0cd77f870b046241f2d35307c5e96cf3ec9dd61f7
+authorization:
+  execution_permitted: true
+  training_permitted: true
+  tuning_permitted: false
+  heldout_execution_permitted: false
+  reward_change_permitted: false
+  high_level_ppo_training_permitted: false
+  snapshot_restore: false
+  future_state_injection: false
+  history_padding_permitted: false
+  one_time_dev_only_pilot: true
+  required_preflight_source_id: THESIS-REENTRY-TERMINAL-REWARD-PILOT-V1-PREFLIGHT
+  required_preflight_gate: E:/uav-vpp-guidance-five-state-heldout-envelope-v1-results/thesis_reentry_terminal_reward_pilot_v1_preflight/preflight_gate.json
+  required_preflight_verification: E:/uav-vpp-guidance-five-state-heldout-envelope-v1-results/thesis_reentry_terminal_reward_pilot_v1_preflight/independent_verification.json
+outputs:
+  runtime_root: E:/uav-vpp-guidance-five-state-heldout-envelope-v1-results/thesis_reentry_terminal_reward_pilot_v1
+  heldout_execution_permitted: false

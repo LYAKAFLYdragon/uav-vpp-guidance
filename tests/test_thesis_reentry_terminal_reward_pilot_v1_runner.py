@@ -50,3 +50,15 @@ def test_runtime_design_resolves_the_hashed_preregistered_base_config():
     assert config["source_id"] == "THESIS-REENTRY-TERMINAL-REWARD-PILOT-V1"
     assert config["proposed_training"]["total_timesteps"] == 20000
     assert config["reward"]["terminal_outcome_reward"]["win_bonus"] == 1.0
+
+
+def test_authorized_overlay_requires_the_existing_independently_verified_preflight():
+    module = _load()
+    config, _ = module.load_runtime_config(
+        ROOT / "config/experiment/thesis_reentry_terminal_reward_pilot_v1_authorized.yaml"
+    )
+
+    module._require_verified_preflight(config)
+    module._require_frozen_inputs(config)
+    assert config["authorization"]["training_permitted"] is True
+    assert config["authorization"]["heldout_execution_permitted"] is False

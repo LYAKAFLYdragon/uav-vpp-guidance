@@ -21,6 +21,16 @@ def _load_runner():
     return module
 
 
+def _load_verifier():
+    path = ROOT / "scripts" / "verify_thesis_five_state_reentry_v10_action_authority.py"
+    spec = importlib.util.spec_from_file_location("v10_action_authority_verifier", path)
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
 def _step() -> dict:
     return {
         "vp_forward_bias_m": 10.0,
@@ -65,3 +75,10 @@ def test_v10_design_keeps_training_and_reward_changes_locked():
     assert config["authorization"]["training_permitted"] is False
     assert config["authorization"]["reward_change_permitted"] is False
     assert config["telemetry_contract"]["backend_unobserved"] == ["vp_vertical_bias_m"]
+
+
+def test_v10_verifier_tolerates_json_float_round_trip_but_not_material_difference():
+    module = _load_verifier()
+
+    assert module._equivalent({"value": 0.2499999995529652}, {"value": 0.24999999955296515})
+    assert not module._equivalent({"value": 0.25}, {"value": 0.2501})

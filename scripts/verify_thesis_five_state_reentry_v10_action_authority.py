@@ -48,6 +48,17 @@ def _finite(value: Any, name: str) -> float:
     return float(value)
 
 
+def _equivalent(left: Any, right: Any) -> bool:
+    """Compare recomputed JSON while tolerating harmless float round trips."""
+    if isinstance(left, (int, float)) and isinstance(right, (int, float)):
+        return math.isclose(float(left), float(right), rel_tol=0.0, abs_tol=1e-12)
+    if isinstance(left, Mapping) and isinstance(right, Mapping):
+        return set(left) == set(right) and all(_equivalent(left[key], right[key]) for key in left)
+    if isinstance(left, list) and isinstance(right, list):
+        return len(left) == len(right) and all(_equivalent(a, b) for a, b in zip(left, right))
+    return left == right
+
+
 def _replay_phase(trace: list[Mapping[str, Any]], event: Mapping[str, Any]) -> None:
     tracker = RawSIReentryPhaseTracker(RawSIReentryPhaseConfig(first_pass=RawSIFirstPassConfig(**dict(event))))
     previous = -1
@@ -137,7 +148,7 @@ def verify(output_root: Path) -> dict[str, Any]:
         safety_delta_max=float(gates["ego_crash_oob_delta_vs_reference_max"]),
     )
     expected_gate = {"source_id": SOURCE_ID, **summary}
-    if _json(output_root / "action_authority_gate.json") != expected_gate:
+    if not _equivalent(_json(output_root / "action_authority_gate.json"), expected_gate):
         raise ValueError("V10 runner and verifier gates differ")
     manifest = _json(output_root / "run_manifest.json")
     if manifest.get("training") != "prohibited" or int(manifest.get("records", -1)) != len(records):

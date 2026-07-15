@@ -35,9 +35,15 @@ def test_finite_vector_rejects_nonfinite_or_wrong_shape():
             raise AssertionError("invalid action must fail closed")
 
 
-def test_default_config_validates_sources_without_execution_authorization():
+def test_source_contract_validates_without_execution_authorization(tmp_path: Path):
     runner = _module()
-    config, manifest, _runtime, _registry, scenarios = runner._validate_sources(CONFIG)
+    payload = yaml.safe_load(CONFIG.read_text(encoding="utf-8"))
+    payload["authorization"]["execution_permitted"] = False
+    payload["authorization"]["required_implementation_git_sha"] = None
+    payload["authorization"]["authorized_code_files"] = []
+    config_path = tmp_path / "p2_not_authorized.yaml"
+    config_path.write_text(yaml.safe_dump(payload), encoding="utf-8")
+    config, manifest, _runtime, _registry, scenarios = runner._validate_sources(config_path)
     assert config["authorization"]["execution_permitted"] is False
     assert manifest["source_id"] == "THESIS-GLOBAL-ADVANTAGE-V1-P2-PHYSICAL-PREFLIGHT60-V1"
     assert len(scenarios) == 60
@@ -81,6 +87,9 @@ def test_execution_authorization_requires_frozen_ancestor_and_exact_code_hashes(
 def test_source_hash_mismatch_fails_closed(tmp_path: Path):
     runner = _module()
     config = yaml.safe_load(CONFIG.read_text(encoding="utf-8"))
+    config["authorization"]["execution_permitted"] = False
+    config["authorization"]["required_implementation_git_sha"] = None
+    config["authorization"]["authorized_code_files"] = []
     config["inputs"]["manifest_sha256"] = "0" * 64
     config_path = tmp_path / "tampered_p2.yaml"
     config_path.write_text(yaml.safe_dump(config), encoding="utf-8")

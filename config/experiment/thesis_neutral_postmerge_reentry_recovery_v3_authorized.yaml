@@ -1,0 +1,55 @@
+base_config: config/experiment/thesis_neutral_postmerge_reentry_recovery_v3_runtime_feasibility.yaml
+status: authorized_one_time_execution
+authorization:
+  execution_permitted: true
+  training_permitted: false
+  tuning_permitted: false
+  candidate_policy_loading_permitted: false
+  high_level_ppo_training_permitted: false
+  four_skill_training_permitted: false
+  combat_finetune_permitted: false
+  vpp_change_permitted: false
+  guidance_change_permitted: false
+  pid_change_permitted: false
+  snapshot_restore: false
+  future_state_injection: false
+  history_padding_permitted: false
+  heldout_claims_permitted: false
+execution:
+  base_config_sha256: 363c8ab6c3443836f6e3d127feb0df0ea5cf471ce5ba6d23f6069c8558e98fc1
+  required_implementation_git_sha: 6c2eb5519ebda9472096127479cbce032d18ff72
+  authorization_delta_paths:
+    - config/experiment/thesis_neutral_postmerge_reentry_recovery_v3_authorized.yaml
+  authorized_code_files:
+    - path: scripts/run_thesis_neutral_postmerge_reentry_recovery_v3_runtime_feasibility.py
+      sha256: 4fc8e180e49cffab61d1996353f2318c017e4449f94447f14f39d0fa0bb4dee3
+    - path: scripts/preflight_thesis_neutral_postmerge_reentry_recovery_v3_runtime_feasibility.py
+      sha256: 694e0dd5f7a96607c0d41d19694dcd965a263f50a0c19e1a1fa32556c36539d4
+    - path: scripts/build_thesis_neutral_postmerge_reentry_recovery_v3_feasibility_manifest.py
+      sha256: 35dc5fea3c8d18e49cf6b0b946f53f9b94d374d103d6b21cec7f41b5318ac861
+    - path: scripts/run_thesis_global_advantage_p2_b3_phase_observability.py
+      sha256: 808096729748c015f2d348dc09f2acacc3063afa427ed0e5090e49535c03d5ee
+    - path: src/uav_vpp_guidance/evaluation/thesis_neutral_postmerge_v3_contract.py
+      sha256: 286fdf9f39865a31773144a21ce621aa3287e4e8348d269ef3329c59477950de
+    - path: src/uav_vpp_guidance/evaluation/thesis_neutral_postmerge_v3_runtime.py
+      sha256: c550a26c359af217a56d693980c0a70b881e4f0d2b125c3754ee18416d799e07
+    - path: src/uav_vpp_guidance/training/thesis_neutral_postmerge_reentry_recovery_pilot.py
+      sha256: dd55d0cca4f223f0d89deda6e4a45907f6bc8c6282e96e7b6f955f7221fcc49c
+    - path: src/uav_vpp_guidance/envs/tracking_env.py
+      sha256: 7596f6b7250c52f76db5c7612496a1f5afcbb2bdd2dba934ce066b9c4f3805a3
+    - path: src/uav_vpp_guidance/envs/expert_opponent.py
+      sha256: 01f440c97369c3490c6ba025d7d14a894958cd83a2fb2f92199171225a633614
+    - path: src/uav_vpp_guidance/envs/end_to_end_opponent.py
+      sha256: e3ae806fdfa674b7473adf7c6c77aae1e62edc8bbda66dd8b224887f6c79e97f
+    - path: src/uav_vpp_guidance/envs/vpp_ppo_opponent.py
+      sha256: 4853393892d00a2c48a40a6d2e49508f9918d2d69069b4f60c01723bed6a10e0
+    - path: src/uav_vpp_guidance/evaluation/feature_name_projected_opponent.py
+      sha256: dc374423711d012d98a54dd61aeaab285c370ef11f0671c4c7bef11c2c40e345
+    - path: src/uav_vpp_guidance/hierarchy/specialist_policy.py
+      sha256: fbc64964a6056382602e3fbe3ca802be13e915677b597b8b0c03dd9b7e5ff3ce
+    - path: src/uav_vpp_guidance/hierarchy/shared_intent_profiles.py
+      sha256: 0353b5afc6d3a6e0270b97d8b9c032087f425699660c382d67504fe5fa8351b3
+    - path: src/uav_vpp_guidance/hierarchy/shared_intent_validity.py
+      sha256: 06fadde7d9a286f6ee5f7c47e5218361fa1abb7e30c26af266b814d211b3b647
+outputs:
+  creation_permitted_by_this_config: true

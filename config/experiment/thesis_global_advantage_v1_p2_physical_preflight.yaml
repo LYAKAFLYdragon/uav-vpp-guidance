@@ -1,11 +1,23 @@
 schema_version: 1
 source_id: THESIS-GLOBAL-ADVANTAGE-V1-P2-PHYSICAL-PREFLIGHT-V1
-status: implementation_freeze_pending_authorization
+status: one_shot_execution_authorized
 
 authorization:
-  execution_permitted: false
-  required_implementation_git_sha: null
-  authorized_code_files: []
+  execution_permitted: true
+  required_implementation_git_sha: 7e9092caf3e109728ae7c863cfdc031c484715c8
+  authorized_code_files:
+    - path: scripts/run_thesis_global_advantage_p2_physical_preflight.py
+      sha256: 27cbbe61a10d871788a1e18a9606e79957c617e032b0312199f6e9cabb9674c4
+    - path: src/uav_vpp_guidance/evaluation/global_advantage_runin_contract.py
+      sha256: 314b742c7417fce2fa7001965d69faba6f1934bf3e05d72ef5f3d9b7787b65df
+    - path: src/uav_vpp_guidance/training/thesis_defext_rangeext_pilot.py
+      sha256: c598738dfd7a548d642079fef9eb23bdb9d71fb94a8d7575826ae56505d52fc5
+    - path: src/uav_vpp_guidance/training/thesis_shared_skill_geometry.py
+      sha256: 4de550c2d405e657004dfb9aece07ecea8f8782f4efbac4b0d859b136a51d6a8
+    - path: src/uav_vpp_guidance/envs/tracking_env.py
+      sha256: 7596f6b7250c52f76db5c7612496a1f5afcbb2bdd2dba934ce066b9c4f3805a3
+    - path: src/uav_vpp_guidance/guidance/overload_rollrate.py
+      sha256: f1f7ee541a4050b7297d004d054d6cf2d6f34bfb090396c71fb5a4952b02333a
   training_permitted: false
   tuning_permitted: false
   candidate_policy_loading_permitted: false

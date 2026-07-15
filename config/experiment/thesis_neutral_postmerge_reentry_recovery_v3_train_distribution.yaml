@@ -1,0 +1,36 @@
+schema_version: 1
+source_id: THESIS-NEUTRAL-POSTMERGE-REENTRY-RECOVERY-RUNTIME-FEASIBILITY-V3-TRAIN
+status: preregistered_identity_contract_only
+training_permitted: false
+identity_contract:
+  identity_kind: train
+  train_stream_id: neutral_postmerge_reentry_v3_train
+  scenario_seed_field: metadata.scenario_seed
+  evaluation_pair_metadata: prohibited
+  paired_delta_eligible: false
+sampling_contract:
+  sampler: continuous_physical_run_in_neutral_postmerge_v3
+  seed: 2026071701
+  initial_class: neutral
+  own_to_target_los_angle_deg: [158.0, 162.0]
+  target_velocity_to_own_los_angle_deg: [158.0, 162.0]
+  los_azimuth_abs_deg: [14.0, 24.0]
+  own_altitude_m: [5000.0, 5400.0]
+  target_minus_own_altitude_m: [-600.0, 600.0]
+  initial_range_m: [3400.0, 4800.0]
+  own_speed_mps: [225.0, 285.0]
+  target_speed_mps: [350.0, 420.0]
+  require_target_faster_than_own_by_mps: 90.0
+  mirror_signs: [negative, positive]
+  phase_path: legal_pre_merge_to_first_pass_to_neutral_post_merge
+  continuous_physical_run_in: true
+  opponents: [expert, end_to_end, independent_ppo_vpp]
+  balanced_opponent_sampling: true
+  candidate_skill: reentry_recovery
+  fixed_profile: reentry_preparation
+leakage_controls:
+  v1_v2_result_reuse: prohibited
+  runtime_feasibility48_physical_state_reuse: prohibited
+  b2_to_b6_trajectory_reuse: prohibited
+  heldout240_dev30_heldout60_trajectory_reuse: prohibited
+  normalization_fit_split: train_only

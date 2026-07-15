@@ -179,5 +179,6 @@
 - [x] R5 已于 2026-07-15 一次性执行并通过：270/270 raw artifact、90/90 cell、每 cell 3 repeat；reset/action/trajectory/boundary/terminal 全等价，无 telemetry 或 fallback 缺失。Gate SHA-256 为 `71d00a4997d277ccc179f3b8252a8078081a39ebe24c3858ee758448581fcc0b`。
 - [x] **P1 已通过：** `THESIS-GLOBAL-ADVANTAGE-V1-P1-R5-JSON-TELEMETRY-REPRO-V1` 已证明冻结 dev30 x 三对手 run-in 协议可重复；R1--R4 保持独立实现失败或负证据归档，不被覆盖。
 - [x] **P2-A manifest freeze：** `THESIS-GLOBAL-ADVANTAGE-V1-HELDOUT240-V1` 已冻结 60 个物理几何 cell x 4 evaluation seed = 240 条独立实例；与 train support、dev30 和旧 heldout60 的实例及物理签名均不相交，payload SHA-256 为 `249234e96e802aa35a72bf2208986a723cba7387109fe1349fd0cff4f0b29526`。
-- [ ] **当前唯一允许动作：完成 P2-B 的 heldout240 physical-reachability 与三对手定量 capability-card preflight；不得直接训练、调参或启动 formal held-out。**
+- [x] **P2-B1 capability card：** 从 R5 的共同 frozen run-in specialist、每对手 30 个固定 repeat_0/forward episode 构建了 target speed/altitude/specific energy、攻击区、first-pass、terminal 与 crash/OOB 卡；无 Elo 或总强度排序。
+- [ ] **当前唯一允许动作：完成 P2-B2 的独立 pre-merge/re-entry physical-reachability preflight；R5 capability card 的 phase 仅为 post_merge，不能代替此 gate。不得直接训练、调参或启动 formal held-out。**
 - [ ] P2--P8 均未授权；尤其不允许以“追求全场景优势”为由绕过 P1/P3 的负证据和 stop rule。

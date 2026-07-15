@@ -1,0 +1,79 @@
+source_id: THESIS-GLOBAL-ADVANTAGE-V1-P2-CAPABILITY-CARD-V1
+status: read_only_interaction_conditioned_capability_documentation
+claim_boundary: No Elo, total-strength ranking, or universal opponent ordering. Values
+  describe pressure observed under the common frozen run-in reference on P1 dev30
+  only.
+evidence:
+  p1_source_id: THESIS-GLOBAL-ADVANTAGE-V1-P1-R5-JSON-TELEMETRY-REPRO-V1
+  p1_gate_sha256: 71d00a4997d277ccc179f3b8252a8078081a39ebe24c3858ee758448581fcc0b
+  p1_run_manifest_sha256: 9195f0d7c38cf67ec6bd641e7b09f060529143681cec4e3dc475261f104d7631
+  selected_repeat:
+    repeat_index: 0
+    order_variant: forward
+  selection_rule: P1 proved all three repeats equivalent before this fixed view was
+    selected.
+cards:
+  expert:
+    episode_count: 30
+    reference_policy: frozen_run_in_head_on_specialist
+    target_speed_mean_mps: 268.9733372928668
+    target_altitude_mean_m: 3984.9765252437337
+    target_specific_energy_mean_j_per_kg: 75626.14203234346
+    ego_attack_zone_fraction: 0.21830316044842707
+    target_attack_zone_fraction: 0.15487855257712135
+    phase_fraction:
+      pre_merge: 0.0
+      post_merge: 1.0
+      re_entry: 0.0
+    first_pass_episode_fraction: 0.43333333333333335
+    first_pass_step_mean: 84.23076923076923
+    terminal_reason_counts:
+      ego_crash_or_out_of_bounds: 4
+      target_crash_or_out_of_bounds: 7
+      timeout_draw: 1
+      timeout_hp_advantage: 13
+      timeout_hp_disadvantage: 5
+    ego_crash_or_oob_fraction: 0.13333333333333333
+    target_crash_or_oob_fraction: 0.23333333333333334
+  end_to_end:
+    episode_count: 30
+    reference_policy: frozen_run_in_head_on_specialist
+    target_speed_mean_mps: 283.82964070387203
+    target_altitude_mean_m: 3470.9119342372023
+    target_specific_energy_mean_j_per_kg: 74603.57804608451
+    ego_attack_zone_fraction: 0.2975623317847344
+    target_attack_zone_fraction: 0.09492108124626432
+    phase_fraction:
+      pre_merge: 0.0
+      post_merge: 1.0
+      re_entry: 0.0
+    first_pass_episode_fraction: 0.26666666666666666
+    first_pass_step_mean: 62.75
+    terminal_reason_counts:
+      ego_crash_or_out_of_bounds: 1
+      target_crash_or_out_of_bounds: 12
+      timeout_hp_advantage: 14
+      timeout_hp_disadvantage: 3
+    ego_crash_or_oob_fraction: 0.03333333333333333
+    target_crash_or_oob_fraction: 0.4
+  independent_ppo_vpp:
+    episode_count: 30
+    reference_policy: frozen_run_in_head_on_specialist
+    target_speed_mean_mps: 268.301728277186
+    target_altitude_mean_m: 4006.5415091308537
+    target_specific_energy_mean_j_per_kg: 75631.40625267765
+    ego_attack_zone_fraction: 0.23229546575456936
+    target_attack_zone_fraction: 0.1410440260020749
+    phase_fraction:
+      pre_merge: 0.0
+      post_merge: 1.0
+      re_entry: 0.0
+    first_pass_episode_fraction: 0.43333333333333335
+    first_pass_step_mean: 78.07692307692308
+    terminal_reason_counts:
+      ego_crash_or_out_of_bounds: 3
+      target_crash_or_out_of_bounds: 9
+      timeout_hp_advantage: 10
+      timeout_hp_disadvantage: 8
+    ego_crash_or_oob_fraction: 0.1
+    target_crash_or_oob_fraction: 0.3

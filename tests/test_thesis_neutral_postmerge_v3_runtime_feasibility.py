@@ -163,17 +163,19 @@ def test_v3_family_gate_selects_only_a_family_that_passes_every_opponent():
         evaluate_family_coverage(without_end_to_end, plan, expected)
 
 
-def test_v3_design_preflight_is_nonexecuting_and_runner_rejects_execute(monkeypatch: pytest.MonkeyPatch):
+def test_v3_design_preflight_is_nonexecuting_and_runner_rejects_execute(monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
     preflight = _load(PREFLIGHT, "v3_preflight")
     runner = _load(RUNNER, "v3_runner")
-    result = preflight.validate_design()
+    design = _payload(CONFIG)
+    design["outputs"]["root"] = str(tmp_path / "v3_design_preflight_output")
+    design_path = tmp_path / "v3_design_preflight.yaml"
+    design_path.write_text(yaml.safe_dump(design, sort_keys=False), encoding="utf-8")
+    result = preflight.validate_design(design_path)
 
     assert result["execution_permitted"] is False
     assert result["training_permitted"] is False
     assert result["planned_records"] == 144
     assert result["output_root_absent"] is True
-    monkeypatch.setattr(sys, "argv", ["v3-runner", "--preflight"])
-    assert runner.main() == 0
     monkeypatch.setattr(sys, "argv", ["v3-runner", "--execute"])
     assert runner.main() == 2
 

@@ -2,7 +2,7 @@
 
 **拟执行 Source ID：** `THESIS-NEUTRAL-POSTMERGE-REENTRY-RECOVERY-RUNTIME-FEASIBILITY-V3`  
 **当前状态：** `request_only_not_authorised`  
-**当前 canonical SHA：** `a843f2cdc195d01136547660311516b63e62bbca`  
+**当前 canonical SHA：** `a843f2cdc195d01136547660311516b63e62bbca`
 **基准配置 SHA-256：** `363c8ab6c3443836f6e3d127feb0df0ea5cf471ce5ba6d23f6069c8558e98fc1`
 
 ## 请求的唯一操作

@@ -1,0 +1,1530 @@
+source_id: THESIS-GLOBAL-ADVANTAGE-V1-P2-RAW-SI-PHASE-MANIFEST30-V1
+manifest_version: 1
+lane: noncanonical_thesis_extension
+family: thesis_five_state_shared_intent_v1
+split: p2_b4_raw_si_phase30
+protocol:
+  training_permitted: false
+  tuning_permitted: false
+  policy_evaluation_permitted: false
+  formal_heldout_claims_permitted: false
+  allowed_use: strict_jsbsim_raw_si_phase_preflight_only
+  opponents:
+  - expert
+  - end_to_end
+  - independent_ppo_vpp
+generation_contract:
+  initial_classes:
+  - advantage
+  - head_on
+  - disadvantage
+  - neutral
+  - crossing_entry
+  height_offsets_target_minus_own_m:
+    own_below: 600.0
+    co_altitude: 0.0
+    own_above: -600.0
+  mirror_signs:
+  - negative
+  - positive
+  package:
+    id: p2_b4_diagnostic_far_fast_f
+    initial_range_m: 4000.0
+    own_speed_mps: 275.0
+    target_speed_mps: 255.0
+  diagnostic_seed_base: 14001
+  scenario_count: 30
+disjointness:
+  p2_b2:
+    path: config/experiment/manifests/thesis_global_advantage_v1_p2_physical_preflight60.yaml
+    sha256: 78d90d6ea32490cc777d13e0a809061ec300f94ff6d7d012f93a9e9895ba834f
+    physical_intersection_count: 0
+  p2_b3:
+    path: config/experiment/manifests/thesis_global_advantage_v1_p2_b3_phase_observability30.yaml
+    sha256: d1e7c0e0750ec36eab6ef3ab7b6a353f7ceed8d88211d6d6535344c13e8a384c
+    physical_intersection_count: 0
+  heldout240:
+    path: config/experiment/manifests/thesis_global_advantage_v1_heldout240.yaml
+    sha256: 81114a64cc7c589f496cff8869eac814f9919bfbc16a03b0aaba69bd5ba8bef3
+    physical_intersection_count: 0
+  dev30:
+    path: config/experiment/manifests/thesis_five_state_shared_intent_v1_dev30.yaml
+    sha256: 6bd9c4282a4aa9724dee350114293421287ce0f00387b5b298e7be067c30d130
+    physical_intersection_count: 0
+  historical_heldout60:
+    path: config/experiment/manifests/thesis_five_state_shared_intent_v1_heldout60.yaml
+    sha256: f96f3c927a0de4702dee62e2894fe784ff945a21f4e5728749fba20666603b5a
+    physical_intersection_count: 0
+scenarios:
+- name: global_advantage_p2_b4_p2_b4_diagnostic_far_fast_f__advantage__own_below__negative_s14001
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 275.0
+    heading_deg: 0.112861273
+  target_init:
+    position_m:
+    - 3761.185038789
+    - -1222.083100279
+    - 5800.0
+    velocity_mps: 255.0
+    heading_deg: 0.112861273
+  metadata:
+    manifest_family: thesis_global_advantage_v1
+    split: p2_b4_raw_si_phase30
+    initial_class: advantage
+    height_condition: own_below
+    mirror_sign: negative
+    mirror_pair_id: p2_b4_diagnostic_far_fast_f__advantage__own_below
+    distance_speed_package: p2_b4_diagnostic_far_fast_f
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: false
+    scenario_seed: 14001
+    initial_range_m: 4000.0
+    altitude_diff_m: 600.0
+    own_speed_mps: 275.0
+    target_speed_mps: 255.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: advantage
+    diagnostic_seed: 14001
+    geometry_cell_id: p2_b4_diagnostic_far_fast_f__advantage__own_below__negative
+    p2_b4_raw_si_only: true
+    physical_geometry_signature:
+    - - 0.0
+      - 0.0
+      - 5200.0
+    - 275.0
+    - 0.112861
+    - - 3761.185039
+      - -1222.0831
+      - 5800.0
+    - 255.0
+    - 0.112861
+- name: global_advantage_p2_b4_p2_b4_diagnostic_far_fast_f__advantage__own_below__positive_s14002
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 275.0
+    heading_deg: 359.887138727
+  target_init:
+    position_m:
+    - 3761.185038789
+    - 1222.083100279
+    - 5800.0
+    velocity_mps: 255.0
+    heading_deg: 359.887138727
+  metadata:
+    manifest_family: thesis_global_advantage_v1
+    split: p2_b4_raw_si_phase30
+    initial_class: advantage
+    height_condition: own_below
+    mirror_sign: positive
+    mirror_pair_id: p2_b4_diagnostic_far_fast_f__advantage__own_below
+    distance_speed_package: p2_b4_diagnostic_far_fast_f
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: false
+    scenario_seed: 14002
+    initial_range_m: 4000.0
+    altitude_diff_m: 600.0
+    own_speed_mps: 275.0
+    target_speed_mps: 255.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: advantage
+    diagnostic_seed: 14002
+    geometry_cell_id: p2_b4_diagnostic_far_fast_f__advantage__own_below__positive
+    p2_b4_raw_si_only: true
+    physical_geometry_signature:
+    - - 0.0
+      - 0.0
+      - 5200.0
+    - 275.0
+    - 359.887139
+    - - 3761.185039
+      - 1222.0831
+      - 5800.0
+    - 255.0
+    - 359.887139
+- name: global_advantage_p2_b4_p2_b4_diagnostic_far_fast_f__advantage__co_altitude__negative_s14003
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 275.0
+    heading_deg: 2.0
+  target_init:
+    position_m:
+    - 3804.226065181
+    - -1236.0679775
+    - 5200.0
+    velocity_mps: 255.0
+    heading_deg: 2.0
+  metadata:
+    manifest_family: thesis_global_advantage_v1
+    split: p2_b4_raw_si_phase30
+    initial_class: advantage
+    height_condition: co_altitude
+    mirror_sign: negative
+    mirror_pair_id: p2_b4_diagnostic_far_fast_f__advantage__co_altitude
+    distance_speed_package: p2_b4_diagnostic_far_fast_f
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: false
+    scenario_seed: 14003
+    initial_range_m: 4000.0
+    altitude_diff_m: 0.0
+    own_speed_mps: 275.0
+    target_speed_mps: 255.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: advantage
+    diagnostic_seed: 14003
+    geometry_cell_id: p2_b4_diagnostic_far_fast_f__advantage__co_altitude__negative
+    p2_b4_raw_si_only: true
+    physical_geometry_signature:
+    - - 0.0
+      - 0.0
+      - 5200.0
+    - 275.0
+    - 2.0
+    - - 3804.226065
+      - -1236.067978
+      - 5200.0
+    - 255.0
+    - 2.0
+- name: global_advantage_p2_b4_p2_b4_diagnostic_far_fast_f__advantage__co_altitude__positive_s14004
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 275.0
+    heading_deg: 358.0
+  target_init:
+    position_m:
+    - 3804.226065181
+    - 1236.0679775
+    - 5200.0
+    velocity_mps: 255.0
+    heading_deg: 358.0
+  metadata:
+    manifest_family: thesis_global_advantage_v1
+    split: p2_b4_raw_si_phase30
+    initial_class: advantage
+    height_condition: co_altitude
+    mirror_sign: positive
+    mirror_pair_id: p2_b4_diagnostic_far_fast_f__advantage__co_altitude
+    distance_speed_package: p2_b4_diagnostic_far_fast_f
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: false
+    scenario_seed: 14004
+    initial_range_m: 4000.0
+    altitude_diff_m: 0.0
+    own_speed_mps: 275.0
+    target_speed_mps: 255.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: advantage
+    diagnostic_seed: 14004
+    geometry_cell_id: p2_b4_diagnostic_far_fast_f__advantage__co_altitude__positive
+    p2_b4_raw_si_only: true
+    physical_geometry_signature:
+    - - 0.0
+      - 0.0
+      - 5200.0
+    - 275.0
+    - 358.0
+    - - 3804.226065
+      - 1236.067978
+      - 5200.0
+    - 255.0
+    - 358.0
+- name: global_advantage_p2_b4_p2_b4_diagnostic_far_fast_f__advantage__own_above__negative_s14005
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 275.0
+    heading_deg: 0.112861273
+  target_init:
+    position_m:
+    - 3761.185038789
+    - -1222.083100279
+    - 4600.0
+    velocity_mps: 255.0
+    heading_deg: 0.112861273
+  metadata:
+    manifest_family: thesis_global_advantage_v1
+    split: p2_b4_raw_si_phase30
+    initial_class: advantage
+    height_condition: own_above
+    mirror_sign: negative
+    mirror_pair_id: p2_b4_diagnostic_far_fast_f__advantage__own_above
+    distance_speed_package: p2_b4_diagnostic_far_fast_f
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: false
+    scenario_seed: 14005
+    initial_range_m: 4000.0
+    altitude_diff_m: -600.0
+    own_speed_mps: 275.0
+    target_speed_mps: 255.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: advantage
+    diagnostic_seed: 14005
+    geometry_cell_id: p2_b4_diagnostic_far_fast_f__advantage__own_above__negative
+    p2_b4_raw_si_only: true
+    physical_geometry_signature:
+    - - 0.0
+      - 0.0
+      - 5200.0
+    - 275.0
+    - 0.112861
+    - - 3761.185039
+      - -1222.0831
+      - 4600.0
+    - 255.0
+    - 0.112861
+- name: global_advantage_p2_b4_p2_b4_diagnostic_far_fast_f__advantage__own_above__positive_s14006
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 275.0
+    heading_deg: 359.887138727
+  target_init:
+    position_m:
+    - 3761.185038789
+    - 1222.083100279
+    - 4600.0
+    velocity_mps: 255.0
+    heading_deg: 359.887138727
+  metadata:
+    manifest_family: thesis_global_advantage_v1
+    split: p2_b4_raw_si_phase30
+    initial_class: advantage
+    height_condition: own_above
+    mirror_sign: positive
+    mirror_pair_id: p2_b4_diagnostic_far_fast_f__advantage__own_above
+    distance_speed_package: p2_b4_diagnostic_far_fast_f
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: false
+    scenario_seed: 14006
+    initial_range_m: 4000.0
+    altitude_diff_m: -600.0
+    own_speed_mps: 275.0
+    target_speed_mps: 255.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: advantage
+    diagnostic_seed: 14006
+    geometry_cell_id: p2_b4_diagnostic_far_fast_f__advantage__own_above__positive
+    p2_b4_raw_si_only: true
+    physical_geometry_signature:
+    - - 0.0
+      - 0.0
+      - 5200.0
+    - 275.0
+    - 359.887139
+    - - 3761.185039
+      - 1222.0831
+      - 4600.0
+    - 255.0
+    - 359.887139
+- name: global_advantage_p2_b4_p2_b4_diagnostic_far_fast_f__head_on__own_below__negative_s14007
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 275.0
+    heading_deg: 0.112861273
+  target_init:
+    position_m:
+    - 3761.185038789
+    - -1222.083100279
+    - 5800.0
+    velocity_mps: 255.0
+    heading_deg: 143.887138727
+  metadata:
+    manifest_family: thesis_global_advantage_v1
+    split: p2_b4_raw_si_phase30
+    initial_class: head_on
+    height_condition: own_below
+    mirror_sign: negative
+    mirror_pair_id: p2_b4_diagnostic_far_fast_f__head_on__own_below
+    distance_speed_package: p2_b4_diagnostic_far_fast_f
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: false
+    scenario_seed: 14007
+    initial_range_m: 4000.0
+    altitude_diff_m: 600.0
+    own_speed_mps: 275.0
+    target_speed_mps: 255.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: head_on
+    diagnostic_seed: 14007
+    geometry_cell_id: p2_b4_diagnostic_far_fast_f__head_on__own_below__negative
+    p2_b4_raw_si_only: true
+    physical_geometry_signature:
+    - - 0.0
+      - 0.0
+      - 5200.0
+    - 275.0
+    - 0.112861
+    - - 3761.185039
+      - -1222.0831
+      - 5800.0
+    - 255.0
+    - 143.887139
+- name: global_advantage_p2_b4_p2_b4_diagnostic_far_fast_f__head_on__own_below__positive_s14008
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 275.0
+    heading_deg: 359.887138727
+  target_init:
+    position_m:
+    - 3761.185038789
+    - 1222.083100279
+    - 5800.0
+    velocity_mps: 255.0
+    heading_deg: 216.112861273
+  metadata:
+    manifest_family: thesis_global_advantage_v1
+    split: p2_b4_raw_si_phase30
+    initial_class: head_on
+    height_condition: own_below
+    mirror_sign: positive
+    mirror_pair_id: p2_b4_diagnostic_far_fast_f__head_on__own_below
+    distance_speed_package: p2_b4_diagnostic_far_fast_f
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: false
+    scenario_seed: 14008
+    initial_range_m: 4000.0
+    altitude_diff_m: 600.0
+    own_speed_mps: 275.0
+    target_speed_mps: 255.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: head_on
+    diagnostic_seed: 14008
+    geometry_cell_id: p2_b4_diagnostic_far_fast_f__head_on__own_below__positive
+    p2_b4_raw_si_only: true
+    physical_geometry_signature:
+    - - 0.0
+      - 0.0
+      - 5200.0
+    - 275.0
+    - 359.887139
+    - - 3761.185039
+      - 1222.0831
+      - 5800.0
+    - 255.0
+    - 216.112861
+- name: global_advantage_p2_b4_p2_b4_diagnostic_far_fast_f__head_on__co_altitude__negative_s14009
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 275.0
+    heading_deg: 2.0
+  target_init:
+    position_m:
+    - 3804.226065181
+    - -1236.0679775
+    - 5200.0
+    velocity_mps: 255.0
+    heading_deg: 142.0
+  metadata:
+    manifest_family: thesis_global_advantage_v1
+    split: p2_b4_raw_si_phase30
+    initial_class: head_on
+    height_condition: co_altitude
+    mirror_sign: negative
+    mirror_pair_id: p2_b4_diagnostic_far_fast_f__head_on__co_altitude
+    distance_speed_package: p2_b4_diagnostic_far_fast_f
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: false
+    scenario_seed: 14009
+    initial_range_m: 4000.0
+    altitude_diff_m: 0.0
+    own_speed_mps: 275.0
+    target_speed_mps: 255.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: head_on
+    diagnostic_seed: 14009
+    geometry_cell_id: p2_b4_diagnostic_far_fast_f__head_on__co_altitude__negative
+    p2_b4_raw_si_only: true
+    physical_geometry_signature:
+    - - 0.0
+      - 0.0
+      - 5200.0
+    - 275.0
+    - 2.0
+    - - 3804.226065
+      - -1236.067978
+      - 5200.0
+    - 255.0
+    - 142.0
+- name: global_advantage_p2_b4_p2_b4_diagnostic_far_fast_f__head_on__co_altitude__positive_s14010
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 275.0
+    heading_deg: 358.0
+  target_init:
+    position_m:
+    - 3804.226065181
+    - 1236.0679775
+    - 5200.0
+    velocity_mps: 255.0
+    heading_deg: 218.0
+  metadata:
+    manifest_family: thesis_global_advantage_v1
+    split: p2_b4_raw_si_phase30
+    initial_class: head_on
+    height_condition: co_altitude
+    mirror_sign: positive
+    mirror_pair_id: p2_b4_diagnostic_far_fast_f__head_on__co_altitude
+    distance_speed_package: p2_b4_diagnostic_far_fast_f
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: false
+    scenario_seed: 14010
+    initial_range_m: 4000.0
+    altitude_diff_m: 0.0
+    own_speed_mps: 275.0
+    target_speed_mps: 255.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: head_on
+    diagnostic_seed: 14010
+    geometry_cell_id: p2_b4_diagnostic_far_fast_f__head_on__co_altitude__positive
+    p2_b4_raw_si_only: true
+    physical_geometry_signature:
+    - - 0.0
+      - 0.0
+      - 5200.0
+    - 275.0
+    - 358.0
+    - - 3804.226065
+      - 1236.067978
+      - 5200.0
+    - 255.0
+    - 218.0
+- name: global_advantage_p2_b4_p2_b4_diagnostic_far_fast_f__head_on__own_above__negative_s14011
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 275.0
+    heading_deg: 0.112861273
+  target_init:
+    position_m:
+    - 3761.185038789
+    - -1222.083100279
+    - 4600.0
+    velocity_mps: 255.0
+    heading_deg: 143.887138727
+  metadata:
+    manifest_family: thesis_global_advantage_v1
+    split: p2_b4_raw_si_phase30
+    initial_class: head_on
+    height_condition: own_above
+    mirror_sign: negative
+    mirror_pair_id: p2_b4_diagnostic_far_fast_f__head_on__own_above
+    distance_speed_package: p2_b4_diagnostic_far_fast_f
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: false
+    scenario_seed: 14011
+    initial_range_m: 4000.0
+    altitude_diff_m: -600.0
+    own_speed_mps: 275.0
+    target_speed_mps: 255.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: head_on
+    diagnostic_seed: 14011
+    geometry_cell_id: p2_b4_diagnostic_far_fast_f__head_on__own_above__negative
+    p2_b4_raw_si_only: true
+    physical_geometry_signature:
+    - - 0.0
+      - 0.0
+      - 5200.0
+    - 275.0
+    - 0.112861
+    - - 3761.185039
+      - -1222.0831
+      - 4600.0
+    - 255.0
+    - 143.887139
+- name: global_advantage_p2_b4_p2_b4_diagnostic_far_fast_f__head_on__own_above__positive_s14012
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 275.0
+    heading_deg: 359.887138727
+  target_init:
+    position_m:
+    - 3761.185038789
+    - 1222.083100279
+    - 4600.0
+    velocity_mps: 255.0
+    heading_deg: 216.112861273
+  metadata:
+    manifest_family: thesis_global_advantage_v1
+    split: p2_b4_raw_si_phase30
+    initial_class: head_on
+    height_condition: own_above
+    mirror_sign: positive
+    mirror_pair_id: p2_b4_diagnostic_far_fast_f__head_on__own_above
+    distance_speed_package: p2_b4_diagnostic_far_fast_f
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: false
+    scenario_seed: 14012
+    initial_range_m: 4000.0
+    altitude_diff_m: -600.0
+    own_speed_mps: 275.0
+    target_speed_mps: 255.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: head_on
+    diagnostic_seed: 14012
+    geometry_cell_id: p2_b4_diagnostic_far_fast_f__head_on__own_above__positive
+    p2_b4_raw_si_only: true
+    physical_geometry_signature:
+    - - 0.0
+      - 0.0
+      - 5200.0
+    - 275.0
+    - 359.887139
+    - - 3761.185039
+      - 1222.0831
+      - 4600.0
+    - 255.0
+    - 216.112861
+- name: global_advantage_p2_b4_p2_b4_diagnostic_far_fast_f__disadvantage__own_below__negative_s14013
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 275.0
+    heading_deg: 143.887138727
+  target_init:
+    position_m:
+    - 3761.185038789
+    - -1222.083100279
+    - 5800.0
+    velocity_mps: 255.0
+    heading_deg: 143.887138727
+  metadata:
+    manifest_family: thesis_global_advantage_v1
+    split: p2_b4_raw_si_phase30
+    initial_class: disadvantage
+    height_condition: own_below
+    mirror_sign: negative
+    mirror_pair_id: p2_b4_diagnostic_far_fast_f__disadvantage__own_below
+    distance_speed_package: p2_b4_diagnostic_far_fast_f
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: false
+    scenario_seed: 14013
+    initial_range_m: 4000.0
+    altitude_diff_m: 600.0
+    own_speed_mps: 275.0
+    target_speed_mps: 255.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: disadvantage
+    diagnostic_seed: 14013
+    geometry_cell_id: p2_b4_diagnostic_far_fast_f__disadvantage__own_below__negative
+    p2_b4_raw_si_only: true
+    physical_geometry_signature:
+    - - 0.0
+      - 0.0
+      - 5200.0
+    - 275.0
+    - 143.887139
+    - - 3761.185039
+      - -1222.0831
+      - 5800.0
+    - 255.0
+    - 143.887139
+- name: global_advantage_p2_b4_p2_b4_diagnostic_far_fast_f__disadvantage__own_below__positive_s14014
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 275.0
+    heading_deg: 216.112861273
+  target_init:
+    position_m:
+    - 3761.185038789
+    - 1222.083100279
+    - 5800.0
+    velocity_mps: 255.0
+    heading_deg: 216.112861273
+  metadata:
+    manifest_family: thesis_global_advantage_v1
+    split: p2_b4_raw_si_phase30
+    initial_class: disadvantage
+    height_condition: own_below
+    mirror_sign: positive
+    mirror_pair_id: p2_b4_diagnostic_far_fast_f__disadvantage__own_below
+    distance_speed_package: p2_b4_diagnostic_far_fast_f
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: false
+    scenario_seed: 14014
+    initial_range_m: 4000.0
+    altitude_diff_m: 600.0
+    own_speed_mps: 275.0
+    target_speed_mps: 255.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: disadvantage
+    diagnostic_seed: 14014
+    geometry_cell_id: p2_b4_diagnostic_far_fast_f__disadvantage__own_below__positive
+    p2_b4_raw_si_only: true
+    physical_geometry_signature:
+    - - 0.0
+      - 0.0
+      - 5200.0
+    - 275.0
+    - 216.112861
+    - - 3761.185039
+      - 1222.0831
+      - 5800.0
+    - 255.0
+    - 216.112861
+- name: global_advantage_p2_b4_p2_b4_diagnostic_far_fast_f__disadvantage__co_altitude__negative_s14015
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 275.0
+    heading_deg: 142.0
+  target_init:
+    position_m:
+    - 3804.226065181
+    - -1236.0679775
+    - 5200.0
+    velocity_mps: 255.0
+    heading_deg: 142.0
+  metadata:
+    manifest_family: thesis_global_advantage_v1
+    split: p2_b4_raw_si_phase30
+    initial_class: disadvantage
+    height_condition: co_altitude
+    mirror_sign: negative
+    mirror_pair_id: p2_b4_diagnostic_far_fast_f__disadvantage__co_altitude
+    distance_speed_package: p2_b4_diagnostic_far_fast_f
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: false
+    scenario_seed: 14015
+    initial_range_m: 4000.0
+    altitude_diff_m: 0.0
+    own_speed_mps: 275.0
+    target_speed_mps: 255.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: disadvantage
+    diagnostic_seed: 14015
+    geometry_cell_id: p2_b4_diagnostic_far_fast_f__disadvantage__co_altitude__negative
+    p2_b4_raw_si_only: true
+    physical_geometry_signature:
+    - - 0.0
+      - 0.0
+      - 5200.0
+    - 275.0
+    - 142.0
+    - - 3804.226065
+      - -1236.067978
+      - 5200.0
+    - 255.0
+    - 142.0
+- name: global_advantage_p2_b4_p2_b4_diagnostic_far_fast_f__disadvantage__co_altitude__positive_s14016
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 275.0
+    heading_deg: 218.0
+  target_init:
+    position_m:
+    - 3804.226065181
+    - 1236.0679775
+    - 5200.0
+    velocity_mps: 255.0
+    heading_deg: 218.0
+  metadata:
+    manifest_family: thesis_global_advantage_v1
+    split: p2_b4_raw_si_phase30
+    initial_class: disadvantage
+    height_condition: co_altitude
+    mirror_sign: positive
+    mirror_pair_id: p2_b4_diagnostic_far_fast_f__disadvantage__co_altitude
+    distance_speed_package: p2_b4_diagnostic_far_fast_f
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: false
+    scenario_seed: 14016
+    initial_range_m: 4000.0
+    altitude_diff_m: 0.0
+    own_speed_mps: 275.0
+    target_speed_mps: 255.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: disadvantage
+    diagnostic_seed: 14016
+    geometry_cell_id: p2_b4_diagnostic_far_fast_f__disadvantage__co_altitude__positive
+    p2_b4_raw_si_only: true
+    physical_geometry_signature:
+    - - 0.0
+      - 0.0
+      - 5200.0
+    - 275.0
+    - 218.0
+    - - 3804.226065
+      - 1236.067978
+      - 5200.0
+    - 255.0
+    - 218.0
+- name: global_advantage_p2_b4_p2_b4_diagnostic_far_fast_f__disadvantage__own_above__negative_s14017
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 275.0
+    heading_deg: 143.887138727
+  target_init:
+    position_m:
+    - 3761.185038789
+    - -1222.083100279
+    - 4600.0
+    velocity_mps: 255.0
+    heading_deg: 143.887138727
+  metadata:
+    manifest_family: thesis_global_advantage_v1
+    split: p2_b4_raw_si_phase30
+    initial_class: disadvantage
+    height_condition: own_above
+    mirror_sign: negative
+    mirror_pair_id: p2_b4_diagnostic_far_fast_f__disadvantage__own_above
+    distance_speed_package: p2_b4_diagnostic_far_fast_f
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: false
+    scenario_seed: 14017
+    initial_range_m: 4000.0
+    altitude_diff_m: -600.0
+    own_speed_mps: 275.0
+    target_speed_mps: 255.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: disadvantage
+    diagnostic_seed: 14017
+    geometry_cell_id: p2_b4_diagnostic_far_fast_f__disadvantage__own_above__negative
+    p2_b4_raw_si_only: true
+    physical_geometry_signature:
+    - - 0.0
+      - 0.0
+      - 5200.0
+    - 275.0
+    - 143.887139
+    - - 3761.185039
+      - -1222.0831
+      - 4600.0
+    - 255.0
+    - 143.887139
+- name: global_advantage_p2_b4_p2_b4_diagnostic_far_fast_f__disadvantage__own_above__positive_s14018
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 275.0
+    heading_deg: 216.112861273
+  target_init:
+    position_m:
+    - 3761.185038789
+    - 1222.083100279
+    - 4600.0
+    velocity_mps: 255.0
+    heading_deg: 216.112861273
+  metadata:
+    manifest_family: thesis_global_advantage_v1
+    split: p2_b4_raw_si_phase30
+    initial_class: disadvantage
+    height_condition: own_above
+    mirror_sign: positive
+    mirror_pair_id: p2_b4_diagnostic_far_fast_f__disadvantage__own_above
+    distance_speed_package: p2_b4_diagnostic_far_fast_f
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: false
+    scenario_seed: 14018
+    initial_range_m: 4000.0
+    altitude_diff_m: -600.0
+    own_speed_mps: 275.0
+    target_speed_mps: 255.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: disadvantage
+    diagnostic_seed: 14018
+    geometry_cell_id: p2_b4_diagnostic_far_fast_f__disadvantage__own_above__positive
+    p2_b4_raw_si_only: true
+    physical_geometry_signature:
+    - - 0.0
+      - 0.0
+      - 5200.0
+    - 275.0
+    - 216.112861
+    - - 3761.185039
+      - 1222.0831
+      - 4600.0
+    - 255.0
+    - 216.112861
+- name: global_advantage_p2_b4_p2_b4_diagnostic_far_fast_f__neutral__own_below__negative_s14019
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 275.0
+    heading_deg: 143.887138727
+  target_init:
+    position_m:
+    - 3761.185038789
+    - -1222.083100279
+    - 5800.0
+    velocity_mps: 255.0
+    heading_deg: 0.112861273
+  metadata:
+    manifest_family: thesis_global_advantage_v1
+    split: p2_b4_raw_si_phase30
+    initial_class: neutral
+    height_condition: own_below
+    mirror_sign: negative
+    mirror_pair_id: p2_b4_diagnostic_far_fast_f__neutral__own_below
+    distance_speed_package: p2_b4_diagnostic_far_fast_f
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: false
+    scenario_seed: 14019
+    initial_range_m: 4000.0
+    altitude_diff_m: 600.0
+    own_speed_mps: 275.0
+    target_speed_mps: 255.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: neutral
+    diagnostic_seed: 14019
+    geometry_cell_id: p2_b4_diagnostic_far_fast_f__neutral__own_below__negative
+    p2_b4_raw_si_only: true
+    physical_geometry_signature:
+    - - 0.0
+      - 0.0
+      - 5200.0
+    - 275.0
+    - 143.887139
+    - - 3761.185039
+      - -1222.0831
+      - 5800.0
+    - 255.0
+    - 0.112861
+- name: global_advantage_p2_b4_p2_b4_diagnostic_far_fast_f__neutral__own_below__positive_s14020
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 275.0
+    heading_deg: 216.112861273
+  target_init:
+    position_m:
+    - 3761.185038789
+    - 1222.083100279
+    - 5800.0
+    velocity_mps: 255.0
+    heading_deg: 359.887138727
+  metadata:
+    manifest_family: thesis_global_advantage_v1
+    split: p2_b4_raw_si_phase30
+    initial_class: neutral
+    height_condition: own_below
+    mirror_sign: positive
+    mirror_pair_id: p2_b4_diagnostic_far_fast_f__neutral__own_below
+    distance_speed_package: p2_b4_diagnostic_far_fast_f
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: false
+    scenario_seed: 14020
+    initial_range_m: 4000.0
+    altitude_diff_m: 600.0
+    own_speed_mps: 275.0
+    target_speed_mps: 255.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: neutral
+    diagnostic_seed: 14020
+    geometry_cell_id: p2_b4_diagnostic_far_fast_f__neutral__own_below__positive
+    p2_b4_raw_si_only: true
+    physical_geometry_signature:
+    - - 0.0
+      - 0.0
+      - 5200.0
+    - 275.0
+    - 216.112861
+    - - 3761.185039
+      - 1222.0831
+      - 5800.0
+    - 255.0
+    - 359.887139
+- name: global_advantage_p2_b4_p2_b4_diagnostic_far_fast_f__neutral__co_altitude__negative_s14021
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 275.0
+    heading_deg: 142.0
+  target_init:
+    position_m:
+    - 3804.226065181
+    - -1236.0679775
+    - 5200.0
+    velocity_mps: 255.0
+    heading_deg: 2.0
+  metadata:
+    manifest_family: thesis_global_advantage_v1
+    split: p2_b4_raw_si_phase30
+    initial_class: neutral
+    height_condition: co_altitude
+    mirror_sign: negative
+    mirror_pair_id: p2_b4_diagnostic_far_fast_f__neutral__co_altitude
+    distance_speed_package: p2_b4_diagnostic_far_fast_f
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: false
+    scenario_seed: 14021
+    initial_range_m: 4000.0
+    altitude_diff_m: 0.0
+    own_speed_mps: 275.0
+    target_speed_mps: 255.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: neutral
+    diagnostic_seed: 14021
+    geometry_cell_id: p2_b4_diagnostic_far_fast_f__neutral__co_altitude__negative
+    p2_b4_raw_si_only: true
+    physical_geometry_signature:
+    - - 0.0
+      - 0.0
+      - 5200.0
+    - 275.0
+    - 142.0
+    - - 3804.226065
+      - -1236.067978
+      - 5200.0
+    - 255.0
+    - 2.0
+- name: global_advantage_p2_b4_p2_b4_diagnostic_far_fast_f__neutral__co_altitude__positive_s14022
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 275.0
+    heading_deg: 218.0
+  target_init:
+    position_m:
+    - 3804.226065181
+    - 1236.0679775
+    - 5200.0
+    velocity_mps: 255.0
+    heading_deg: 358.0
+  metadata:
+    manifest_family: thesis_global_advantage_v1
+    split: p2_b4_raw_si_phase30
+    initial_class: neutral
+    height_condition: co_altitude
+    mirror_sign: positive
+    mirror_pair_id: p2_b4_diagnostic_far_fast_f__neutral__co_altitude
+    distance_speed_package: p2_b4_diagnostic_far_fast_f
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: false
+    scenario_seed: 14022
+    initial_range_m: 4000.0
+    altitude_diff_m: 0.0
+    own_speed_mps: 275.0
+    target_speed_mps: 255.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: neutral
+    diagnostic_seed: 14022
+    geometry_cell_id: p2_b4_diagnostic_far_fast_f__neutral__co_altitude__positive
+    p2_b4_raw_si_only: true
+    physical_geometry_signature:
+    - - 0.0
+      - 0.0
+      - 5200.0
+    - 275.0
+    - 218.0
+    - - 3804.226065
+      - 1236.067978
+      - 5200.0
+    - 255.0
+    - 358.0
+- name: global_advantage_p2_b4_p2_b4_diagnostic_far_fast_f__neutral__own_above__negative_s14023
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 275.0
+    heading_deg: 143.887138727
+  target_init:
+    position_m:
+    - 3761.185038789
+    - -1222.083100279
+    - 4600.0
+    velocity_mps: 255.0
+    heading_deg: 0.112861273
+  metadata:
+    manifest_family: thesis_global_advantage_v1
+    split: p2_b4_raw_si_phase30
+    initial_class: neutral
+    height_condition: own_above
+    mirror_sign: negative
+    mirror_pair_id: p2_b4_diagnostic_far_fast_f__neutral__own_above
+    distance_speed_package: p2_b4_diagnostic_far_fast_f
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: false
+    scenario_seed: 14023
+    initial_range_m: 4000.0
+    altitude_diff_m: -600.0
+    own_speed_mps: 275.0
+    target_speed_mps: 255.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: neutral
+    diagnostic_seed: 14023
+    geometry_cell_id: p2_b4_diagnostic_far_fast_f__neutral__own_above__negative
+    p2_b4_raw_si_only: true
+    physical_geometry_signature:
+    - - 0.0
+      - 0.0
+      - 5200.0
+    - 275.0
+    - 143.887139
+    - - 3761.185039
+      - -1222.0831
+      - 4600.0
+    - 255.0
+    - 0.112861
+- name: global_advantage_p2_b4_p2_b4_diagnostic_far_fast_f__neutral__own_above__positive_s14024
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 275.0
+    heading_deg: 216.112861273
+  target_init:
+    position_m:
+    - 3761.185038789
+    - 1222.083100279
+    - 4600.0
+    velocity_mps: 255.0
+    heading_deg: 359.887138727
+  metadata:
+    manifest_family: thesis_global_advantage_v1
+    split: p2_b4_raw_si_phase30
+    initial_class: neutral
+    height_condition: own_above
+    mirror_sign: positive
+    mirror_pair_id: p2_b4_diagnostic_far_fast_f__neutral__own_above
+    distance_speed_package: p2_b4_diagnostic_far_fast_f
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: false
+    scenario_seed: 14024
+    initial_range_m: 4000.0
+    altitude_diff_m: -600.0
+    own_speed_mps: 275.0
+    target_speed_mps: 255.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: neutral
+    diagnostic_seed: 14024
+    geometry_cell_id: p2_b4_diagnostic_far_fast_f__neutral__own_above__positive
+    p2_b4_raw_si_only: true
+    physical_geometry_signature:
+    - - 0.0
+      - 0.0
+      - 5200.0
+    - 275.0
+    - 216.112861
+    - - 3761.185039
+      - 1222.0831
+      - 4600.0
+    - 255.0
+    - 359.887139
+- name: global_advantage_p2_b4_p2_b4_diagnostic_far_fast_f__crossing_entry__own_below__negative_s14025
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 275.0
+    heading_deg: 0.112861273
+  target_init:
+    position_m:
+    - 3761.185038789
+    - -1222.083100279
+    - 5800.0
+    velocity_mps: 255.0
+    heading_deg: 72.0
+  metadata:
+    manifest_family: thesis_global_advantage_v1
+    split: p2_b4_raw_si_phase30
+    initial_class: crossing_entry
+    height_condition: own_below
+    mirror_sign: negative
+    mirror_pair_id: p2_b4_diagnostic_far_fast_f__crossing_entry__own_below
+    distance_speed_package: p2_b4_diagnostic_far_fast_f
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: true
+    scenario_seed: 14025
+    initial_range_m: 4000.0
+    altitude_diff_m: 600.0
+    own_speed_mps: 275.0
+    target_speed_mps: 255.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 90.0
+    taxonomy_geometry_state: transition
+    diagnostic_seed: 14025
+    geometry_cell_id: p2_b4_diagnostic_far_fast_f__crossing_entry__own_below__negative
+    p2_b4_raw_si_only: true
+    physical_geometry_signature:
+    - - 0.0
+      - 0.0
+      - 5200.0
+    - 275.0
+    - 0.112861
+    - - 3761.185039
+      - -1222.0831
+      - 5800.0
+    - 255.0
+    - 72.0
+- name: global_advantage_p2_b4_p2_b4_diagnostic_far_fast_f__crossing_entry__own_below__positive_s14026
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 275.0
+    heading_deg: 359.887138727
+  target_init:
+    position_m:
+    - 3761.185038789
+    - 1222.083100279
+    - 5800.0
+    velocity_mps: 255.0
+    heading_deg: 288.0
+  metadata:
+    manifest_family: thesis_global_advantage_v1
+    split: p2_b4_raw_si_phase30
+    initial_class: crossing_entry
+    height_condition: own_below
+    mirror_sign: positive
+    mirror_pair_id: p2_b4_diagnostic_far_fast_f__crossing_entry__own_below
+    distance_speed_package: p2_b4_diagnostic_far_fast_f
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: true
+    scenario_seed: 14026
+    initial_range_m: 4000.0
+    altitude_diff_m: 600.0
+    own_speed_mps: 275.0
+    target_speed_mps: 255.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 90.0
+    taxonomy_geometry_state: transition
+    diagnostic_seed: 14026
+    geometry_cell_id: p2_b4_diagnostic_far_fast_f__crossing_entry__own_below__positive
+    p2_b4_raw_si_only: true
+    physical_geometry_signature:
+    - - 0.0
+      - 0.0
+      - 5200.0
+    - 275.0
+    - 359.887139
+    - - 3761.185039
+      - 1222.0831
+      - 5800.0
+    - 255.0
+    - 288.0
+- name: global_advantage_p2_b4_p2_b4_diagnostic_far_fast_f__crossing_entry__co_altitude__negative_s14027
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 275.0
+    heading_deg: 2.0
+  target_init:
+    position_m:
+    - 3804.226065181
+    - -1236.0679775
+    - 5200.0
+    velocity_mps: 255.0
+    heading_deg: 72.0
+  metadata:
+    manifest_family: thesis_global_advantage_v1
+    split: p2_b4_raw_si_phase30
+    initial_class: crossing_entry
+    height_condition: co_altitude
+    mirror_sign: negative
+    mirror_pair_id: p2_b4_diagnostic_far_fast_f__crossing_entry__co_altitude
+    distance_speed_package: p2_b4_diagnostic_far_fast_f
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: true
+    scenario_seed: 14027
+    initial_range_m: 4000.0
+    altitude_diff_m: 0.0
+    own_speed_mps: 275.0
+    target_speed_mps: 255.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 90.0
+    taxonomy_geometry_state: transition
+    diagnostic_seed: 14027
+    geometry_cell_id: p2_b4_diagnostic_far_fast_f__crossing_entry__co_altitude__negative
+    p2_b4_raw_si_only: true
+    physical_geometry_signature:
+    - - 0.0
+      - 0.0
+      - 5200.0
+    - 275.0
+    - 2.0
+    - - 3804.226065
+      - -1236.067978
+      - 5200.0
+    - 255.0
+    - 72.0
+- name: global_advantage_p2_b4_p2_b4_diagnostic_far_fast_f__crossing_entry__co_altitude__positive_s14028
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 275.0
+    heading_deg: 358.0
+  target_init:
+    position_m:
+    - 3804.226065181
+    - 1236.0679775
+    - 5200.0
+    velocity_mps: 255.0
+    heading_deg: 288.0
+  metadata:
+    manifest_family: thesis_global_advantage_v1
+    split: p2_b4_raw_si_phase30
+    initial_class: crossing_entry
+    height_condition: co_altitude
+    mirror_sign: positive
+    mirror_pair_id: p2_b4_diagnostic_far_fast_f__crossing_entry__co_altitude
+    distance_speed_package: p2_b4_diagnostic_far_fast_f
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: true
+    scenario_seed: 14028
+    initial_range_m: 4000.0
+    altitude_diff_m: 0.0
+    own_speed_mps: 275.0
+    target_speed_mps: 255.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 90.0
+    taxonomy_geometry_state: transition
+    diagnostic_seed: 14028
+    geometry_cell_id: p2_b4_diagnostic_far_fast_f__crossing_entry__co_altitude__positive
+    p2_b4_raw_si_only: true
+    physical_geometry_signature:
+    - - 0.0
+      - 0.0
+      - 5200.0
+    - 275.0
+    - 358.0
+    - - 3804.226065
+      - 1236.067978
+      - 5200.0
+    - 255.0
+    - 288.0
+- name: global_advantage_p2_b4_p2_b4_diagnostic_far_fast_f__crossing_entry__own_above__negative_s14029
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 275.0
+    heading_deg: 0.112861273
+  target_init:
+    position_m:
+    - 3761.185038789
+    - -1222.083100279
+    - 4600.0
+    velocity_mps: 255.0
+    heading_deg: 72.0
+  metadata:
+    manifest_family: thesis_global_advantage_v1
+    split: p2_b4_raw_si_phase30
+    initial_class: crossing_entry
+    height_condition: own_above
+    mirror_sign: negative
+    mirror_pair_id: p2_b4_diagnostic_far_fast_f__crossing_entry__own_above
+    distance_speed_package: p2_b4_diagnostic_far_fast_f
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: true
+    scenario_seed: 14029
+    initial_range_m: 4000.0
+    altitude_diff_m: -600.0
+    own_speed_mps: 275.0
+    target_speed_mps: 255.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 90.0
+    taxonomy_geometry_state: transition
+    diagnostic_seed: 14029
+    geometry_cell_id: p2_b4_diagnostic_far_fast_f__crossing_entry__own_above__negative
+    p2_b4_raw_si_only: true
+    physical_geometry_signature:
+    - - 0.0
+      - 0.0
+      - 5200.0
+    - 275.0
+    - 0.112861
+    - - 3761.185039
+      - -1222.0831
+      - 4600.0
+    - 255.0
+    - 72.0
+- name: global_advantage_p2_b4_p2_b4_diagnostic_far_fast_f__crossing_entry__own_above__positive_s14030
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 275.0
+    heading_deg: 359.887138727
+  target_init:
+    position_m:
+    - 3761.185038789
+    - 1222.083100279
+    - 4600.0
+    velocity_mps: 255.0
+    heading_deg: 288.0
+  metadata:
+    manifest_family: thesis_global_advantage_v1
+    split: p2_b4_raw_si_phase30
+    initial_class: crossing_entry
+    height_condition: own_above
+    mirror_sign: positive
+    mirror_pair_id: p2_b4_diagnostic_far_fast_f__crossing_entry__own_above
+    distance_speed_package: p2_b4_diagnostic_far_fast_f
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: true
+    scenario_seed: 14030
+    initial_range_m: 4000.0
+    altitude_diff_m: -600.0
+    own_speed_mps: 275.0
+    target_speed_mps: 255.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 90.0
+    taxonomy_geometry_state: transition
+    diagnostic_seed: 14030
+    geometry_cell_id: p2_b4_diagnostic_far_fast_f__crossing_entry__own_above__positive
+    p2_b4_raw_si_only: true
+    physical_geometry_signature:
+    - - 0.0
+      - 0.0
+      - 5200.0
+    - 275.0
+    - 359.887139
+    - - 3761.185039
+      - 1222.0831
+      - 4600.0
+    - 255.0
+    - 288.0
+integrity:
+  payload_sha256: 18e8a85698ff0978fcacc44e76d5217ed6da28defb54efa7ffbfa981cca31b4b

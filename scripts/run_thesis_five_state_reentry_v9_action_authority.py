@@ -95,6 +95,10 @@ def _require_execution_authorization(config: Mapping[str, Any]) -> None:
     files = execution.get("authorized_code_files")
     if not isinstance(files, list) or not files:
         raise V9RuntimeError("V9 authorization code whitelist is missing")
+    manifest = _load(_resolve(config["inputs"]["manifest"]))
+    expected_records = len(_methods(config)) * len(OPPONENTS) * len(manifest.get("scenarios", []))
+    if int(execution.get("expected_records", -1)) != expected_records:
+        raise V9RuntimeError("V9 authorization expected-record universe drifted")
     for item in files:
         if not isinstance(item, Mapping):
             raise V9RuntimeError("V9 authorization code whitelist is invalid")

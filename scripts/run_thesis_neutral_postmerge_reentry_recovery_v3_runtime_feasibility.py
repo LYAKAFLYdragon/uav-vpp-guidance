@@ -285,13 +285,46 @@ def run(config_path: Path) -> dict[str, Any]:
         raise
 
 
+def authorized_preflight(config_path: Path) -> dict[str, Any]:
+    """Validate a future one-time overlay without creating a JSBSim output."""
+
+    config, base_path, overlay = _load_authorized_config(config_path)
+    _validate_authorization(config, base_path, overlay)
+    plan = build_plan(config)
+    manifest_path = _repo_path(str(config["inputs"]["feasibility_manifest"]))
+    _require_hash(manifest_path, config["inputs"].get("feasibility_manifest_sha256"), "V3 feasibility manifest")
+    manifest = load_yaml(manifest_path)
+    validate_feasibility_manifest(manifest)
+    output = Path(str(config["outputs"]["root"]))
+    if config["outputs"].get("creation_permitted_by_this_config") is not True:
+        raise RuntimeError("V3 output creation is not authorised")
+    if not output.is_absolute() or output.exists() or shutil.disk_usage(output.parent).free / (1024**3) < plan.min_free_disk_gb:
+        raise RuntimeError("V3 output root failed fresh-output or disk gate")
+    return {
+        "source_id": SOURCE_ID,
+        "mode": "authorized_preflight_no_jsbsim_no_output_creation",
+        "execution_permitted": True,
+        "training_permitted": False,
+        "git_sha": _git_value("rev-parse", "HEAD"),
+        "scenario_count": len(manifest["scenarios"]),
+        "planned_records": len(manifest["scenarios"]) * len(plan.opponents),
+        "output_root": str(output),
+        "output_root_absent": True,
+    }
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG)
+    parser.add_argument("--preflight", action="store_true")
     parser.add_argument("--execute", action="store_true")
     args = parser.parse_args()
     try:
-        if args.execute:
+        if args.preflight and args.execute:
+            raise RuntimeError("choose either --preflight or --execute")
+        if args.preflight:
+            result = validate_design(args.config) if args.config == DEFAULT_CONFIG else authorized_preflight(args.config)
+        elif args.execute:
             result = run(args.config)
         else:
             result = validate_design(args.config)

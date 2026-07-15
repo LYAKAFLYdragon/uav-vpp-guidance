@@ -172,6 +172,8 @@ def test_v3_design_preflight_is_nonexecuting_and_runner_rejects_execute(monkeypa
     assert result["training_permitted"] is False
     assert result["planned_records"] == 144
     assert result["output_root_absent"] is True
+    monkeypatch.setattr(sys, "argv", ["v3-runner", "--preflight"])
+    assert runner.main() == 0
     monkeypatch.setattr(sys, "argv", ["v3-runner", "--execute"])
     assert runner.main() == 2
 

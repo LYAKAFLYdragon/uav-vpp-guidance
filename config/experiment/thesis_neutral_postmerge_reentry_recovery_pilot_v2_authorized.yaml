@@ -18,7 +18,7 @@ authorization:
   scope: single_neutral_postmerge_reentry_recovery_pilot_v2_only
 execution:
   base_config_sha256: 2c4c5c2d8c948b1d1c29281bd7d019e58b66353d13092c3540d9ce7b677a654e
-  required_implementation_git_sha: c384183490f1b8ba03cf88b5fe4fd05bf7aa191e
+  required_implementation_git_sha: 6f35453f091a88d2d51ec4a9d9d3cbbd979e50d0
   authorization_delta_paths:
     - config/experiment/thesis_neutral_postmerge_reentry_recovery_pilot_v2_authorized.yaml
   runtime_template: config/experiment/train_thesis_five_state_shared_skills_geometry_v1.yaml
@@ -29,7 +29,7 @@ execution:
     - path: scripts/run_thesis_neutral_postmerge_reentry_recovery_pilot_v2.py
       sha256: 1d267d8f440d31968d533cd6a730cf80523e9b8924b4776629bbbf762493b0ea
     - path: src/uav_vpp_guidance/training/thesis_neutral_postmerge_reentry_recovery_pilot_v2.py
-      sha256: f3bb8187e7614ae5ee2f7bdfb9c321f3f7562cb0b8f99afef535218b80c8a2b3
+      sha256: 0a273754fd0bc5ac50223abef63188f29bdb66537b8e44527aacd9ee1cfa179c
     - path: src/uav_vpp_guidance/training/thesis_neutral_postmerge_reentry_recovery_pilot.py
       sha256: dd55d0cca4f223f0d89deda6e4a45907f6bc8c6282e96e7b6f955f7221fcc49c
     - path: src/uav_vpp_guidance/training/thesis_defext_rangeext_pilot.py

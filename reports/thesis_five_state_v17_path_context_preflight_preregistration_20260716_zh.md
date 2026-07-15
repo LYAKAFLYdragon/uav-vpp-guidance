@@ -1,6 +1,6 @@
 # V17 Path-Context Schema 与采样 Preflight 预注册
 
-**Source ID：** `THESIS-FIVE-STATE-PATH-CONTEXT-PREFLIGHT-V17`  
+**Source ID：** `THESIS-FIVE-STATE-PATH-CONTEXT-PREFLIGHT-V17`
 **状态：** schema implementation only；未授权采集、训练、调参或 held-out 评估。
 
 ## 1. 触发依据

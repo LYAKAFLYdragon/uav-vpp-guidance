@@ -265,7 +265,9 @@ def main() -> int:
     sources = {label: _load_yaml(path) for label, path in DISJOINT_MANIFESTS}
     manifest = build_manifest(sources)
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(yaml.safe_dump(manifest, sort_keys=False), encoding="utf-8")
+    # SHA-bound manifests must be byte-stable across Windows and Unix clones.
+    with args.output.open("w", encoding="utf-8", newline="\n") as handle:
+        handle.write(yaml.safe_dump(manifest, sort_keys=False))
     print(json.dumps({"source_id": MANIFEST_SOURCE_ID, "scenario_count": len(manifest["scenarios"]), **manifest["integrity"]}, indent=2))
     return 0
 

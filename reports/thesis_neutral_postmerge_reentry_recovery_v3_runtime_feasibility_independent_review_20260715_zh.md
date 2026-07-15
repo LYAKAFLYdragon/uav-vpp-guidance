@@ -9,7 +9,7 @@
 | 项目 | 结果 | 证据 |
 |---|---|---|
 | 设计权限 | PASS | 所有 V3 execution/training/four-skill/combat-finetune 权限均为 `false`；`--execute` 返回 exit 2。 |
-| 场景再生 | PASS | 从 builder 临时重建 manifest，和受控 manifest 的文件 SHA-256 均为 `6e3b21687e6195d45f40459b5673e3e5dab10c4f2d65fe17c23a79ca37546faa`，逐字节一致。 |
+| 场景再生 | PASS | 从 builder 临时重建 manifest，和受控 manifest 的文件 SHA-256 均为 `0dbc1748e528dadd6112577f095d05a11a774eb33bc8b9f67c896e22ff49aa30`，逐字节一致。 |
 | manifest 身份 | PASS | 48 个唯一 evaluation `pair_key`；4 family 各 12 条，均为 2 package x 3 height x 2 mirror。 |
 | 历史隔离 | PASS | manifest 记录的 V1/V2、B2--B6、`heldout240`、`dev30`、历史 `heldout60`、phase-v2 均为 physical/seed intersection `0/0`，并在 preflight 复核源文件 hash。 |
 | train/evaluation 分离 | PASS | train key 为 `neutral_postmerge_reentry_v3_train::seed=2026071701`，不含 pair metadata，`paired_delta_eligible=false`。 |

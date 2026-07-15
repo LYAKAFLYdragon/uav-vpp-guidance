@@ -2446,5 +2446,5 @@ scenarios:
     physical_geometry_signature: ((0.0, 0.0, 5200.0), 248.0, 216.608902, (4356.669382,
       1415.567692, 4600.0), 406.0, 359.391098)
 integrity:
-  builder_code_sha256: 9f0a9e280e9244094caa25785f95803d0d03d429902d63417c5eb038dd64266c
-  payload_sha256: cea3387ea62dc7c8e4327e1fda443028d4ffb81addf8d7db48b6aff6edacbf91
+  builder_code_sha256: 35dc5fea3c8d18e49cf6b0b946f53f9b94d374d103d6b21cec7f41b5318ac861
+  payload_sha256: dfaca79bdafa16a72b01a2c9af8b43987e8e7b3ef1c73b20f3d27035a2ae5054

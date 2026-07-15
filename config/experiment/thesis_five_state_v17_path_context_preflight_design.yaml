@@ -1,0 +1,78 @@
+source_id: THESIS-FIVE-STATE-PATH-CONTEXT-PREFLIGHT-V17
+status: preregistered_design_execution_not_authorised
+authorization:
+  execution_permitted: false
+  training_permitted: false
+  tuning_permitted: false
+  reward_change_permitted: false
+  candidate_policy_loading_permitted: false
+  combat_finetune_permitted: false
+  heldout_claims_permitted: false
+  future_state_injection: false
+  history_padding_permitted: false
+inputs:
+  manifest: config/experiment/manifests/thesis_five_state_v17_path_context_preflight24.yaml
+  manifest_sha256: 87bb61c5837541d45e0213a6af5c7b5a4a55a0c172a7c19e6315de50d9d3ba16
+  runtime_template: config/experiment/train_thesis_five_state_shared_skills_geometry_v1.yaml
+  runtime_template_sha256: 2a9fb82721d82cd67e13e08157d5cc9d9eac3deafa04b12e253c8b6098c38806
+  runtime_registry: config/experiment/thesis_neutral_postmerge_reentry_recovery_pilot_v1_execution_runtime_registry.yaml
+  runtime_registry_sha256: e3124120b33b55c1018da6d8d133ef15b5cf5e6c5c04361d6b90498b0b279ca8
+  frozen_p3_encoder: E:/uav-vpp-guidance-thesis-five-state-v1-results/p3_temporal_encoder_phaseconditional_v2/checkpoints/best.pt
+  frozen_p3_encoder_sha256: 385663281a9c48c0416ea4d1a1bb8dc08ed64a0cfebb0f01083cbbb8bcfbdc59
+  path_context_contract: config/experiment/thesis_five_state_shared_intent_v2_path_context_observation_contract.yaml
+  path_context_contract_sha256: 762f9f137d5c21b51e20c37f6e4dd8fe31af60b16aa8d1a0868bf19001f80b0b
+opponents:
+  order: [expert, end_to_end, independent_ppo_vpp]
+  report_separately: true
+  pooled_gate: prohibited
+execution:
+  runtime_template: config/experiment/train_thesis_five_state_shared_skills_geometry_v1.yaml
+observability:
+  max_high_level_steps: 260
+  local_window_steps: 20
+  min_free_disk_gb: 120.0
+  raw_si_first_pass_event:
+    closing_rate_threshold_mps: 0.0
+    opening_rate_threshold_mps: 0.0
+    minimum_closing_steps: 3
+    minimum_opening_steps: 2
+path:
+  anchor_count: 3
+  escape_extent_m: 1200.0
+  connector_fraction: 0.5
+  opening_rate_start_mps: 0.0
+  opening_rate_full_mps: 80.0
+  generator_anchor_source: predicted_target_position
+semantic_compiler:
+  raw_action_offset_frame: world_neu
+  raw_action_ranges: [[-1500.0, 1500.0], [-800.0, 800.0], [-500.0, 500.0]]
+  range_extent_m: 1200.0
+  turn_extent_m: 900.0
+  vertical_extent_m: 400.0
+  range_error_scale_m: 2000.0
+  range_rate_error_scale_mps: 200.0
+  turn_error_scale_deg: 90.0
+  energy_error_scale_m: 1000.0
+  altitude_error_scale_m: 1000.0
+gates:
+  min_qualifying_episodes_per_opponent: 8
+  min_valid_path_context_steps_per_opponent: 160
+  min_mirrors_per_opponent: 2
+  min_signatures_per_opponent: 2
+contract:
+  backend: jsbsim
+  strict_backend: true
+  one_continuous_episode: true
+  reset_at_handoff: false
+  observation_dim: 74
+  action_dim: 3
+  path_context_current_only: true
+  training: prohibited
+  reward_recording: prohibited
+  checkpoint_fallback: prohibited
+  backend_fallback: prohibited
+  prediction_fallback: prohibited
+outputs:
+  root: E:/uav-vpp-guidance-five-state-heldout-envelope-v1-results/five_state_v17_path_context_preflight
+  paper_safe: false
+  creation_permitted_by_this_config: false

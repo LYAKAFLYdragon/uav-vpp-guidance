@@ -1,9 +1,11 @@
 schema_version: 1
 source_id: THESIS-GLOBAL-ADVANTAGE-V1-P2-PHYSICAL-PREFLIGHT-V1
-status: manifest_only_not_authorised_to_execute
+status: implementation_freeze_pending_authorization
 
 authorization:
   execution_permitted: false
+  required_implementation_git_sha: null
+  authorized_code_files: []
   training_permitted: false
   tuning_permitted: false
   candidate_policy_loading_permitted: false
@@ -11,8 +13,12 @@ authorization:
 
 inputs:
   manifest: config/experiment/manifests/thesis_global_advantage_v1_p2_physical_preflight60.yaml
+  manifest_source_id: THESIS-GLOBAL-ADVANTAGE-V1-P2-PHYSICAL-PREFLIGHT60-V1
+  manifest_sha256: 78d90d6ea32490cc777d13e0a809061ec300f94ff6d7d012f93a9e9895ba834f
   runtime_config: config/experiment/thesis_defext_rangeext_feasibility_pilot_v1.yaml
+  runtime_config_sha256: 3a050de1eac5258fb68ae52dea71fc9cc8c9ad1bea69a73c0cd403a56e40b1f2
   runtime_registry: config/experiment/thesis_defext_rangeext_feasibility_pilot_v1_runtime_registry.yaml
+  runtime_registry_sha256: c87edfed4be69a8293a889c9caa55c520fdab7dd93c44c9c6e057be869f435c5
   reference_specialist: run_in_head_on
 
 contract:
@@ -23,6 +29,7 @@ contract:
   strict_backend: true
   max_high_level_steps: 260
   min_valid_steps: 20
+  min_free_disk_gb: 120.0
   record_phase_first_pass_terminal_and_fallback: true
   phase_gaps_block_related_skill_training: true
 

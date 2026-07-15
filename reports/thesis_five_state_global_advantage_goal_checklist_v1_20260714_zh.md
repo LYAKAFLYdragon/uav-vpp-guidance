@@ -181,5 +181,5 @@
 - [x] **P2-A manifest freeze：** `THESIS-GLOBAL-ADVANTAGE-V1-HELDOUT240-V1` 已冻结 60 个物理几何 cell x 4 evaluation seed = 240 条独立实例；与 train support、dev30 和旧 heldout60 的实例及物理签名均不相交，payload SHA-256 为 `249234e96e802aa35a72bf2208986a723cba7387109fe1349fd0cff4f0b29526`。
 - [x] **P2-B1 capability card：** 从 R5 的共同 frozen run-in specialist、每对手 30 个固定 repeat_0/forward episode 构建了 target speed/altitude/specific energy、攻击区、first-pass、terminal 与 crash/OOB 卡；无 Elo 或总强度排序。
 - [x] **P2-B2 input freeze：** `THESIS-GLOBAL-ADVANTAGE-V1-P2-PHYSICAL-PREFLIGHT60-V1` 使用相同 60 个几何 cell、全新的 per-cell preflight seed；它不消耗 heldout240 的四个 evaluation seed。
-- [ ] **当前唯一允许动作：实现、复核并一次性执行 P2-B2 strict-JSBSim physical-reachability preflight；R5 capability card 的 phase 仅为 post_merge，不能代替此 gate。不得直接训练、调参或启动 formal held-out。**
+- [ ] **当前唯一允许动作：在已冻结实现上独立复核并一次性执行 P2-B2 strict-JSBSim physical-reachability preflight。R5 capability card 的 phase 仅为 post_merge，不能代替此 gate。不得直接训练、调参或启动 formal held-out。**
 - [ ] P2--P8 均未授权；尤其不允许以“追求全场景优势”为由绕过 P1/P3 的负证据和 stop rule。

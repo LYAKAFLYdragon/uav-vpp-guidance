@@ -1,0 +1,2822 @@
+source_id: THESIS-FIVE-STATE-RAW-SI-PHASE-OBSERVABILITY-V5-MANIFEST60
+manifest_version: 1
+status: preregistered_design_only
+split: raw_si_observability60
+protocol:
+  evaluation_only: true
+  training_permitted: false
+  routing_enabled: false
+  reference_controller: frozen_fixed_head_on
+  continuous_physical_run_in: true
+  snapshot_restore: false
+  future_state_injection: false
+  opponents_reported_separately: true
+  raw_si_first_pass_event:
+    closing_rate_threshold_mps: 0.0
+    opening_rate_threshold_mps: 0.0
+    minimum_closing_steps: 3
+    minimum_opening_steps: 2
+generation_contract:
+  initial_states:
+  - advantage
+  - head_on
+  - disadvantage
+  - neutral
+  - crossing_entry
+  packages:
+  - id: v5_close_closure
+    initial_range_m: 3070.0
+    own_speed_mps: 238.0
+    target_speed_mps: 356.0
+  - id: v5_extended_closure
+    initial_range_m: 4690.0
+    own_speed_mps: 258.0
+    target_speed_mps: 388.0
+  height_offsets_target_minus_own_m:
+    own_below: 600.0
+    co_altitude: 0.0
+    own_above: -600.0
+  mirror_signs:
+  - negative
+  - positive
+  future_training_must_not_reuse_v5_states: true
+disjointness:
+  five_state_dev30:
+    path: config/experiment/manifests/thesis_five_state_shared_intent_v1_dev30.yaml
+    sha256: 6bd9c4282a4aa9724dee350114293421287ce0f00387b5b298e7be067c30d130
+    physical_intersection_count: 0
+    seed_intersection_count: 0
+  five_state_heldout60:
+    path: config/experiment/manifests/thesis_five_state_shared_intent_v1_heldout60.yaml
+    sha256: f96f3c927a0de4702dee62e2894fe784ff945a21f4e5728749fba20666603b5a
+    physical_intersection_count: 0
+    seed_intersection_count: 0
+  taxonomy30:
+    path: config/experiment/manifests/thesis_taxonomy_ablation30_v1.yaml
+    sha256: 79dddd3fa2585f99846330ad966220252acb80aa05fc6718ea873e5a1d801cf2
+    physical_intersection_count: 0
+    seed_intersection_count: 0
+  v1_dev12:
+    path: config/experiment/manifests/thesis_neutral_postmerge_reentry_recovery_pilot_v1_dev12.yaml
+    sha256: 652dbe209a0fc6b17a4a43f28996664ebb4ed4bd436e3292eb90e9ff9eca06e6
+    physical_intersection_count: 0
+    seed_intersection_count: 0
+  v1_heldout24:
+    path: config/experiment/manifests/thesis_neutral_postmerge_reentry_recovery_pilot_v1_heldout24.yaml
+    sha256: 025384fa92351e33671df724b04f6bec0c5e56ff425836a82df7c36127397852
+    physical_intersection_count: 0
+    seed_intersection_count: 0
+  v2_dev12:
+    path: config/experiment/manifests/thesis_neutral_postmerge_reentry_recovery_pilot_v2_dev12.yaml
+    sha256: 64b0566db71fa62096f51886d762bb99a52097d0e621df4a0e3cd5f6c2ae85ee
+    physical_intersection_count: 0
+    seed_intersection_count: 0
+  v2_heldout24:
+    path: config/experiment/manifests/thesis_neutral_postmerge_reentry_recovery_pilot_v2_heldout24.yaml
+    sha256: a239a32af2eef2374b84e0a33d97411843f3dfefd75b085ef2d64c53a7d82ebb
+    physical_intersection_count: 0
+    seed_intersection_count: 0
+  v3_runtime_design:
+    path: config/experiment/manifests/thesis_neutral_postmerge_reentry_recovery_v3_runtime_feasibility48.yaml
+    sha256: 0dbc1748e528dadd6112577f095d05a11a774eb33bc8b9f67c896e22ff49aa30
+    physical_intersection_count: 0
+    seed_intersection_count: 0
+  v4_runtime:
+    path: config/experiment/manifests/thesis_neutral_postmerge_reentry_recovery_v4_runtime_feasibility48.yaml
+    sha256: 8b83069c9e1949b1d5b59711936691dec413349471946c56d3c474c37f5410e4
+    physical_intersection_count: 0
+    seed_intersection_count: 0
+  p2_b2:
+    path: config/experiment/manifests/thesis_global_advantage_v1_p2_physical_preflight60.yaml
+    sha256: 78d90d6ea32490cc777d13e0a809061ec300f94ff6d7d012f93a9e9895ba834f
+    physical_intersection_count: 0
+    seed_intersection_count: 0
+  p2_b3:
+    path: config/experiment/manifests/thesis_global_advantage_v1_p2_b3_phase_observability30.yaml
+    sha256: d1e7c0e0750ec36eab6ef3ab7b6a353f7ceed8d88211d6d6535344c13e8a384c
+    physical_intersection_count: 0
+    seed_intersection_count: 0
+  p2_b4:
+    path: config/experiment/manifests/thesis_global_advantage_v1_p2_b4_raw_si_phase30.yaml
+    sha256: e709cdafd3ba6ba822454cdbd88ffa49988962cedeed310b15f071b87004fa81
+    physical_intersection_count: 0
+    seed_intersection_count: 0
+  p2_b5:
+    path: config/experiment/manifests/thesis_global_advantage_v1_p2_b5_phase_feasible_sampler12.yaml
+    sha256: 63acf19e57d5488f33fdef48df9b59ec9c7f892c5a70e1465cea9622bf3f798a
+    physical_intersection_count: 0
+    seed_intersection_count: 0
+  p2_b6:
+    path: config/experiment/manifests/thesis_global_advantage_v1_p2_b6_opponent_conditional_reachability60.yaml
+    sha256: 258bef67cddc66c4a8f4c04baeaee6a1c0152e5286035928244e0c21aebdd884
+    physical_intersection_count: 0
+    seed_intersection_count: 0
+  heldout240:
+    path: config/experiment/manifests/thesis_global_advantage_v1_heldout240.yaml
+    sha256: 81114a64cc7c589f496cff8869eac814f9919bfbc16a03b0aaba69bd5ba8bef3
+    physical_intersection_count: 0
+    seed_intersection_count: 0
+scenarios:
+- name: five_state_raw_si_v5_advantage__v5_close_closure__own_below__negative_s120100
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 238.0
+    heading_deg: 358.630521597
+  target_init:
+    position_m:
+    - 2863.438331125
+    - -930.387512731
+    - 5800.0
+    velocity_mps: 356.0
+    heading_deg: 358.630521597
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: raw_si_observability60
+    initial_class: advantage
+    height_condition: own_below
+    mirror_sign: negative
+    mirror_pair_id: v5_close_closure__advantage__own_below
+    distance_speed_package: v5_close_closure
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    crossing_context: false
+    scenario_seed: 120100
+    initial_range_m: 3070.0
+    altitude_diff_m: 600.0
+    own_speed_mps: 238.0
+    target_speed_mps: 356.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: advantage
+    pilot_family: THESIS-FIVE-STATE-RAW-SI-PHASE-OBSERVABILITY-V5
+    identity_kind: evaluation
+    geometry_cell_id: advantage__v5_close_closure__own_below__negative
+    pair_key: advantage__v5_close_closure__own_below__negative::seed=120100
+    scenario_signature: v5_raw_si::advantage__v5_close_closure__own_below__negative::seed=120100
+    raw_si_phase_event: three_closing_then_two_opening
+    routing_enabled: false
+    fixed_run_in: frozen_fixed_head_on
+    physical_geometry_signature: ((0.0, 0.0, 5200.0), 238.0, 358.630522, (2863.438331,
+      -930.387513, 5800.0), 356.0, 358.630522)
+- name: five_state_raw_si_v5_advantage__v5_close_closure__own_below__positive_s120101
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 238.0
+    heading_deg: 1.369478403
+  target_init:
+    position_m:
+    - 2863.438331125
+    - 930.387512731
+    - 5800.0
+    velocity_mps: 356.0
+    heading_deg: 1.369478403
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: raw_si_observability60
+    initial_class: advantage
+    height_condition: own_below
+    mirror_sign: positive
+    mirror_pair_id: v5_close_closure__advantage__own_below
+    distance_speed_package: v5_close_closure
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    crossing_context: false
+    scenario_seed: 120101
+    initial_range_m: 3070.0
+    altitude_diff_m: 600.0
+    own_speed_mps: 238.0
+    target_speed_mps: 356.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: advantage
+    pilot_family: THESIS-FIVE-STATE-RAW-SI-PHASE-OBSERVABILITY-V5
+    identity_kind: evaluation
+    geometry_cell_id: advantage__v5_close_closure__own_below__positive
+    pair_key: advantage__v5_close_closure__own_below__positive::seed=120101
+    scenario_signature: v5_raw_si::advantage__v5_close_closure__own_below__positive::seed=120101
+    raw_si_phase_event: three_closing_then_two_opening
+    routing_enabled: false
+    fixed_run_in: frozen_fixed_head_on
+    physical_geometry_signature: ((0.0, 0.0, 5200.0), 238.0, 1.369478, (2863.438331,
+      930.387513, 5800.0), 356.0, 1.369478)
+- name: five_state_raw_si_v5_advantage__v5_close_closure__co_altitude__negative_s120102
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 238.0
+    heading_deg: 2.0
+  target_init:
+    position_m:
+    - 2919.743505026
+    - -948.682172731
+    - 5200.0
+    velocity_mps: 356.0
+    heading_deg: 2.0
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: raw_si_observability60
+    initial_class: advantage
+    height_condition: co_altitude
+    mirror_sign: negative
+    mirror_pair_id: v5_close_closure__advantage__co_altitude
+    distance_speed_package: v5_close_closure
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    crossing_context: false
+    scenario_seed: 120102
+    initial_range_m: 3070.0
+    altitude_diff_m: 0.0
+    own_speed_mps: 238.0
+    target_speed_mps: 356.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: advantage
+    pilot_family: THESIS-FIVE-STATE-RAW-SI-PHASE-OBSERVABILITY-V5
+    identity_kind: evaluation
+    geometry_cell_id: advantage__v5_close_closure__co_altitude__negative
+    pair_key: advantage__v5_close_closure__co_altitude__negative::seed=120102
+    scenario_signature: v5_raw_si::advantage__v5_close_closure__co_altitude__negative::seed=120102
+    raw_si_phase_event: three_closing_then_two_opening
+    routing_enabled: false
+    fixed_run_in: frozen_fixed_head_on
+    physical_geometry_signature: ((0.0, 0.0, 5200.0), 238.0, 2.0, (2919.743505, -948.682173,
+      5200.0), 356.0, 2.0)
+- name: five_state_raw_si_v5_advantage__v5_close_closure__co_altitude__positive_s120103
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 238.0
+    heading_deg: 358.0
+  target_init:
+    position_m:
+    - 2919.743505026
+    - 948.682172731
+    - 5200.0
+    velocity_mps: 356.0
+    heading_deg: 358.0
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: raw_si_observability60
+    initial_class: advantage
+    height_condition: co_altitude
+    mirror_sign: positive
+    mirror_pair_id: v5_close_closure__advantage__co_altitude
+    distance_speed_package: v5_close_closure
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    crossing_context: false
+    scenario_seed: 120103
+    initial_range_m: 3070.0
+    altitude_diff_m: 0.0
+    own_speed_mps: 238.0
+    target_speed_mps: 356.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: advantage
+    pilot_family: THESIS-FIVE-STATE-RAW-SI-PHASE-OBSERVABILITY-V5
+    identity_kind: evaluation
+    geometry_cell_id: advantage__v5_close_closure__co_altitude__positive
+    pair_key: advantage__v5_close_closure__co_altitude__positive::seed=120103
+    scenario_signature: v5_raw_si::advantage__v5_close_closure__co_altitude__positive::seed=120103
+    raw_si_phase_event: three_closing_then_two_opening
+    routing_enabled: false
+    fixed_run_in: frozen_fixed_head_on
+    physical_geometry_signature: ((0.0, 0.0, 5200.0), 238.0, 358.0, (2919.743505,
+      948.682173, 5200.0), 356.0, 358.0)
+- name: five_state_raw_si_v5_advantage__v5_close_closure__own_above__negative_s120104
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 238.0
+    heading_deg: 358.630521597
+  target_init:
+    position_m:
+    - 2863.438331125
+    - -930.387512731
+    - 4600.0
+    velocity_mps: 356.0
+    heading_deg: 358.630521597
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: raw_si_observability60
+    initial_class: advantage
+    height_condition: own_above
+    mirror_sign: negative
+    mirror_pair_id: v5_close_closure__advantage__own_above
+    distance_speed_package: v5_close_closure
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    crossing_context: false
+    scenario_seed: 120104
+    initial_range_m: 3070.0
+    altitude_diff_m: -600.0
+    own_speed_mps: 238.0
+    target_speed_mps: 356.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: advantage
+    pilot_family: THESIS-FIVE-STATE-RAW-SI-PHASE-OBSERVABILITY-V5
+    identity_kind: evaluation
+    geometry_cell_id: advantage__v5_close_closure__own_above__negative
+    pair_key: advantage__v5_close_closure__own_above__negative::seed=120104
+    scenario_signature: v5_raw_si::advantage__v5_close_closure__own_above__negative::seed=120104
+    raw_si_phase_event: three_closing_then_two_opening
+    routing_enabled: false
+    fixed_run_in: frozen_fixed_head_on
+    physical_geometry_signature: ((0.0, 0.0, 5200.0), 238.0, 358.630522, (2863.438331,
+      -930.387513, 4600.0), 356.0, 358.630522)
+- name: five_state_raw_si_v5_advantage__v5_close_closure__own_above__positive_s120105
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 238.0
+    heading_deg: 1.369478403
+  target_init:
+    position_m:
+    - 2863.438331125
+    - 930.387512731
+    - 4600.0
+    velocity_mps: 356.0
+    heading_deg: 1.369478403
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: raw_si_observability60
+    initial_class: advantage
+    height_condition: own_above
+    mirror_sign: positive
+    mirror_pair_id: v5_close_closure__advantage__own_above
+    distance_speed_package: v5_close_closure
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    crossing_context: false
+    scenario_seed: 120105
+    initial_range_m: 3070.0
+    altitude_diff_m: -600.0
+    own_speed_mps: 238.0
+    target_speed_mps: 356.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: advantage
+    pilot_family: THESIS-FIVE-STATE-RAW-SI-PHASE-OBSERVABILITY-V5
+    identity_kind: evaluation
+    geometry_cell_id: advantage__v5_close_closure__own_above__positive
+    pair_key: advantage__v5_close_closure__own_above__positive::seed=120105
+    scenario_signature: v5_raw_si::advantage__v5_close_closure__own_above__positive::seed=120105
+    raw_si_phase_event: three_closing_then_two_opening
+    routing_enabled: false
+    fixed_run_in: frozen_fixed_head_on
+    physical_geometry_signature: ((0.0, 0.0, 5200.0), 238.0, 1.369478, (2863.438331,
+      930.387513, 4600.0), 356.0, 1.369478)
+- name: five_state_raw_si_v5_advantage__v5_extended_closure__own_below__negative_s120106
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 258.0
+    heading_deg: 0.652083515
+  target_init:
+    position_m:
+    - 4423.803374473
+    - -1437.380848628
+    - 5800.0
+    velocity_mps: 388.0
+    heading_deg: 0.652083515
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: raw_si_observability60
+    initial_class: advantage
+    height_condition: own_below
+    mirror_sign: negative
+    mirror_pair_id: v5_extended_closure__advantage__own_below
+    distance_speed_package: v5_extended_closure
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    crossing_context: false
+    scenario_seed: 120106
+    initial_range_m: 4690.0
+    altitude_diff_m: 600.0
+    own_speed_mps: 258.0
+    target_speed_mps: 388.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: advantage
+    pilot_family: THESIS-FIVE-STATE-RAW-SI-PHASE-OBSERVABILITY-V5
+    identity_kind: evaluation
+    geometry_cell_id: advantage__v5_extended_closure__own_below__negative
+    pair_key: advantage__v5_extended_closure__own_below__negative::seed=120106
+    scenario_signature: v5_raw_si::advantage__v5_extended_closure__own_below__negative::seed=120106
+    raw_si_phase_event: three_closing_then_two_opening
+    routing_enabled: false
+    fixed_run_in: frozen_fixed_head_on
+    physical_geometry_signature: ((0.0, 0.0, 5200.0), 258.0, 0.652084, (4423.803374,
+      -1437.380849, 5800.0), 388.0, 0.652084)
+- name: five_state_raw_si_v5_advantage__v5_extended_closure__own_below__positive_s120107
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 258.0
+    heading_deg: 359.347916485
+  target_init:
+    position_m:
+    - 4423.803374473
+    - 1437.380848628
+    - 5800.0
+    velocity_mps: 388.0
+    heading_deg: 359.347916485
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: raw_si_observability60
+    initial_class: advantage
+    height_condition: own_below
+    mirror_sign: positive
+    mirror_pair_id: v5_extended_closure__advantage__own_below
+    distance_speed_package: v5_extended_closure
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    crossing_context: false
+    scenario_seed: 120107
+    initial_range_m: 4690.0
+    altitude_diff_m: 600.0
+    own_speed_mps: 258.0
+    target_speed_mps: 388.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: advantage
+    pilot_family: THESIS-FIVE-STATE-RAW-SI-PHASE-OBSERVABILITY-V5
+    identity_kind: evaluation
+    geometry_cell_id: advantage__v5_extended_closure__own_below__positive
+    pair_key: advantage__v5_extended_closure__own_below__positive::seed=120107
+    scenario_signature: v5_raw_si::advantage__v5_extended_closure__own_below__positive::seed=120107
+    raw_si_phase_event: three_closing_then_two_opening
+    routing_enabled: false
+    fixed_run_in: frozen_fixed_head_on
+    physical_geometry_signature: ((0.0, 0.0, 5200.0), 258.0, 359.347916, (4423.803374,
+      1437.380849, 5800.0), 388.0, 359.347916)
+- name: five_state_raw_si_v5_advantage__v5_extended_closure__co_altitude__negative_s120108
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 258.0
+    heading_deg: 2.0
+  target_init:
+    position_m:
+    - 4460.455061424
+    - -1449.289703619
+    - 5200.0
+    velocity_mps: 388.0
+    heading_deg: 2.0
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: raw_si_observability60
+    initial_class: advantage
+    height_condition: co_altitude
+    mirror_sign: negative
+    mirror_pair_id: v5_extended_closure__advantage__co_altitude
+    distance_speed_package: v5_extended_closure
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    crossing_context: false
+    scenario_seed: 120108
+    initial_range_m: 4690.0
+    altitude_diff_m: 0.0
+    own_speed_mps: 258.0
+    target_speed_mps: 388.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: advantage
+    pilot_family: THESIS-FIVE-STATE-RAW-SI-PHASE-OBSERVABILITY-V5
+    identity_kind: evaluation
+    geometry_cell_id: advantage__v5_extended_closure__co_altitude__negative
+    pair_key: advantage__v5_extended_closure__co_altitude__negative::seed=120108
+    scenario_signature: v5_raw_si::advantage__v5_extended_closure__co_altitude__negative::seed=120108
+    raw_si_phase_event: three_closing_then_two_opening
+    routing_enabled: false
+    fixed_run_in: frozen_fixed_head_on
+    physical_geometry_signature: ((0.0, 0.0, 5200.0), 258.0, 2.0, (4460.455061, -1449.289704,
+      5200.0), 388.0, 2.0)
+- name: five_state_raw_si_v5_advantage__v5_extended_closure__co_altitude__positive_s120109
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 258.0
+    heading_deg: 358.0
+  target_init:
+    position_m:
+    - 4460.455061424
+    - 1449.289703619
+    - 5200.0
+    velocity_mps: 388.0
+    heading_deg: 358.0
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: raw_si_observability60
+    initial_class: advantage
+    height_condition: co_altitude
+    mirror_sign: positive
+    mirror_pair_id: v5_extended_closure__advantage__co_altitude
+    distance_speed_package: v5_extended_closure
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    crossing_context: false
+    scenario_seed: 120109
+    initial_range_m: 4690.0
+    altitude_diff_m: 0.0
+    own_speed_mps: 258.0
+    target_speed_mps: 388.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: advantage
+    pilot_family: THESIS-FIVE-STATE-RAW-SI-PHASE-OBSERVABILITY-V5
+    identity_kind: evaluation
+    geometry_cell_id: advantage__v5_extended_closure__co_altitude__positive
+    pair_key: advantage__v5_extended_closure__co_altitude__positive::seed=120109
+    scenario_signature: v5_raw_si::advantage__v5_extended_closure__co_altitude__positive::seed=120109
+    raw_si_phase_event: three_closing_then_two_opening
+    routing_enabled: false
+    fixed_run_in: frozen_fixed_head_on
+    physical_geometry_signature: ((0.0, 0.0, 5200.0), 258.0, 358.0, (4460.455061,
+      1449.289704, 5200.0), 388.0, 358.0)
+- name: five_state_raw_si_v5_advantage__v5_extended_closure__own_above__negative_s120110
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 258.0
+    heading_deg: 0.652083515
+  target_init:
+    position_m:
+    - 4423.803374473
+    - -1437.380848628
+    - 4600.0
+    velocity_mps: 388.0
+    heading_deg: 0.652083515
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: raw_si_observability60
+    initial_class: advantage
+    height_condition: own_above
+    mirror_sign: negative
+    mirror_pair_id: v5_extended_closure__advantage__own_above
+    distance_speed_package: v5_extended_closure
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    crossing_context: false
+    scenario_seed: 120110
+    initial_range_m: 4690.0
+    altitude_diff_m: -600.0
+    own_speed_mps: 258.0
+    target_speed_mps: 388.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: advantage
+    pilot_family: THESIS-FIVE-STATE-RAW-SI-PHASE-OBSERVABILITY-V5
+    identity_kind: evaluation
+    geometry_cell_id: advantage__v5_extended_closure__own_above__negative
+    pair_key: advantage__v5_extended_closure__own_above__negative::seed=120110
+    scenario_signature: v5_raw_si::advantage__v5_extended_closure__own_above__negative::seed=120110
+    raw_si_phase_event: three_closing_then_two_opening
+    routing_enabled: false
+    fixed_run_in: frozen_fixed_head_on
+    physical_geometry_signature: ((0.0, 0.0, 5200.0), 258.0, 0.652084, (4423.803374,
+      -1437.380849, 4600.0), 388.0, 0.652084)
+- name: five_state_raw_si_v5_advantage__v5_extended_closure__own_above__positive_s120111
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 258.0
+    heading_deg: 359.347916485
+  target_init:
+    position_m:
+    - 4423.803374473
+    - 1437.380848628
+    - 4600.0
+    velocity_mps: 388.0
+    heading_deg: 359.347916485
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: raw_si_observability60
+    initial_class: advantage
+    height_condition: own_above
+    mirror_sign: positive
+    mirror_pair_id: v5_extended_closure__advantage__own_above
+    distance_speed_package: v5_extended_closure
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    crossing_context: false
+    scenario_seed: 120111
+    initial_range_m: 4690.0
+    altitude_diff_m: -600.0
+    own_speed_mps: 258.0
+    target_speed_mps: 388.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: advantage
+    pilot_family: THESIS-FIVE-STATE-RAW-SI-PHASE-OBSERVABILITY-V5
+    identity_kind: evaluation
+    geometry_cell_id: advantage__v5_extended_closure__own_above__positive
+    pair_key: advantage__v5_extended_closure__own_above__positive::seed=120111
+    scenario_signature: v5_raw_si::advantage__v5_extended_closure__own_above__positive::seed=120111
+    raw_si_phase_event: three_closing_then_two_opening
+    routing_enabled: false
+    fixed_run_in: frozen_fixed_head_on
+    physical_geometry_signature: ((0.0, 0.0, 5200.0), 258.0, 359.347916, (4423.803374,
+      1437.380849, 4600.0), 388.0, 359.347916)
+- name: five_state_raw_si_v5_head_on__v5_close_closure__own_below__negative_s120112
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 238.0
+    heading_deg: 358.630521597
+  target_init:
+    position_m:
+    - 2863.438331125
+    - -930.387512731
+    - 5800.0
+    velocity_mps: 356.0
+    heading_deg: 145.369478403
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: raw_si_observability60
+    initial_class: head_on
+    height_condition: own_below
+    mirror_sign: negative
+    mirror_pair_id: v5_close_closure__head_on__own_below
+    distance_speed_package: v5_close_closure
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    crossing_context: false
+    scenario_seed: 120112
+    initial_range_m: 3070.0
+    altitude_diff_m: 600.0
+    own_speed_mps: 238.0
+    target_speed_mps: 356.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: head_on
+    pilot_family: THESIS-FIVE-STATE-RAW-SI-PHASE-OBSERVABILITY-V5
+    identity_kind: evaluation
+    geometry_cell_id: head_on__v5_close_closure__own_below__negative
+    pair_key: head_on__v5_close_closure__own_below__negative::seed=120112
+    scenario_signature: v5_raw_si::head_on__v5_close_closure__own_below__negative::seed=120112
+    raw_si_phase_event: three_closing_then_two_opening
+    routing_enabled: false
+    fixed_run_in: frozen_fixed_head_on
+    physical_geometry_signature: ((0.0, 0.0, 5200.0), 238.0, 358.630522, (2863.438331,
+      -930.387513, 5800.0), 356.0, 145.369478)
+- name: five_state_raw_si_v5_head_on__v5_close_closure__own_below__positive_s120113
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 238.0
+    heading_deg: 1.369478403
+  target_init:
+    position_m:
+    - 2863.438331125
+    - 930.387512731
+    - 5800.0
+    velocity_mps: 356.0
+    heading_deg: 214.630521597
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: raw_si_observability60
+    initial_class: head_on
+    height_condition: own_below
+    mirror_sign: positive
+    mirror_pair_id: v5_close_closure__head_on__own_below
+    distance_speed_package: v5_close_closure
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    crossing_context: false
+    scenario_seed: 120113
+    initial_range_m: 3070.0
+    altitude_diff_m: 600.0
+    own_speed_mps: 238.0
+    target_speed_mps: 356.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: head_on
+    pilot_family: THESIS-FIVE-STATE-RAW-SI-PHASE-OBSERVABILITY-V5
+    identity_kind: evaluation
+    geometry_cell_id: head_on__v5_close_closure__own_below__positive
+    pair_key: head_on__v5_close_closure__own_below__positive::seed=120113
+    scenario_signature: v5_raw_si::head_on__v5_close_closure__own_below__positive::seed=120113
+    raw_si_phase_event: three_closing_then_two_opening
+    routing_enabled: false
+    fixed_run_in: frozen_fixed_head_on
+    physical_geometry_signature: ((0.0, 0.0, 5200.0), 238.0, 1.369478, (2863.438331,
+      930.387513, 5800.0), 356.0, 214.630522)
+- name: five_state_raw_si_v5_head_on__v5_close_closure__co_altitude__negative_s120114
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 238.0
+    heading_deg: 2.0
+  target_init:
+    position_m:
+    - 2919.743505026
+    - -948.682172731
+    - 5200.0
+    velocity_mps: 356.0
+    heading_deg: 142.0
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: raw_si_observability60
+    initial_class: head_on
+    height_condition: co_altitude
+    mirror_sign: negative
+    mirror_pair_id: v5_close_closure__head_on__co_altitude
+    distance_speed_package: v5_close_closure
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    crossing_context: false
+    scenario_seed: 120114
+    initial_range_m: 3070.0
+    altitude_diff_m: 0.0
+    own_speed_mps: 238.0
+    target_speed_mps: 356.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: head_on
+    pilot_family: THESIS-FIVE-STATE-RAW-SI-PHASE-OBSERVABILITY-V5
+    identity_kind: evaluation
+    geometry_cell_id: head_on__v5_close_closure__co_altitude__negative
+    pair_key: head_on__v5_close_closure__co_altitude__negative::seed=120114
+    scenario_signature: v5_raw_si::head_on__v5_close_closure__co_altitude__negative::seed=120114
+    raw_si_phase_event: three_closing_then_two_opening
+    routing_enabled: false
+    fixed_run_in: frozen_fixed_head_on
+    physical_geometry_signature: ((0.0, 0.0, 5200.0), 238.0, 2.0, (2919.743505, -948.682173,
+      5200.0), 356.0, 142.0)
+- name: five_state_raw_si_v5_head_on__v5_close_closure__co_altitude__positive_s120115
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 238.0
+    heading_deg: 358.0
+  target_init:
+    position_m:
+    - 2919.743505026
+    - 948.682172731
+    - 5200.0
+    velocity_mps: 356.0
+    heading_deg: 218.0
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: raw_si_observability60
+    initial_class: head_on
+    height_condition: co_altitude
+    mirror_sign: positive
+    mirror_pair_id: v5_close_closure__head_on__co_altitude
+    distance_speed_package: v5_close_closure
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    crossing_context: false
+    scenario_seed: 120115
+    initial_range_m: 3070.0
+    altitude_diff_m: 0.0
+    own_speed_mps: 238.0
+    target_speed_mps: 356.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: head_on
+    pilot_family: THESIS-FIVE-STATE-RAW-SI-PHASE-OBSERVABILITY-V5
+    identity_kind: evaluation
+    geometry_cell_id: head_on__v5_close_closure__co_altitude__positive
+    pair_key: head_on__v5_close_closure__co_altitude__positive::seed=120115
+    scenario_signature: v5_raw_si::head_on__v5_close_closure__co_altitude__positive::seed=120115
+    raw_si_phase_event: three_closing_then_two_opening
+    routing_enabled: false
+    fixed_run_in: frozen_fixed_head_on
+    physical_geometry_signature: ((0.0, 0.0, 5200.0), 238.0, 358.0, (2919.743505,
+      948.682173, 5200.0), 356.0, 218.0)
+- name: five_state_raw_si_v5_head_on__v5_close_closure__own_above__negative_s120116
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 238.0
+    heading_deg: 358.630521597
+  target_init:
+    position_m:
+    - 2863.438331125
+    - -930.387512731
+    - 4600.0
+    velocity_mps: 356.0
+    heading_deg: 145.369478403
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: raw_si_observability60
+    initial_class: head_on
+    height_condition: own_above
+    mirror_sign: negative
+    mirror_pair_id: v5_close_closure__head_on__own_above
+    distance_speed_package: v5_close_closure
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    crossing_context: false
+    scenario_seed: 120116
+    initial_range_m: 3070.0
+    altitude_diff_m: -600.0
+    own_speed_mps: 238.0
+    target_speed_mps: 356.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: head_on
+    pilot_family: THESIS-FIVE-STATE-RAW-SI-PHASE-OBSERVABILITY-V5
+    identity_kind: evaluation
+    geometry_cell_id: head_on__v5_close_closure__own_above__negative
+    pair_key: head_on__v5_close_closure__own_above__negative::seed=120116
+    scenario_signature: v5_raw_si::head_on__v5_close_closure__own_above__negative::seed=120116
+    raw_si_phase_event: three_closing_then_two_opening
+    routing_enabled: false
+    fixed_run_in: frozen_fixed_head_on
+    physical_geometry_signature: ((0.0, 0.0, 5200.0), 238.0, 358.630522, (2863.438331,
+      -930.387513, 4600.0), 356.0, 145.369478)
+- name: five_state_raw_si_v5_head_on__v5_close_closure__own_above__positive_s120117
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 238.0
+    heading_deg: 1.369478403
+  target_init:
+    position_m:
+    - 2863.438331125
+    - 930.387512731
+    - 4600.0
+    velocity_mps: 356.0
+    heading_deg: 214.630521597
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: raw_si_observability60
+    initial_class: head_on
+    height_condition: own_above
+    mirror_sign: positive
+    mirror_pair_id: v5_close_closure__head_on__own_above
+    distance_speed_package: v5_close_closure
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    crossing_context: false
+    scenario_seed: 120117
+    initial_range_m: 3070.0
+    altitude_diff_m: -600.0
+    own_speed_mps: 238.0
+    target_speed_mps: 356.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: head_on
+    pilot_family: THESIS-FIVE-STATE-RAW-SI-PHASE-OBSERVABILITY-V5
+    identity_kind: evaluation
+    geometry_cell_id: head_on__v5_close_closure__own_above__positive
+    pair_key: head_on__v5_close_closure__own_above__positive::seed=120117
+    scenario_signature: v5_raw_si::head_on__v5_close_closure__own_above__positive::seed=120117
+    raw_si_phase_event: three_closing_then_two_opening
+    routing_enabled: false
+    fixed_run_in: frozen_fixed_head_on
+    physical_geometry_signature: ((0.0, 0.0, 5200.0), 238.0, 1.369478, (2863.438331,
+      930.387513, 4600.0), 356.0, 214.630522)
+- name: five_state_raw_si_v5_head_on__v5_extended_closure__own_below__negative_s120118
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 258.0
+    heading_deg: 0.652083515
+  target_init:
+    position_m:
+    - 4423.803374473
+    - -1437.380848628
+    - 5800.0
+    velocity_mps: 388.0
+    heading_deg: 143.347916485
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: raw_si_observability60
+    initial_class: head_on
+    height_condition: own_below
+    mirror_sign: negative
+    mirror_pair_id: v5_extended_closure__head_on__own_below
+    distance_speed_package: v5_extended_closure
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    crossing_context: false
+    scenario_seed: 120118
+    initial_range_m: 4690.0
+    altitude_diff_m: 600.0
+    own_speed_mps: 258.0
+    target_speed_mps: 388.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: head_on
+    pilot_family: THESIS-FIVE-STATE-RAW-SI-PHASE-OBSERVABILITY-V5
+    identity_kind: evaluation
+    geometry_cell_id: head_on__v5_extended_closure__own_below__negative
+    pair_key: head_on__v5_extended_closure__own_below__negative::seed=120118
+    scenario_signature: v5_raw_si::head_on__v5_extended_closure__own_below__negative::seed=120118
+    raw_si_phase_event: three_closing_then_two_opening
+    routing_enabled: false
+    fixed_run_in: frozen_fixed_head_on
+    physical_geometry_signature: ((0.0, 0.0, 5200.0), 258.0, 0.652084, (4423.803374,
+      -1437.380849, 5800.0), 388.0, 143.347916)
+- name: five_state_raw_si_v5_head_on__v5_extended_closure__own_below__positive_s120119
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 258.0
+    heading_deg: 359.347916485
+  target_init:
+    position_m:
+    - 4423.803374473
+    - 1437.380848628
+    - 5800.0
+    velocity_mps: 388.0
+    heading_deg: 216.652083515
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: raw_si_observability60
+    initial_class: head_on
+    height_condition: own_below
+    mirror_sign: positive
+    mirror_pair_id: v5_extended_closure__head_on__own_below
+    distance_speed_package: v5_extended_closure
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    crossing_context: false
+    scenario_seed: 120119
+    initial_range_m: 4690.0
+    altitude_diff_m: 600.0
+    own_speed_mps: 258.0
+    target_speed_mps: 388.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: head_on
+    pilot_family: THESIS-FIVE-STATE-RAW-SI-PHASE-OBSERVABILITY-V5
+    identity_kind: evaluation
+    geometry_cell_id: head_on__v5_extended_closure__own_below__positive
+    pair_key: head_on__v5_extended_closure__own_below__positive::seed=120119
+    scenario_signature: v5_raw_si::head_on__v5_extended_closure__own_below__positive::seed=120119
+    raw_si_phase_event: three_closing_then_two_opening
+    routing_enabled: false
+    fixed_run_in: frozen_fixed_head_on
+    physical_geometry_signature: ((0.0, 0.0, 5200.0), 258.0, 359.347916, (4423.803374,
+      1437.380849, 5800.0), 388.0, 216.652084)
+- name: five_state_raw_si_v5_head_on__v5_extended_closure__co_altitude__negative_s120120
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 258.0
+    heading_deg: 2.0
+  target_init:
+    position_m:
+    - 4460.455061424
+    - -1449.289703619
+    - 5200.0
+    velocity_mps: 388.0
+    heading_deg: 142.0
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: raw_si_observability60
+    initial_class: head_on
+    height_condition: co_altitude
+    mirror_sign: negative
+    mirror_pair_id: v5_extended_closure__head_on__co_altitude
+    distance_speed_package: v5_extended_closure
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    crossing_context: false
+    scenario_seed: 120120
+    initial_range_m: 4690.0
+    altitude_diff_m: 0.0
+    own_speed_mps: 258.0
+    target_speed_mps: 388.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: head_on
+    pilot_family: THESIS-FIVE-STATE-RAW-SI-PHASE-OBSERVABILITY-V5
+    identity_kind: evaluation
+    geometry_cell_id: head_on__v5_extended_closure__co_altitude__negative
+    pair_key: head_on__v5_extended_closure__co_altitude__negative::seed=120120
+    scenario_signature: v5_raw_si::head_on__v5_extended_closure__co_altitude__negative::seed=120120
+    raw_si_phase_event: three_closing_then_two_opening
+    routing_enabled: false
+    fixed_run_in: frozen_fixed_head_on
+    physical_geometry_signature: ((0.0, 0.0, 5200.0), 258.0, 2.0, (4460.455061, -1449.289704,
+      5200.0), 388.0, 142.0)
+- name: five_state_raw_si_v5_head_on__v5_extended_closure__co_altitude__positive_s120121
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 258.0
+    heading_deg: 358.0
+  target_init:
+    position_m:
+    - 4460.455061424
+    - 1449.289703619
+    - 5200.0
+    velocity_mps: 388.0
+    heading_deg: 218.0
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: raw_si_observability60
+    initial_class: head_on
+    height_condition: co_altitude
+    mirror_sign: positive
+    mirror_pair_id: v5_extended_closure__head_on__co_altitude
+    distance_speed_package: v5_extended_closure
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    crossing_context: false
+    scenario_seed: 120121
+    initial_range_m: 4690.0
+    altitude_diff_m: 0.0
+    own_speed_mps: 258.0
+    target_speed_mps: 388.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: head_on
+    pilot_family: THESIS-FIVE-STATE-RAW-SI-PHASE-OBSERVABILITY-V5
+    identity_kind: evaluation
+    geometry_cell_id: head_on__v5_extended_closure__co_altitude__positive
+    pair_key: head_on__v5_extended_closure__co_altitude__positive::seed=120121
+    scenario_signature: v5_raw_si::head_on__v5_extended_closure__co_altitude__positive::seed=120121
+    raw_si_phase_event: three_closing_then_two_opening
+    routing_enabled: false
+    fixed_run_in: frozen_fixed_head_on
+    physical_geometry_signature: ((0.0, 0.0, 5200.0), 258.0, 358.0, (4460.455061,
+      1449.289704, 5200.0), 388.0, 218.0)
+- name: five_state_raw_si_v5_head_on__v5_extended_closure__own_above__negative_s120122
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 258.0
+    heading_deg: 0.652083515
+  target_init:
+    position_m:
+    - 4423.803374473
+    - -1437.380848628
+    - 4600.0
+    velocity_mps: 388.0
+    heading_deg: 143.347916485
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: raw_si_observability60
+    initial_class: head_on
+    height_condition: own_above
+    mirror_sign: negative
+    mirror_pair_id: v5_extended_closure__head_on__own_above
+    distance_speed_package: v5_extended_closure
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    crossing_context: false
+    scenario_seed: 120122
+    initial_range_m: 4690.0
+    altitude_diff_m: -600.0
+    own_speed_mps: 258.0
+    target_speed_mps: 388.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: head_on
+    pilot_family: THESIS-FIVE-STATE-RAW-SI-PHASE-OBSERVABILITY-V5
+    identity_kind: evaluation
+    geometry_cell_id: head_on__v5_extended_closure__own_above__negative
+    pair_key: head_on__v5_extended_closure__own_above__negative::seed=120122
+    scenario_signature: v5_raw_si::head_on__v5_extended_closure__own_above__negative::seed=120122
+    raw_si_phase_event: three_closing_then_two_opening
+    routing_enabled: false
+    fixed_run_in: frozen_fixed_head_on
+    physical_geometry_signature: ((0.0, 0.0, 5200.0), 258.0, 0.652084, (4423.803374,
+      -1437.380849, 4600.0), 388.0, 143.347916)
+- name: five_state_raw_si_v5_head_on__v5_extended_closure__own_above__positive_s120123
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 258.0
+    heading_deg: 359.347916485
+  target_init:
+    position_m:
+    - 4423.803374473
+    - 1437.380848628
+    - 4600.0
+    velocity_mps: 388.0
+    heading_deg: 216.652083515
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: raw_si_observability60
+    initial_class: head_on
+    height_condition: own_above
+    mirror_sign: positive
+    mirror_pair_id: v5_extended_closure__head_on__own_above
+    distance_speed_package: v5_extended_closure
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    crossing_context: false
+    scenario_seed: 120123
+    initial_range_m: 4690.0
+    altitude_diff_m: -600.0
+    own_speed_mps: 258.0
+    target_speed_mps: 388.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: head_on
+    pilot_family: THESIS-FIVE-STATE-RAW-SI-PHASE-OBSERVABILITY-V5
+    identity_kind: evaluation
+    geometry_cell_id: head_on__v5_extended_closure__own_above__positive
+    pair_key: head_on__v5_extended_closure__own_above__positive::seed=120123
+    scenario_signature: v5_raw_si::head_on__v5_extended_closure__own_above__positive::seed=120123
+    raw_si_phase_event: three_closing_then_two_opening
+    routing_enabled: false
+    fixed_run_in: frozen_fixed_head_on
+    physical_geometry_signature: ((0.0, 0.0, 5200.0), 258.0, 359.347916, (4423.803374,
+      1437.380849, 4600.0), 388.0, 216.652084)
+- name: five_state_raw_si_v5_disadvantage__v5_close_closure__own_below__negative_s120124
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 238.0
+    heading_deg: 145.369478403
+  target_init:
+    position_m:
+    - 2863.438331125
+    - -930.387512731
+    - 5800.0
+    velocity_mps: 356.0
+    heading_deg: 145.369478403
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: raw_si_observability60
+    initial_class: disadvantage
+    height_condition: own_below
+    mirror_sign: negative
+    mirror_pair_id: v5_close_closure__disadvantage__own_below
+    distance_speed_package: v5_close_closure
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    crossing_context: false
+    scenario_seed: 120124
+    initial_range_m: 3070.0
+    altitude_diff_m: 600.0
+    own_speed_mps: 238.0
+    target_speed_mps: 356.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: disadvantage
+    pilot_family: THESIS-FIVE-STATE-RAW-SI-PHASE-OBSERVABILITY-V5
+    identity_kind: evaluation
+    geometry_cell_id: disadvantage__v5_close_closure__own_below__negative
+    pair_key: disadvantage__v5_close_closure__own_below__negative::seed=120124
+    scenario_signature: v5_raw_si::disadvantage__v5_close_closure__own_below__negative::seed=120124
+    raw_si_phase_event: three_closing_then_two_opening
+    routing_enabled: false
+    fixed_run_in: frozen_fixed_head_on
+    physical_geometry_signature: ((0.0, 0.0, 5200.0), 238.0, 145.369478, (2863.438331,
+      -930.387513, 5800.0), 356.0, 145.369478)
+- name: five_state_raw_si_v5_disadvantage__v5_close_closure__own_below__positive_s120125
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 238.0
+    heading_deg: 214.630521597
+  target_init:
+    position_m:
+    - 2863.438331125
+    - 930.387512731
+    - 5800.0
+    velocity_mps: 356.0
+    heading_deg: 214.630521597
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: raw_si_observability60
+    initial_class: disadvantage
+    height_condition: own_below
+    mirror_sign: positive
+    mirror_pair_id: v5_close_closure__disadvantage__own_below
+    distance_speed_package: v5_close_closure
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    crossing_context: false
+    scenario_seed: 120125
+    initial_range_m: 3070.0
+    altitude_diff_m: 600.0
+    own_speed_mps: 238.0
+    target_speed_mps: 356.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: disadvantage
+    pilot_family: THESIS-FIVE-STATE-RAW-SI-PHASE-OBSERVABILITY-V5
+    identity_kind: evaluation
+    geometry_cell_id: disadvantage__v5_close_closure__own_below__positive
+    pair_key: disadvantage__v5_close_closure__own_below__positive::seed=120125
+    scenario_signature: v5_raw_si::disadvantage__v5_close_closure__own_below__positive::seed=120125
+    raw_si_phase_event: three_closing_then_two_opening
+    routing_enabled: false
+    fixed_run_in: frozen_fixed_head_on
+    physical_geometry_signature: ((0.0, 0.0, 5200.0), 238.0, 214.630522, (2863.438331,
+      930.387513, 5800.0), 356.0, 214.630522)
+- name: five_state_raw_si_v5_disadvantage__v5_close_closure__co_altitude__negative_s120126
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 238.0
+    heading_deg: 142.0
+  target_init:
+    position_m:
+    - 2919.743505026
+    - -948.682172731
+    - 5200.0
+    velocity_mps: 356.0
+    heading_deg: 142.0
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: raw_si_observability60
+    initial_class: disadvantage
+    height_condition: co_altitude
+    mirror_sign: negative
+    mirror_pair_id: v5_close_closure__disadvantage__co_altitude
+    distance_speed_package: v5_close_closure
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    crossing_context: false
+    scenario_seed: 120126
+    initial_range_m: 3070.0
+    altitude_diff_m: 0.0
+    own_speed_mps: 238.0
+    target_speed_mps: 356.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: disadvantage
+    pilot_family: THESIS-FIVE-STATE-RAW-SI-PHASE-OBSERVABILITY-V5
+    identity_kind: evaluation
+    geometry_cell_id: disadvantage__v5_close_closure__co_altitude__negative
+    pair_key: disadvantage__v5_close_closure__co_altitude__negative::seed=120126
+    scenario_signature: v5_raw_si::disadvantage__v5_close_closure__co_altitude__negative::seed=120126
+    raw_si_phase_event: three_closing_then_two_opening
+    routing_enabled: false
+    fixed_run_in: frozen_fixed_head_on
+    physical_geometry_signature: ((0.0, 0.0, 5200.0), 238.0, 142.0, (2919.743505,
+      -948.682173, 5200.0), 356.0, 142.0)
+- name: five_state_raw_si_v5_disadvantage__v5_close_closure__co_altitude__positive_s120127
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 238.0
+    heading_deg: 218.0
+  target_init:
+    position_m:
+    - 2919.743505026
+    - 948.682172731
+    - 5200.0
+    velocity_mps: 356.0
+    heading_deg: 218.0
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: raw_si_observability60
+    initial_class: disadvantage
+    height_condition: co_altitude
+    mirror_sign: positive
+    mirror_pair_id: v5_close_closure__disadvantage__co_altitude
+    distance_speed_package: v5_close_closure
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    crossing_context: false
+    scenario_seed: 120127
+    initial_range_m: 3070.0
+    altitude_diff_m: 0.0
+    own_speed_mps: 238.0
+    target_speed_mps: 356.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: disadvantage
+    pilot_family: THESIS-FIVE-STATE-RAW-SI-PHASE-OBSERVABILITY-V5
+    identity_kind: evaluation
+    geometry_cell_id: disadvantage__v5_close_closure__co_altitude__positive
+    pair_key: disadvantage__v5_close_closure__co_altitude__positive::seed=120127
+    scenario_signature: v5_raw_si::disadvantage__v5_close_closure__co_altitude__positive::seed=120127
+    raw_si_phase_event: three_closing_then_two_opening
+    routing_enabled: false
+    fixed_run_in: frozen_fixed_head_on
+    physical_geometry_signature: ((0.0, 0.0, 5200.0), 238.0, 218.0, (2919.743505,
+      948.682173, 5200.0), 356.0, 218.0)
+- name: five_state_raw_si_v5_disadvantage__v5_close_closure__own_above__negative_s120128
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 238.0
+    heading_deg: 145.369478403
+  target_init:
+    position_m:
+    - 2863.438331125
+    - -930.387512731
+    - 4600.0
+    velocity_mps: 356.0
+    heading_deg: 145.369478403
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: raw_si_observability60
+    initial_class: disadvantage
+    height_condition: own_above
+    mirror_sign: negative
+    mirror_pair_id: v5_close_closure__disadvantage__own_above
+    distance_speed_package: v5_close_closure
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    crossing_context: false
+    scenario_seed: 120128
+    initial_range_m: 3070.0
+    altitude_diff_m: -600.0
+    own_speed_mps: 238.0
+    target_speed_mps: 356.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: disadvantage
+    pilot_family: THESIS-FIVE-STATE-RAW-SI-PHASE-OBSERVABILITY-V5
+    identity_kind: evaluation
+    geometry_cell_id: disadvantage__v5_close_closure__own_above__negative
+    pair_key: disadvantage__v5_close_closure__own_above__negative::seed=120128
+    scenario_signature: v5_raw_si::disadvantage__v5_close_closure__own_above__negative::seed=120128
+    raw_si_phase_event: three_closing_then_two_opening
+    routing_enabled: false
+    fixed_run_in: frozen_fixed_head_on
+    physical_geometry_signature: ((0.0, 0.0, 5200.0), 238.0, 145.369478, (2863.438331,
+      -930.387513, 4600.0), 356.0, 145.369478)
+- name: five_state_raw_si_v5_disadvantage__v5_close_closure__own_above__positive_s120129
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 238.0
+    heading_deg: 214.630521597
+  target_init:
+    position_m:
+    - 2863.438331125
+    - 930.387512731
+    - 4600.0
+    velocity_mps: 356.0
+    heading_deg: 214.630521597
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: raw_si_observability60
+    initial_class: disadvantage
+    height_condition: own_above
+    mirror_sign: positive
+    mirror_pair_id: v5_close_closure__disadvantage__own_above
+    distance_speed_package: v5_close_closure
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    crossing_context: false
+    scenario_seed: 120129
+    initial_range_m: 3070.0
+    altitude_diff_m: -600.0
+    own_speed_mps: 238.0
+    target_speed_mps: 356.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: disadvantage
+    pilot_family: THESIS-FIVE-STATE-RAW-SI-PHASE-OBSERVABILITY-V5
+    identity_kind: evaluation
+    geometry_cell_id: disadvantage__v5_close_closure__own_above__positive
+    pair_key: disadvantage__v5_close_closure__own_above__positive::seed=120129
+    scenario_signature: v5_raw_si::disadvantage__v5_close_closure__own_above__positive::seed=120129
+    raw_si_phase_event: three_closing_then_two_opening
+    routing_enabled: false
+    fixed_run_in: frozen_fixed_head_on
+    physical_geometry_signature: ((0.0, 0.0, 5200.0), 238.0, 214.630522, (2863.438331,
+      930.387513, 4600.0), 356.0, 214.630522)
+- name: five_state_raw_si_v5_disadvantage__v5_extended_closure__own_below__negative_s120130
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 258.0
+    heading_deg: 143.347916485
+  target_init:
+    position_m:
+    - 4423.803374473
+    - -1437.380848628
+    - 5800.0
+    velocity_mps: 388.0
+    heading_deg: 143.347916485
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: raw_si_observability60
+    initial_class: disadvantage
+    height_condition: own_below
+    mirror_sign: negative
+    mirror_pair_id: v5_extended_closure__disadvantage__own_below
+    distance_speed_package: v5_extended_closure
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    crossing_context: false
+    scenario_seed: 120130
+    initial_range_m: 4690.0
+    altitude_diff_m: 600.0
+    own_speed_mps: 258.0
+    target_speed_mps: 388.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: disadvantage
+    pilot_family: THESIS-FIVE-STATE-RAW-SI-PHASE-OBSERVABILITY-V5
+    identity_kind: evaluation
+    geometry_cell_id: disadvantage__v5_extended_closure__own_below__negative
+    pair_key: disadvantage__v5_extended_closure__own_below__negative::seed=120130
+    scenario_signature: v5_raw_si::disadvantage__v5_extended_closure__own_below__negative::seed=120130
+    raw_si_phase_event: three_closing_then_two_opening
+    routing_enabled: false
+    fixed_run_in: frozen_fixed_head_on
+    physical_geometry_signature: ((0.0, 0.0, 5200.0), 258.0, 143.347916, (4423.803374,
+      -1437.380849, 5800.0), 388.0, 143.347916)
+- name: five_state_raw_si_v5_disadvantage__v5_extended_closure__own_below__positive_s120131
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 258.0
+    heading_deg: 216.652083515
+  target_init:
+    position_m:
+    - 4423.803374473
+    - 1437.380848628
+    - 5800.0
+    velocity_mps: 388.0
+    heading_deg: 216.652083515
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: raw_si_observability60
+    initial_class: disadvantage
+    height_condition: own_below
+    mirror_sign: positive
+    mirror_pair_id: v5_extended_closure__disadvantage__own_below
+    distance_speed_package: v5_extended_closure
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    crossing_context: false
+    scenario_seed: 120131
+    initial_range_m: 4690.0
+    altitude_diff_m: 600.0
+    own_speed_mps: 258.0
+    target_speed_mps: 388.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: disadvantage
+    pilot_family: THESIS-FIVE-STATE-RAW-SI-PHASE-OBSERVABILITY-V5
+    identity_kind: evaluation
+    geometry_cell_id: disadvantage__v5_extended_closure__own_below__positive
+    pair_key: disadvantage__v5_extended_closure__own_below__positive::seed=120131
+    scenario_signature: v5_raw_si::disadvantage__v5_extended_closure__own_below__positive::seed=120131
+    raw_si_phase_event: three_closing_then_two_opening
+    routing_enabled: false
+    fixed_run_in: frozen_fixed_head_on
+    physical_geometry_signature: ((0.0, 0.0, 5200.0), 258.0, 216.652084, (4423.803374,
+      1437.380849, 5800.0), 388.0, 216.652084)
+- name: five_state_raw_si_v5_disadvantage__v5_extended_closure__co_altitude__negative_s120132
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 258.0
+    heading_deg: 142.0
+  target_init:
+    position_m:
+    - 4460.455061424
+    - -1449.289703619
+    - 5200.0
+    velocity_mps: 388.0
+    heading_deg: 142.0
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: raw_si_observability60
+    initial_class: disadvantage
+    height_condition: co_altitude
+    mirror_sign: negative
+    mirror_pair_id: v5_extended_closure__disadvantage__co_altitude
+    distance_speed_package: v5_extended_closure
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    crossing_context: false
+    scenario_seed: 120132
+    initial_range_m: 4690.0
+    altitude_diff_m: 0.0
+    own_speed_mps: 258.0
+    target_speed_mps: 388.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: disadvantage
+    pilot_family: THESIS-FIVE-STATE-RAW-SI-PHASE-OBSERVABILITY-V5
+    identity_kind: evaluation
+    geometry_cell_id: disadvantage__v5_extended_closure__co_altitude__negative
+    pair_key: disadvantage__v5_extended_closure__co_altitude__negative::seed=120132
+    scenario_signature: v5_raw_si::disadvantage__v5_extended_closure__co_altitude__negative::seed=120132
+    raw_si_phase_event: three_closing_then_two_opening
+    routing_enabled: false
+    fixed_run_in: frozen_fixed_head_on
+    physical_geometry_signature: ((0.0, 0.0, 5200.0), 258.0, 142.0, (4460.455061,
+      -1449.289704, 5200.0), 388.0, 142.0)
+- name: five_state_raw_si_v5_disadvantage__v5_extended_closure__co_altitude__positive_s120133
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 258.0
+    heading_deg: 218.0
+  target_init:
+    position_m:
+    - 4460.455061424
+    - 1449.289703619
+    - 5200.0
+    velocity_mps: 388.0
+    heading_deg: 218.0
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: raw_si_observability60
+    initial_class: disadvantage
+    height_condition: co_altitude
+    mirror_sign: positive
+    mirror_pair_id: v5_extended_closure__disadvantage__co_altitude
+    distance_speed_package: v5_extended_closure
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    crossing_context: false
+    scenario_seed: 120133
+    initial_range_m: 4690.0
+    altitude_diff_m: 0.0
+    own_speed_mps: 258.0
+    target_speed_mps: 388.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: disadvantage
+    pilot_family: THESIS-FIVE-STATE-RAW-SI-PHASE-OBSERVABILITY-V5
+    identity_kind: evaluation
+    geometry_cell_id: disadvantage__v5_extended_closure__co_altitude__positive
+    pair_key: disadvantage__v5_extended_closure__co_altitude__positive::seed=120133
+    scenario_signature: v5_raw_si::disadvantage__v5_extended_closure__co_altitude__positive::seed=120133
+    raw_si_phase_event: three_closing_then_two_opening
+    routing_enabled: false
+    fixed_run_in: frozen_fixed_head_on
+    physical_geometry_signature: ((0.0, 0.0, 5200.0), 258.0, 218.0, (4460.455061,
+      1449.289704, 5200.0), 388.0, 218.0)
+- name: five_state_raw_si_v5_disadvantage__v5_extended_closure__own_above__negative_s120134
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 258.0
+    heading_deg: 143.347916485
+  target_init:
+    position_m:
+    - 4423.803374473
+    - -1437.380848628
+    - 4600.0
+    velocity_mps: 388.0
+    heading_deg: 143.347916485
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: raw_si_observability60
+    initial_class: disadvantage
+    height_condition: own_above
+    mirror_sign: negative
+    mirror_pair_id: v5_extended_closure__disadvantage__own_above
+    distance_speed_package: v5_extended_closure
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    crossing_context: false
+    scenario_seed: 120134
+    initial_range_m: 4690.0
+    altitude_diff_m: -600.0
+    own_speed_mps: 258.0
+    target_speed_mps: 388.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: disadvantage
+    pilot_family: THESIS-FIVE-STATE-RAW-SI-PHASE-OBSERVABILITY-V5
+    identity_kind: evaluation
+    geometry_cell_id: disadvantage__v5_extended_closure__own_above__negative
+    pair_key: disadvantage__v5_extended_closure__own_above__negative::seed=120134
+    scenario_signature: v5_raw_si::disadvantage__v5_extended_closure__own_above__negative::seed=120134
+    raw_si_phase_event: three_closing_then_two_opening
+    routing_enabled: false
+    fixed_run_in: frozen_fixed_head_on
+    physical_geometry_signature: ((0.0, 0.0, 5200.0), 258.0, 143.347916, (4423.803374,
+      -1437.380849, 4600.0), 388.0, 143.347916)
+- name: five_state_raw_si_v5_disadvantage__v5_extended_closure__own_above__positive_s120135
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 258.0
+    heading_deg: 216.652083515
+  target_init:
+    position_m:
+    - 4423.803374473
+    - 1437.380848628
+    - 4600.0
+    velocity_mps: 388.0
+    heading_deg: 216.652083515
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: raw_si_observability60
+    initial_class: disadvantage
+    height_condition: own_above
+    mirror_sign: positive
+    mirror_pair_id: v5_extended_closure__disadvantage__own_above
+    distance_speed_package: v5_extended_closure
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    crossing_context: false
+    scenario_seed: 120135
+    initial_range_m: 4690.0
+    altitude_diff_m: -600.0
+    own_speed_mps: 258.0
+    target_speed_mps: 388.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: disadvantage
+    pilot_family: THESIS-FIVE-STATE-RAW-SI-PHASE-OBSERVABILITY-V5
+    identity_kind: evaluation
+    geometry_cell_id: disadvantage__v5_extended_closure__own_above__positive
+    pair_key: disadvantage__v5_extended_closure__own_above__positive::seed=120135
+    scenario_signature: v5_raw_si::disadvantage__v5_extended_closure__own_above__positive::seed=120135
+    raw_si_phase_event: three_closing_then_two_opening
+    routing_enabled: false
+    fixed_run_in: frozen_fixed_head_on
+    physical_geometry_signature: ((0.0, 0.0, 5200.0), 258.0, 216.652084, (4423.803374,
+      1437.380849, 4600.0), 388.0, 216.652084)
+- name: five_state_raw_si_v5_neutral__v5_close_closure__own_below__negative_s120136
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 238.0
+    heading_deg: 145.369478403
+  target_init:
+    position_m:
+    - 2863.438331125
+    - -930.387512731
+    - 5800.0
+    velocity_mps: 356.0
+    heading_deg: 358.630521597
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: raw_si_observability60
+    initial_class: neutral
+    height_condition: own_below
+    mirror_sign: negative
+    mirror_pair_id: v5_close_closure__neutral__own_below
+    distance_speed_package: v5_close_closure
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    crossing_context: false
+    scenario_seed: 120136
+    initial_range_m: 3070.0
+    altitude_diff_m: 600.0
+    own_speed_mps: 238.0
+    target_speed_mps: 356.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: neutral
+    pilot_family: THESIS-FIVE-STATE-RAW-SI-PHASE-OBSERVABILITY-V5
+    identity_kind: evaluation
+    geometry_cell_id: neutral__v5_close_closure__own_below__negative
+    pair_key: neutral__v5_close_closure__own_below__negative::seed=120136
+    scenario_signature: v5_raw_si::neutral__v5_close_closure__own_below__negative::seed=120136
+    raw_si_phase_event: three_closing_then_two_opening
+    routing_enabled: false
+    fixed_run_in: frozen_fixed_head_on
+    physical_geometry_signature: ((0.0, 0.0, 5200.0), 238.0, 145.369478, (2863.438331,
+      -930.387513, 5800.0), 356.0, 358.630522)
+- name: five_state_raw_si_v5_neutral__v5_close_closure__own_below__positive_s120137
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 238.0
+    heading_deg: 214.630521597
+  target_init:
+    position_m:
+    - 2863.438331125
+    - 930.387512731
+    - 5800.0
+    velocity_mps: 356.0
+    heading_deg: 1.369478403
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: raw_si_observability60
+    initial_class: neutral
+    height_condition: own_below
+    mirror_sign: positive
+    mirror_pair_id: v5_close_closure__neutral__own_below
+    distance_speed_package: v5_close_closure
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    crossing_context: false
+    scenario_seed: 120137
+    initial_range_m: 3070.0
+    altitude_diff_m: 600.0
+    own_speed_mps: 238.0
+    target_speed_mps: 356.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: neutral
+    pilot_family: THESIS-FIVE-STATE-RAW-SI-PHASE-OBSERVABILITY-V5
+    identity_kind: evaluation
+    geometry_cell_id: neutral__v5_close_closure__own_below__positive
+    pair_key: neutral__v5_close_closure__own_below__positive::seed=120137
+    scenario_signature: v5_raw_si::neutral__v5_close_closure__own_below__positive::seed=120137
+    raw_si_phase_event: three_closing_then_two_opening
+    routing_enabled: false
+    fixed_run_in: frozen_fixed_head_on
+    physical_geometry_signature: ((0.0, 0.0, 5200.0), 238.0, 214.630522, (2863.438331,
+      930.387513, 5800.0), 356.0, 1.369478)
+- name: five_state_raw_si_v5_neutral__v5_close_closure__co_altitude__negative_s120138
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 238.0
+    heading_deg: 142.0
+  target_init:
+    position_m:
+    - 2919.743505026
+    - -948.682172731
+    - 5200.0
+    velocity_mps: 356.0
+    heading_deg: 2.0
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: raw_si_observability60
+    initial_class: neutral
+    height_condition: co_altitude
+    mirror_sign: negative
+    mirror_pair_id: v5_close_closure__neutral__co_altitude
+    distance_speed_package: v5_close_closure
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    crossing_context: false
+    scenario_seed: 120138
+    initial_range_m: 3070.0
+    altitude_diff_m: 0.0
+    own_speed_mps: 238.0
+    target_speed_mps: 356.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: neutral
+    pilot_family: THESIS-FIVE-STATE-RAW-SI-PHASE-OBSERVABILITY-V5
+    identity_kind: evaluation
+    geometry_cell_id: neutral__v5_close_closure__co_altitude__negative
+    pair_key: neutral__v5_close_closure__co_altitude__negative::seed=120138
+    scenario_signature: v5_raw_si::neutral__v5_close_closure__co_altitude__negative::seed=120138
+    raw_si_phase_event: three_closing_then_two_opening
+    routing_enabled: false
+    fixed_run_in: frozen_fixed_head_on
+    physical_geometry_signature: ((0.0, 0.0, 5200.0), 238.0, 142.0, (2919.743505,
+      -948.682173, 5200.0), 356.0, 2.0)
+- name: five_state_raw_si_v5_neutral__v5_close_closure__co_altitude__positive_s120139
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 238.0
+    heading_deg: 218.0
+  target_init:
+    position_m:
+    - 2919.743505026
+    - 948.682172731
+    - 5200.0
+    velocity_mps: 356.0
+    heading_deg: 358.0
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: raw_si_observability60
+    initial_class: neutral
+    height_condition: co_altitude
+    mirror_sign: positive
+    mirror_pair_id: v5_close_closure__neutral__co_altitude
+    distance_speed_package: v5_close_closure
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    crossing_context: false
+    scenario_seed: 120139
+    initial_range_m: 3070.0
+    altitude_diff_m: 0.0
+    own_speed_mps: 238.0
+    target_speed_mps: 356.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: neutral
+    pilot_family: THESIS-FIVE-STATE-RAW-SI-PHASE-OBSERVABILITY-V5
+    identity_kind: evaluation
+    geometry_cell_id: neutral__v5_close_closure__co_altitude__positive
+    pair_key: neutral__v5_close_closure__co_altitude__positive::seed=120139
+    scenario_signature: v5_raw_si::neutral__v5_close_closure__co_altitude__positive::seed=120139
+    raw_si_phase_event: three_closing_then_two_opening
+    routing_enabled: false
+    fixed_run_in: frozen_fixed_head_on
+    physical_geometry_signature: ((0.0, 0.0, 5200.0), 238.0, 218.0, (2919.743505,
+      948.682173, 5200.0), 356.0, 358.0)
+- name: five_state_raw_si_v5_neutral__v5_close_closure__own_above__negative_s120140
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 238.0
+    heading_deg: 145.369478403
+  target_init:
+    position_m:
+    - 2863.438331125
+    - -930.387512731
+    - 4600.0
+    velocity_mps: 356.0
+    heading_deg: 358.630521597
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: raw_si_observability60
+    initial_class: neutral
+    height_condition: own_above
+    mirror_sign: negative
+    mirror_pair_id: v5_close_closure__neutral__own_above
+    distance_speed_package: v5_close_closure
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    crossing_context: false
+    scenario_seed: 120140
+    initial_range_m: 3070.0
+    altitude_diff_m: -600.0
+    own_speed_mps: 238.0
+    target_speed_mps: 356.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: neutral
+    pilot_family: THESIS-FIVE-STATE-RAW-SI-PHASE-OBSERVABILITY-V5
+    identity_kind: evaluation
+    geometry_cell_id: neutral__v5_close_closure__own_above__negative
+    pair_key: neutral__v5_close_closure__own_above__negative::seed=120140
+    scenario_signature: v5_raw_si::neutral__v5_close_closure__own_above__negative::seed=120140
+    raw_si_phase_event: three_closing_then_two_opening
+    routing_enabled: false
+    fixed_run_in: frozen_fixed_head_on
+    physical_geometry_signature: ((0.0, 0.0, 5200.0), 238.0, 145.369478, (2863.438331,
+      -930.387513, 4600.0), 356.0, 358.630522)
+- name: five_state_raw_si_v5_neutral__v5_close_closure__own_above__positive_s120141
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 238.0
+    heading_deg: 214.630521597
+  target_init:
+    position_m:
+    - 2863.438331125
+    - 930.387512731
+    - 4600.0
+    velocity_mps: 356.0
+    heading_deg: 1.369478403
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: raw_si_observability60
+    initial_class: neutral
+    height_condition: own_above
+    mirror_sign: positive
+    mirror_pair_id: v5_close_closure__neutral__own_above
+    distance_speed_package: v5_close_closure
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    crossing_context: false
+    scenario_seed: 120141
+    initial_range_m: 3070.0
+    altitude_diff_m: -600.0
+    own_speed_mps: 238.0
+    target_speed_mps: 356.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: neutral
+    pilot_family: THESIS-FIVE-STATE-RAW-SI-PHASE-OBSERVABILITY-V5
+    identity_kind: evaluation
+    geometry_cell_id: neutral__v5_close_closure__own_above__positive
+    pair_key: neutral__v5_close_closure__own_above__positive::seed=120141
+    scenario_signature: v5_raw_si::neutral__v5_close_closure__own_above__positive::seed=120141
+    raw_si_phase_event: three_closing_then_two_opening
+    routing_enabled: false
+    fixed_run_in: frozen_fixed_head_on
+    physical_geometry_signature: ((0.0, 0.0, 5200.0), 238.0, 214.630522, (2863.438331,
+      930.387513, 4600.0), 356.0, 1.369478)
+- name: five_state_raw_si_v5_neutral__v5_extended_closure__own_below__negative_s120142
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 258.0
+    heading_deg: 143.347916485
+  target_init:
+    position_m:
+    - 4423.803374473
+    - -1437.380848628
+    - 5800.0
+    velocity_mps: 388.0
+    heading_deg: 0.652083515
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: raw_si_observability60
+    initial_class: neutral
+    height_condition: own_below
+    mirror_sign: negative
+    mirror_pair_id: v5_extended_closure__neutral__own_below
+    distance_speed_package: v5_extended_closure
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    crossing_context: false
+    scenario_seed: 120142
+    initial_range_m: 4690.0
+    altitude_diff_m: 600.0
+    own_speed_mps: 258.0
+    target_speed_mps: 388.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: neutral
+    pilot_family: THESIS-FIVE-STATE-RAW-SI-PHASE-OBSERVABILITY-V5
+    identity_kind: evaluation
+    geometry_cell_id: neutral__v5_extended_closure__own_below__negative
+    pair_key: neutral__v5_extended_closure__own_below__negative::seed=120142
+    scenario_signature: v5_raw_si::neutral__v5_extended_closure__own_below__negative::seed=120142
+    raw_si_phase_event: three_closing_then_two_opening
+    routing_enabled: false
+    fixed_run_in: frozen_fixed_head_on
+    physical_geometry_signature: ((0.0, 0.0, 5200.0), 258.0, 143.347916, (4423.803374,
+      -1437.380849, 5800.0), 388.0, 0.652084)
+- name: five_state_raw_si_v5_neutral__v5_extended_closure__own_below__positive_s120143
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 258.0
+    heading_deg: 216.652083515
+  target_init:
+    position_m:
+    - 4423.803374473
+    - 1437.380848628
+    - 5800.0
+    velocity_mps: 388.0
+    heading_deg: 359.347916485
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: raw_si_observability60
+    initial_class: neutral
+    height_condition: own_below
+    mirror_sign: positive
+    mirror_pair_id: v5_extended_closure__neutral__own_below
+    distance_speed_package: v5_extended_closure
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    crossing_context: false
+    scenario_seed: 120143
+    initial_range_m: 4690.0
+    altitude_diff_m: 600.0
+    own_speed_mps: 258.0
+    target_speed_mps: 388.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: neutral
+    pilot_family: THESIS-FIVE-STATE-RAW-SI-PHASE-OBSERVABILITY-V5
+    identity_kind: evaluation
+    geometry_cell_id: neutral__v5_extended_closure__own_below__positive
+    pair_key: neutral__v5_extended_closure__own_below__positive::seed=120143
+    scenario_signature: v5_raw_si::neutral__v5_extended_closure__own_below__positive::seed=120143
+    raw_si_phase_event: three_closing_then_two_opening
+    routing_enabled: false
+    fixed_run_in: frozen_fixed_head_on
+    physical_geometry_signature: ((0.0, 0.0, 5200.0), 258.0, 216.652084, (4423.803374,
+      1437.380849, 5800.0), 388.0, 359.347916)
+- name: five_state_raw_si_v5_neutral__v5_extended_closure__co_altitude__negative_s120144
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 258.0
+    heading_deg: 142.0
+  target_init:
+    position_m:
+    - 4460.455061424
+    - -1449.289703619
+    - 5200.0
+    velocity_mps: 388.0
+    heading_deg: 2.0
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: raw_si_observability60
+    initial_class: neutral
+    height_condition: co_altitude
+    mirror_sign: negative
+    mirror_pair_id: v5_extended_closure__neutral__co_altitude
+    distance_speed_package: v5_extended_closure
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    crossing_context: false
+    scenario_seed: 120144
+    initial_range_m: 4690.0
+    altitude_diff_m: 0.0
+    own_speed_mps: 258.0
+    target_speed_mps: 388.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: neutral
+    pilot_family: THESIS-FIVE-STATE-RAW-SI-PHASE-OBSERVABILITY-V5
+    identity_kind: evaluation
+    geometry_cell_id: neutral__v5_extended_closure__co_altitude__negative
+    pair_key: neutral__v5_extended_closure__co_altitude__negative::seed=120144
+    scenario_signature: v5_raw_si::neutral__v5_extended_closure__co_altitude__negative::seed=120144
+    raw_si_phase_event: three_closing_then_two_opening
+    routing_enabled: false
+    fixed_run_in: frozen_fixed_head_on
+    physical_geometry_signature: ((0.0, 0.0, 5200.0), 258.0, 142.0, (4460.455061,
+      -1449.289704, 5200.0), 388.0, 2.0)
+- name: five_state_raw_si_v5_neutral__v5_extended_closure__co_altitude__positive_s120145
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 258.0
+    heading_deg: 218.0
+  target_init:
+    position_m:
+    - 4460.455061424
+    - 1449.289703619
+    - 5200.0
+    velocity_mps: 388.0
+    heading_deg: 358.0
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: raw_si_observability60
+    initial_class: neutral
+    height_condition: co_altitude
+    mirror_sign: positive
+    mirror_pair_id: v5_extended_closure__neutral__co_altitude
+    distance_speed_package: v5_extended_closure
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    crossing_context: false
+    scenario_seed: 120145
+    initial_range_m: 4690.0
+    altitude_diff_m: 0.0
+    own_speed_mps: 258.0
+    target_speed_mps: 388.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: neutral
+    pilot_family: THESIS-FIVE-STATE-RAW-SI-PHASE-OBSERVABILITY-V5
+    identity_kind: evaluation
+    geometry_cell_id: neutral__v5_extended_closure__co_altitude__positive
+    pair_key: neutral__v5_extended_closure__co_altitude__positive::seed=120145
+    scenario_signature: v5_raw_si::neutral__v5_extended_closure__co_altitude__positive::seed=120145
+    raw_si_phase_event: three_closing_then_two_opening
+    routing_enabled: false
+    fixed_run_in: frozen_fixed_head_on
+    physical_geometry_signature: ((0.0, 0.0, 5200.0), 258.0, 218.0, (4460.455061,
+      1449.289704, 5200.0), 388.0, 358.0)
+- name: five_state_raw_si_v5_neutral__v5_extended_closure__own_above__negative_s120146
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 258.0
+    heading_deg: 143.347916485
+  target_init:
+    position_m:
+    - 4423.803374473
+    - -1437.380848628
+    - 4600.0
+    velocity_mps: 388.0
+    heading_deg: 0.652083515
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: raw_si_observability60
+    initial_class: neutral
+    height_condition: own_above
+    mirror_sign: negative
+    mirror_pair_id: v5_extended_closure__neutral__own_above
+    distance_speed_package: v5_extended_closure
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    crossing_context: false
+    scenario_seed: 120146
+    initial_range_m: 4690.0
+    altitude_diff_m: -600.0
+    own_speed_mps: 258.0
+    target_speed_mps: 388.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: neutral
+    pilot_family: THESIS-FIVE-STATE-RAW-SI-PHASE-OBSERVABILITY-V5
+    identity_kind: evaluation
+    geometry_cell_id: neutral__v5_extended_closure__own_above__negative
+    pair_key: neutral__v5_extended_closure__own_above__negative::seed=120146
+    scenario_signature: v5_raw_si::neutral__v5_extended_closure__own_above__negative::seed=120146
+    raw_si_phase_event: three_closing_then_two_opening
+    routing_enabled: false
+    fixed_run_in: frozen_fixed_head_on
+    physical_geometry_signature: ((0.0, 0.0, 5200.0), 258.0, 143.347916, (4423.803374,
+      -1437.380849, 4600.0), 388.0, 0.652084)
+- name: five_state_raw_si_v5_neutral__v5_extended_closure__own_above__positive_s120147
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 258.0
+    heading_deg: 216.652083515
+  target_init:
+    position_m:
+    - 4423.803374473
+    - 1437.380848628
+    - 4600.0
+    velocity_mps: 388.0
+    heading_deg: 359.347916485
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: raw_si_observability60
+    initial_class: neutral
+    height_condition: own_above
+    mirror_sign: positive
+    mirror_pair_id: v5_extended_closure__neutral__own_above
+    distance_speed_package: v5_extended_closure
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    crossing_context: false
+    scenario_seed: 120147
+    initial_range_m: 4690.0
+    altitude_diff_m: -600.0
+    own_speed_mps: 258.0
+    target_speed_mps: 388.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: neutral
+    pilot_family: THESIS-FIVE-STATE-RAW-SI-PHASE-OBSERVABILITY-V5
+    identity_kind: evaluation
+    geometry_cell_id: neutral__v5_extended_closure__own_above__positive
+    pair_key: neutral__v5_extended_closure__own_above__positive::seed=120147
+    scenario_signature: v5_raw_si::neutral__v5_extended_closure__own_above__positive::seed=120147
+    raw_si_phase_event: three_closing_then_two_opening
+    routing_enabled: false
+    fixed_run_in: frozen_fixed_head_on
+    physical_geometry_signature: ((0.0, 0.0, 5200.0), 258.0, 216.652084, (4423.803374,
+      1437.380849, 4600.0), 388.0, 359.347916)
+- name: five_state_raw_si_v5_crossing_entry__v5_close_closure__own_below__negative_s120148
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 238.0
+    heading_deg: 358.630521597
+  target_init:
+    position_m:
+    - 2863.438331125
+    - -930.387512731
+    - 5800.0
+    velocity_mps: 356.0
+    heading_deg: 72.0
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: raw_si_observability60
+    initial_class: crossing_entry
+    height_condition: own_below
+    mirror_sign: negative
+    mirror_pair_id: v5_close_closure__crossing_entry__own_below
+    distance_speed_package: v5_close_closure
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    crossing_context: true
+    scenario_seed: 120148
+    initial_range_m: 3070.0
+    altitude_diff_m: 600.0
+    own_speed_mps: 238.0
+    target_speed_mps: 356.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 90.0
+    taxonomy_geometry_state: transition
+    pilot_family: THESIS-FIVE-STATE-RAW-SI-PHASE-OBSERVABILITY-V5
+    identity_kind: evaluation
+    geometry_cell_id: crossing_entry__v5_close_closure__own_below__negative
+    pair_key: crossing_entry__v5_close_closure__own_below__negative::seed=120148
+    scenario_signature: v5_raw_si::crossing_entry__v5_close_closure__own_below__negative::seed=120148
+    raw_si_phase_event: three_closing_then_two_opening
+    routing_enabled: false
+    fixed_run_in: frozen_fixed_head_on
+    physical_geometry_signature: ((0.0, 0.0, 5200.0), 238.0, 358.630522, (2863.438331,
+      -930.387513, 5800.0), 356.0, 72.0)
+- name: five_state_raw_si_v5_crossing_entry__v5_close_closure__own_below__positive_s120149
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 238.0
+    heading_deg: 1.369478403
+  target_init:
+    position_m:
+    - 2863.438331125
+    - 930.387512731
+    - 5800.0
+    velocity_mps: 356.0
+    heading_deg: 288.0
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: raw_si_observability60
+    initial_class: crossing_entry
+    height_condition: own_below
+    mirror_sign: positive
+    mirror_pair_id: v5_close_closure__crossing_entry__own_below
+    distance_speed_package: v5_close_closure
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    crossing_context: true
+    scenario_seed: 120149
+    initial_range_m: 3070.0
+    altitude_diff_m: 600.0
+    own_speed_mps: 238.0
+    target_speed_mps: 356.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 90.0
+    taxonomy_geometry_state: transition
+    pilot_family: THESIS-FIVE-STATE-RAW-SI-PHASE-OBSERVABILITY-V5
+    identity_kind: evaluation
+    geometry_cell_id: crossing_entry__v5_close_closure__own_below__positive
+    pair_key: crossing_entry__v5_close_closure__own_below__positive::seed=120149
+    scenario_signature: v5_raw_si::crossing_entry__v5_close_closure__own_below__positive::seed=120149
+    raw_si_phase_event: three_closing_then_two_opening
+    routing_enabled: false
+    fixed_run_in: frozen_fixed_head_on
+    physical_geometry_signature: ((0.0, 0.0, 5200.0), 238.0, 1.369478, (2863.438331,
+      930.387513, 5800.0), 356.0, 288.0)
+- name: five_state_raw_si_v5_crossing_entry__v5_close_closure__co_altitude__negative_s120150
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 238.0
+    heading_deg: 2.0
+  target_init:
+    position_m:
+    - 2919.743505026
+    - -948.682172731
+    - 5200.0
+    velocity_mps: 356.0
+    heading_deg: 72.0
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: raw_si_observability60
+    initial_class: crossing_entry
+    height_condition: co_altitude
+    mirror_sign: negative
+    mirror_pair_id: v5_close_closure__crossing_entry__co_altitude
+    distance_speed_package: v5_close_closure
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    crossing_context: true
+    scenario_seed: 120150
+    initial_range_m: 3070.0
+    altitude_diff_m: 0.0
+    own_speed_mps: 238.0
+    target_speed_mps: 356.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 90.0
+    taxonomy_geometry_state: transition
+    pilot_family: THESIS-FIVE-STATE-RAW-SI-PHASE-OBSERVABILITY-V5
+    identity_kind: evaluation
+    geometry_cell_id: crossing_entry__v5_close_closure__co_altitude__negative
+    pair_key: crossing_entry__v5_close_closure__co_altitude__negative::seed=120150
+    scenario_signature: v5_raw_si::crossing_entry__v5_close_closure__co_altitude__negative::seed=120150
+    raw_si_phase_event: three_closing_then_two_opening
+    routing_enabled: false
+    fixed_run_in: frozen_fixed_head_on
+    physical_geometry_signature: ((0.0, 0.0, 5200.0), 238.0, 2.0, (2919.743505, -948.682173,
+      5200.0), 356.0, 72.0)
+- name: five_state_raw_si_v5_crossing_entry__v5_close_closure__co_altitude__positive_s120151
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 238.0
+    heading_deg: 358.0
+  target_init:
+    position_m:
+    - 2919.743505026
+    - 948.682172731
+    - 5200.0
+    velocity_mps: 356.0
+    heading_deg: 288.0
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: raw_si_observability60
+    initial_class: crossing_entry
+    height_condition: co_altitude
+    mirror_sign: positive
+    mirror_pair_id: v5_close_closure__crossing_entry__co_altitude
+    distance_speed_package: v5_close_closure
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    crossing_context: true
+    scenario_seed: 120151
+    initial_range_m: 3070.0
+    altitude_diff_m: 0.0
+    own_speed_mps: 238.0
+    target_speed_mps: 356.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 90.0
+    taxonomy_geometry_state: transition
+    pilot_family: THESIS-FIVE-STATE-RAW-SI-PHASE-OBSERVABILITY-V5
+    identity_kind: evaluation
+    geometry_cell_id: crossing_entry__v5_close_closure__co_altitude__positive
+    pair_key: crossing_entry__v5_close_closure__co_altitude__positive::seed=120151
+    scenario_signature: v5_raw_si::crossing_entry__v5_close_closure__co_altitude__positive::seed=120151
+    raw_si_phase_event: three_closing_then_two_opening
+    routing_enabled: false
+    fixed_run_in: frozen_fixed_head_on
+    physical_geometry_signature: ((0.0, 0.0, 5200.0), 238.0, 358.0, (2919.743505,
+      948.682173, 5200.0), 356.0, 288.0)
+- name: five_state_raw_si_v5_crossing_entry__v5_close_closure__own_above__negative_s120152
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 238.0
+    heading_deg: 358.630521597
+  target_init:
+    position_m:
+    - 2863.438331125
+    - -930.387512731
+    - 4600.0
+    velocity_mps: 356.0
+    heading_deg: 72.0
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: raw_si_observability60
+    initial_class: crossing_entry
+    height_condition: own_above
+    mirror_sign: negative
+    mirror_pair_id: v5_close_closure__crossing_entry__own_above
+    distance_speed_package: v5_close_closure
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    crossing_context: true
+    scenario_seed: 120152
+    initial_range_m: 3070.0
+    altitude_diff_m: -600.0
+    own_speed_mps: 238.0
+    target_speed_mps: 356.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 90.0
+    taxonomy_geometry_state: transition
+    pilot_family: THESIS-FIVE-STATE-RAW-SI-PHASE-OBSERVABILITY-V5
+    identity_kind: evaluation
+    geometry_cell_id: crossing_entry__v5_close_closure__own_above__negative
+    pair_key: crossing_entry__v5_close_closure__own_above__negative::seed=120152
+    scenario_signature: v5_raw_si::crossing_entry__v5_close_closure__own_above__negative::seed=120152
+    raw_si_phase_event: three_closing_then_two_opening
+    routing_enabled: false
+    fixed_run_in: frozen_fixed_head_on
+    physical_geometry_signature: ((0.0, 0.0, 5200.0), 238.0, 358.630522, (2863.438331,
+      -930.387513, 4600.0), 356.0, 72.0)
+- name: five_state_raw_si_v5_crossing_entry__v5_close_closure__own_above__positive_s120153
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 238.0
+    heading_deg: 1.369478403
+  target_init:
+    position_m:
+    - 2863.438331125
+    - 930.387512731
+    - 4600.0
+    velocity_mps: 356.0
+    heading_deg: 288.0
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: raw_si_observability60
+    initial_class: crossing_entry
+    height_condition: own_above
+    mirror_sign: positive
+    mirror_pair_id: v5_close_closure__crossing_entry__own_above
+    distance_speed_package: v5_close_closure
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    crossing_context: true
+    scenario_seed: 120153
+    initial_range_m: 3070.0
+    altitude_diff_m: -600.0
+    own_speed_mps: 238.0
+    target_speed_mps: 356.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 90.0
+    taxonomy_geometry_state: transition
+    pilot_family: THESIS-FIVE-STATE-RAW-SI-PHASE-OBSERVABILITY-V5
+    identity_kind: evaluation
+    geometry_cell_id: crossing_entry__v5_close_closure__own_above__positive
+    pair_key: crossing_entry__v5_close_closure__own_above__positive::seed=120153
+    scenario_signature: v5_raw_si::crossing_entry__v5_close_closure__own_above__positive::seed=120153
+    raw_si_phase_event: three_closing_then_two_opening
+    routing_enabled: false
+    fixed_run_in: frozen_fixed_head_on
+    physical_geometry_signature: ((0.0, 0.0, 5200.0), 238.0, 1.369478, (2863.438331,
+      930.387513, 4600.0), 356.0, 288.0)
+- name: five_state_raw_si_v5_crossing_entry__v5_extended_closure__own_below__negative_s120154
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 258.0
+    heading_deg: 0.652083515
+  target_init:
+    position_m:
+    - 4423.803374473
+    - -1437.380848628
+    - 5800.0
+    velocity_mps: 388.0
+    heading_deg: 72.0
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: raw_si_observability60
+    initial_class: crossing_entry
+    height_condition: own_below
+    mirror_sign: negative
+    mirror_pair_id: v5_extended_closure__crossing_entry__own_below
+    distance_speed_package: v5_extended_closure
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    crossing_context: true
+    scenario_seed: 120154
+    initial_range_m: 4690.0
+    altitude_diff_m: 600.0
+    own_speed_mps: 258.0
+    target_speed_mps: 388.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 90.0
+    taxonomy_geometry_state: transition
+    pilot_family: THESIS-FIVE-STATE-RAW-SI-PHASE-OBSERVABILITY-V5
+    identity_kind: evaluation
+    geometry_cell_id: crossing_entry__v5_extended_closure__own_below__negative
+    pair_key: crossing_entry__v5_extended_closure__own_below__negative::seed=120154
+    scenario_signature: v5_raw_si::crossing_entry__v5_extended_closure__own_below__negative::seed=120154
+    raw_si_phase_event: three_closing_then_two_opening
+    routing_enabled: false
+    fixed_run_in: frozen_fixed_head_on
+    physical_geometry_signature: ((0.0, 0.0, 5200.0), 258.0, 0.652084, (4423.803374,
+      -1437.380849, 5800.0), 388.0, 72.0)
+- name: five_state_raw_si_v5_crossing_entry__v5_extended_closure__own_below__positive_s120155
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 258.0
+    heading_deg: 359.347916485
+  target_init:
+    position_m:
+    - 4423.803374473
+    - 1437.380848628
+    - 5800.0
+    velocity_mps: 388.0
+    heading_deg: 288.0
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: raw_si_observability60
+    initial_class: crossing_entry
+    height_condition: own_below
+    mirror_sign: positive
+    mirror_pair_id: v5_extended_closure__crossing_entry__own_below
+    distance_speed_package: v5_extended_closure
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    crossing_context: true
+    scenario_seed: 120155
+    initial_range_m: 4690.0
+    altitude_diff_m: 600.0
+    own_speed_mps: 258.0
+    target_speed_mps: 388.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 90.0
+    taxonomy_geometry_state: transition
+    pilot_family: THESIS-FIVE-STATE-RAW-SI-PHASE-OBSERVABILITY-V5
+    identity_kind: evaluation
+    geometry_cell_id: crossing_entry__v5_extended_closure__own_below__positive
+    pair_key: crossing_entry__v5_extended_closure__own_below__positive::seed=120155
+    scenario_signature: v5_raw_si::crossing_entry__v5_extended_closure__own_below__positive::seed=120155
+    raw_si_phase_event: three_closing_then_two_opening
+    routing_enabled: false
+    fixed_run_in: frozen_fixed_head_on
+    physical_geometry_signature: ((0.0, 0.0, 5200.0), 258.0, 359.347916, (4423.803374,
+      1437.380849, 5800.0), 388.0, 288.0)
+- name: five_state_raw_si_v5_crossing_entry__v5_extended_closure__co_altitude__negative_s120156
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 258.0
+    heading_deg: 2.0
+  target_init:
+    position_m:
+    - 4460.455061424
+    - -1449.289703619
+    - 5200.0
+    velocity_mps: 388.0
+    heading_deg: 72.0
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: raw_si_observability60
+    initial_class: crossing_entry
+    height_condition: co_altitude
+    mirror_sign: negative
+    mirror_pair_id: v5_extended_closure__crossing_entry__co_altitude
+    distance_speed_package: v5_extended_closure
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    crossing_context: true
+    scenario_seed: 120156
+    initial_range_m: 4690.0
+    altitude_diff_m: 0.0
+    own_speed_mps: 258.0
+    target_speed_mps: 388.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 90.0
+    taxonomy_geometry_state: transition
+    pilot_family: THESIS-FIVE-STATE-RAW-SI-PHASE-OBSERVABILITY-V5
+    identity_kind: evaluation
+    geometry_cell_id: crossing_entry__v5_extended_closure__co_altitude__negative
+    pair_key: crossing_entry__v5_extended_closure__co_altitude__negative::seed=120156
+    scenario_signature: v5_raw_si::crossing_entry__v5_extended_closure__co_altitude__negative::seed=120156
+    raw_si_phase_event: three_closing_then_two_opening
+    routing_enabled: false
+    fixed_run_in: frozen_fixed_head_on
+    physical_geometry_signature: ((0.0, 0.0, 5200.0), 258.0, 2.0, (4460.455061, -1449.289704,
+      5200.0), 388.0, 72.0)
+- name: five_state_raw_si_v5_crossing_entry__v5_extended_closure__co_altitude__positive_s120157
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 258.0
+    heading_deg: 358.0
+  target_init:
+    position_m:
+    - 4460.455061424
+    - 1449.289703619
+    - 5200.0
+    velocity_mps: 388.0
+    heading_deg: 288.0
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: raw_si_observability60
+    initial_class: crossing_entry
+    height_condition: co_altitude
+    mirror_sign: positive
+    mirror_pair_id: v5_extended_closure__crossing_entry__co_altitude
+    distance_speed_package: v5_extended_closure
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    crossing_context: true
+    scenario_seed: 120157
+    initial_range_m: 4690.0
+    altitude_diff_m: 0.0
+    own_speed_mps: 258.0
+    target_speed_mps: 388.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 90.0
+    taxonomy_geometry_state: transition
+    pilot_family: THESIS-FIVE-STATE-RAW-SI-PHASE-OBSERVABILITY-V5
+    identity_kind: evaluation
+    geometry_cell_id: crossing_entry__v5_extended_closure__co_altitude__positive
+    pair_key: crossing_entry__v5_extended_closure__co_altitude__positive::seed=120157
+    scenario_signature: v5_raw_si::crossing_entry__v5_extended_closure__co_altitude__positive::seed=120157
+    raw_si_phase_event: three_closing_then_two_opening
+    routing_enabled: false
+    fixed_run_in: frozen_fixed_head_on
+    physical_geometry_signature: ((0.0, 0.0, 5200.0), 258.0, 358.0, (4460.455061,
+      1449.289704, 5200.0), 388.0, 288.0)
+- name: five_state_raw_si_v5_crossing_entry__v5_extended_closure__own_above__negative_s120158
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 258.0
+    heading_deg: 0.652083515
+  target_init:
+    position_m:
+    - 4423.803374473
+    - -1437.380848628
+    - 4600.0
+    velocity_mps: 388.0
+    heading_deg: 72.0
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: raw_si_observability60
+    initial_class: crossing_entry
+    height_condition: own_above
+    mirror_sign: negative
+    mirror_pair_id: v5_extended_closure__crossing_entry__own_above
+    distance_speed_package: v5_extended_closure
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    crossing_context: true
+    scenario_seed: 120158
+    initial_range_m: 4690.0
+    altitude_diff_m: -600.0
+    own_speed_mps: 258.0
+    target_speed_mps: 388.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 90.0
+    taxonomy_geometry_state: transition
+    pilot_family: THESIS-FIVE-STATE-RAW-SI-PHASE-OBSERVABILITY-V5
+    identity_kind: evaluation
+    geometry_cell_id: crossing_entry__v5_extended_closure__own_above__negative
+    pair_key: crossing_entry__v5_extended_closure__own_above__negative::seed=120158
+    scenario_signature: v5_raw_si::crossing_entry__v5_extended_closure__own_above__negative::seed=120158
+    raw_si_phase_event: three_closing_then_two_opening
+    routing_enabled: false
+    fixed_run_in: frozen_fixed_head_on
+    physical_geometry_signature: ((0.0, 0.0, 5200.0), 258.0, 0.652084, (4423.803374,
+      -1437.380849, 4600.0), 388.0, 72.0)
+- name: five_state_raw_si_v5_crossing_entry__v5_extended_closure__own_above__positive_s120159
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 258.0
+    heading_deg: 359.347916485
+  target_init:
+    position_m:
+    - 4423.803374473
+    - 1437.380848628
+    - 4600.0
+    velocity_mps: 388.0
+    heading_deg: 288.0
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: raw_si_observability60
+    initial_class: crossing_entry
+    height_condition: own_above
+    mirror_sign: positive
+    mirror_pair_id: v5_extended_closure__crossing_entry__own_above
+    distance_speed_package: v5_extended_closure
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    crossing_context: true
+    scenario_seed: 120159
+    initial_range_m: 4690.0
+    altitude_diff_m: -600.0
+    own_speed_mps: 258.0
+    target_speed_mps: 388.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 90.0
+    taxonomy_geometry_state: transition
+    pilot_family: THESIS-FIVE-STATE-RAW-SI-PHASE-OBSERVABILITY-V5
+    identity_kind: evaluation
+    geometry_cell_id: crossing_entry__v5_extended_closure__own_above__positive
+    pair_key: crossing_entry__v5_extended_closure__own_above__positive::seed=120159
+    scenario_signature: v5_raw_si::crossing_entry__v5_extended_closure__own_above__positive::seed=120159
+    raw_si_phase_event: three_closing_then_two_opening
+    routing_enabled: false
+    fixed_run_in: frozen_fixed_head_on
+    physical_geometry_signature: ((0.0, 0.0, 5200.0), 258.0, 359.347916, (4423.803374,
+      1437.380849, 4600.0), 388.0, 288.0)
+integrity:
+  builder_code_sha256: a4636dbdec36bf16927747fb4dbb3ddac3af138e33bac7e482ec183a014afc49
+  payload_sha256: 7bccba9802140c5f12e3f3d957e46363cc900eef4ccba75222d567c0c6d0b3ee

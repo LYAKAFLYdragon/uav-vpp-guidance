@@ -1,0 +1,596 @@
+source_id: THESIS-FIVE-STATE-REENTRY-REACHABILITY-CONTROL-MATRIX-V6-MANIFEST12
+manifest_version: 1
+status: preregistered_design_only
+protocol:
+  evaluation_only: true
+  training_permitted: false
+  controllers:
+  - frozen_fixed_head_on
+  - frozen_fixed_crossing
+  opponents_reported_separately: true
+  raw_si_only: true
+generation_contract:
+  initial_states:
+  - head_on
+  - crossing_entry
+  package:
+    id: v6_reentry_unseen_closure
+    initial_range_m: 5270.0
+    own_speed_mps: 272.0
+    target_speed_mps: 397.0
+  height_offsets_target_minus_own_m:
+    own_below: 600.0
+    co_altitude: 0.0
+    own_above: -600.0
+  mirror_signs:
+  - negative
+  - positive
+disjointness:
+  five_state_dev30:
+    path: config/experiment/manifests/thesis_five_state_shared_intent_v1_dev30.yaml
+    sha256: 6bd9c4282a4aa9724dee350114293421287ce0f00387b5b298e7be067c30d130
+    physical_intersection_count: 0
+  five_state_heldout60:
+    path: config/experiment/manifests/thesis_five_state_shared_intent_v1_heldout60.yaml
+    sha256: f96f3c927a0de4702dee62e2894fe784ff945a21f4e5728749fba20666603b5a
+    physical_intersection_count: 0
+  taxonomy30:
+    path: config/experiment/manifests/thesis_taxonomy_ablation30_v1.yaml
+    sha256: 79dddd3fa2585f99846330ad966220252acb80aa05fc6718ea873e5a1d801cf2
+    physical_intersection_count: 0
+  v1_dev12:
+    path: config/experiment/manifests/thesis_neutral_postmerge_reentry_recovery_pilot_v1_dev12.yaml
+    sha256: 652dbe209a0fc6b17a4a43f28996664ebb4ed4bd436e3292eb90e9ff9eca06e6
+    physical_intersection_count: 0
+  v1_heldout24:
+    path: config/experiment/manifests/thesis_neutral_postmerge_reentry_recovery_pilot_v1_heldout24.yaml
+    sha256: 025384fa92351e33671df724b04f6bec0c5e56ff425836a82df7c36127397852
+    physical_intersection_count: 0
+  v2_dev12:
+    path: config/experiment/manifests/thesis_neutral_postmerge_reentry_recovery_pilot_v2_dev12.yaml
+    sha256: 64b0566db71fa62096f51886d762bb99a52097d0e621df4a0e3cd5f6c2ae85ee
+    physical_intersection_count: 0
+  v2_heldout24:
+    path: config/experiment/manifests/thesis_neutral_postmerge_reentry_recovery_pilot_v2_heldout24.yaml
+    sha256: a239a32af2eef2374b84e0a33d97411843f3dfefd75b085ef2d64c53a7d82ebb
+    physical_intersection_count: 0
+  v3_runtime_design:
+    path: config/experiment/manifests/thesis_neutral_postmerge_reentry_recovery_v3_runtime_feasibility48.yaml
+    sha256: 0dbc1748e528dadd6112577f095d05a11a774eb33bc8b9f67c896e22ff49aa30
+    physical_intersection_count: 0
+  v4_runtime:
+    path: config/experiment/manifests/thesis_neutral_postmerge_reentry_recovery_v4_runtime_feasibility48.yaml
+    sha256: 8b83069c9e1949b1d5b59711936691dec413349471946c56d3c474c37f5410e4
+    physical_intersection_count: 0
+  p2_b2:
+    path: config/experiment/manifests/thesis_global_advantage_v1_p2_physical_preflight60.yaml
+    sha256: 78d90d6ea32490cc777d13e0a809061ec300f94ff6d7d012f93a9e9895ba834f
+    physical_intersection_count: 0
+  p2_b3:
+    path: config/experiment/manifests/thesis_global_advantage_v1_p2_b3_phase_observability30.yaml
+    sha256: d1e7c0e0750ec36eab6ef3ab7b6a353f7ceed8d88211d6d6535344c13e8a384c
+    physical_intersection_count: 0
+  p2_b4:
+    path: config/experiment/manifests/thesis_global_advantage_v1_p2_b4_raw_si_phase30.yaml
+    sha256: e709cdafd3ba6ba822454cdbd88ffa49988962cedeed310b15f071b87004fa81
+    physical_intersection_count: 0
+  p2_b5:
+    path: config/experiment/manifests/thesis_global_advantage_v1_p2_b5_phase_feasible_sampler12.yaml
+    sha256: 63acf19e57d5488f33fdef48df9b59ec9c7f892c5a70e1465cea9622bf3f798a
+    physical_intersection_count: 0
+  p2_b6:
+    path: config/experiment/manifests/thesis_global_advantage_v1_p2_b6_opponent_conditional_reachability60.yaml
+    sha256: 258bef67cddc66c4a8f4c04baeaee6a1c0152e5286035928244e0c21aebdd884
+    physical_intersection_count: 0
+  heldout240:
+    path: config/experiment/manifests/thesis_global_advantage_v1_heldout240.yaml
+    sha256: 81114a64cc7c589f496cff8869eac814f9919bfbc16a03b0aaba69bd5ba8bef3
+    physical_intersection_count: 0
+scenarios:
+- name: v6_reentry_head_on__v6_reentry_unseen_closure__own_below__negative_s130100
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 272.0
+    heading_deg: 0.942866198
+  target_init:
+    position_m:
+    - 4979.477982937
+    - -1617.930473614
+    - 5800.0
+    velocity_mps: 397.0
+    heading_deg: 143.057133802
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: reentry_v6_control12
+    initial_class: head_on
+    height_condition: own_below
+    mirror_sign: negative
+    mirror_pair_id: v6_reentry_unseen_closure__head_on__own_below
+    distance_speed_package: v6_reentry_unseen_closure
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: false
+    scenario_seed: 130100
+    initial_range_m: 5270.0
+    altitude_diff_m: 600.0
+    own_speed_mps: 272.0
+    target_speed_mps: 397.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: head_on
+    pilot_family: THESIS-FIVE-STATE-REENTRY-REACHABILITY-CONTROL-MATRIX-V6
+    identity_kind: evaluation
+    geometry_cell_id: head_on__v6_reentry_unseen_closure__own_below__negative
+    pair_key: head_on__v6_reentry_unseen_closure__own_below__negative::seed=130100
+    scenario_signature: v6_reentry::head_on__v6_reentry_unseen_closure__own_below__negative::seed=130100
+    raw_si_first_pass_event: three_closing_then_two_opening
+    reentry_event: after_first_pass_two_consecutive_range_rate_lt_minus_25_mps
+- name: v6_reentry_head_on__v6_reentry_unseen_closure__own_below__positive_s130101
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 272.0
+    heading_deg: 359.057133802
+  target_init:
+    position_m:
+    - 4979.477982937
+    - 1617.930473614
+    - 5800.0
+    velocity_mps: 397.0
+    heading_deg: 216.942866198
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: reentry_v6_control12
+    initial_class: head_on
+    height_condition: own_below
+    mirror_sign: positive
+    mirror_pair_id: v6_reentry_unseen_closure__head_on__own_below
+    distance_speed_package: v6_reentry_unseen_closure
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: false
+    scenario_seed: 130101
+    initial_range_m: 5270.0
+    altitude_diff_m: 600.0
+    own_speed_mps: 272.0
+    target_speed_mps: 397.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: head_on
+    pilot_family: THESIS-FIVE-STATE-REENTRY-REACHABILITY-CONTROL-MATRIX-V6
+    identity_kind: evaluation
+    geometry_cell_id: head_on__v6_reentry_unseen_closure__own_below__positive
+    pair_key: head_on__v6_reentry_unseen_closure__own_below__positive::seed=130101
+    scenario_signature: v6_reentry::head_on__v6_reentry_unseen_closure__own_below__positive::seed=130101
+    raw_si_first_pass_event: three_closing_then_two_opening
+    reentry_event: after_first_pass_two_consecutive_range_rate_lt_minus_25_mps
+- name: v6_reentry_head_on__v6_reentry_unseen_closure__co_altitude__negative_s130102
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 272.0
+    heading_deg: 2.0
+  target_init:
+    position_m:
+    - 5012.067840875
+    - -1628.519560356
+    - 5200.0
+    velocity_mps: 397.0
+    heading_deg: 142.0
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: reentry_v6_control12
+    initial_class: head_on
+    height_condition: co_altitude
+    mirror_sign: negative
+    mirror_pair_id: v6_reentry_unseen_closure__head_on__co_altitude
+    distance_speed_package: v6_reentry_unseen_closure
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: false
+    scenario_seed: 130102
+    initial_range_m: 5270.0
+    altitude_diff_m: 0.0
+    own_speed_mps: 272.0
+    target_speed_mps: 397.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: head_on
+    pilot_family: THESIS-FIVE-STATE-REENTRY-REACHABILITY-CONTROL-MATRIX-V6
+    identity_kind: evaluation
+    geometry_cell_id: head_on__v6_reentry_unseen_closure__co_altitude__negative
+    pair_key: head_on__v6_reentry_unseen_closure__co_altitude__negative::seed=130102
+    scenario_signature: v6_reentry::head_on__v6_reentry_unseen_closure__co_altitude__negative::seed=130102
+    raw_si_first_pass_event: three_closing_then_two_opening
+    reentry_event: after_first_pass_two_consecutive_range_rate_lt_minus_25_mps
+- name: v6_reentry_head_on__v6_reentry_unseen_closure__co_altitude__positive_s130103
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 272.0
+    heading_deg: 358.0
+  target_init:
+    position_m:
+    - 5012.067840875
+    - 1628.519560356
+    - 5200.0
+    velocity_mps: 397.0
+    heading_deg: 218.0
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: reentry_v6_control12
+    initial_class: head_on
+    height_condition: co_altitude
+    mirror_sign: positive
+    mirror_pair_id: v6_reentry_unseen_closure__head_on__co_altitude
+    distance_speed_package: v6_reentry_unseen_closure
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: false
+    scenario_seed: 130103
+    initial_range_m: 5270.0
+    altitude_diff_m: 0.0
+    own_speed_mps: 272.0
+    target_speed_mps: 397.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: head_on
+    pilot_family: THESIS-FIVE-STATE-REENTRY-REACHABILITY-CONTROL-MATRIX-V6
+    identity_kind: evaluation
+    geometry_cell_id: head_on__v6_reentry_unseen_closure__co_altitude__positive
+    pair_key: head_on__v6_reentry_unseen_closure__co_altitude__positive::seed=130103
+    scenario_signature: v6_reentry::head_on__v6_reentry_unseen_closure__co_altitude__positive::seed=130103
+    raw_si_first_pass_event: three_closing_then_two_opening
+    reentry_event: after_first_pass_two_consecutive_range_rate_lt_minus_25_mps
+- name: v6_reentry_head_on__v6_reentry_unseen_closure__own_above__negative_s130104
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 272.0
+    heading_deg: 0.942866198
+  target_init:
+    position_m:
+    - 4979.477982937
+    - -1617.930473614
+    - 4600.0
+    velocity_mps: 397.0
+    heading_deg: 143.057133802
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: reentry_v6_control12
+    initial_class: head_on
+    height_condition: own_above
+    mirror_sign: negative
+    mirror_pair_id: v6_reentry_unseen_closure__head_on__own_above
+    distance_speed_package: v6_reentry_unseen_closure
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: false
+    scenario_seed: 130104
+    initial_range_m: 5270.0
+    altitude_diff_m: -600.0
+    own_speed_mps: 272.0
+    target_speed_mps: 397.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: head_on
+    pilot_family: THESIS-FIVE-STATE-REENTRY-REACHABILITY-CONTROL-MATRIX-V6
+    identity_kind: evaluation
+    geometry_cell_id: head_on__v6_reentry_unseen_closure__own_above__negative
+    pair_key: head_on__v6_reentry_unseen_closure__own_above__negative::seed=130104
+    scenario_signature: v6_reentry::head_on__v6_reentry_unseen_closure__own_above__negative::seed=130104
+    raw_si_first_pass_event: three_closing_then_two_opening
+    reentry_event: after_first_pass_two_consecutive_range_rate_lt_minus_25_mps
+- name: v6_reentry_head_on__v6_reentry_unseen_closure__own_above__positive_s130105
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 272.0
+    heading_deg: 359.057133802
+  target_init:
+    position_m:
+    - 4979.477982937
+    - 1617.930473614
+    - 4600.0
+    velocity_mps: 397.0
+    heading_deg: 216.942866198
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: reentry_v6_control12
+    initial_class: head_on
+    height_condition: own_above
+    mirror_sign: positive
+    mirror_pair_id: v6_reentry_unseen_closure__head_on__own_above
+    distance_speed_package: v6_reentry_unseen_closure
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: false
+    scenario_seed: 130105
+    initial_range_m: 5270.0
+    altitude_diff_m: -600.0
+    own_speed_mps: 272.0
+    target_speed_mps: 397.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: head_on
+    pilot_family: THESIS-FIVE-STATE-REENTRY-REACHABILITY-CONTROL-MATRIX-V6
+    identity_kind: evaluation
+    geometry_cell_id: head_on__v6_reentry_unseen_closure__own_above__positive
+    pair_key: head_on__v6_reentry_unseen_closure__own_above__positive::seed=130105
+    scenario_signature: v6_reentry::head_on__v6_reentry_unseen_closure__own_above__positive::seed=130105
+    raw_si_first_pass_event: three_closing_then_two_opening
+    reentry_event: after_first_pass_two_consecutive_range_rate_lt_minus_25_mps
+- name: v6_reentry_crossing_entry__v6_reentry_unseen_closure__own_below__negative_s130106
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 272.0
+    heading_deg: 0.942866198
+  target_init:
+    position_m:
+    - 4979.477982937
+    - -1617.930473614
+    - 5800.0
+    velocity_mps: 397.0
+    heading_deg: 72.0
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: reentry_v6_control12
+    initial_class: crossing_entry
+    height_condition: own_below
+    mirror_sign: negative
+    mirror_pair_id: v6_reentry_unseen_closure__crossing_entry__own_below
+    distance_speed_package: v6_reentry_unseen_closure
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: true
+    scenario_seed: 130106
+    initial_range_m: 5270.0
+    altitude_diff_m: 600.0
+    own_speed_mps: 272.0
+    target_speed_mps: 397.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 90.0
+    taxonomy_geometry_state: transition
+    pilot_family: THESIS-FIVE-STATE-REENTRY-REACHABILITY-CONTROL-MATRIX-V6
+    identity_kind: evaluation
+    geometry_cell_id: crossing_entry__v6_reentry_unseen_closure__own_below__negative
+    pair_key: crossing_entry__v6_reentry_unseen_closure__own_below__negative::seed=130106
+    scenario_signature: v6_reentry::crossing_entry__v6_reentry_unseen_closure__own_below__negative::seed=130106
+    raw_si_first_pass_event: three_closing_then_two_opening
+    reentry_event: after_first_pass_two_consecutive_range_rate_lt_minus_25_mps
+- name: v6_reentry_crossing_entry__v6_reentry_unseen_closure__own_below__positive_s130107
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 272.0
+    heading_deg: 359.057133802
+  target_init:
+    position_m:
+    - 4979.477982937
+    - 1617.930473614
+    - 5800.0
+    velocity_mps: 397.0
+    heading_deg: 288.0
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: reentry_v6_control12
+    initial_class: crossing_entry
+    height_condition: own_below
+    mirror_sign: positive
+    mirror_pair_id: v6_reentry_unseen_closure__crossing_entry__own_below
+    distance_speed_package: v6_reentry_unseen_closure
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: true
+    scenario_seed: 130107
+    initial_range_m: 5270.0
+    altitude_diff_m: 600.0
+    own_speed_mps: 272.0
+    target_speed_mps: 397.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 90.0
+    taxonomy_geometry_state: transition
+    pilot_family: THESIS-FIVE-STATE-REENTRY-REACHABILITY-CONTROL-MATRIX-V6
+    identity_kind: evaluation
+    geometry_cell_id: crossing_entry__v6_reentry_unseen_closure__own_below__positive
+    pair_key: crossing_entry__v6_reentry_unseen_closure__own_below__positive::seed=130107
+    scenario_signature: v6_reentry::crossing_entry__v6_reentry_unseen_closure__own_below__positive::seed=130107
+    raw_si_first_pass_event: three_closing_then_two_opening
+    reentry_event: after_first_pass_two_consecutive_range_rate_lt_minus_25_mps
+- name: v6_reentry_crossing_entry__v6_reentry_unseen_closure__co_altitude__negative_s130108
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 272.0
+    heading_deg: 2.0
+  target_init:
+    position_m:
+    - 5012.067840875
+    - -1628.519560356
+    - 5200.0
+    velocity_mps: 397.0
+    heading_deg: 72.0
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: reentry_v6_control12
+    initial_class: crossing_entry
+    height_condition: co_altitude
+    mirror_sign: negative
+    mirror_pair_id: v6_reentry_unseen_closure__crossing_entry__co_altitude
+    distance_speed_package: v6_reentry_unseen_closure
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: true
+    scenario_seed: 130108
+    initial_range_m: 5270.0
+    altitude_diff_m: 0.0
+    own_speed_mps: 272.0
+    target_speed_mps: 397.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 90.0
+    taxonomy_geometry_state: transition
+    pilot_family: THESIS-FIVE-STATE-REENTRY-REACHABILITY-CONTROL-MATRIX-V6
+    identity_kind: evaluation
+    geometry_cell_id: crossing_entry__v6_reentry_unseen_closure__co_altitude__negative
+    pair_key: crossing_entry__v6_reentry_unseen_closure__co_altitude__negative::seed=130108
+    scenario_signature: v6_reentry::crossing_entry__v6_reentry_unseen_closure__co_altitude__negative::seed=130108
+    raw_si_first_pass_event: three_closing_then_two_opening
+    reentry_event: after_first_pass_two_consecutive_range_rate_lt_minus_25_mps
+- name: v6_reentry_crossing_entry__v6_reentry_unseen_closure__co_altitude__positive_s130109
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 272.0
+    heading_deg: 358.0
+  target_init:
+    position_m:
+    - 5012.067840875
+    - 1628.519560356
+    - 5200.0
+    velocity_mps: 397.0
+    heading_deg: 288.0
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: reentry_v6_control12
+    initial_class: crossing_entry
+    height_condition: co_altitude
+    mirror_sign: positive
+    mirror_pair_id: v6_reentry_unseen_closure__crossing_entry__co_altitude
+    distance_speed_package: v6_reentry_unseen_closure
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: true
+    scenario_seed: 130109
+    initial_range_m: 5270.0
+    altitude_diff_m: 0.0
+    own_speed_mps: 272.0
+    target_speed_mps: 397.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 90.0
+    taxonomy_geometry_state: transition
+    pilot_family: THESIS-FIVE-STATE-REENTRY-REACHABILITY-CONTROL-MATRIX-V6
+    identity_kind: evaluation
+    geometry_cell_id: crossing_entry__v6_reentry_unseen_closure__co_altitude__positive
+    pair_key: crossing_entry__v6_reentry_unseen_closure__co_altitude__positive::seed=130109
+    scenario_signature: v6_reentry::crossing_entry__v6_reentry_unseen_closure__co_altitude__positive::seed=130109
+    raw_si_first_pass_event: three_closing_then_two_opening
+    reentry_event: after_first_pass_two_consecutive_range_rate_lt_minus_25_mps
+- name: v6_reentry_crossing_entry__v6_reentry_unseen_closure__own_above__negative_s130110
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 272.0
+    heading_deg: 0.942866198
+  target_init:
+    position_m:
+    - 4979.477982937
+    - -1617.930473614
+    - 4600.0
+    velocity_mps: 397.0
+    heading_deg: 72.0
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: reentry_v6_control12
+    initial_class: crossing_entry
+    height_condition: own_above
+    mirror_sign: negative
+    mirror_pair_id: v6_reentry_unseen_closure__crossing_entry__own_above
+    distance_speed_package: v6_reentry_unseen_closure
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: true
+    scenario_seed: 130110
+    initial_range_m: 5270.0
+    altitude_diff_m: -600.0
+    own_speed_mps: 272.0
+    target_speed_mps: 397.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 90.0
+    taxonomy_geometry_state: transition
+    pilot_family: THESIS-FIVE-STATE-REENTRY-REACHABILITY-CONTROL-MATRIX-V6
+    identity_kind: evaluation
+    geometry_cell_id: crossing_entry__v6_reentry_unseen_closure__own_above__negative
+    pair_key: crossing_entry__v6_reentry_unseen_closure__own_above__negative::seed=130110
+    scenario_signature: v6_reentry::crossing_entry__v6_reentry_unseen_closure__own_above__negative::seed=130110
+    raw_si_first_pass_event: three_closing_then_two_opening
+    reentry_event: after_first_pass_two_consecutive_range_rate_lt_minus_25_mps
+- name: v6_reentry_crossing_entry__v6_reentry_unseen_closure__own_above__positive_s130111
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 272.0
+    heading_deg: 359.057133802
+  target_init:
+    position_m:
+    - 4979.477982937
+    - 1617.930473614
+    - 4600.0
+    velocity_mps: 397.0
+    heading_deg: 288.0
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: reentry_v6_control12
+    initial_class: crossing_entry
+    height_condition: own_above
+    mirror_sign: positive
+    mirror_pair_id: v6_reentry_unseen_closure__crossing_entry__own_above
+    distance_speed_package: v6_reentry_unseen_closure
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: true
+    scenario_seed: 130111
+    initial_range_m: 5270.0
+    altitude_diff_m: -600.0
+    own_speed_mps: 272.0
+    target_speed_mps: 397.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 90.0
+    taxonomy_geometry_state: transition
+    pilot_family: THESIS-FIVE-STATE-REENTRY-REACHABILITY-CONTROL-MATRIX-V6
+    identity_kind: evaluation
+    geometry_cell_id: crossing_entry__v6_reentry_unseen_closure__own_above__positive
+    pair_key: crossing_entry__v6_reentry_unseen_closure__own_above__positive::seed=130111
+    scenario_signature: v6_reentry::crossing_entry__v6_reentry_unseen_closure__own_above__positive::seed=130111
+    raw_si_first_pass_event: three_closing_then_two_opening
+    reentry_event: after_first_pass_two_consecutive_range_rate_lt_minus_25_mps
+integrity:
+  builder_code_sha256: dcd6527b4e8a7a20fe446a6143d74b3b1e6fc584f0d2ca1c22db2dbc091ae72c
+  payload_sha256: 8cbfb3d3b87e1088eaee2869dfc6f18087e82901763020baf774bb6cf8a7d692

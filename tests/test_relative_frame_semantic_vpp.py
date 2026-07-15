@@ -139,7 +139,7 @@ def test_summary_requires_all_three_transfer_layers_and_separate_opponents():
     assert summary["semantic_transfer_candidates"] == ["range_extension_los", "range_extension_los_turn", "range_extension_full"]
 
 
-def test_v11_design_is_nonlearning_and_uses_a_new_manifest():
+def test_v11_design_is_nonlearning_and_uses_a_new_manifest(tmp_path: Path):
     path = ROOT / "scripts" / "run_thesis_five_state_reentry_v11_relative_frame_semantic.py"
     spec = importlib.util.spec_from_file_location("v11_runner", path)
     assert spec and spec.loader
@@ -152,7 +152,12 @@ def test_v11_design_is_nonlearning_and_uses_a_new_manifest():
     assert config["authorization"]["training_permitted"] is False
     assert config["authorization"]["reward_change_permitted"] is False
     assert config["semantic_compiler"]["raw_action_offset_frame"] == "world_neu"
-    result = module.validate_design(ROOT / "config/experiment/thesis_five_state_reentry_v11_relative_frame_semantic_design.yaml")
+    # The real output root is intentionally occupied after the one-time run.
+    # Validate design invariants against an otherwise identical fresh root.
+    config["outputs"]["root"] = str(tmp_path / "fresh_v11_output")
+    temporary_config = tmp_path / "v11_design.yaml"
+    temporary_config.write_text(yaml.safe_dump(config, sort_keys=False), encoding="utf-8")
+    result = module.validate_design(temporary_config)
     assert result["planned_records"] == 144
 
 

@@ -1,0 +1,28 @@
+schema_version: 1
+source_id: THESIS-GLOBAL-ADVANTAGE-V1-P2-MANIFEST-FREEZE-V1
+status: manifest_build_only_not_authorised_for_evaluation
+
+scope:
+  lane: noncanonical_thesis_extension
+  family: thesis_five_state_shared_intent_v1
+  training_permitted: false
+  tuning_permitted: false
+  policy_loading_permitted: false
+  jsbsim_evaluation_permitted: false
+
+inputs:
+  train_distribution: config/experiment/thesis_five_state_shared_intent_v1_train_distribution.yaml
+  dev30: config/experiment/manifests/thesis_five_state_shared_intent_v1_dev30.yaml
+  historical_heldout60: config/experiment/manifests/thesis_five_state_shared_intent_v1_heldout60.yaml
+
+outputs:
+  heldout240: config/experiment/manifests/thesis_global_advantage_v1_heldout240.yaml
+
+contract:
+  geometry_cells: 60
+  evaluation_seeds_per_cell: 4
+  evaluation_packages: 2
+  expected_scenario_count: 240
+  physical_reachability_required_before_use: true
+  separate_opponent_reporting_required: true
+  no_overwrite: true

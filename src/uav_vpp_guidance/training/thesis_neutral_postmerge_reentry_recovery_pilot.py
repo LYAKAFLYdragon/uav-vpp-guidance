@@ -782,3 +782,22 @@ def run(config_path: Path) -> dict[str, Any]:
     except Exception as error:
         write_json(output_root / "runner_failure_manifest.json", {"source_id": SOURCE_ID, "status": "execution_failed_output_preserved", "error": repr(error)})
         raise
+
+
+def preflight(config_path: Path) -> dict[str, Any]:
+    """Validate an authorized configuration without creating an output root."""
+
+    config, base_path = load_authorized_config(config_path)
+    registry, output_root = _validate_authorization(config, config_path, base_path)
+    return {
+        "source_id": SOURCE_ID,
+        "mode": "authorized_preflight_no_jsbsim_no_output_creation",
+        "git_sha": _git_value("rev-parse", "HEAD"),
+        "execution_permitted": bool(config["authorization"]["execution_permitted"]),
+        "training_permitted": bool(config["authorization"]["training_permitted"]),
+        "output_root": str(output_root),
+        "output_root_absent": not output_root.exists(),
+        "opponents": list(registry["opponents"]),
+        "methods": list(METHODS),
+        "total_timesteps": int(config["proposed_training"]["total_timesteps"]),
+    }

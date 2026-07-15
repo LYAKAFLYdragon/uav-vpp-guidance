@@ -3,7 +3,7 @@
 ## 正式结论
 
 `THESIS-FIVE-STATE-PATH-CONTEXT-PREFLIGHT-V17` **未通过**预注册的三对手
-path-context coverage gate。72 条严格 JSBSim 记录已完整生成，独立 verifier 已从 ledger
+path-context coverage gate。72 条严格 JSBSim 记录已完整生成，独立 verifier 已从 episode record
 重放 74-D path context，并确认报告矩阵一致；但是 end-to-end 对手只形成 4 条 qualifying
 episode 和 80 个有效 path-context step，低于每个对手分别要求的 `8` 条和 `160` 步。
 

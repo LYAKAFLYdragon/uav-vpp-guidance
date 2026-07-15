@@ -1,0 +1,114 @@
+schema_version: 1
+source_id: THESIS-GLOBAL-ADVANTAGE-V1-P2-PHASE-FEASIBLE-SAMPLER-B5-R1
+status: preregistered_design_execution_not_authorised
+
+authorization:
+  execution_permitted: false
+  required_implementation_git_sha: null
+  authorized_code_files: []
+  training_permitted: false
+  tuning_permitted: false
+  candidate_policy_loading_permitted: false
+  action_replacement_permitted: false
+  policy_change_permitted: false
+  vpp_change_permitted: false
+  guidance_change_permitted: false
+  pid_change_permitted: false
+  reset_after_first_pass: false
+  snapshot_restore: false
+  future_state_injection: false
+  history_padding_permitted: false
+  heldout_claims_permitted: false
+
+inputs:
+  manifest: config/experiment/manifests/thesis_global_advantage_v1_p2_b5_phase_feasible_sampler12.yaml
+  manifest_source_id: THESIS-GLOBAL-ADVANTAGE-V1-P2-PHASE-FEASIBLE-SAMPLER-B5-MANIFEST12-R1
+  manifest_sha256: 63acf19e57d5488f33fdef48df9b59ec9c7f892c5a70e1465cea9622bf3f798a
+  runtime_config: config/experiment/thesis_defext_rangeext_feasibility_pilot_v1.yaml
+  runtime_config_sha256: 3a050de1eac5258fb68ae52dea71fc9cc8c9ad1bea69a73c0cd403a56e40b1f2
+  runtime_registry: config/experiment/thesis_defext_rangeext_feasibility_pilot_v1_runtime_registry.yaml
+  runtime_registry_sha256: c87edfed4be69a8293a889c9caa55c520fdab7dd93c44c9c6e057be869f435c5
+
+contract:
+  backend: jsbsim
+  strict_backend: true
+  fresh_environment_per_episode: true
+  phase_input_unit_contract: raw_SI_from_observation.relative_state
+  max_high_level_steps: 260
+  min_free_disk_gb: 120.0
+  scenario_application_tolerances:
+    position_error_m: 10.0
+    velocity_error_mps: 5.0
+    heading_error_deg: 3.0
+    altitude_error_m: 5.0
+  learning_or_selection: prohibited
+  reset_or_snapshot_handoff: prohibited
+
+phase_feasible_sampler_b5:
+  source_id: THESIS-GLOBAL-ADVANTAGE-V1-P2-PHASE-FEASIBLE-SAMPLER-B5-R1
+  status: preregistered_continuous_sampler_design
+  reference:
+    controller: frozen_fixed_head_on_specialist
+    registry_key: run_in_head_on
+    checkpoint_sha256: 0aeadd11cd8c7723c8963bcc5da21dd97c365e64f234d07b86c2b8f0d7ec5fb6
+    learning: false
+    routing: false
+  frozen_p3_encoder:
+    checkpoint: E:/uav-vpp-guidance-thesis-five-state-v1-results/p3_temporal_encoder_phaseconditional_v2/checkpoints/best.pt
+    sha256: 385663281a9c48c0416ea4d1a1bb8dc08ed64a0cfebb0f01083cbbb8bcfbdc59
+    input_dim: 16
+    history_window_steps: 10
+    embedding_dim: 32
+    trainable: false
+  observation_contract:
+    base_dim: 16
+    explicit_history_dim: 6
+    intent_target_dim: 6
+    intent_weight_dim: 6
+    temporal_embedding_dim: 32
+    history_window_steps: 10
+    composed_dim: 66
+    projection: feature_name_only
+  phase_input:
+    unit_contract: raw_SI_from_observation.relative_state
+    policy_normalization_diagnostic:
+      range_m_scale: 5000.0
+      range_rate_mps_scale: 200.0
+      range_tolerance_m: 10.0
+      range_rate_tolerance_mps: 1.0
+  target_motif:
+    dynamic_state: disadvantage
+    phases: [post_merge, re_entry]
+    skill: defensive_extension
+    profile: range_extension
+    requires_first_pass_continuity: true
+  context_bands:
+    specific_energy_height_band_m: 100.0
+    altitude_band_m: 100.0
+  opponents: [expert, end_to_end, independent_ppo_vpp]
+  gate:
+    minimum_qualifying_episodes_per_opponent: 2
+    minimum_valid_target_steps_per_opponent: 20
+    minimum_distinct_scenario_signatures_per_opponent: 2
+    minimum_distinct_mirror_signs_per_opponent: 2
+    require_strict_jsbsim: true
+    require_no_backend_fallback: true
+    require_no_reset: true
+    require_no_future_state_injection: true
+    require_no_history_padding: true
+    require_raw_si_phase_replay: true
+    require_finite_66d_and_3d: true
+  pass_consequence: >
+    A pass permits only drafting a separate defensive-extension pilot
+    preregistration; it does not authorise training or formal held-out claims.
+  failure_consequence: >
+    Any opponent failure freezes this source as negative evidence that the
+    cross-opponent 66-D to 3-D data contract is not established.
+  stop_rule: >
+    Do not rerun, tune, replace assets, change scenarios, reset after first
+    pass, restore a snapshot, inject future state, or use pooled success to
+    override an opponent-level failure.
+
+outputs:
+  root: E:/uav-vpp-guidance-five-state-heldout-envelope-v1-results/global_advantage_v1_p2_b5_phase_feasible_sampler_r1
+  fresh_output_required: true

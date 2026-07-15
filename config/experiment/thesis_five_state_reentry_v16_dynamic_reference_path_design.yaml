@@ -6,6 +6,9 @@ authorization:
   reward_change_permitted: false
   combat_finetune_permitted: false
   heldout_claims_permitted: false
+inputs:
+  manifest: config/experiment/manifests/thesis_five_state_reentry_v16_dynamic_reference_path12.yaml
+  manifest_sha256: f86898ab6da7f15507b0104b98b61426d7fe62c470a749f457d393ff22ca046c
 contract:
   backend: jsbsim
   strict_backend: true

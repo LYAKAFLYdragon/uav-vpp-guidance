@@ -1,0 +1,1153 @@
+source_id: THESIS-FIVE-STATE-PATH-CONTEXT-PREFLIGHT-V17-MANIFEST24
+manifest_version: 1
+status: preregistered_design_only
+protocol:
+  evaluation_only: true
+  training_permitted: false
+  reward_recording: prohibited
+  controllers:
+  - frozen_fixed_head_on_path_context_collector
+  opponents_reported_separately: true
+  raw_si_only: true
+generation_contract:
+  initial_states:
+  - head_on
+  - crossing_entry
+  packages:
+  - id: v17_path_context_a
+    initial_range_m: 8300.0
+    own_speed_mps: 315.0
+    target_speed_mps: 350.0
+    seed_base: 199100
+  - id: v17_path_context_b
+    initial_range_m: 8700.0
+    own_speed_mps: 340.0
+    target_speed_mps: 370.0
+    seed_base: 199200
+  height_offsets_target_minus_own_m:
+    own_below: 600.0
+    co_altitude: 0.0
+    own_above: -600.0
+  mirror_signs:
+  - negative
+  - positive
+disjointness:
+  five_state_dev30:
+    path: config/experiment/manifests/thesis_five_state_shared_intent_v1_dev30.yaml
+    sha256: 6bd9c4282a4aa9724dee350114293421287ce0f00387b5b298e7be067c30d130
+    physical_intersection_count: 0
+  five_state_heldout60:
+    path: config/experiment/manifests/thesis_five_state_shared_intent_v1_heldout60.yaml
+    sha256: f96f3c927a0de4702dee62e2894fe784ff945a21f4e5728749fba20666603b5a
+    physical_intersection_count: 0
+  taxonomy30:
+    path: config/experiment/manifests/thesis_taxonomy_ablation30_v1.yaml
+    sha256: 79dddd3fa2585f99846330ad966220252acb80aa05fc6718ea873e5a1d801cf2
+    physical_intersection_count: 0
+  v1_dev12:
+    path: config/experiment/manifests/thesis_neutral_postmerge_reentry_recovery_pilot_v1_dev12.yaml
+    sha256: 652dbe209a0fc6b17a4a43f28996664ebb4ed4bd436e3292eb90e9ff9eca06e6
+    physical_intersection_count: 0
+  v1_heldout24:
+    path: config/experiment/manifests/thesis_neutral_postmerge_reentry_recovery_pilot_v1_heldout24.yaml
+    sha256: 025384fa92351e33671df724b04f6bec0c5e56ff425836a82df7c36127397852
+    physical_intersection_count: 0
+  v2_dev12:
+    path: config/experiment/manifests/thesis_neutral_postmerge_reentry_recovery_pilot_v2_dev12.yaml
+    sha256: 64b0566db71fa62096f51886d762bb99a52097d0e621df4a0e3cd5f6c2ae85ee
+    physical_intersection_count: 0
+  v2_heldout24:
+    path: config/experiment/manifests/thesis_neutral_postmerge_reentry_recovery_pilot_v2_heldout24.yaml
+    sha256: a239a32af2eef2374b84e0a33d97411843f3dfefd75b085ef2d64c53a7d82ebb
+    physical_intersection_count: 0
+  v3_runtime_design:
+    path: config/experiment/manifests/thesis_neutral_postmerge_reentry_recovery_v3_runtime_feasibility48.yaml
+    sha256: 0dbc1748e528dadd6112577f095d05a11a774eb33bc8b9f67c896e22ff49aa30
+    physical_intersection_count: 0
+  v4_runtime:
+    path: config/experiment/manifests/thesis_neutral_postmerge_reentry_recovery_v4_runtime_feasibility48.yaml
+    sha256: 8b83069c9e1949b1d5b59711936691dec413349471946c56d3c474c37f5410e4
+    physical_intersection_count: 0
+  p2_b2:
+    path: config/experiment/manifests/thesis_global_advantage_v1_p2_physical_preflight60.yaml
+    sha256: 78d90d6ea32490cc777d13e0a809061ec300f94ff6d7d012f93a9e9895ba834f
+    physical_intersection_count: 0
+  p2_b3:
+    path: config/experiment/manifests/thesis_global_advantage_v1_p2_b3_phase_observability30.yaml
+    sha256: d1e7c0e0750ec36eab6ef3ab7b6a353f7ceed8d88211d6d6535344c13e8a384c
+    physical_intersection_count: 0
+  p2_b4:
+    path: config/experiment/manifests/thesis_global_advantage_v1_p2_b4_raw_si_phase30.yaml
+    sha256: e709cdafd3ba6ba822454cdbd88ffa49988962cedeed310b15f071b87004fa81
+    physical_intersection_count: 0
+  p2_b5:
+    path: config/experiment/manifests/thesis_global_advantage_v1_p2_b5_phase_feasible_sampler12.yaml
+    sha256: 63acf19e57d5488f33fdef48df9b59ec9c7f892c5a70e1465cea9622bf3f798a
+    physical_intersection_count: 0
+  p2_b6:
+    path: config/experiment/manifests/thesis_global_advantage_v1_p2_b6_opponent_conditional_reachability60.yaml
+    sha256: 258bef67cddc66c4a8f4c04baeaee6a1c0152e5286035928244e0c21aebdd884
+    physical_intersection_count: 0
+  heldout240:
+    path: config/experiment/manifests/thesis_global_advantage_v1_heldout240.yaml
+    sha256: 81114a64cc7c589f496cff8869eac814f9919bfbc16a03b0aaba69bd5ba8bef3
+    physical_intersection_count: 0
+  v6:
+    path: config/experiment/manifests/thesis_five_state_reentry_v6_control12.yaml
+    sha256: 416c2c8fda9add71004c44bc0ddcf078ac27f40710646f5199b413dcf49af6cf
+    physical_intersection_count: 0
+  v7:
+    path: config/experiment/manifests/thesis_five_state_reentry_v7_teacher12.yaml
+    sha256: 81718778d493d10e3d2bbf7f73f4135d0148a0cdb2134377020ed330f577a7f9
+    physical_intersection_count: 0
+  v8:
+    path: config/experiment/manifests/thesis_five_state_reentry_v8_phase_contract12.yaml
+    sha256: 2e36a581c77122d847cf7ae18bd766f289231f29fe66e9483f01871ad27ba833
+    physical_intersection_count: 0
+  v9:
+    path: config/experiment/manifests/thesis_five_state_reentry_v9_action_authority12.yaml
+    sha256: a1bcb298f3e8fd4e7bf2a7b87ab77397b51349f579a4061d4b65dae1f0e50aa5
+    physical_intersection_count: 0
+  reward_v1_dev:
+    path: config/experiment/manifests/thesis_reentry_terminal_reward_pilot_v1_dev12.yaml
+    sha256: 6dd87a03abaeaf7af4ef9868b01d1b245287eaad31361b4000d30f15594efd87
+    physical_intersection_count: 0
+  reward_v1_heldout:
+    path: config/experiment/manifests/thesis_reentry_terminal_reward_pilot_v1_heldout24.yaml
+    sha256: dc505ebdfa4ccf057ff4d986317915b1f0f54ed919dd483b01e9849514b5aa4e
+    physical_intersection_count: 0
+  v10:
+    path: config/experiment/manifests/thesis_five_state_reentry_v10_action_authority12.yaml
+    sha256: 8f6edca5903da7e4fbbb0175fd7996f340b67548d5a18719ac9773e8616b4446
+    physical_intersection_count: 0
+  v11:
+    path: config/experiment/manifests/thesis_five_state_reentry_v11_relative_frame_semantic12.yaml
+    sha256: 762208903d94d23635cca99e359aeb37e29e5867d2bf2c0e5ab01d77995a4a8f
+    physical_intersection_count: 0
+  v12:
+    path: config/experiment/manifests/thesis_five_state_reentry_v12_intent_controllability12.yaml
+    sha256: 08096a7281c8e226c44c14bf463b80a0c0d3223864ae8502203acef51a8eaafd
+    physical_intersection_count: 0
+  v14:
+    path: config/experiment/manifests/thesis_five_state_reentry_v14_temporal_corridor12.yaml
+    sha256: 3249e5ab84aedaf83d0366defef3119311ff8b5aa8c53ae1e063b118aeb3b1fe
+    physical_intersection_count: 0
+  v15:
+    path: config/experiment/manifests/thesis_five_state_reentry_v15_fixed_encoder_temporal_corridor12.yaml
+    sha256: 6b3f9f474593ce5bb4e33a1c60f7e6bb19513ca7fbee7a3d835286a3a80dcc53
+    physical_intersection_count: 0
+  v16:
+    path: config/experiment/manifests/thesis_five_state_reentry_v16_dynamic_reference_path12.yaml
+    sha256: f86898ab6da7f15507b0104b98b61426d7fe62c470a749f457d393ff22ca046c
+    physical_intersection_count: 0
+scenarios:
+- name: v6_reentry_head_on__v17_path_context_a__own_below__negative_s199100
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 315.0
+    heading_deg: 1.582892246
+  target_init:
+    position_m:
+    - 7873.116747023
+    - -2558.130701849
+    - 5800.0
+    velocity_mps: 350.0
+    heading_deg: 142.417107754
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: reentry_v6_control12
+    initial_class: head_on
+    height_condition: own_below
+    mirror_sign: negative
+    mirror_pair_id: v17_path_context_a__head_on__own_below
+    distance_speed_package: v17_path_context_a
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: false
+    scenario_seed: 199100
+    initial_range_m: 8300.0
+    altitude_diff_m: 600.0
+    own_speed_mps: 315.0
+    target_speed_mps: 350.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: head_on
+    pilot_family: THESIS-FIVE-STATE-PATH-CONTEXT-PREFLIGHT-V17
+    identity_kind: evaluation
+    geometry_cell_id: head_on__v17_path_context_a__own_below__negative
+    pair_key: head_on__v17_path_context_a__own_below__negative::seed=199100
+    scenario_signature: v6_reentry::head_on__v17_path_context_a__own_below__negative::seed=199100
+    raw_si_first_pass_event: three_closing_then_two_opening
+    reentry_event: after_first_pass_two_consecutive_range_rate_lt_minus_25_mps
+- name: v6_reentry_head_on__v17_path_context_a__own_below__positive_s199101
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 315.0
+    heading_deg: 358.417107754
+  target_init:
+    position_m:
+    - 7873.116747023
+    - 2558.130701849
+    - 5800.0
+    velocity_mps: 350.0
+    heading_deg: 217.582892246
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: reentry_v6_control12
+    initial_class: head_on
+    height_condition: own_below
+    mirror_sign: positive
+    mirror_pair_id: v17_path_context_a__head_on__own_below
+    distance_speed_package: v17_path_context_a
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: false
+    scenario_seed: 199101
+    initial_range_m: 8300.0
+    altitude_diff_m: 600.0
+    own_speed_mps: 315.0
+    target_speed_mps: 350.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: head_on
+    pilot_family: THESIS-FIVE-STATE-PATH-CONTEXT-PREFLIGHT-V17
+    identity_kind: evaluation
+    geometry_cell_id: head_on__v17_path_context_a__own_below__positive
+    pair_key: head_on__v17_path_context_a__own_below__positive::seed=199101
+    scenario_signature: v6_reentry::head_on__v17_path_context_a__own_below__positive::seed=199101
+    raw_si_first_pass_event: three_closing_then_two_opening
+    reentry_event: after_first_pass_two_consecutive_range_rate_lt_minus_25_mps
+- name: v6_reentry_head_on__v17_path_context_a__co_altitude__negative_s199102
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 315.0
+    heading_deg: 2.0
+  target_init:
+    position_m:
+    - 7893.76908525
+    - -2564.841053312
+    - 5200.0
+    velocity_mps: 350.0
+    heading_deg: 142.0
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: reentry_v6_control12
+    initial_class: head_on
+    height_condition: co_altitude
+    mirror_sign: negative
+    mirror_pair_id: v17_path_context_a__head_on__co_altitude
+    distance_speed_package: v17_path_context_a
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: false
+    scenario_seed: 199102
+    initial_range_m: 8300.0
+    altitude_diff_m: 0.0
+    own_speed_mps: 315.0
+    target_speed_mps: 350.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: head_on
+    pilot_family: THESIS-FIVE-STATE-PATH-CONTEXT-PREFLIGHT-V17
+    identity_kind: evaluation
+    geometry_cell_id: head_on__v17_path_context_a__co_altitude__negative
+    pair_key: head_on__v17_path_context_a__co_altitude__negative::seed=199102
+    scenario_signature: v6_reentry::head_on__v17_path_context_a__co_altitude__negative::seed=199102
+    raw_si_first_pass_event: three_closing_then_two_opening
+    reentry_event: after_first_pass_two_consecutive_range_rate_lt_minus_25_mps
+- name: v6_reentry_head_on__v17_path_context_a__co_altitude__positive_s199103
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 315.0
+    heading_deg: 358.0
+  target_init:
+    position_m:
+    - 7893.76908525
+    - 2564.841053312
+    - 5200.0
+    velocity_mps: 350.0
+    heading_deg: 218.0
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: reentry_v6_control12
+    initial_class: head_on
+    height_condition: co_altitude
+    mirror_sign: positive
+    mirror_pair_id: v17_path_context_a__head_on__co_altitude
+    distance_speed_package: v17_path_context_a
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: false
+    scenario_seed: 199103
+    initial_range_m: 8300.0
+    altitude_diff_m: 0.0
+    own_speed_mps: 315.0
+    target_speed_mps: 350.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: head_on
+    pilot_family: THESIS-FIVE-STATE-PATH-CONTEXT-PREFLIGHT-V17
+    identity_kind: evaluation
+    geometry_cell_id: head_on__v17_path_context_a__co_altitude__positive
+    pair_key: head_on__v17_path_context_a__co_altitude__positive::seed=199103
+    scenario_signature: v6_reentry::head_on__v17_path_context_a__co_altitude__positive::seed=199103
+    raw_si_first_pass_event: three_closing_then_two_opening
+    reentry_event: after_first_pass_two_consecutive_range_rate_lt_minus_25_mps
+- name: v6_reentry_head_on__v17_path_context_a__own_above__negative_s199104
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 315.0
+    heading_deg: 1.582892246
+  target_init:
+    position_m:
+    - 7873.116747023
+    - -2558.130701849
+    - 4600.0
+    velocity_mps: 350.0
+    heading_deg: 142.417107754
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: reentry_v6_control12
+    initial_class: head_on
+    height_condition: own_above
+    mirror_sign: negative
+    mirror_pair_id: v17_path_context_a__head_on__own_above
+    distance_speed_package: v17_path_context_a
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: false
+    scenario_seed: 199104
+    initial_range_m: 8300.0
+    altitude_diff_m: -600.0
+    own_speed_mps: 315.0
+    target_speed_mps: 350.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: head_on
+    pilot_family: THESIS-FIVE-STATE-PATH-CONTEXT-PREFLIGHT-V17
+    identity_kind: evaluation
+    geometry_cell_id: head_on__v17_path_context_a__own_above__negative
+    pair_key: head_on__v17_path_context_a__own_above__negative::seed=199104
+    scenario_signature: v6_reentry::head_on__v17_path_context_a__own_above__negative::seed=199104
+    raw_si_first_pass_event: three_closing_then_two_opening
+    reentry_event: after_first_pass_two_consecutive_range_rate_lt_minus_25_mps
+- name: v6_reentry_head_on__v17_path_context_a__own_above__positive_s199105
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 315.0
+    heading_deg: 358.417107754
+  target_init:
+    position_m:
+    - 7873.116747023
+    - 2558.130701849
+    - 4600.0
+    velocity_mps: 350.0
+    heading_deg: 217.582892246
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: reentry_v6_control12
+    initial_class: head_on
+    height_condition: own_above
+    mirror_sign: positive
+    mirror_pair_id: v17_path_context_a__head_on__own_above
+    distance_speed_package: v17_path_context_a
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: false
+    scenario_seed: 199105
+    initial_range_m: 8300.0
+    altitude_diff_m: -600.0
+    own_speed_mps: 315.0
+    target_speed_mps: 350.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: head_on
+    pilot_family: THESIS-FIVE-STATE-PATH-CONTEXT-PREFLIGHT-V17
+    identity_kind: evaluation
+    geometry_cell_id: head_on__v17_path_context_a__own_above__positive
+    pair_key: head_on__v17_path_context_a__own_above__positive::seed=199105
+    scenario_signature: v6_reentry::head_on__v17_path_context_a__own_above__positive::seed=199105
+    raw_si_first_pass_event: three_closing_then_two_opening
+    reentry_event: after_first_pass_two_consecutive_range_rate_lt_minus_25_mps
+- name: v6_reentry_crossing_entry__v17_path_context_a__own_below__negative_s199106
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 315.0
+    heading_deg: 1.582892246
+  target_init:
+    position_m:
+    - 7873.116747023
+    - -2558.130701849
+    - 5800.0
+    velocity_mps: 350.0
+    heading_deg: 72.0
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: reentry_v6_control12
+    initial_class: crossing_entry
+    height_condition: own_below
+    mirror_sign: negative
+    mirror_pair_id: v17_path_context_a__crossing_entry__own_below
+    distance_speed_package: v17_path_context_a
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: true
+    scenario_seed: 199106
+    initial_range_m: 8300.0
+    altitude_diff_m: 600.0
+    own_speed_mps: 315.0
+    target_speed_mps: 350.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 90.0
+    taxonomy_geometry_state: transition
+    pilot_family: THESIS-FIVE-STATE-PATH-CONTEXT-PREFLIGHT-V17
+    identity_kind: evaluation
+    geometry_cell_id: crossing_entry__v17_path_context_a__own_below__negative
+    pair_key: crossing_entry__v17_path_context_a__own_below__negative::seed=199106
+    scenario_signature: v6_reentry::crossing_entry__v17_path_context_a__own_below__negative::seed=199106
+    raw_si_first_pass_event: three_closing_then_two_opening
+    reentry_event: after_first_pass_two_consecutive_range_rate_lt_minus_25_mps
+- name: v6_reentry_crossing_entry__v17_path_context_a__own_below__positive_s199107
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 315.0
+    heading_deg: 358.417107754
+  target_init:
+    position_m:
+    - 7873.116747023
+    - 2558.130701849
+    - 5800.0
+    velocity_mps: 350.0
+    heading_deg: 288.0
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: reentry_v6_control12
+    initial_class: crossing_entry
+    height_condition: own_below
+    mirror_sign: positive
+    mirror_pair_id: v17_path_context_a__crossing_entry__own_below
+    distance_speed_package: v17_path_context_a
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: true
+    scenario_seed: 199107
+    initial_range_m: 8300.0
+    altitude_diff_m: 600.0
+    own_speed_mps: 315.0
+    target_speed_mps: 350.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 90.0
+    taxonomy_geometry_state: transition
+    pilot_family: THESIS-FIVE-STATE-PATH-CONTEXT-PREFLIGHT-V17
+    identity_kind: evaluation
+    geometry_cell_id: crossing_entry__v17_path_context_a__own_below__positive
+    pair_key: crossing_entry__v17_path_context_a__own_below__positive::seed=199107
+    scenario_signature: v6_reentry::crossing_entry__v17_path_context_a__own_below__positive::seed=199107
+    raw_si_first_pass_event: three_closing_then_two_opening
+    reentry_event: after_first_pass_two_consecutive_range_rate_lt_minus_25_mps
+- name: v6_reentry_crossing_entry__v17_path_context_a__co_altitude__negative_s199108
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 315.0
+    heading_deg: 2.0
+  target_init:
+    position_m:
+    - 7893.76908525
+    - -2564.841053312
+    - 5200.0
+    velocity_mps: 350.0
+    heading_deg: 72.0
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: reentry_v6_control12
+    initial_class: crossing_entry
+    height_condition: co_altitude
+    mirror_sign: negative
+    mirror_pair_id: v17_path_context_a__crossing_entry__co_altitude
+    distance_speed_package: v17_path_context_a
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: true
+    scenario_seed: 199108
+    initial_range_m: 8300.0
+    altitude_diff_m: 0.0
+    own_speed_mps: 315.0
+    target_speed_mps: 350.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 90.0
+    taxonomy_geometry_state: transition
+    pilot_family: THESIS-FIVE-STATE-PATH-CONTEXT-PREFLIGHT-V17
+    identity_kind: evaluation
+    geometry_cell_id: crossing_entry__v17_path_context_a__co_altitude__negative
+    pair_key: crossing_entry__v17_path_context_a__co_altitude__negative::seed=199108
+    scenario_signature: v6_reentry::crossing_entry__v17_path_context_a__co_altitude__negative::seed=199108
+    raw_si_first_pass_event: three_closing_then_two_opening
+    reentry_event: after_first_pass_two_consecutive_range_rate_lt_minus_25_mps
+- name: v6_reentry_crossing_entry__v17_path_context_a__co_altitude__positive_s199109
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 315.0
+    heading_deg: 358.0
+  target_init:
+    position_m:
+    - 7893.76908525
+    - 2564.841053312
+    - 5200.0
+    velocity_mps: 350.0
+    heading_deg: 288.0
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: reentry_v6_control12
+    initial_class: crossing_entry
+    height_condition: co_altitude
+    mirror_sign: positive
+    mirror_pair_id: v17_path_context_a__crossing_entry__co_altitude
+    distance_speed_package: v17_path_context_a
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: true
+    scenario_seed: 199109
+    initial_range_m: 8300.0
+    altitude_diff_m: 0.0
+    own_speed_mps: 315.0
+    target_speed_mps: 350.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 90.0
+    taxonomy_geometry_state: transition
+    pilot_family: THESIS-FIVE-STATE-PATH-CONTEXT-PREFLIGHT-V17
+    identity_kind: evaluation
+    geometry_cell_id: crossing_entry__v17_path_context_a__co_altitude__positive
+    pair_key: crossing_entry__v17_path_context_a__co_altitude__positive::seed=199109
+    scenario_signature: v6_reentry::crossing_entry__v17_path_context_a__co_altitude__positive::seed=199109
+    raw_si_first_pass_event: three_closing_then_two_opening
+    reentry_event: after_first_pass_two_consecutive_range_rate_lt_minus_25_mps
+- name: v6_reentry_crossing_entry__v17_path_context_a__own_above__negative_s199110
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 315.0
+    heading_deg: 1.582892246
+  target_init:
+    position_m:
+    - 7873.116747023
+    - -2558.130701849
+    - 4600.0
+    velocity_mps: 350.0
+    heading_deg: 72.0
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: reentry_v6_control12
+    initial_class: crossing_entry
+    height_condition: own_above
+    mirror_sign: negative
+    mirror_pair_id: v17_path_context_a__crossing_entry__own_above
+    distance_speed_package: v17_path_context_a
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: true
+    scenario_seed: 199110
+    initial_range_m: 8300.0
+    altitude_diff_m: -600.0
+    own_speed_mps: 315.0
+    target_speed_mps: 350.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 90.0
+    taxonomy_geometry_state: transition
+    pilot_family: THESIS-FIVE-STATE-PATH-CONTEXT-PREFLIGHT-V17
+    identity_kind: evaluation
+    geometry_cell_id: crossing_entry__v17_path_context_a__own_above__negative
+    pair_key: crossing_entry__v17_path_context_a__own_above__negative::seed=199110
+    scenario_signature: v6_reentry::crossing_entry__v17_path_context_a__own_above__negative::seed=199110
+    raw_si_first_pass_event: three_closing_then_two_opening
+    reentry_event: after_first_pass_two_consecutive_range_rate_lt_minus_25_mps
+- name: v6_reentry_crossing_entry__v17_path_context_a__own_above__positive_s199111
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 315.0
+    heading_deg: 358.417107754
+  target_init:
+    position_m:
+    - 7873.116747023
+    - 2558.130701849
+    - 4600.0
+    velocity_mps: 350.0
+    heading_deg: 288.0
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: reentry_v6_control12
+    initial_class: crossing_entry
+    height_condition: own_above
+    mirror_sign: positive
+    mirror_pair_id: v17_path_context_a__crossing_entry__own_above
+    distance_speed_package: v17_path_context_a
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: true
+    scenario_seed: 199111
+    initial_range_m: 8300.0
+    altitude_diff_m: -600.0
+    own_speed_mps: 315.0
+    target_speed_mps: 350.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 90.0
+    taxonomy_geometry_state: transition
+    pilot_family: THESIS-FIVE-STATE-PATH-CONTEXT-PREFLIGHT-V17
+    identity_kind: evaluation
+    geometry_cell_id: crossing_entry__v17_path_context_a__own_above__positive
+    pair_key: crossing_entry__v17_path_context_a__own_above__positive::seed=199111
+    scenario_signature: v6_reentry::crossing_entry__v17_path_context_a__own_above__positive::seed=199111
+    raw_si_first_pass_event: three_closing_then_two_opening
+    reentry_event: after_first_pass_two_consecutive_range_rate_lt_minus_25_mps
+- name: v6_reentry_head_on__v17_path_context_b__own_below__negative_s199200
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 340.0
+    heading_deg: 1.620848648
+  target_init:
+    position_m:
+    - 8254.491207405
+    - -2682.046775667
+    - 5800.0
+    velocity_mps: 370.0
+    heading_deg: 142.379151352
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: reentry_v6_control12
+    initial_class: head_on
+    height_condition: own_below
+    mirror_sign: negative
+    mirror_pair_id: v17_path_context_b__head_on__own_below
+    distance_speed_package: v17_path_context_b
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: false
+    scenario_seed: 199200
+    initial_range_m: 8700.0
+    altitude_diff_m: 600.0
+    own_speed_mps: 340.0
+    target_speed_mps: 370.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: head_on
+    pilot_family: THESIS-FIVE-STATE-PATH-CONTEXT-PREFLIGHT-V17
+    identity_kind: evaluation
+    geometry_cell_id: head_on__v17_path_context_b__own_below__negative
+    pair_key: head_on__v17_path_context_b__own_below__negative::seed=199200
+    scenario_signature: v6_reentry::head_on__v17_path_context_b__own_below__negative::seed=199200
+    raw_si_first_pass_event: three_closing_then_two_opening
+    reentry_event: after_first_pass_two_consecutive_range_rate_lt_minus_25_mps
+- name: v6_reentry_head_on__v17_path_context_b__own_below__positive_s199201
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 340.0
+    heading_deg: 358.379151352
+  target_init:
+    position_m:
+    - 8254.491207405
+    - 2682.046775667
+    - 5800.0
+    velocity_mps: 370.0
+    heading_deg: 217.620848648
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: reentry_v6_control12
+    initial_class: head_on
+    height_condition: own_below
+    mirror_sign: positive
+    mirror_pair_id: v17_path_context_b__head_on__own_below
+    distance_speed_package: v17_path_context_b
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: false
+    scenario_seed: 199201
+    initial_range_m: 8700.0
+    altitude_diff_m: 600.0
+    own_speed_mps: 340.0
+    target_speed_mps: 370.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: head_on
+    pilot_family: THESIS-FIVE-STATE-PATH-CONTEXT-PREFLIGHT-V17
+    identity_kind: evaluation
+    geometry_cell_id: head_on__v17_path_context_b__own_below__positive
+    pair_key: head_on__v17_path_context_b__own_below__positive::seed=199201
+    scenario_signature: v6_reentry::head_on__v17_path_context_b__own_below__positive::seed=199201
+    raw_si_first_pass_event: three_closing_then_two_opening
+    reentry_event: after_first_pass_two_consecutive_range_rate_lt_minus_25_mps
+- name: v6_reentry_head_on__v17_path_context_b__co_altitude__negative_s199202
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 340.0
+    heading_deg: 2.0
+  target_init:
+    position_m:
+    - 8274.191691768
+    - -2688.447851062
+    - 5200.0
+    velocity_mps: 370.0
+    heading_deg: 142.0
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: reentry_v6_control12
+    initial_class: head_on
+    height_condition: co_altitude
+    mirror_sign: negative
+    mirror_pair_id: v17_path_context_b__head_on__co_altitude
+    distance_speed_package: v17_path_context_b
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: false
+    scenario_seed: 199202
+    initial_range_m: 8700.0
+    altitude_diff_m: 0.0
+    own_speed_mps: 340.0
+    target_speed_mps: 370.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: head_on
+    pilot_family: THESIS-FIVE-STATE-PATH-CONTEXT-PREFLIGHT-V17
+    identity_kind: evaluation
+    geometry_cell_id: head_on__v17_path_context_b__co_altitude__negative
+    pair_key: head_on__v17_path_context_b__co_altitude__negative::seed=199202
+    scenario_signature: v6_reentry::head_on__v17_path_context_b__co_altitude__negative::seed=199202
+    raw_si_first_pass_event: three_closing_then_two_opening
+    reentry_event: after_first_pass_two_consecutive_range_rate_lt_minus_25_mps
+- name: v6_reentry_head_on__v17_path_context_b__co_altitude__positive_s199203
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 340.0
+    heading_deg: 358.0
+  target_init:
+    position_m:
+    - 8274.191691768
+    - 2688.447851062
+    - 5200.0
+    velocity_mps: 370.0
+    heading_deg: 218.0
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: reentry_v6_control12
+    initial_class: head_on
+    height_condition: co_altitude
+    mirror_sign: positive
+    mirror_pair_id: v17_path_context_b__head_on__co_altitude
+    distance_speed_package: v17_path_context_b
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: false
+    scenario_seed: 199203
+    initial_range_m: 8700.0
+    altitude_diff_m: 0.0
+    own_speed_mps: 340.0
+    target_speed_mps: 370.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: head_on
+    pilot_family: THESIS-FIVE-STATE-PATH-CONTEXT-PREFLIGHT-V17
+    identity_kind: evaluation
+    geometry_cell_id: head_on__v17_path_context_b__co_altitude__positive
+    pair_key: head_on__v17_path_context_b__co_altitude__positive::seed=199203
+    scenario_signature: v6_reentry::head_on__v17_path_context_b__co_altitude__positive::seed=199203
+    raw_si_first_pass_event: three_closing_then_two_opening
+    reentry_event: after_first_pass_two_consecutive_range_rate_lt_minus_25_mps
+- name: v6_reentry_head_on__v17_path_context_b__own_above__negative_s199204
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 340.0
+    heading_deg: 1.620848648
+  target_init:
+    position_m:
+    - 8254.491207405
+    - -2682.046775667
+    - 4600.0
+    velocity_mps: 370.0
+    heading_deg: 142.379151352
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: reentry_v6_control12
+    initial_class: head_on
+    height_condition: own_above
+    mirror_sign: negative
+    mirror_pair_id: v17_path_context_b__head_on__own_above
+    distance_speed_package: v17_path_context_b
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: false
+    scenario_seed: 199204
+    initial_range_m: 8700.0
+    altitude_diff_m: -600.0
+    own_speed_mps: 340.0
+    target_speed_mps: 370.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: head_on
+    pilot_family: THESIS-FIVE-STATE-PATH-CONTEXT-PREFLIGHT-V17
+    identity_kind: evaluation
+    geometry_cell_id: head_on__v17_path_context_b__own_above__negative
+    pair_key: head_on__v17_path_context_b__own_above__negative::seed=199204
+    scenario_signature: v6_reentry::head_on__v17_path_context_b__own_above__negative::seed=199204
+    raw_si_first_pass_event: three_closing_then_two_opening
+    reentry_event: after_first_pass_two_consecutive_range_rate_lt_minus_25_mps
+- name: v6_reentry_head_on__v17_path_context_b__own_above__positive_s199205
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 340.0
+    heading_deg: 358.379151352
+  target_init:
+    position_m:
+    - 8254.491207405
+    - 2682.046775667
+    - 4600.0
+    velocity_mps: 370.0
+    heading_deg: 217.620848648
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: reentry_v6_control12
+    initial_class: head_on
+    height_condition: own_above
+    mirror_sign: positive
+    mirror_pair_id: v17_path_context_b__head_on__own_above
+    distance_speed_package: v17_path_context_b
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: false
+    scenario_seed: 199205
+    initial_range_m: 8700.0
+    altitude_diff_m: -600.0
+    own_speed_mps: 340.0
+    target_speed_mps: 370.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    taxonomy_geometry_state: head_on
+    pilot_family: THESIS-FIVE-STATE-PATH-CONTEXT-PREFLIGHT-V17
+    identity_kind: evaluation
+    geometry_cell_id: head_on__v17_path_context_b__own_above__positive
+    pair_key: head_on__v17_path_context_b__own_above__positive::seed=199205
+    scenario_signature: v6_reentry::head_on__v17_path_context_b__own_above__positive::seed=199205
+    raw_si_first_pass_event: three_closing_then_two_opening
+    reentry_event: after_first_pass_two_consecutive_range_rate_lt_minus_25_mps
+- name: v6_reentry_crossing_entry__v17_path_context_b__own_below__negative_s199206
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 340.0
+    heading_deg: 1.620848648
+  target_init:
+    position_m:
+    - 8254.491207405
+    - -2682.046775667
+    - 5800.0
+    velocity_mps: 370.0
+    heading_deg: 72.0
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: reentry_v6_control12
+    initial_class: crossing_entry
+    height_condition: own_below
+    mirror_sign: negative
+    mirror_pair_id: v17_path_context_b__crossing_entry__own_below
+    distance_speed_package: v17_path_context_b
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: true
+    scenario_seed: 199206
+    initial_range_m: 8700.0
+    altitude_diff_m: 600.0
+    own_speed_mps: 340.0
+    target_speed_mps: 370.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 90.0
+    taxonomy_geometry_state: transition
+    pilot_family: THESIS-FIVE-STATE-PATH-CONTEXT-PREFLIGHT-V17
+    identity_kind: evaluation
+    geometry_cell_id: crossing_entry__v17_path_context_b__own_below__negative
+    pair_key: crossing_entry__v17_path_context_b__own_below__negative::seed=199206
+    scenario_signature: v6_reentry::crossing_entry__v17_path_context_b__own_below__negative::seed=199206
+    raw_si_first_pass_event: three_closing_then_two_opening
+    reentry_event: after_first_pass_two_consecutive_range_rate_lt_minus_25_mps
+- name: v6_reentry_crossing_entry__v17_path_context_b__own_below__positive_s199207
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 340.0
+    heading_deg: 358.379151352
+  target_init:
+    position_m:
+    - 8254.491207405
+    - 2682.046775667
+    - 5800.0
+    velocity_mps: 370.0
+    heading_deg: 288.0
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: reentry_v6_control12
+    initial_class: crossing_entry
+    height_condition: own_below
+    mirror_sign: positive
+    mirror_pair_id: v17_path_context_b__crossing_entry__own_below
+    distance_speed_package: v17_path_context_b
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: true
+    scenario_seed: 199207
+    initial_range_m: 8700.0
+    altitude_diff_m: 600.0
+    own_speed_mps: 340.0
+    target_speed_mps: 370.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 90.0
+    taxonomy_geometry_state: transition
+    pilot_family: THESIS-FIVE-STATE-PATH-CONTEXT-PREFLIGHT-V17
+    identity_kind: evaluation
+    geometry_cell_id: crossing_entry__v17_path_context_b__own_below__positive
+    pair_key: crossing_entry__v17_path_context_b__own_below__positive::seed=199207
+    scenario_signature: v6_reentry::crossing_entry__v17_path_context_b__own_below__positive::seed=199207
+    raw_si_first_pass_event: three_closing_then_two_opening
+    reentry_event: after_first_pass_two_consecutive_range_rate_lt_minus_25_mps
+- name: v6_reentry_crossing_entry__v17_path_context_b__co_altitude__negative_s199208
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 340.0
+    heading_deg: 2.0
+  target_init:
+    position_m:
+    - 8274.191691768
+    - -2688.447851062
+    - 5200.0
+    velocity_mps: 370.0
+    heading_deg: 72.0
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: reentry_v6_control12
+    initial_class: crossing_entry
+    height_condition: co_altitude
+    mirror_sign: negative
+    mirror_pair_id: v17_path_context_b__crossing_entry__co_altitude
+    distance_speed_package: v17_path_context_b
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: true
+    scenario_seed: 199208
+    initial_range_m: 8700.0
+    altitude_diff_m: 0.0
+    own_speed_mps: 340.0
+    target_speed_mps: 370.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 90.0
+    taxonomy_geometry_state: transition
+    pilot_family: THESIS-FIVE-STATE-PATH-CONTEXT-PREFLIGHT-V17
+    identity_kind: evaluation
+    geometry_cell_id: crossing_entry__v17_path_context_b__co_altitude__negative
+    pair_key: crossing_entry__v17_path_context_b__co_altitude__negative::seed=199208
+    scenario_signature: v6_reentry::crossing_entry__v17_path_context_b__co_altitude__negative::seed=199208
+    raw_si_first_pass_event: three_closing_then_two_opening
+    reentry_event: after_first_pass_two_consecutive_range_rate_lt_minus_25_mps
+- name: v6_reentry_crossing_entry__v17_path_context_b__co_altitude__positive_s199209
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 340.0
+    heading_deg: 358.0
+  target_init:
+    position_m:
+    - 8274.191691768
+    - 2688.447851062
+    - 5200.0
+    velocity_mps: 370.0
+    heading_deg: 288.0
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: reentry_v6_control12
+    initial_class: crossing_entry
+    height_condition: co_altitude
+    mirror_sign: positive
+    mirror_pair_id: v17_path_context_b__crossing_entry__co_altitude
+    distance_speed_package: v17_path_context_b
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: true
+    scenario_seed: 199209
+    initial_range_m: 8700.0
+    altitude_diff_m: 0.0
+    own_speed_mps: 340.0
+    target_speed_mps: 370.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 90.0
+    taxonomy_geometry_state: transition
+    pilot_family: THESIS-FIVE-STATE-PATH-CONTEXT-PREFLIGHT-V17
+    identity_kind: evaluation
+    geometry_cell_id: crossing_entry__v17_path_context_b__co_altitude__positive
+    pair_key: crossing_entry__v17_path_context_b__co_altitude__positive::seed=199209
+    scenario_signature: v6_reentry::crossing_entry__v17_path_context_b__co_altitude__positive::seed=199209
+    raw_si_first_pass_event: three_closing_then_two_opening
+    reentry_event: after_first_pass_two_consecutive_range_rate_lt_minus_25_mps
+- name: v6_reentry_crossing_entry__v17_path_context_b__own_above__negative_s199210
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 340.0
+    heading_deg: 1.620848648
+  target_init:
+    position_m:
+    - 8254.491207405
+    - -2682.046775667
+    - 4600.0
+    velocity_mps: 370.0
+    heading_deg: 72.0
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: reentry_v6_control12
+    initial_class: crossing_entry
+    height_condition: own_above
+    mirror_sign: negative
+    mirror_pair_id: v17_path_context_b__crossing_entry__own_above
+    distance_speed_package: v17_path_context_b
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: true
+    scenario_seed: 199210
+    initial_range_m: 8700.0
+    altitude_diff_m: -600.0
+    own_speed_mps: 340.0
+    target_speed_mps: 370.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 90.0
+    taxonomy_geometry_state: transition
+    pilot_family: THESIS-FIVE-STATE-PATH-CONTEXT-PREFLIGHT-V17
+    identity_kind: evaluation
+    geometry_cell_id: crossing_entry__v17_path_context_b__own_above__negative
+    pair_key: crossing_entry__v17_path_context_b__own_above__negative::seed=199210
+    scenario_signature: v6_reentry::crossing_entry__v17_path_context_b__own_above__negative::seed=199210
+    raw_si_first_pass_event: three_closing_then_two_opening
+    reentry_event: after_first_pass_two_consecutive_range_rate_lt_minus_25_mps
+- name: v6_reentry_crossing_entry__v17_path_context_b__own_above__positive_s199211
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 340.0
+    heading_deg: 358.379151352
+  target_init:
+    position_m:
+    - 8254.491207405
+    - 2682.046775667
+    - 4600.0
+    velocity_mps: 370.0
+    heading_deg: 288.0
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: reentry_v6_control12
+    initial_class: crossing_entry
+    height_condition: own_above
+    mirror_sign: positive
+    mirror_pair_id: v17_path_context_b__crossing_entry__own_above
+    distance_speed_package: v17_path_context_b
+    phase_at_reset: pre_merge
+    task_registry_key: five_state_shared_intent
+    crossing_context: true
+    scenario_seed: 199211
+    initial_range_m: 8700.0
+    altitude_diff_m: -600.0
+    own_speed_mps: 340.0
+    target_speed_mps: 370.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 20.0
+    target_velocity_to_own_los_angle_deg: 90.0
+    taxonomy_geometry_state: transition
+    pilot_family: THESIS-FIVE-STATE-PATH-CONTEXT-PREFLIGHT-V17
+    identity_kind: evaluation
+    geometry_cell_id: crossing_entry__v17_path_context_b__own_above__positive
+    pair_key: crossing_entry__v17_path_context_b__own_above__positive::seed=199211
+    scenario_signature: v6_reentry::crossing_entry__v17_path_context_b__own_above__positive::seed=199211
+    raw_si_first_pass_event: three_closing_then_two_opening
+    reentry_event: after_first_pass_two_consecutive_range_rate_lt_minus_25_mps
+integrity:
+  payload_sha256: 1c79c22d78976b148115e39c8c77d75869afed708c2c981eb934061cc6f52351

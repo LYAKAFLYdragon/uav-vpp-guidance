@@ -1,0 +1,178 @@
+schema_version: 1
+source_id: THESIS-NEUTRAL-POSTMERGE-REENTRY-RECOVERY-PILOT-V1
+status: preregistered_design_only_not_authorised
+experiment:
+  family: thesis_five_state_shared_intent_v1
+  stage: single_skill_neutral_postmerge_feasibility_pilot
+  execution_mode: design_and_preflight_only
+authorization:
+  execution_permitted: false
+  training_permitted: false
+  baseline_evaluation_permitted: false
+  heldout_evaluation_permitted: false
+  high_level_ppo_training_permitted: false
+  four_skill_training_permitted: false
+  combat_finetune_permitted: false
+  tuning_permitted: false
+  vpp_change_permitted: false
+  guidance_change_permitted: false
+  pid_change_permitted: false
+  snapshot_restore: false
+  future_state_injection: false
+  history_padding_permitted: false
+implementation_freeze:
+  status: separate_clean_sha_required_before_authorization
+  base_preregistration_commit: 4ea260a
+  design_only_not_execution_authorization: true
+sources:
+  train_distribution: config/experiment/thesis_neutral_postmerge_reentry_recovery_pilot_v1_train_distribution.yaml
+  train_distribution_sha256: 1959db34466b087198b9818f6a38c1e4735552ef432aca80fa914e3e12eb5ba3
+  dev_manifest: config/experiment/manifests/thesis_neutral_postmerge_reentry_recovery_pilot_v1_dev12.yaml
+  dev_manifest_sha256: 652dbe209a0fc6b17a4a43f28996664ebb4ed4bd436e3292eb90e9ff9eca06e6
+  heldout_manifest: config/experiment/manifests/thesis_neutral_postmerge_reentry_recovery_pilot_v1_heldout24.yaml
+  heldout_manifest_sha256: 025384fa92351e33671df724b04f6bec0c5e56ff425836a82df7c36127397852
+  runtime_registry: config/experiment/thesis_neutral_postmerge_reentry_recovery_pilot_v1_runtime_registry.yaml
+  runtime_registry_sha256: 1a8675ed1b418a2bc8d66e12714813dbe88008a62c3e062d14f9168040bcadef
+  artifact_schema: config/experiment/thesis_neutral_postmerge_reentry_recovery_pilot_v1_artifact_schema.yaml
+  artifact_schema_sha256: c42c25c8984097be3cd8de51a51885d6cb2b28123e552a71718a81ddbc7fa1f5
+  manifest_builder: scripts/build_thesis_neutral_postmerge_reentry_recovery_pilot_v1_manifests.py
+  manifest_builder_sha256: 599b015e4589930878ff7336fbf8ed89b30f46fae5c6852aaf3bab05e7f00cbf
+  preflight: scripts/preflight_thesis_neutral_postmerge_reentry_recovery_pilot_v1.py
+  preflight_sha256: 4990d002bb3310c1592c965153a818250b5c604f35264fc5ff796d50539bcdb0
+  pilot_contract: src/uav_vpp_guidance/evaluation/thesis_neutral_postmerge_reentry_recovery_pilot.py
+  pilot_contract_sha256: 4b1ce776d20c3211268eb679a52c300b21c4ada8f698bf0d0c2a079122303bb9
+fixed_contract:
+  skill: reentry_recovery
+  profile: reentry_preparation
+  profile_targets: [30.0, 130.0, 2200.0, -30.0, 100.0, 0.0]
+  profile_weights: [0.8, 0.8, 1.0, 0.8, 0.7, 0.4]
+  routing_enabled: false
+  high_level_policy_present: false
+  observation_dim: 66
+  action_dim: 3
+  action_semantics: normalized_vpp_forward_lateral_vertical_bias
+  encoder:
+    checkpoint: E:/uav-vpp-guidance-thesis-five-state-v1-results/p3_temporal_encoder_phaseconditional_v2/checkpoints/best.pt
+    sha256: 385663281a9c48c0416ea4d1a1bb8dc08ed64a0cfebb0f01083cbbb8bcfbdc59
+    trainable: false
+    fallback: prohibited
+  policy_history_padding: prohibited
+  prediction_reward: prohibited
+  predictor_vpp_guidance_pid: frozen_existing_chain
+physical_handoff:
+  run_in_controller: frozen_fixed_head_on
+  legal_reset_phase: pre_merge
+  target_window:
+    dynamic_state: neutral
+    phase: post_merge
+  first_pass_required: true
+  one_continuous_jsbsim_episode: true
+  reset_at_handoff: false
+  snapshot_restore: false
+  future_state_injection: false
+  exact_real_history_frames: 10
+methods:
+  candidate_fixed_reentry_recovery:
+    role: experimental
+    checkpoint: null
+    checkpoint_status: untrained_not_authorized
+    skill: reentry_recovery
+    profile: reentry_preparation
+    routing: disabled
+  frozen_fixed_head_on:
+    role: primary_baseline
+    checkpoint: E:/uav-vpp-guidance-thesis-five-state-v1-assets/canonical_head_on_specialist_best.pt
+    checkpoint_sha256: 0aeadd11cd8c7723c8963bcc5da21dd97c365e64f234d07b86c2b8f0d7ec5fb6
+    routing: disabled
+  frozen_fixed_crossing:
+    role: auxiliary_existing_library_baseline
+    checkpoint: E:/uav-vpp-guidance-thesis-five-state-v1-assets/canonical_crossing_specialist_last.pt
+    checkpoint_sha256: 5eddc138bff55a5466da1129e840ef7dfb3677347a05276c3877746c8e89148b
+    routing: disabled
+opponents:
+  order: [expert, end_to_end, independent_ppo_vpp]
+  report_separately: true
+  pooled_gate: prohibited
+proposed_training:
+  total_timesteps: 50000
+  training_seed: 2026071502
+  balanced_opponent_sampling: true
+  checkpoint_evaluation_steps: [10000, 20000, 30000, 40000, 50000]
+  checkpoint_selection_split: dev12_only
+  checkpoint_selection_rule: minimize_worst_opponent_mean_paired_intent_loss_auc20_delta_vs_head_on
+  heldout_use_for_selection: prohibited
+  budget_extension: prohibited
+  reward_change_after_start: prohibited
+  scenario_support_change_after_start: prohibited
+metrics:
+  primary:
+    name: normalized_reentry_preparation_intent_loss_auc20
+    lower_is_better: true
+    window: first_20_valid_neutral_post_merge_steps_after_handoff
+    paired_delta: candidate_minus_baseline
+  mechanism:
+    - range_and_range_rate_trajectory
+    - specific_energy_height_delta_m
+    - attack_zone_exposure_fraction
+    - reentry_dwell_fraction
+    - vpp_forward_lateral_vertical_bias
+    - actual_nz_aoa_response
+  safety:
+    - ego_crash_oob_rate
+    - nonfinite_observation_action_count
+    - backend_fallback_count
+    - checkpoint_fallback_count
+    - abnormal_reset_count
+gates:
+  per_opponent_contract_minimum:
+    qualifying_paired_episodes: 2
+    valid_target_steps: 20
+    distinct_scenario_signatures: 2
+    distinct_mirror_signs: 2
+    all_66d_and_3d_finite: true
+    no_padding: true
+    no_prediction_fallback: true
+    no_reset: true
+    no_backend_fallback: true
+    no_checkpoint_fallback: true
+  per_opponent_claim_ready_coverage:
+    qualifying_paired_episodes: 8
+    valid_target_steps: 160
+  safety_noninferiority_vs_head_on:
+    ego_crash_oob_rate_delta_max: 0.05
+  geometry_noninferiority_vs_head_on:
+    paired_intent_loss_auc20_delta_max: 0.02
+  practical_improvement_vs_head_on:
+    paired_intent_loss_auc20_delta_max: -0.05
+    minimum_opponents_passing: 2
+  practical_improvement_vs_best_existing_specialist:
+    paired_intent_loss_auc20_delta_max: -0.02
+    minimum_opponents_passing: 2
+safety_stop_rule:
+  immediate_abort_on:
+    - nonfinite_66d_observation
+    - nonfinite_or_out_of_bounds_3d_action
+    - jsbsim_backend_fallback
+    - checkpoint_fallback
+    - abnormal_environment_reset
+    - history_padding_or_future_state_injection
+  dev_abort_on:
+    metric: ego_crash_oob_rate_delta_vs_frozen_fixed_head_on
+    threshold: 0.05
+  after_abort:
+    freeze_as_negative_evidence: true
+    reward_tuning: prohibited
+    add_training_steps: prohibited
+    replace_scenarios: prohibited
+    replace_checkpoint_or_encoder: prohibited
+    rerun_same_source_id: prohibited
+contract:
+  backend: jsbsim
+  strict_backend: true
+  taxonomy_angle_order: [ATA, AA]
+  phase_input_unit_contract: raw_SI_from_observation.relative_state
+  min_free_disk_gb: 120.0
+outputs:
+  root: E:/uav-vpp-guidance-five-state-heldout-envelope-v1-results/neutral_postmerge_reentry_recovery_pilot_v1
+  creation_permitted_by_this_config: false
+  paper_safe: false

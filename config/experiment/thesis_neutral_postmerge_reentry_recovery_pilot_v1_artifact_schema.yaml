@@ -1,0 +1,46 @@
+schema_version: 1
+source_id: THESIS-NEUTRAL-POSTMERGE-REENTRY-RECOVERY-PILOT-V1-ARTIFACT-SCHEMA
+status: preregistered_design_only
+paper_safe: false
+execution_artifacts_created_by_design: false
+design_artifacts:
+  required:
+    - config/experiment/thesis_neutral_postmerge_reentry_recovery_pilot_v1.yaml
+    - config/experiment/thesis_neutral_postmerge_reentry_recovery_pilot_v1_runtime_registry.yaml
+    - config/experiment/thesis_neutral_postmerge_reentry_recovery_pilot_v1_train_distribution.yaml
+    - config/experiment/manifests/thesis_neutral_postmerge_reentry_recovery_pilot_v1_dev12.yaml
+    - config/experiment/manifests/thesis_neutral_postmerge_reentry_recovery_pilot_v1_heldout24.yaml
+    - scripts/build_thesis_neutral_postmerge_reentry_recovery_pilot_v1_manifests.py
+    - scripts/preflight_thesis_neutral_postmerge_reentry_recovery_pilot_v1.py
+    - src/uav_vpp_guidance/evaluation/thesis_neutral_postmerge_reentry_recovery_pilot.py
+future_authorized_execution_artifacts:
+  prohibited_until_separate_authorization: true
+  required_after_authorization:
+    - authorization_preflight.json
+    - resolved_config.yaml
+    - run_manifest.json
+    - asset_hashes.json
+    - dev/baseline_records.json
+    - train/training_summary.json
+    - heldout/paired_records.json
+    - heldout/decision.json
+    - telemetry/episode_ledgers.jsonl
+  per_episode_required_fields:
+    - raw_si_phase_input
+    - dynamic_taxonomy_state
+    - phase
+    - first_pass_boundary_hash
+    - observation_66d
+    - normalized_vpp_action_3d
+    - prediction_valid
+    - prediction_fallback
+    - nz_command
+    - nz_actual
+    - aoa_deg
+    - pid_saturation
+    - terminal_reason
+forbidden_artifacts_before_authorization:
+  - candidate_checkpoint
+  - training_summary
+  - heldout_result
+  - paper_safe_manifest

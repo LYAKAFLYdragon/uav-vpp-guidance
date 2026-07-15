@@ -1,0 +1,1124 @@
+source_id: THESIS-NEUTRAL-POSTMERGE-REENTRY-RECOVERY-PILOT-V1-HELDOUT24
+manifest_version: 1
+status: preregistered_design_only
+split: heldout24
+protocol:
+  training_permitted: false
+  evaluation_permitted: false
+  continuous_physical_run_in: true
+  snapshot_restore: false
+  future_state_injection: false
+  routing_enabled: false
+  candidate_skill: reentry_recovery
+  fixed_profile: reentry_preparation
+  opponents_reported_separately: true
+generation_contract:
+  initial_class: neutral
+  height_offsets_target_minus_own_m:
+    own_below: 600.0
+    co_altitude: 0.0
+    own_above: -600.0
+  mirror_signs:
+  - negative
+  - positive
+  packages:
+  - id: neutral_reentry_hold_a
+    initial_range_m: 3050.0
+    own_speed_mps: 225.0
+    target_speed_mps: 335.0
+  - id: neutral_reentry_hold_b
+    initial_range_m: 3525.0
+    own_speed_mps: 245.0
+    target_speed_mps: 360.0
+  - id: neutral_reentry_hold_c
+    initial_range_m: 4150.0
+    own_speed_mps: 270.0
+    target_speed_mps: 380.0
+  - id: neutral_reentry_hold_d
+    initial_range_m: 4700.0
+    own_speed_mps: 295.0
+    target_speed_mps: 410.0
+  first_pass_requirement: legal pre_merge reset followed by one continuous strict-JSBSim
+    episode
+disjointness:
+  p2_b2:
+    path: config/experiment/manifests/thesis_global_advantage_v1_p2_physical_preflight60.yaml
+    sha256: 78d90d6ea32490cc777d13e0a809061ec300f94ff6d7d012f93a9e9895ba834f
+    physical_intersection_count: 0
+    seed_intersection_count: 0
+  p2_b3:
+    path: config/experiment/manifests/thesis_global_advantage_v1_p2_b3_phase_observability30.yaml
+    sha256: d1e7c0e0750ec36eab6ef3ab7b6a353f7ceed8d88211d6d6535344c13e8a384c
+    physical_intersection_count: 0
+    seed_intersection_count: 0
+  p2_b4:
+    path: config/experiment/manifests/thesis_global_advantage_v1_p2_b4_raw_si_phase30.yaml
+    sha256: e709cdafd3ba6ba822454cdbd88ffa49988962cedeed310b15f071b87004fa81
+    physical_intersection_count: 0
+    seed_intersection_count: 0
+  p2_b5:
+    path: config/experiment/manifests/thesis_global_advantage_v1_p2_b5_phase_feasible_sampler12.yaml
+    sha256: 63acf19e57d5488f33fdef48df9b59ec9c7f892c5a70e1465cea9622bf3f798a
+    physical_intersection_count: 0
+    seed_intersection_count: 0
+  p2_b6:
+    path: config/experiment/manifests/thesis_global_advantage_v1_p2_b6_opponent_conditional_reachability60.yaml
+    sha256: 258bef67cddc66c4a8f4c04baeaee6a1c0152e5286035928244e0c21aebdd884
+    physical_intersection_count: 0
+    seed_intersection_count: 0
+  heldout240:
+    path: config/experiment/manifests/thesis_global_advantage_v1_heldout240.yaml
+    sha256: 81114a64cc7c589f496cff8869eac814f9919bfbc16a03b0aaba69bd5ba8bef3
+    physical_intersection_count: 0
+    seed_intersection_count: 0
+  dev30:
+    path: config/experiment/manifests/thesis_five_state_shared_intent_v1_dev30.yaml
+    sha256: 6bd9c4282a4aa9724dee350114293421287ce0f00387b5b298e7be067c30d130
+    physical_intersection_count: 0
+    seed_intersection_count: 0
+  historical_heldout60:
+    path: config/experiment/manifests/thesis_five_state_shared_intent_v1_heldout60.yaml
+    sha256: f96f3c927a0de4702dee62e2894fe784ff945a21f4e5728749fba20666603b5a
+    physical_intersection_count: 0
+    seed_intersection_count: 0
+  phase_v2:
+    path: config/experiment/manifests/thesis_phase_reachability_v2_run_in_handoff_r1.yaml
+    sha256: d2c7f97f4f7cc99fd14649cc27866557784b27fbeba9f729f1a87b406b31c6e6
+    physical_intersection_count: 0
+    seed_intersection_count: 0
+scenarios:
+- name: neutral_postmerge_reentry_heldout24_neutral_reentry_hold_a_own_below_negative_s94800
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 225.0
+    heading_deg: 145.419689135
+  target_init:
+    position_m:
+    - 2844.040653032
+    - -924.084825057
+    - 5800.0
+    velocity_mps: 335.0
+    heading_deg: 358.580310865
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: heldout24
+    initial_class: neutral
+    height_condition: own_below
+    mirror_sign: negative
+    mirror_pair_id: neutral_reentry_hold_a__neutral__own_below
+    distance_speed_package: neutral_reentry_hold_a
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    crossing_context: false
+    scenario_seed: 94800
+    initial_range_m: 3050.0
+    altitude_diff_m: 600.0
+    own_speed_mps: 225.0
+    target_speed_mps: 335.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: neutral
+    pilot_family: THESIS-NEUTRAL-POSTMERGE-REENTRY-RECOVERY-PILOT-V1
+    geometry_cell_id: neutral_reentry_hold_a__neutral__own_below__negative
+    continuous_run_in: true
+    routing_enabled: false
+    fixed_skill: reentry_recovery
+    fixed_profile: reentry_preparation
+    physical_geometry_signature: ((0.0, 0.0, 5200.0), 225.0, 145.419689, (2844.040653,
+      -924.084825, 5800.0), 335.0, 358.580311)
+- name: neutral_postmerge_reentry_heldout24_neutral_reentry_hold_a_own_below_positive_s94801
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 225.0
+    heading_deg: 214.580310865
+  target_init:
+    position_m:
+    - 2844.040653032
+    - 924.084825057
+    - 5800.0
+    velocity_mps: 335.0
+    heading_deg: 1.419689135
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: heldout24
+    initial_class: neutral
+    height_condition: own_below
+    mirror_sign: positive
+    mirror_pair_id: neutral_reentry_hold_a__neutral__own_below
+    distance_speed_package: neutral_reentry_hold_a
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    crossing_context: false
+    scenario_seed: 94801
+    initial_range_m: 3050.0
+    altitude_diff_m: 600.0
+    own_speed_mps: 225.0
+    target_speed_mps: 335.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: neutral
+    pilot_family: THESIS-NEUTRAL-POSTMERGE-REENTRY-RECOVERY-PILOT-V1
+    geometry_cell_id: neutral_reentry_hold_a__neutral__own_below__positive
+    continuous_run_in: true
+    routing_enabled: false
+    fixed_skill: reentry_recovery
+    fixed_profile: reentry_preparation
+    physical_geometry_signature: ((0.0, 0.0, 5200.0), 225.0, 214.580311, (2844.040653,
+      924.084825, 5800.0), 335.0, 1.419689)
+- name: neutral_postmerge_reentry_heldout24_neutral_reentry_hold_a_co_altitude_negative_s94802
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 225.0
+    heading_deg: 142.0
+  target_init:
+    position_m:
+    - 2900.7223747
+    - -942.501832844
+    - 5200.0
+    velocity_mps: 335.0
+    heading_deg: 2.0
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: heldout24
+    initial_class: neutral
+    height_condition: co_altitude
+    mirror_sign: negative
+    mirror_pair_id: neutral_reentry_hold_a__neutral__co_altitude
+    distance_speed_package: neutral_reentry_hold_a
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    crossing_context: false
+    scenario_seed: 94802
+    initial_range_m: 3050.0
+    altitude_diff_m: 0.0
+    own_speed_mps: 225.0
+    target_speed_mps: 335.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: neutral
+    pilot_family: THESIS-NEUTRAL-POSTMERGE-REENTRY-RECOVERY-PILOT-V1
+    geometry_cell_id: neutral_reentry_hold_a__neutral__co_altitude__negative
+    continuous_run_in: true
+    routing_enabled: false
+    fixed_skill: reentry_recovery
+    fixed_profile: reentry_preparation
+    physical_geometry_signature: ((0.0, 0.0, 5200.0), 225.0, 142.0, (2900.722375,
+      -942.501833, 5200.0), 335.0, 2.0)
+- name: neutral_postmerge_reentry_heldout24_neutral_reentry_hold_a_co_altitude_positive_s94803
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 225.0
+    heading_deg: 218.0
+  target_init:
+    position_m:
+    - 2900.7223747
+    - 942.501832844
+    - 5200.0
+    velocity_mps: 335.0
+    heading_deg: 358.0
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: heldout24
+    initial_class: neutral
+    height_condition: co_altitude
+    mirror_sign: positive
+    mirror_pair_id: neutral_reentry_hold_a__neutral__co_altitude
+    distance_speed_package: neutral_reentry_hold_a
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    crossing_context: false
+    scenario_seed: 94803
+    initial_range_m: 3050.0
+    altitude_diff_m: 0.0
+    own_speed_mps: 225.0
+    target_speed_mps: 335.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: neutral
+    pilot_family: THESIS-NEUTRAL-POSTMERGE-REENTRY-RECOVERY-PILOT-V1
+    geometry_cell_id: neutral_reentry_hold_a__neutral__co_altitude__positive
+    continuous_run_in: true
+    routing_enabled: false
+    fixed_skill: reentry_recovery
+    fixed_profile: reentry_preparation
+    physical_geometry_signature: ((0.0, 0.0, 5200.0), 225.0, 218.0, (2900.722375,
+      942.501833, 5200.0), 335.0, 358.0)
+- name: neutral_postmerge_reentry_heldout24_neutral_reentry_hold_a_own_above_negative_s94804
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 225.0
+    heading_deg: 145.419689135
+  target_init:
+    position_m:
+    - 2844.040653032
+    - -924.084825057
+    - 4600.0
+    velocity_mps: 335.0
+    heading_deg: 358.580310865
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: heldout24
+    initial_class: neutral
+    height_condition: own_above
+    mirror_sign: negative
+    mirror_pair_id: neutral_reentry_hold_a__neutral__own_above
+    distance_speed_package: neutral_reentry_hold_a
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    crossing_context: false
+    scenario_seed: 94804
+    initial_range_m: 3050.0
+    altitude_diff_m: -600.0
+    own_speed_mps: 225.0
+    target_speed_mps: 335.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: neutral
+    pilot_family: THESIS-NEUTRAL-POSTMERGE-REENTRY-RECOVERY-PILOT-V1
+    geometry_cell_id: neutral_reentry_hold_a__neutral__own_above__negative
+    continuous_run_in: true
+    routing_enabled: false
+    fixed_skill: reentry_recovery
+    fixed_profile: reentry_preparation
+    physical_geometry_signature: ((0.0, 0.0, 5200.0), 225.0, 145.419689, (2844.040653,
+      -924.084825, 4600.0), 335.0, 358.580311)
+- name: neutral_postmerge_reentry_heldout24_neutral_reentry_hold_a_own_above_positive_s94805
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 225.0
+    heading_deg: 214.580310865
+  target_init:
+    position_m:
+    - 2844.040653032
+    - 924.084825057
+    - 4600.0
+    velocity_mps: 335.0
+    heading_deg: 1.419689135
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: heldout24
+    initial_class: neutral
+    height_condition: own_above
+    mirror_sign: positive
+    mirror_pair_id: neutral_reentry_hold_a__neutral__own_above
+    distance_speed_package: neutral_reentry_hold_a
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    crossing_context: false
+    scenario_seed: 94805
+    initial_range_m: 3050.0
+    altitude_diff_m: -600.0
+    own_speed_mps: 225.0
+    target_speed_mps: 335.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: neutral
+    pilot_family: THESIS-NEUTRAL-POSTMERGE-REENTRY-RECOVERY-PILOT-V1
+    geometry_cell_id: neutral_reentry_hold_a__neutral__own_above__positive
+    continuous_run_in: true
+    routing_enabled: false
+    fixed_skill: reentry_recovery
+    fixed_profile: reentry_preparation
+    physical_geometry_signature: ((0.0, 0.0, 5200.0), 225.0, 214.580311, (2844.040653,
+      924.084825, 4600.0), 335.0, 1.419689)
+- name: neutral_postmerge_reentry_heldout24_neutral_reentry_hold_b_own_below_negative_s94806
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 245.0
+    heading_deg: 144.479311335
+  target_init:
+    position_m:
+    - 3303.552684063
+    - -1073.389334595
+    - 5800.0
+    velocity_mps: 360.0
+    heading_deg: 359.520688665
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: heldout24
+    initial_class: neutral
+    height_condition: own_below
+    mirror_sign: negative
+    mirror_pair_id: neutral_reentry_hold_b__neutral__own_below
+    distance_speed_package: neutral_reentry_hold_b
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    crossing_context: false
+    scenario_seed: 94806
+    initial_range_m: 3525.0
+    altitude_diff_m: 600.0
+    own_speed_mps: 245.0
+    target_speed_mps: 360.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: neutral
+    pilot_family: THESIS-NEUTRAL-POSTMERGE-REENTRY-RECOVERY-PILOT-V1
+    geometry_cell_id: neutral_reentry_hold_b__neutral__own_below__negative
+    continuous_run_in: true
+    routing_enabled: false
+    fixed_skill: reentry_recovery
+    fixed_profile: reentry_preparation
+    physical_geometry_signature: ((0.0, 0.0, 5200.0), 245.0, 144.479311, (3303.552684,
+      -1073.389335, 5800.0), 360.0, 359.520689)
+- name: neutral_postmerge_reentry_heldout24_neutral_reentry_hold_b_own_below_positive_s94807
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 245.0
+    heading_deg: 215.520688665
+  target_init:
+    position_m:
+    - 3303.552684063
+    - 1073.389334595
+    - 5800.0
+    velocity_mps: 360.0
+    heading_deg: 0.479311335
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: heldout24
+    initial_class: neutral
+    height_condition: own_below
+    mirror_sign: positive
+    mirror_pair_id: neutral_reentry_hold_b__neutral__own_below
+    distance_speed_package: neutral_reentry_hold_b
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    crossing_context: false
+    scenario_seed: 94807
+    initial_range_m: 3525.0
+    altitude_diff_m: 600.0
+    own_speed_mps: 245.0
+    target_speed_mps: 360.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: neutral
+    pilot_family: THESIS-NEUTRAL-POSTMERGE-REENTRY-RECOVERY-PILOT-V1
+    geometry_cell_id: neutral_reentry_hold_b__neutral__own_below__positive
+    continuous_run_in: true
+    routing_enabled: false
+    fixed_skill: reentry_recovery
+    fixed_profile: reentry_preparation
+    physical_geometry_signature: ((0.0, 0.0, 5200.0), 245.0, 215.520689, (3303.552684,
+      1073.389335, 5800.0), 360.0, 0.479311)
+- name: neutral_postmerge_reentry_heldout24_neutral_reentry_hold_b_co_altitude_negative_s94808
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 245.0
+    heading_deg: 142.0
+  target_init:
+    position_m:
+    - 3352.47421994
+    - -1089.284905172
+    - 5200.0
+    velocity_mps: 360.0
+    heading_deg: 2.0
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: heldout24
+    initial_class: neutral
+    height_condition: co_altitude
+    mirror_sign: negative
+    mirror_pair_id: neutral_reentry_hold_b__neutral__co_altitude
+    distance_speed_package: neutral_reentry_hold_b
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    crossing_context: false
+    scenario_seed: 94808
+    initial_range_m: 3525.0
+    altitude_diff_m: 0.0
+    own_speed_mps: 245.0
+    target_speed_mps: 360.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: neutral
+    pilot_family: THESIS-NEUTRAL-POSTMERGE-REENTRY-RECOVERY-PILOT-V1
+    geometry_cell_id: neutral_reentry_hold_b__neutral__co_altitude__negative
+    continuous_run_in: true
+    routing_enabled: false
+    fixed_skill: reentry_recovery
+    fixed_profile: reentry_preparation
+    physical_geometry_signature: ((0.0, 0.0, 5200.0), 245.0, 142.0, (3352.47422, -1089.284905,
+      5200.0), 360.0, 2.0)
+- name: neutral_postmerge_reentry_heldout24_neutral_reentry_hold_b_co_altitude_positive_s94809
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 245.0
+    heading_deg: 218.0
+  target_init:
+    position_m:
+    - 3352.47421994
+    - 1089.284905172
+    - 5200.0
+    velocity_mps: 360.0
+    heading_deg: 358.0
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: heldout24
+    initial_class: neutral
+    height_condition: co_altitude
+    mirror_sign: positive
+    mirror_pair_id: neutral_reentry_hold_b__neutral__co_altitude
+    distance_speed_package: neutral_reentry_hold_b
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    crossing_context: false
+    scenario_seed: 94809
+    initial_range_m: 3525.0
+    altitude_diff_m: 0.0
+    own_speed_mps: 245.0
+    target_speed_mps: 360.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: neutral
+    pilot_family: THESIS-NEUTRAL-POSTMERGE-REENTRY-RECOVERY-PILOT-V1
+    geometry_cell_id: neutral_reentry_hold_b__neutral__co_altitude__positive
+    continuous_run_in: true
+    routing_enabled: false
+    fixed_skill: reentry_recovery
+    fixed_profile: reentry_preparation
+    physical_geometry_signature: ((0.0, 0.0, 5200.0), 245.0, 218.0, (3352.47422, 1089.284905,
+      5200.0), 360.0, 358.0)
+- name: neutral_postmerge_reentry_heldout24_neutral_reentry_hold_b_own_above_negative_s94810
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 245.0
+    heading_deg: 144.479311335
+  target_init:
+    position_m:
+    - 3303.552684063
+    - -1073.389334595
+    - 4600.0
+    velocity_mps: 360.0
+    heading_deg: 359.520688665
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: heldout24
+    initial_class: neutral
+    height_condition: own_above
+    mirror_sign: negative
+    mirror_pair_id: neutral_reentry_hold_b__neutral__own_above
+    distance_speed_package: neutral_reentry_hold_b
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    crossing_context: false
+    scenario_seed: 94810
+    initial_range_m: 3525.0
+    altitude_diff_m: -600.0
+    own_speed_mps: 245.0
+    target_speed_mps: 360.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: neutral
+    pilot_family: THESIS-NEUTRAL-POSTMERGE-REENTRY-RECOVERY-PILOT-V1
+    geometry_cell_id: neutral_reentry_hold_b__neutral__own_above__negative
+    continuous_run_in: true
+    routing_enabled: false
+    fixed_skill: reentry_recovery
+    fixed_profile: reentry_preparation
+    physical_geometry_signature: ((0.0, 0.0, 5200.0), 245.0, 144.479311, (3303.552684,
+      -1073.389335, 4600.0), 360.0, 359.520689)
+- name: neutral_postmerge_reentry_heldout24_neutral_reentry_hold_b_own_above_positive_s94811
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 245.0
+    heading_deg: 215.520688665
+  target_init:
+    position_m:
+    - 3303.552684063
+    - 1073.389334595
+    - 4600.0
+    velocity_mps: 360.0
+    heading_deg: 0.479311335
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: heldout24
+    initial_class: neutral
+    height_condition: own_above
+    mirror_sign: positive
+    mirror_pair_id: neutral_reentry_hold_b__neutral__own_above
+    distance_speed_package: neutral_reentry_hold_b
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    crossing_context: false
+    scenario_seed: 94811
+    initial_range_m: 3525.0
+    altitude_diff_m: -600.0
+    own_speed_mps: 245.0
+    target_speed_mps: 360.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: neutral
+    pilot_family: THESIS-NEUTRAL-POSTMERGE-REENTRY-RECOVERY-PILOT-V1
+    geometry_cell_id: neutral_reentry_hold_b__neutral__own_above__positive
+    continuous_run_in: true
+    routing_enabled: false
+    fixed_skill: reentry_recovery
+    fixed_profile: reentry_preparation
+    physical_geometry_signature: ((0.0, 0.0, 5200.0), 245.0, 215.520689, (3303.552684,
+      1073.389335, 4600.0), 360.0, 0.479311)
+- name: neutral_postmerge_reentry_heldout24_neutral_reentry_hold_c_own_below_negative_s94812
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 270.0
+    heading_deg: 143.744757045
+  target_init:
+    position_m:
+    - 3905.416051309
+    - -1268.946597055
+    - 5800.0
+    velocity_mps: 380.0
+    heading_deg: 0.255242955
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: heldout24
+    initial_class: neutral
+    height_condition: own_below
+    mirror_sign: negative
+    mirror_pair_id: neutral_reentry_hold_c__neutral__own_below
+    distance_speed_package: neutral_reentry_hold_c
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    crossing_context: false
+    scenario_seed: 94812
+    initial_range_m: 4150.0
+    altitude_diff_m: 600.0
+    own_speed_mps: 270.0
+    target_speed_mps: 380.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: neutral
+    pilot_family: THESIS-NEUTRAL-POSTMERGE-REENTRY-RECOVERY-PILOT-V1
+    geometry_cell_id: neutral_reentry_hold_c__neutral__own_below__negative
+    continuous_run_in: true
+    routing_enabled: false
+    fixed_skill: reentry_recovery
+    fixed_profile: reentry_preparation
+    physical_geometry_signature: ((0.0, 0.0, 5200.0), 270.0, 143.744757, (3905.416051,
+      -1268.946597, 5800.0), 380.0, 0.255243)
+- name: neutral_postmerge_reentry_heldout24_neutral_reentry_hold_c_own_below_positive_s94813
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 270.0
+    heading_deg: 216.255242955
+  target_init:
+    position_m:
+    - 3905.416051309
+    - 1268.946597055
+    - 5800.0
+    velocity_mps: 380.0
+    heading_deg: 359.744757045
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: heldout24
+    initial_class: neutral
+    height_condition: own_below
+    mirror_sign: positive
+    mirror_pair_id: neutral_reentry_hold_c__neutral__own_below
+    distance_speed_package: neutral_reentry_hold_c
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    crossing_context: false
+    scenario_seed: 94813
+    initial_range_m: 4150.0
+    altitude_diff_m: 600.0
+    own_speed_mps: 270.0
+    target_speed_mps: 380.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: neutral
+    pilot_family: THESIS-NEUTRAL-POSTMERGE-REENTRY-RECOVERY-PILOT-V1
+    geometry_cell_id: neutral_reentry_hold_c__neutral__own_below__positive
+    continuous_run_in: true
+    routing_enabled: false
+    fixed_skill: reentry_recovery
+    fixed_profile: reentry_preparation
+    physical_geometry_signature: ((0.0, 0.0, 5200.0), 270.0, 216.255243, (3905.416051,
+      1268.946597, 5800.0), 380.0, 359.744757)
+- name: neutral_postmerge_reentry_heldout24_neutral_reentry_hold_c_co_altitude_negative_s94814
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 270.0
+    heading_deg: 142.0
+  target_init:
+    position_m:
+    - 3946.884542625
+    - -1282.420526656
+    - 5200.0
+    velocity_mps: 380.0
+    heading_deg: 2.0
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: heldout24
+    initial_class: neutral
+    height_condition: co_altitude
+    mirror_sign: negative
+    mirror_pair_id: neutral_reentry_hold_c__neutral__co_altitude
+    distance_speed_package: neutral_reentry_hold_c
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    crossing_context: false
+    scenario_seed: 94814
+    initial_range_m: 4150.0
+    altitude_diff_m: 0.0
+    own_speed_mps: 270.0
+    target_speed_mps: 380.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: neutral
+    pilot_family: THESIS-NEUTRAL-POSTMERGE-REENTRY-RECOVERY-PILOT-V1
+    geometry_cell_id: neutral_reentry_hold_c__neutral__co_altitude__negative
+    continuous_run_in: true
+    routing_enabled: false
+    fixed_skill: reentry_recovery
+    fixed_profile: reentry_preparation
+    physical_geometry_signature: ((0.0, 0.0, 5200.0), 270.0, 142.0, (3946.884543,
+      -1282.420527, 5200.0), 380.0, 2.0)
+- name: neutral_postmerge_reentry_heldout24_neutral_reentry_hold_c_co_altitude_positive_s94815
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 270.0
+    heading_deg: 218.0
+  target_init:
+    position_m:
+    - 3946.884542625
+    - 1282.420526656
+    - 5200.0
+    velocity_mps: 380.0
+    heading_deg: 358.0
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: heldout24
+    initial_class: neutral
+    height_condition: co_altitude
+    mirror_sign: positive
+    mirror_pair_id: neutral_reentry_hold_c__neutral__co_altitude
+    distance_speed_package: neutral_reentry_hold_c
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    crossing_context: false
+    scenario_seed: 94815
+    initial_range_m: 4150.0
+    altitude_diff_m: 0.0
+    own_speed_mps: 270.0
+    target_speed_mps: 380.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: neutral
+    pilot_family: THESIS-NEUTRAL-POSTMERGE-REENTRY-RECOVERY-PILOT-V1
+    geometry_cell_id: neutral_reentry_hold_c__neutral__co_altitude__positive
+    continuous_run_in: true
+    routing_enabled: false
+    fixed_skill: reentry_recovery
+    fixed_profile: reentry_preparation
+    physical_geometry_signature: ((0.0, 0.0, 5200.0), 270.0, 218.0, (3946.884543,
+      1282.420527, 5200.0), 380.0, 358.0)
+- name: neutral_postmerge_reentry_heldout24_neutral_reentry_hold_c_own_above_negative_s94816
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 270.0
+    heading_deg: 143.744757045
+  target_init:
+    position_m:
+    - 3905.416051309
+    - -1268.946597055
+    - 4600.0
+    velocity_mps: 380.0
+    heading_deg: 0.255242955
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: heldout24
+    initial_class: neutral
+    height_condition: own_above
+    mirror_sign: negative
+    mirror_pair_id: neutral_reentry_hold_c__neutral__own_above
+    distance_speed_package: neutral_reentry_hold_c
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    crossing_context: false
+    scenario_seed: 94816
+    initial_range_m: 4150.0
+    altitude_diff_m: -600.0
+    own_speed_mps: 270.0
+    target_speed_mps: 380.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: neutral
+    pilot_family: THESIS-NEUTRAL-POSTMERGE-REENTRY-RECOVERY-PILOT-V1
+    geometry_cell_id: neutral_reentry_hold_c__neutral__own_above__negative
+    continuous_run_in: true
+    routing_enabled: false
+    fixed_skill: reentry_recovery
+    fixed_profile: reentry_preparation
+    physical_geometry_signature: ((0.0, 0.0, 5200.0), 270.0, 143.744757, (3905.416051,
+      -1268.946597, 4600.0), 380.0, 0.255243)
+- name: neutral_postmerge_reentry_heldout24_neutral_reentry_hold_c_own_above_positive_s94817
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 270.0
+    heading_deg: 216.255242955
+  target_init:
+    position_m:
+    - 3905.416051309
+    - 1268.946597055
+    - 4600.0
+    velocity_mps: 380.0
+    heading_deg: 359.744757045
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: heldout24
+    initial_class: neutral
+    height_condition: own_above
+    mirror_sign: positive
+    mirror_pair_id: neutral_reentry_hold_c__neutral__own_above
+    distance_speed_package: neutral_reentry_hold_c
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    crossing_context: false
+    scenario_seed: 94817
+    initial_range_m: 4150.0
+    altitude_diff_m: -600.0
+    own_speed_mps: 270.0
+    target_speed_mps: 380.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: neutral
+    pilot_family: THESIS-NEUTRAL-POSTMERGE-REENTRY-RECOVERY-PILOT-V1
+    geometry_cell_id: neutral_reentry_hold_c__neutral__own_above__positive
+    continuous_run_in: true
+    routing_enabled: false
+    fixed_skill: reentry_recovery
+    fixed_profile: reentry_preparation
+    physical_geometry_signature: ((0.0, 0.0, 5200.0), 270.0, 216.255243, (3905.416051,
+      1268.946597, 4600.0), 380.0, 359.744757)
+- name: neutral_postmerge_reentry_heldout24_neutral_reentry_hold_d_own_below_negative_s94818
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 295.0
+    heading_deg: 143.341915008
+  target_init:
+    position_m:
+    - 4433.392565957
+    - -1440.496565812
+    - 5800.0
+    velocity_mps: 410.0
+    heading_deg: 0.658084992
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: heldout24
+    initial_class: neutral
+    height_condition: own_below
+    mirror_sign: negative
+    mirror_pair_id: neutral_reentry_hold_d__neutral__own_below
+    distance_speed_package: neutral_reentry_hold_d
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    crossing_context: false
+    scenario_seed: 94818
+    initial_range_m: 4700.0
+    altitude_diff_m: 600.0
+    own_speed_mps: 295.0
+    target_speed_mps: 410.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: neutral
+    pilot_family: THESIS-NEUTRAL-POSTMERGE-REENTRY-RECOVERY-PILOT-V1
+    geometry_cell_id: neutral_reentry_hold_d__neutral__own_below__negative
+    continuous_run_in: true
+    routing_enabled: false
+    fixed_skill: reentry_recovery
+    fixed_profile: reentry_preparation
+    physical_geometry_signature: ((0.0, 0.0, 5200.0), 295.0, 143.341915, (4433.392566,
+      -1440.496566, 5800.0), 410.0, 0.658085)
+- name: neutral_postmerge_reentry_heldout24_neutral_reentry_hold_d_own_below_positive_s94819
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 295.0
+    heading_deg: 216.658084992
+  target_init:
+    position_m:
+    - 4433.392565957
+    - 1440.496565812
+    - 5800.0
+    velocity_mps: 410.0
+    heading_deg: 359.341915008
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: heldout24
+    initial_class: neutral
+    height_condition: own_below
+    mirror_sign: positive
+    mirror_pair_id: neutral_reentry_hold_d__neutral__own_below
+    distance_speed_package: neutral_reentry_hold_d
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    crossing_context: false
+    scenario_seed: 94819
+    initial_range_m: 4700.0
+    altitude_diff_m: 600.0
+    own_speed_mps: 295.0
+    target_speed_mps: 410.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: neutral
+    pilot_family: THESIS-NEUTRAL-POSTMERGE-REENTRY-RECOVERY-PILOT-V1
+    geometry_cell_id: neutral_reentry_hold_d__neutral__own_below__positive
+    continuous_run_in: true
+    routing_enabled: false
+    fixed_skill: reentry_recovery
+    fixed_profile: reentry_preparation
+    physical_geometry_signature: ((0.0, 0.0, 5200.0), 295.0, 216.658085, (4433.392566,
+      1440.496566, 5800.0), 410.0, 359.341915)
+- name: neutral_postmerge_reentry_heldout24_neutral_reentry_hold_d_co_altitude_negative_s94820
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 295.0
+    heading_deg: 142.0
+  target_init:
+    position_m:
+    - 4469.965626587
+    - -1452.379873562
+    - 5200.0
+    velocity_mps: 410.0
+    heading_deg: 2.0
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: heldout24
+    initial_class: neutral
+    height_condition: co_altitude
+    mirror_sign: negative
+    mirror_pair_id: neutral_reentry_hold_d__neutral__co_altitude
+    distance_speed_package: neutral_reentry_hold_d
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    crossing_context: false
+    scenario_seed: 94820
+    initial_range_m: 4700.0
+    altitude_diff_m: 0.0
+    own_speed_mps: 295.0
+    target_speed_mps: 410.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: neutral
+    pilot_family: THESIS-NEUTRAL-POSTMERGE-REENTRY-RECOVERY-PILOT-V1
+    geometry_cell_id: neutral_reentry_hold_d__neutral__co_altitude__negative
+    continuous_run_in: true
+    routing_enabled: false
+    fixed_skill: reentry_recovery
+    fixed_profile: reentry_preparation
+    physical_geometry_signature: ((0.0, 0.0, 5200.0), 295.0, 142.0, (4469.965627,
+      -1452.379874, 5200.0), 410.0, 2.0)
+- name: neutral_postmerge_reentry_heldout24_neutral_reentry_hold_d_co_altitude_positive_s94821
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 295.0
+    heading_deg: 218.0
+  target_init:
+    position_m:
+    - 4469.965626587
+    - 1452.379873562
+    - 5200.0
+    velocity_mps: 410.0
+    heading_deg: 358.0
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: heldout24
+    initial_class: neutral
+    height_condition: co_altitude
+    mirror_sign: positive
+    mirror_pair_id: neutral_reentry_hold_d__neutral__co_altitude
+    distance_speed_package: neutral_reentry_hold_d
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    crossing_context: false
+    scenario_seed: 94821
+    initial_range_m: 4700.0
+    altitude_diff_m: 0.0
+    own_speed_mps: 295.0
+    target_speed_mps: 410.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: neutral
+    pilot_family: THESIS-NEUTRAL-POSTMERGE-REENTRY-RECOVERY-PILOT-V1
+    geometry_cell_id: neutral_reentry_hold_d__neutral__co_altitude__positive
+    continuous_run_in: true
+    routing_enabled: false
+    fixed_skill: reentry_recovery
+    fixed_profile: reentry_preparation
+    physical_geometry_signature: ((0.0, 0.0, 5200.0), 295.0, 218.0, (4469.965627,
+      1452.379874, 5200.0), 410.0, 358.0)
+- name: neutral_postmerge_reentry_heldout24_neutral_reentry_hold_d_own_above_negative_s94822
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 295.0
+    heading_deg: 143.341915008
+  target_init:
+    position_m:
+    - 4433.392565957
+    - -1440.496565812
+    - 4600.0
+    velocity_mps: 410.0
+    heading_deg: 0.658084992
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: heldout24
+    initial_class: neutral
+    height_condition: own_above
+    mirror_sign: negative
+    mirror_pair_id: neutral_reentry_hold_d__neutral__own_above
+    distance_speed_package: neutral_reentry_hold_d
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    crossing_context: false
+    scenario_seed: 94822
+    initial_range_m: 4700.0
+    altitude_diff_m: -600.0
+    own_speed_mps: 295.0
+    target_speed_mps: 410.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: neutral
+    pilot_family: THESIS-NEUTRAL-POSTMERGE-REENTRY-RECOVERY-PILOT-V1
+    geometry_cell_id: neutral_reentry_hold_d__neutral__own_above__negative
+    continuous_run_in: true
+    routing_enabled: false
+    fixed_skill: reentry_recovery
+    fixed_profile: reentry_preparation
+    physical_geometry_signature: ((0.0, 0.0, 5200.0), 295.0, 143.341915, (4433.392566,
+      -1440.496566, 4600.0), 410.0, 0.658085)
+- name: neutral_postmerge_reentry_heldout24_neutral_reentry_hold_d_own_above_positive_s94823
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5200.0
+    velocity_mps: 295.0
+    heading_deg: 216.658084992
+  target_init:
+    position_m:
+    - 4433.392565957
+    - 1440.496565812
+    - 4600.0
+    velocity_mps: 410.0
+    heading_deg: 359.341915008
+  metadata:
+    manifest_family: thesis_five_state_shared_intent_v1
+    split: heldout24
+    initial_class: neutral
+    height_condition: own_above
+    mirror_sign: positive
+    mirror_pair_id: neutral_reentry_hold_d__neutral__own_above
+    distance_speed_package: neutral_reentry_hold_d
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    crossing_context: false
+    scenario_seed: 94823
+    initial_range_m: 4700.0
+    altitude_diff_m: -600.0
+    own_speed_mps: 295.0
+    target_speed_mps: 410.0
+    los_azimuth_abs_deg: 18.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 160.0
+    taxonomy_geometry_state: neutral
+    pilot_family: THESIS-NEUTRAL-POSTMERGE-REENTRY-RECOVERY-PILOT-V1
+    geometry_cell_id: neutral_reentry_hold_d__neutral__own_above__positive
+    continuous_run_in: true
+    routing_enabled: false
+    fixed_skill: reentry_recovery
+    fixed_profile: reentry_preparation
+    physical_geometry_signature: ((0.0, 0.0, 5200.0), 295.0, 216.658085, (4433.392566,
+      1440.496566, 4600.0), 410.0, 359.341915)
+integrity:
+  builder_code_sha256: 599b015e4589930878ff7336fbf8ed89b30f46fae5c6852aaf3bab05e7f00cbf
+  payload_sha256: 1226c21d6ab03365078e58df063894a116b3c9910139146149e64650ffbf6627

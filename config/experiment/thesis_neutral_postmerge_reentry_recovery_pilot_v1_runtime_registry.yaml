@@ -1,0 +1,76 @@
+schema_version: 1
+source_id: THESIS-NEUTRAL-POSTMERGE-REENTRY-RECOVERY-PILOT-V1-RUNTIME-REGISTRY
+status: preregistered_design_only
+runtime_chain:
+  backend: jsbsim
+  strict_backend: true
+  continuous_run_in: true
+  run_in_controller: frozen_fixed_head_on
+  candidate_handoff_reset: prohibited
+  snapshot_restore: prohibited
+  future_state_injection: prohibited
+  history_padding: prohibited
+  prediction_reward: prohibited
+opponents:
+  expert:
+    type: rule_based
+    class: uav_vpp_guidance.envs.expert_opponent.ExpertOpponent
+    config: {}
+  end_to_end:
+    type: neural_projected_base16
+    class: uav_vpp_guidance.evaluation.feature_name_projected_opponent.FeatureNameProjectedOpponent
+    checkpoint: E:/uav-vpp-guidance-thesis-five-state-v1-assets/canonical_end_to_end_neural_opponent_best.pt
+    checkpoint_sha256: d38828338d5e7e22167129b2e9972d52ecf5fc3fda5d52caff95a8374c35b8bc
+    device: cpu
+    config:
+      delegate_class: uav_vpp_guidance.envs.end_to_end_opponent.EndToEndOpponent
+      delegate_kwargs:
+        invert_observation: true
+      expected_feature_names: &base16
+        - range_m
+        - range_rate_mps
+        - altitude_diff_m
+        - speed_diff_mps
+        - los_azimuth_sin
+        - los_azimuth_cos
+        - los_elevation_sin
+        - los_elevation_cos
+        - ata_sin
+        - ata_cos
+        - aa_sin
+        - aa_cos
+        - own_speed
+        - target_speed
+        - own_altitude
+        - target_altitude
+  independent_ppo_vpp:
+    type: continuous_vpp_projected_base16
+    class: uav_vpp_guidance.evaluation.feature_name_projected_opponent.FeatureNameProjectedOpponent
+    checkpoint: E:/uav-vpp-guidance-thesis-five-state-v1-assets/independent_ppo_vpp_opponent_v1_step_32768.pt
+    checkpoint_sha256: 43cd37fc86c0eb01d96a693f68d30894de7e768de01aed6dba41fa4761edfc60
+    device: cpu
+    config:
+      delegate_class: uav_vpp_guidance.envs.vpp_ppo_opponent.VPPPPOOpponent
+      expected_feature_names: *base16
+specialists:
+  run_in_head_on:
+    checkpoint: E:/uav-vpp-guidance-thesis-five-state-v1-assets/canonical_head_on_specialist_best.pt
+    checkpoint_sha256: 0aeadd11cd8c7723c8963bcc5da21dd97c365e64f234d07b86c2b8f0d7ec5fb6
+    specialist_key: head_on
+  frozen_fixed_head_on:
+    checkpoint: E:/uav-vpp-guidance-thesis-five-state-v1-assets/canonical_head_on_specialist_best.pt
+    checkpoint_sha256: 0aeadd11cd8c7723c8963bcc5da21dd97c365e64f234d07b86c2b8f0d7ec5fb6
+    specialist_key: head_on
+  frozen_fixed_crossing:
+    checkpoint: E:/uav-vpp-guidance-thesis-five-state-v1-assets/canonical_crossing_specialist_last.pt
+    checkpoint_sha256: 5eddc138bff55a5466da1129e840ef7dfb3677347a05276c3877746c8e89148b
+    specialist_key: crossing_feasible
+candidate:
+  method: candidate_fixed_reentry_recovery
+  checkpoint: null
+  checkpoint_status: untrained_not_authorized
+  skill: reentry_recovery
+  profile: reentry_preparation
+  observation_dim: 66
+  action_dim: 3
+  routing_enabled: false

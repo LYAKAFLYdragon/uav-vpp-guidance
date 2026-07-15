@@ -2,14 +2,17 @@ from __future__ import annotations
 
 import copy
 import math
+import importlib.util
 from pathlib import Path
 
 import numpy as np
+import pytest
 import yaml
 
 
 ROOT = Path(__file__).resolve().parent.parent
 CONFIG = ROOT / "config" / "experiment" / "thesis_global_advantage_v1_p2_b6_opponent_conditional_reachability.yaml"
+RUNNER = ROOT / "scripts" / "run_thesis_global_advantage_p2_b6_reachability.py"
 
 
 class _Encoder:
@@ -22,6 +25,14 @@ def _plan():
     from uav_vpp_guidance.evaluation.global_advantage_p2_b6_reachability import build_b6_plan
 
     return build_b6_plan(yaml.safe_load(CONFIG.read_text(encoding="utf-8")))
+
+
+def _runner():
+    spec = importlib.util.spec_from_file_location("b6_runner", RUNNER)
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 
 def _observation(raw_range_m: float, raw_range_rate_mps: float) -> dict:
@@ -134,3 +145,14 @@ def test_b6_candidate_gate_requires_each_opponent_independently():
         plan,
     )
     assert no_independent["selected_candidate"] is None
+
+
+def test_b6_runner_validates_design_but_refuses_unauthorised_execution():
+    runner = _runner()
+    config, plan, _runtime, _registry, scenarios = runner.validate_sources(CONFIG)
+
+    assert config["authorization"]["execution_permitted"] is False
+    assert plan.execution_permitted is False
+    assert len(scenarios) == 60
+    with pytest.raises(runner.B6ReachabilityError, match="not authorised"):
+        runner.run(CONFIG)

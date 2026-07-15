@@ -1,9 +1,9 @@
 # V16 动态参考路径 Probe 结果与 Go/No-Go 决策
 
-**Source ID：** `THESIS-FIVE-STATE-REENTRY-DYNAMIC-REFERENCE-PATH-V16`  
-**实现提交：** `de1e0abf72fbe113a061131aed8d39906a073523`  
-**授权提交 / 运行 SHA：** `bfccfc84f9eb24ff88fbe5ccf23b5031410b3bc5`  
-**输出根：** `E:/uav-vpp-guidance-five-state-heldout-envelope-v1-results/five_state_reentry_v16_dynamic_reference_path`  
+**Source ID：** `THESIS-FIVE-STATE-REENTRY-DYNAMIC-REFERENCE-PATH-V16`
+**实现提交：** `de1e0abf72fbe113a061131aed8d39906a073523`
+**授权提交 / 运行 SHA：** `bfccfc84f9eb24ff88fbe5ccf23b5031410b3bc5`
+**输出根：** `E:/uav-vpp-guidance-five-state-heldout-envelope-v1-results/five_state_reentry_v16_dynamic_reference_path`
 **最终判定：** `mechanism_preflight_passed_not_a_performance_or_training_result`
 
 ## 1. 执行完整性

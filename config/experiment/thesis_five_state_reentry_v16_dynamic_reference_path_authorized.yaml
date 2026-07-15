@@ -1,0 +1,51 @@
+base_config: config/experiment/thesis_five_state_reentry_v16_dynamic_reference_path_design.yaml
+base_config_sha256: 5e58362b9c69a0423650118762ad5a9ed35b53a4a764c56656e96913f30b30ec
+status: authorized_one_time_nonlearning_execution
+authorization:
+  execution_permitted: true
+  training_permitted: false
+  tuning_permitted: false
+  reward_change_permitted: false
+  candidate_policy_loading_permitted: false
+  high_level_ppo_training_permitted: false
+  four_skill_training_permitted: false
+  combat_finetune_permitted: false
+  heldout_claims_permitted: false
+  snapshot_restore: false
+  future_state_injection: false
+  history_padding_permitted: false
+execution:
+  required_implementation_git_sha: de1e0abf72fbe113a061131aed8d39906a073523
+  expected_records: 108
+  one_time_record_only: true
+  authorized_code_files:
+    - {path: config/experiment/thesis_five_state_reentry_v16_dynamic_reference_path_design.yaml, sha256: 5e58362b9c69a0423650118762ad5a9ed35b53a4a764c56656e96913f30b30ec}
+    - {path: config/experiment/manifests/thesis_five_state_reentry_v16_dynamic_reference_path12.yaml, sha256: f86898ab6da7f15507b0104b98b61426d7fe62c470a749f457d393ff22ca046c}
+    - {path: scripts/build_thesis_five_state_reentry_v16_manifest.py, sha256: b258fb1aa9c0bc7c0487883491e8ae5b2523cf18ebe2aed2df37f4561b40b993}
+    - {path: scripts/run_thesis_five_state_reentry_v16_dynamic_reference_path.py, sha256: 2f788a9353e549f9751eb717189f7d366b2df3236326c254f19713920ab2bb02}
+    - {path: scripts/verify_thesis_five_state_reentry_v16_dynamic_reference_path.py, sha256: 586a7b027a6c844568e9b3c751e550e33177e0bf9122605ce9fd13a9b412cfe0}
+    - {path: src/uav_vpp_guidance/evaluation/thesis_reentry_v16_dynamic_reference_path.py, sha256: 83db07706ec61232174f771e8680e6c764289844eb3e5f585639d11aedd65a41}
+    - {path: src/uav_vpp_guidance/virtual_point/dynamic_reference_path.py, sha256: 11121cc2e5764159efcfffe2d605b012b5e8871c7f5354f275a1a5a7b8342ece}
+    - {path: scripts/run_thesis_five_state_reentry_v15_fixed_encoder_temporal_corridor.py, sha256: 4953179b945c21895007deff7e3227072c0dab0ce85b0a703e4c2012946d5293}
+    - {path: scripts/run_thesis_five_state_reentry_v14_temporal_corridor.py, sha256: 9170a2f3f78eefee0d34d5663b56101ad06fe97d856e3b3c31c9cde72969fee5}
+    - {path: scripts/run_thesis_five_state_reentry_v11_relative_frame_semantic.py, sha256: 016e0a9a53dbfe8bad4eeb770db9c930116684da52ab0f13c723f2a5992eeffe}
+    - {path: scripts/verify_thesis_five_state_reentry_v14_temporal_corridor.py, sha256: 185f09f15a2ddf2705e4ba293247cd60c6769b833eea63ed9758c91fb4a20566}
+    - {path: src/uav_vpp_guidance/evaluation/thesis_reentry_v15_fixed_encoder_corridor.py, sha256: 20e109c5f2e73ed94c451e17ca0cb6c5ced56a631eeeb33b50b9d889085fdab5}
+    - {path: src/uav_vpp_guidance/evaluation/thesis_reentry_v14_temporal_corridor.py, sha256: f74b62b99a1003b05336caa5622e24ad89d5ea31f8b68bb0cdf497b5082d302d}
+    - {path: src/uav_vpp_guidance/evaluation/thesis_five_state_raw_si_v5_record_only.py, sha256: 8e80f8285e1c26aae68fa0bc3519a31a8ac5bd0e1c15f40b8448db07fdca223e}
+    - {path: src/uav_vpp_guidance/virtual_point/relative_frame_semantic.py, sha256: e770ad475467eb5c1dbbebbfffb613bc5b70693bdabed100a646fef2a2c49be8}
+    - {path: src/uav_vpp_guidance/virtual_point/coordinate_transform.py, sha256: 02bbfc62feadce2ca7603beb7af98ad84e73d003b0a1edb1939c67b4572095a9}
+    - {path: src/uav_vpp_guidance/hierarchy/shared_intent_profiles.py, sha256: 0353b5afc6d3a6e0270b97d8b9c032087f425699660c382d67504fe5fa8351b3}
+    - {path: src/uav_vpp_guidance/hierarchy/five_state_observation_contract.py, sha256: 0ac8b3998348897db22305973feb3283ffc7178a490ebc975fd48270e6e86ce3}
+    - {path: src/uav_vpp_guidance/hierarchy/temporal_geometry_features.py, sha256: 92f03b9af8b52333235d2778bffed5aeecf786143006f6c4d408c7562862d95b}
+    - {path: src/uav_vpp_guidance/hierarchy/specialist_policy.py, sha256: fbc64964a6056382602e3fbe3ca802be13e915677b597b8b0c03dd9b7e5ff3ce}
+    - {path: src/uav_vpp_guidance/training/thesis_neutral_postmerge_reentry_recovery_pilot.py, sha256: dd55d0cca4f223f0d89deda6e4a45907f6bc8c6282e96e7b6f955f7221fcc49c}
+    - {path: src/uav_vpp_guidance/training/thesis_shared_skill_geometry.py, sha256: 4de550c2d405e657004dfb9aece07ecea8f8782f4efbac4b0d859b136a51d6a8}
+    - {path: src/uav_vpp_guidance/envs/observation.py, sha256: 102f98ce85442880b32f102ef98f6e8bc5699b6d9b965acd13a12e2fd3a9984c}
+    - {path: src/uav_vpp_guidance/envs/tracking_env.py, sha256: 7596f6b7250c52f76db5c7612496a1f5afcbb2bdd2dba934ce066b9c4f3805a3}
+    - {path: src/uav_vpp_guidance/envs/expert_opponent.py, sha256: 01f440c97369c3490c6ba025d7d14a894958cd83a2fb2f92199171225a633614}
+    - {path: src/uav_vpp_guidance/envs/end_to_end_opponent.py, sha256: e3ae806fdfa674b7473adf7c6c77aae1e62edc8bbda66dd8b224887f6c79e97f}
+    - {path: src/uav_vpp_guidance/envs/vpp_ppo_opponent.py, sha256: 4853393892d00a2c48a40a6d2e49508f9918d2d69069b4f60c01723bed6a10e0}
+    - {path: src/uav_vpp_guidance/trajectory_prediction/predictor_adapter.py, sha256: 0cc338378236bb1d7d762fbb7bf4663daca71a4cc7be8061cb600e2056c10b90}
+    - {path: src/uav_vpp_guidance/evaluation/raw_si_reentry_phase.py, sha256: 8d3ea0dac82008ceaf207d66aafa98f19f06a1cf2777b9f18ab37ead8120e1fb}
+    - {path: src/uav_vpp_guidance/evaluation/raw_si_first_pass_event.py, sha256: 594ef1f15a6193b6641c9974e72b121fa67d161d5d1a333247445a6ece6c0607}

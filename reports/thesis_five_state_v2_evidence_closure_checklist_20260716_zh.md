@@ -1,9 +1,11 @@
 # Five-State v2：三项证据缺口闭合 Checklist
 
 **日期：** 2026-07-16  
-**状态：** design checklist；不构成训练或正式 Source 执行授权  
+**状态：** 已由执行收缩版替代；不构成训练或正式 Source 执行授权
 **适用范围：** 硕士论文的五态势扩展线；不改变 AST 主稿 `CAN-20260705` 的双技能结论。  
 **前置阅读：** [V1--V22 尝试账本](E:/uav-vpp-guidance-five-state-heldout-envelope-v1/reports/thesis_five_state_v1_v22_attempt_ledger_20260716_zh.md)。
+
+> **执行说明（2026-07-16）：** 本文保留为长期 Five-State v2 研究蓝图。当前可执行路径以 [硕士论文证据闭合 Checklist v2](E:/uav-vpp-guidance-five-state-heldout-envelope-v1/reports/thesis_master_evidence_closure_checklist_v2_20260716_zh.md) 为准：先用唯一的无训练 Taxonomy60 × 3 opponents × 5 methods 正式 Source 闭合论文三项证据缺口；新接口探索默认不启动，且最多只允许一个独立 gate。
 
 ## 0. 目标与边界
 

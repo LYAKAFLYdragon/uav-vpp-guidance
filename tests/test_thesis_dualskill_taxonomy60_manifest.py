@@ -193,8 +193,15 @@ def test_frozen_manifest_matches_builder_and_records_disjoint_source_files():
 
     assert frozen["scenarios"] == expected["scenarios"]
     assert frozen["protocol"] == expected["protocol"]
+    assert frozen["decision_contract"] == expected["decision_contract"]
+    assert frozen["method_contracts"] == expected["method_contracts"]
     assert frozen["disjointness"]["intersection_count"] == 0
-    assert len(frozen["disjointness"]["source_files"]) >= 40
+    assert len(frozen["disjointness"]["source_files"]) == 49
+    assert all(
+        source["provenance"]["kind"] == "git_blob"
+        and source["source_descriptor"].startswith("git:")
+        for source in frozen["disjointness"]["source_files"]
+    )
     payload = copy.deepcopy(frozen)
     expected_hash = payload["integrity"].pop("payload_sha256")
     assert builder._payload_sha256(payload) == expected_hash

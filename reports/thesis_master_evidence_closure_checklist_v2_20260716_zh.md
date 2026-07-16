@@ -128,3 +128,4 @@
 ## 8. 执行状态
 
 - [x] **P0 development preflight：** 资产哈希、解释器、容量、空输出根与现有 Taxonomy30 测试已核验通过；详情见 [P0 preflight record](E:/uav-vpp-guidance-five-state-heldout-envelope-v1/reports/thesis_dualskill_taxonomy60_p0_preflight_20260716.md)。P1 manifest 开发获准，P2 smoke 与正式 Source 仍未授权。
+- [x] **P1 Heldout60 manifest freeze：** 60 个场景、49 个 Git-replayed 历史来源与 `0` full-state intersection 已冻结；no-go contract 和五方法组件合同已写入 manifest。详情见 [P1 manifest freeze record](E:/uav-vpp-guidance-five-state-heldout-envelope-v1/reports/thesis_dualskill_taxonomy60_p1_manifest_freeze_20260716_zh.md)。P2 仅获准开发并执行 15 条 disposable engineering smoke；900 条正式 Source 仍未授权。

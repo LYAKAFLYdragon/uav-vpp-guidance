@@ -4,8 +4,11 @@ from collections import Counter, defaultdict
 import importlib.util
 import math
 from pathlib import Path
+import subprocess
+import sys
 
 import pytest
+import yaml
 
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -126,3 +129,25 @@ def test_disjointness_rejects_colliding_historical_signature():
             scenarios,
             {"SYNTHETIC-HISTORICAL": {builder.scenario_signature(scenarios[0])}},
         )
+
+
+def test_cli_writes_a_manifest_from_a_clean_python_process(tmp_path):
+    output = tmp_path / "taxonomy60.yaml"
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(BUILDER_PATH),
+            "--source-git-sha",
+            "TEST-SHA",
+            "--output",
+            str(output),
+        ],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert completed.returncode == 0, completed.stderr
+    frozen = yaml.safe_load(output.read_text(encoding="utf-8"))
+    assert frozen["source_id"] == "THESIS-DUALSKILL-TAXONOMY60-3OPP-V1"
+    assert len(frozen["scenarios"]) == 60

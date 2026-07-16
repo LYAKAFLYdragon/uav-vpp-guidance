@@ -8,9 +8,13 @@ import json
 import math
 from pathlib import Path
 import subprocess
+import sys
 from typing import Any, Iterable, Mapping, Optional, Set, Tuple
 
 import yaml
+
+REPO_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(REPO_ROOT / "src"))
 
 from uav_vpp_guidance.evaluation.engagement_geometry_taxonomy import (
     GeometryTaxonomyConfig,
@@ -370,7 +374,7 @@ def _parse_disjoint_source(value: str) -> Tuple[str, Path]:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    root = Path(__file__).resolve().parent.parent
+    root = REPO_ROOT
     parser.add_argument(
         "--output",
         type=Path,

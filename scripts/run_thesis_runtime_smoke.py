@@ -45,6 +45,17 @@ def _finite_vector(value: Any, name: str) -> list[float]:
     return array.tolist()
 
 
+def _actual_aoa_rad(own_state: Mapping[str, Any]) -> float:
+    """Derive physical AoA from the JSBSim body-velocity receipt.
+
+    The unified JSBSim state exposes body velocity but does not currently carry
+    an ``alpha_rad`` field.  This is the same actual-response definition used
+    by the shared-skill geometry evaluator, rather than a commanded AoA proxy.
+    """
+    velocity = np.asarray(_finite_vector(own_state.get("velocity_body"), "velocity_body"), dtype=np.float64)
+    return float(np.arctan2(velocity[2], velocity[0]))
+
+
 class RuntimeSmokeEpisode(v22.Episode):
     """V22 observer protocol plus complete per-step execution receipts."""
 
@@ -70,7 +81,7 @@ class RuntimeSmokeEpisode(v22.Episode):
                     float(guidance["roll_rate_cmd"]) / 1.5,
                     float(guidance["throttle_cmd"]),
                 ],
-                "aoa_rad": float(own_state.get("alpha_rad")),
+                "aoa_rad": _actual_aoa_rad(own_state),
                 "actual_nz_g": float(own_state.get("nz_g", info.get("nz_g"))),
                 "runtime_vpp_anchor_mode": info.get("runtime_vpp_anchor_mode"),
             }

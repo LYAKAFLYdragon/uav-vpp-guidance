@@ -64,3 +64,12 @@ def test_runtime_smoke_runner_keeps_a_non_source_provenance_boundary():
     sys.modules[spec.name] = module
     spec.loader.exec_module(module)
     assert module.SMOKE_ID.endswith("NOT-A-SOURCE-ID")
+
+
+def test_runtime_smoke_derives_actual_aoa_from_jsbsim_body_velocity():
+    spec = importlib.util.spec_from_file_location("runtime_smoke_runner_aoa", ROOT / "scripts" / "run_thesis_runtime_smoke.py")
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    assert module._actual_aoa_rad({"velocity_body": [10.0, 0.0, 1.0]}) == pytest.approx(0.0996686525)

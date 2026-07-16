@@ -1,0 +1,10 @@
+kind: engineering_runtime_smoke_not_scientific
+training_permitted: false
+reward_change_permitted: false
+inputs:
+  manifest: config/experiment/manifests/thesis_five_state_v17_path_context_preflight24.yaml
+  runtime_template: config/experiment/thesis_five_state_v17_path_context_preflight_design.yaml
+  runtime_registry: config/experiment/thesis_neutral_postmerge_reentry_recovery_pilot_v1_execution_runtime_registry.yaml
+scenario:
+  # This pair qualified under all three opponents in the frozen V17 evidence.
+  pair_key: head_on__v17_path_context_a__co_altitude__negative::seed=199102

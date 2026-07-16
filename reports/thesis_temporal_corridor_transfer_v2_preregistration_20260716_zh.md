@@ -1,7 +1,7 @@
 # Temporal-Corridor Physical Transfer V2 预注册
 
 **Source ID：** `THESIS-FIVE-STATE-TEMPORAL-CORRIDOR-TRANSFER-V2`  
-**状态：** engineering smoke gate passed；未授权、未执行 108 条正式记录
+**状态：** executed once; preregistered negative mechanism evidence
 **性质：** 非学习、非奖励、非论文主结果的物理传递机制 probe
 
 ## 1. V1 的边界与 V2 的唯一修复
@@ -33,7 +33,9 @@ hash-bound one-time authorization overlay。smoke 只验证工程可执行性，
 物理传递的结果。
 
 该 gate 已在 `05a944370b21e4387db97b7a74719d5953041c8b` 上通过。完整 receipt 与其
-解释边界见 `reports/thesis_temporal_corridor_transfer_v2_smoke_gate_20260716_zh.md`。
+解释边界见 `reports/thesis_temporal_corridor_transfer_v2_smoke_gate_20260716_zh.md`。正式 108 条
+执行与独立复核均已完成，但没有 candidate 通过 gate；结果见
+`reports/thesis_temporal_corridor_transfer_v2_result_20260716_zh.md`。
 
 ## 3. 正式矩阵与解释门
 

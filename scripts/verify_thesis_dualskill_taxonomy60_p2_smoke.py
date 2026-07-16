@@ -155,7 +155,7 @@ def verify_smoke_root(root: Path) -> Dict[str, Any]:
         run_dir = _run_dir(root, opponent)
         manifest = _load_json(run_dir / "run_manifest.json")
         failures = _load_json(run_dir / "failures.json")
-        records = _load_json(run_dir / "aggregate" / "episode_records.json")
+        record_payload = _load_json(run_dir / "aggregate" / "episode_records.json")
         contract = _load_json(run_dir / "artifact_contract.json")
 
         if manifest.get("status") != "completed":
@@ -172,6 +172,11 @@ def verify_smoke_root(root: Path) -> Dict[str, Any]:
             raise SmokeVerificationError("{} run records failures".format(opponent))
         if "aggregate/episode_records.json" not in contract.get("required_files", []):
             raise SmokeVerificationError("{} contract lacks episode records".format(opponent))
+        if not isinstance(record_payload, Mapping):
+            raise SmokeVerificationError("{} episode record payload is not a mapping".format(opponent))
+        records = record_payload.get("episodes")
+        if record_payload.get("n_episodes") != len(METHODS):
+            raise SmokeVerificationError("{} aggregate count does not match the smoke matrix".format(opponent))
         if not isinstance(records, list) or len(records) != len(METHODS):
             raise SmokeVerificationError("{} has an unexpected record universe".format(opponent))
 

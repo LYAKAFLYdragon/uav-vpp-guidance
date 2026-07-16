@@ -206,7 +206,15 @@ def _write_valid_smoke_root(root: Path):
             encoding="utf-8",
         )
         (run_dir / "aggregate" / "episode_records.json").write_text(
-            json.dumps([_record(method, opponent) for method in verifier.METHODS]),
+            json.dumps(
+                {
+                    "run_dir": str(run_dir),
+                    "n_episodes": len(verifier.METHODS),
+                    "episodes": [
+                        _record(method, opponent) for method in verifier.METHODS
+                    ],
+                }
+            ),
             encoding="utf-8",
         )
     return verifier
@@ -231,7 +239,7 @@ def test_independent_smoke_verifier_rejects_backend_fallback(tmp_path):
         / "episode_records.json"
     )
     records = json.loads(record_path.read_text(encoding="utf-8"))
-    records[0]["backend_fallback_occurred"] = True
+    records["episodes"][0]["backend_fallback_occurred"] = True
     record_path.write_text(json.dumps(records), encoding="utf-8")
 
     with pytest.raises(verifier.SmokeVerificationError, match="backend fallback"):

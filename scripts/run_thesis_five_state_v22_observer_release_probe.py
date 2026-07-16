@@ -11,11 +11,17 @@ from uav_vpp_guidance.evaluation.v22_observer_release_protocol import V22Observe
 from uav_vpp_guidance.training import thesis_neutral_postmerge_reentry_recovery_pilot as engine
 from uav_vpp_guidance.training.thesis_shared_skill_geometry import FrozenP3Encoder
 SOURCE_ID='THESIS-FIVE-STATE-V22-OBSERVER-RELEASE-PROBE';OPPONENTS=('expert','end_to_end','independent_ppo_vpp')
+def _load_config(path):
+ d=v17._load(path)
+ if 'base_config' not in d:return d
+ base=v17._resolve(d['base_config'])
+ if v17._hash(base)!=d.get('base_config_sha256'):raise RuntimeError('V22 authorization base hash mismatch')
+ result=copy.deepcopy(v17._load(base));result['authorization']=copy.deepcopy(d.get('authorization',{}));return result
 class Episode(V22ObserverReleaseMixin,v17.PathContextEpisode):
  def run(self,s,seed): self._v21_reset_anchor_protocol();r=super().run(s,seed);r['anchor_switches']=self._v21_switches;r['released']=self._v21_released;return r
  def _observe(self,o): super()._observe(o);self._v22_after_observation()
 def main():
- p=argparse.ArgumentParser();p.add_argument('--config',type=Path,required=True);p.add_argument('--execute',action='store_true');a=p.parse_args();d=v17._load(a.config);m=v17._load(v17._resolve(d['inputs']['manifest']));out=v17._resolve(d['outputs']['root']);pre={'source_id':SOURCE_ID,'planned_records':72,'output_root_absent':not out.exists(),'execution_permitted':bool(d['authorization']['execution_permitted'])}
+ p=argparse.ArgumentParser();p.add_argument('--config',type=Path,required=True);p.add_argument('--execute',action='store_true');a=p.parse_args();d=_load_config(a.config);m=v17._load(v17._resolve(d['inputs']['manifest']));out=v17._resolve(d['outputs']['root']);pre={'source_id':SOURCE_ID,'planned_records':72,'output_root_absent':not out.exists(),'execution_permitted':bool(d['authorization']['execution_permitted'])}
  if not a.execute:print(json.dumps(pre,indent=2));return
  if not pre['output_root_absent'] or not pre['execution_permitted']:raise RuntimeError('V22 not authorized')
  runtime=copy.deepcopy(v17._load(v17._resolve(d['inputs']['runtime_template'])));old=runtime['trajectory_prediction']['integration'].get('observer_only_warmup');runtime['trajectory_prediction']['integration']['observer_only_warmup']=True;record_config_override(runtime,'trajectory_prediction.integration.observer_only_warmup',True,old,'V22 observer-only release')

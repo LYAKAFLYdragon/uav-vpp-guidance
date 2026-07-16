@@ -3980,6 +3980,36 @@ class CloseRangeTrackingEnv:
 
         # 若 anchor_mode=predicted_target，获取预测位置
         predicted_target_pos = None
+        observer_only_prediction = bool(
+            self.config.get("trajectory_prediction", {})
+            .get("integration", {})
+            .get("observer_only_warmup", False)
+        )
+        observer_prediction_info = {
+            "updated": False,
+            "valid": False,
+            "fallback": False,
+            "reason": None,
+            "consumed_by_control": False,
+        }
+        if (
+            observer_only_prediction
+            and anchor_mode != "predicted_target"
+            and tp_enabled
+            and self.trajectory_predictor_adapter is not None
+        ):
+            try:
+                _observer_position, _, observer_info = self.trajectory_predictor_adapter.predict(
+                    target_state
+                )
+                observer_prediction_info.update(
+                    updated=True,
+                    valid=not bool(observer_info.get("fallback", False)),
+                    fallback=bool(observer_info.get("fallback", False)),
+                    reason=observer_info.get("fallback_reason"),
+                )
+            except Exception as exc:
+                observer_prediction_info.update(fallback=True, reason=f"predict_failed: {exc}")
         lookahead_time_s = self.config.get("trajectory_prediction", {}).get("prediction", {}).get("lookahead_time_s", 1.0)
         if (
             anchor_mode == "predicted_target"
@@ -5583,6 +5613,13 @@ class CloseRangeTrackingEnv:
             "prediction_fallback_mode": prediction_info["prediction_fallback_mode"],
             "prediction_fallback_model": prediction_info["prediction_fallback_model"],
             "prediction_fallback_phase": prediction_info["prediction_fallback_phase"],
+            "observer_prediction_updated": observer_prediction_info["updated"],
+            "observer_prediction_valid": observer_prediction_info["valid"],
+            "observer_prediction_fallback": observer_prediction_info["fallback"],
+            "observer_prediction_reason": observer_prediction_info["reason"],
+            "observer_prediction_consumed_by_control": observer_prediction_info[
+                "consumed_by_control"
+            ],
             "predicted_target_position": prediction_info["predicted_target_position"],
             "prediction_noise_std_m": prediction_info["prediction_noise_std_m"],
             "prediction_noise_applied": prediction_info["prediction_noise_applied"],

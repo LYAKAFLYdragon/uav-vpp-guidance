@@ -62,7 +62,13 @@ def _run_dir(root: Path, opponent: str) -> Path:
     return root / "{}-{}".format(SOURCE_ID, opponent)
 
 
-def _verify_step(step: Mapping[str, Any], *, method: str, context: str) -> Dict[str, int]:
+def _verify_step(
+    step: Mapping[str, Any],
+    *,
+    method: str,
+    context: str,
+    require_formal_telemetry: bool,
+) -> Dict[str, int]:
     prediction = {"valid_steps": 0, "fallback_steps": 0}
     for key in COMMON_STEP_FIELDS:
         value = _require(step, key, context=context)
@@ -85,10 +91,47 @@ def _verify_step(step: Mapping[str, Any], *, method: str, context: str) -> Dict[
         ):
             if not isinstance(_require(step, key, context=context), bool):
                 raise SmokeVerificationError("{} has non-boolean {}".format(context, key))
+    if require_formal_telemetry:
+        action = _require(step, "vpp_action", context=context)
+        if (
+            not isinstance(action, list)
+            or len(action) != 3
+            or any(not _is_finite(value) for value in action)
+        ):
+            raise SmokeVerificationError("{} has unreadable 3-D VPP action".format(context))
+        for key in ("aoa_deg", "nz_cmd", "nz_actual"):
+            if not _is_finite(_require(step, key, context=context)):
+                raise SmokeVerificationError("{} has non-finite {}".format(context, key))
+        guidance = _require(step, "guidance_telemetry", context=context)
+        if not isinstance(guidance, Mapping) or not isinstance(
+            guidance.get("effective_guidance_mode"), str
+        ):
+            raise SmokeVerificationError("{} has unreadable guidance telemetry".format(context))
+        if any(
+            not _is_finite(guidance.get(key))
+            for key in ("nz_cmd", "roll_rate_cmd", "throttle_cmd", "nz_actual")
+        ):
+            raise SmokeVerificationError("{} has non-finite guidance telemetry".format(context))
+        clipping = _require(step, "clipping", context=context)
+        if not isinstance(clipping, Mapping) or any(
+            not isinstance(clipping.get(key), bool)
+            for key in (
+                "nz_saturated",
+                "roll_rate_saturated",
+                "throttle_saturated",
+                "any_saturated",
+            )
+        ):
+            raise SmokeVerificationError("{} has unreadable clipping telemetry".format(context))
     return prediction
 
 
-def _verify_record(record: Mapping[str, Any], *, opponent: str) -> Dict[str, Any]:
+def _verify_record(
+    record: Mapping[str, Any],
+    *,
+    opponent: str,
+    require_formal_telemetry: bool,
+) -> Dict[str, Any]:
     context = "{}/{}".format(opponent, record.get("controller", "unknown"))
     method = str(_require(record, "controller", context=context))
     if method not in METHODS:
@@ -101,6 +144,13 @@ def _verify_record(record: Mapping[str, Any], *, opponent: str) -> Dict[str, Any
         raise SmokeVerificationError("{} did not use strict JSBSim".format(context))
     if bool(record.get("backend_fallback_occurred", False)):
         raise SmokeVerificationError("{} reports a backend fallback".format(context))
+    if require_formal_telemetry:
+        if bool(record.get("checkpoint_fallback_occurred", False)):
+            raise SmokeVerificationError("{} reports a checkpoint fallback".format(context))
+        if not isinstance(record.get("terminal_reason"), str) or not record.get("terminal_reason"):
+            raise SmokeVerificationError("{} has unreadable terminal reason".format(context))
+        if not isinstance(record.get("outcome"), str) or not record.get("outcome"):
+            raise SmokeVerificationError("{} has unreadable outcome".format(context))
     if int(record.get("steps", 0)) <= 0:
         raise SmokeVerificationError("{} has no executed steps".format(context))
     trajectory = record.get("trajectory")
@@ -112,7 +162,27 @@ def _verify_record(record: Mapping[str, Any], *, opponent: str) -> Dict[str, Any
     for index, step in enumerate(trajectory):
         if not isinstance(step, Mapping):
             raise SmokeVerificationError("{} trajectory step {} is not a mapping".format(context, index))
-        receipt = _verify_step(step, method=method, context="{} step {}".format(context, index))
+        receipt = _verify_step(
+            step,
+            method=method,
+            context="{} step {}".format(context, index),
+            require_formal_telemetry=require_formal_telemetry,
+        )
+        if require_formal_telemetry:
+            if index < 9 and (
+                step["prediction_valid"] is not False
+                or step["prediction_fallback"] is not True
+            ):
+                raise SmokeVerificationError(
+                    "{} violates the fixed 9-step prediction warm-up".format(context)
+                )
+            if index >= 9 and (
+                step["prediction_valid"] is not True
+                or step["prediction_fallback"] is not False
+            ):
+                raise SmokeVerificationError(
+                    "{} has invalid prediction after warm-up".format(context)
+                )
         valid_steps += receipt["valid_steps"]
         fallback_steps += receipt["fallback_steps"]
 
@@ -136,7 +206,11 @@ def _verify_record(record: Mapping[str, Any], *, opponent: str) -> Dict[str, Any
     }
 
 
-def verify_smoke_root(root: Path) -> Dict[str, Any]:
+def verify_smoke_root(
+    root: Path,
+    *,
+    require_formal_telemetry: bool = False,
+) -> Dict[str, Any]:
     """Check all 15 episodes without inspecting any comparative outcome field."""
 
     root = Path(root)
@@ -183,7 +257,11 @@ def verify_smoke_root(root: Path) -> Dict[str, Any]:
         methods_seen = set()
         receipt_rows = []
         for record in records:
-            receipt = _verify_record(record, opponent=opponent)
+            receipt = _verify_record(
+                record,
+                opponent=opponent,
+                require_formal_telemetry=require_formal_telemetry,
+            )
             methods_seen.add(receipt["method"])
             receipt_rows.append(receipt)
         if methods_seen != set(METHODS):
@@ -203,15 +281,20 @@ def verify_smoke_root(root: Path) -> Dict[str, Any]:
         "per_opponent": per_opponent,
         "verdict": "pass",
         "paper_evidence": False,
+        "formal_telemetry_contract_checked": require_formal_telemetry,
     }
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output-root", type=Path, required=True)
+    parser.add_argument("--require-formal-telemetry", action="store_true")
     args = parser.parse_args()
     try:
-        result = verify_smoke_root(args.output_root)
+        result = verify_smoke_root(
+            args.output_root,
+            require_formal_telemetry=args.require_formal_telemetry,
+        )
     except (OSError, ValueError, SmokeVerificationError) as error:
         result = {
             "source_id": SOURCE_ID,

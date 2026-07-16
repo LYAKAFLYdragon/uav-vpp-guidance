@@ -2798,7 +2798,15 @@ def _run_episode(
             )
         own_state = info.get("own_state", {})
         target_state = info.get("target_state", {})
-        recorder.record_step(steps, steps * dt, own_state, target_state, info, float(reward))
+        recorder.record_step(
+            steps,
+            steps * dt,
+            own_state,
+            target_state,
+            info,
+            float(reward),
+            action=action,
+        )
 
         range_m = _safe_float(info.get("range_m"))
         abs_ata_deg = abs(_safe_float(info.get("ata_deg")))
@@ -2902,7 +2910,9 @@ def _run_episode(
             "completed_orbits": _last_finite(completed_orbits_values),
             "backend_fallback_occurred": backend_fallback_occurred,
             "backend_fallback_reason": info.get("backend_fallback_reason"),
+            "checkpoint_fallback_occurred": False,
             "combat_outcome": info.get("combat_outcome"),
+            "outcome": info.get("combat_outcome"),
             "combat_success": bool(info.get("combat_success", False)),
             "win": bool(info.get("win", False)),
             "loss": bool(info.get("loss", False)),
@@ -2911,6 +2921,7 @@ def _run_episode(
             "target_hp": _safe_float(info.get("target_hp"), 100.0),
             "hp_advantage": _safe_float(info.get("hp_advantage")),
             "combat_reason": info.get("combat_reason"),
+            "terminal_reason": info.get("combat_reason") or info.get("reason", "timeout"),
             "combat_time_to_kill": combat_time_to_kill,
             "time_to_kill": combat_time_to_kill,
             "survived": not bool(
@@ -6488,6 +6499,8 @@ def main() -> int:
         opponent_stage=opponent_stage,
         allow_missing=args.allow_missing_checkpoints and args.dry_run,
     )
+    # Preserve positive checkpoint receipts for independent formal verification.
+    manifest.extra["checkpoint_checks"] = copy.deepcopy(checkpoint_checks)
     if checkpoint_errors:
         failures.extend({"phase": "checkpoint_check", "error": err} for err in checkpoint_errors)
 

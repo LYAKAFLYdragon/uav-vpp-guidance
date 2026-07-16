@@ -20,7 +20,7 @@ DECISION_CONTRACT_PATH = (
     / "config"
     / "experiment"
     / "decision_contracts"
-    / "thesis_dualskill_taxonomy60_no_go_v2.yaml"
+    / "thesis_dualskill_taxonomy60_no_go_v3.yaml"
 )
 
 
@@ -70,8 +70,8 @@ def test_builder_generates_balanced_sixty_scenarios_and_protocol():
         "wide_balanced": 30,
         "fast_closure": 30,
     }
-    assert manifest["decision_contract"]["id"] == "THESIS-DUALSKILL-TAXONOMY60-NO-GO-V2"
-    assert manifest["manifest_version"] == 3
+    assert manifest["decision_contract"]["id"] == "THESIS-DUALSKILL-TAXONOMY60-NO-GO-V3"
+    assert manifest["manifest_version"] == 4
     assert manifest["protocol"]["methods"] == [
         "fixed_head_on",
         "fixed_crossing",
@@ -236,12 +236,32 @@ def test_frozen_manifest_matches_builder_and_records_disjoint_source_files():
     assert builder._payload_sha256(payload) == expected_hash
 
 
-def test_no_go_contract_has_primary_opponent_gate_and_guard_confound_route():
-    contract = yaml.safe_load(DECISION_CONTRACT_PATH.read_text(encoding="utf-8"))
+def test_no_go_contract_has_complete_precedence_route_mapping():
+    contract_path = (
+        ROOT
+        / "config"
+        / "experiment"
+        / "decision_contracts"
+        / "thesis_dualskill_taxonomy60_no_go_v3.yaml"
+    )
+    contract = yaml.safe_load(contract_path.read_text(encoding="utf-8"))
     assert contract["applies_to_source"] == "THESIS-DUALSKILL-TAXONOMY60-3OPP-V1"
     assert contract["evidence_scope"]["primary_opponents"] == ["expert", "end_to_end"]
     assert contract["evidence_scope"]["supporting_opponents"] == ["independent_ppo_vpp"]
     assert contract["classification"]["mixed_interface_guard_bound"]["trigger"]
+    assert set(contract["classification"]["precedence"]) == set(
+        contract["classification_routes"]
+    )
+    assert {
+        route["selected_study_route"]
+        for route in contract["classification_routes"].values()
+    }.issubset(contract["allowed_routes"])
+    assert (
+        contract["classification_routes"]["two_skill_capacity_boundary_candidate"]
+        ["selected_study_route"]
+        == "paper_closure"
+    )
+    assert contract["route_decision_artifact"]["producer"] == "P4_formal_verifier"
     assert contract["allowed_routes"]["paper_closure"]["prohibited"] == [
         "training",
         "tuning",

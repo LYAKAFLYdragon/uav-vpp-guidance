@@ -26,13 +26,13 @@ from uav_vpp_guidance.evaluation.engagement_geometry_taxonomy import (
 SOURCE_ID = "THESIS-DUALSKILL-TAXONOMY60-3OPP-V1"
 TAXONOMY_VERSION = "v1"
 TRANSITION_BAND_DEG = (85.0, 95.0)
-NO_GO_ROUTER_ID = "THESIS-DUALSKILL-TAXONOMY60-NO-GO-V2"
+NO_GO_ROUTER_ID = "THESIS-DUALSKILL-TAXONOMY60-NO-GO-V3"
 NO_GO_ROUTER_PATH = (
     REPO_ROOT
     / "config"
     / "experiment"
     / "decision_contracts"
-    / "thesis_dualskill_taxonomy60_no_go_v2.yaml"
+    / "thesis_dualskill_taxonomy60_no_go_v3.yaml"
 )
 
 CLASS_ANGLE_TARGETS_DEG = {
@@ -279,7 +279,7 @@ def build_manifest(frozen_git_sha: str) -> Mapping[str, Any]:
                     scenario_index += 1
     return {
         "source_id": SOURCE_ID,
-        "manifest_version": 3,
+        "manifest_version": 4,
         "status": "preregistered_before_evaluation",
         "frozen_source": {
             "generation_git_sha": frozen_git_sha,

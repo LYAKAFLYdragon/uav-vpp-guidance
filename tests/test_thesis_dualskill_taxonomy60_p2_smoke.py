@@ -244,3 +244,47 @@ def test_independent_smoke_verifier_rejects_backend_fallback(tmp_path):
 
     with pytest.raises(verifier.SmokeVerificationError, match="backend fallback"):
         verifier.verify_smoke_root(tmp_path)
+
+
+def test_independent_smoke_verifier_can_require_the_p4_formal_telemetry_contract(tmp_path):
+    verifier = _write_valid_smoke_root(tmp_path)
+    for opponent in verifier.OPPONENTS:
+        record_path = (
+            tmp_path
+            / "{}-{}".format(verifier.SOURCE_ID, opponent)
+            / "aggregate"
+            / "episode_records.json"
+        )
+        payload = json.loads(record_path.read_text(encoding="utf-8"))
+        for record in payload["episodes"]:
+            record["checkpoint_fallback_occurred"] = False
+            record["terminal_reason"] = "timeout"
+            record["outcome"] = "draw"
+            step = record["trajectory"][0]
+            step.update(
+                {
+                    "prediction_valid": False,
+                    "prediction_fallback": True,
+                    "vpp_action": [0.1, -0.2, 0.3],
+                    "aoa_deg": 4.0,
+                    "nz_actual": 1.1,
+                    "guidance_telemetry": {
+                        "effective_guidance_mode": "los_rate",
+                        "nz_cmd": 1.2,
+                        "roll_rate_cmd": 0.1,
+                        "throttle_cmd": 0.5,
+                        "nz_actual": 1.1,
+                    },
+                    "clipping": {
+                        "nz_saturated": False,
+                        "roll_rate_saturated": False,
+                        "throttle_saturated": False,
+                        "any_saturated": False,
+                    },
+                }
+            )
+        record_path.write_text(json.dumps(payload), encoding="utf-8")
+
+    result = verifier.verify_smoke_root(tmp_path, require_formal_telemetry=True)
+    assert result["verdict"] == "pass"
+    assert result["formal_telemetry_contract_checked"] is True

@@ -1,0 +1,393 @@
+{
+  "source_id": "THESIS-DUALSKILL-TAXONOMY60-3OPP-V1",
+  "formal_config": "E:\\uav-vpp-guidance-five-state-heldout-envelope-v1\\config\\experiment\\jsbsim_hrl_thesis_dualskill_taxonomy60_formal.yaml",
+  "formal_output_root": "E:\\uav-vpp-guidance-thesis-evidence\\THESIS-DUALSKILL-TAXONOMY60-3OPP-V1",
+  "formal_output_root_exists": false,
+  "free_bytes": 311311122432,
+  "minimum_free_bytes": 53687091200,
+  "static_errors": [],
+  "config_matrix_cells": [
+    {
+      "opponent": "expert",
+      "method": "fixed_head_on",
+      "task": "head_on",
+      "strict_backend": true,
+      "opponent_stage": "expert"
+    },
+    {
+      "opponent": "expert",
+      "method": "fixed_head_on",
+      "task": "crossing_feasible",
+      "strict_backend": true,
+      "opponent_stage": "expert"
+    },
+    {
+      "opponent": "expert",
+      "method": "fixed_crossing",
+      "task": "head_on",
+      "strict_backend": true,
+      "opponent_stage": "expert"
+    },
+    {
+      "opponent": "expert",
+      "method": "fixed_crossing",
+      "task": "crossing_feasible",
+      "strict_backend": true,
+      "opponent_stage": "expert"
+    },
+    {
+      "opponent": "expert",
+      "method": "static_oracle_gate",
+      "task": "head_on",
+      "strict_backend": true,
+      "opponent_stage": "expert"
+    },
+    {
+      "opponent": "expert",
+      "method": "static_oracle_gate",
+      "task": "crossing_feasible",
+      "strict_backend": true,
+      "opponent_stage": "expert"
+    },
+    {
+      "opponent": "expert",
+      "method": "canonical_ppo",
+      "task": "head_on",
+      "strict_backend": true,
+      "opponent_stage": "expert"
+    },
+    {
+      "opponent": "expert",
+      "method": "canonical_ppo",
+      "task": "crossing_feasible",
+      "strict_backend": true,
+      "opponent_stage": "expert"
+    },
+    {
+      "opponent": "expert",
+      "method": "ppo_unbootstrapped_crossing",
+      "task": "head_on",
+      "strict_backend": true,
+      "opponent_stage": "expert"
+    },
+    {
+      "opponent": "expert",
+      "method": "ppo_unbootstrapped_crossing",
+      "task": "crossing_feasible",
+      "strict_backend": true,
+      "opponent_stage": "expert"
+    },
+    {
+      "opponent": "end_to_end",
+      "method": "fixed_head_on",
+      "task": "head_on",
+      "strict_backend": true,
+      "opponent_stage": "end_to_end"
+    },
+    {
+      "opponent": "end_to_end",
+      "method": "fixed_head_on",
+      "task": "crossing_feasible",
+      "strict_backend": true,
+      "opponent_stage": "end_to_end"
+    },
+    {
+      "opponent": "end_to_end",
+      "method": "fixed_crossing",
+      "task": "head_on",
+      "strict_backend": true,
+      "opponent_stage": "end_to_end"
+    },
+    {
+      "opponent": "end_to_end",
+      "method": "fixed_crossing",
+      "task": "crossing_feasible",
+      "strict_backend": true,
+      "opponent_stage": "end_to_end"
+    },
+    {
+      "opponent": "end_to_end",
+      "method": "static_oracle_gate",
+      "task": "head_on",
+      "strict_backend": true,
+      "opponent_stage": "end_to_end"
+    },
+    {
+      "opponent": "end_to_end",
+      "method": "static_oracle_gate",
+      "task": "crossing_feasible",
+      "strict_backend": true,
+      "opponent_stage": "end_to_end"
+    },
+    {
+      "opponent": "end_to_end",
+      "method": "canonical_ppo",
+      "task": "head_on",
+      "strict_backend": true,
+      "opponent_stage": "end_to_end"
+    },
+    {
+      "opponent": "end_to_end",
+      "method": "canonical_ppo",
+      "task": "crossing_feasible",
+      "strict_backend": true,
+      "opponent_stage": "end_to_end"
+    },
+    {
+      "opponent": "end_to_end",
+      "method": "ppo_unbootstrapped_crossing",
+      "task": "head_on",
+      "strict_backend": true,
+      "opponent_stage": "end_to_end"
+    },
+    {
+      "opponent": "end_to_end",
+      "method": "ppo_unbootstrapped_crossing",
+      "task": "crossing_feasible",
+      "strict_backend": true,
+      "opponent_stage": "end_to_end"
+    },
+    {
+      "opponent": "independent_ppo_vpp",
+      "method": "fixed_head_on",
+      "task": "head_on",
+      "strict_backend": true,
+      "opponent_stage": "independent_ppo_vpp"
+    },
+    {
+      "opponent": "independent_ppo_vpp",
+      "method": "fixed_head_on",
+      "task": "crossing_feasible",
+      "strict_backend": true,
+      "opponent_stage": "independent_ppo_vpp"
+    },
+    {
+      "opponent": "independent_ppo_vpp",
+      "method": "fixed_crossing",
+      "task": "head_on",
+      "strict_backend": true,
+      "opponent_stage": "independent_ppo_vpp"
+    },
+    {
+      "opponent": "independent_ppo_vpp",
+      "method": "fixed_crossing",
+      "task": "crossing_feasible",
+      "strict_backend": true,
+      "opponent_stage": "independent_ppo_vpp"
+    },
+    {
+      "opponent": "independent_ppo_vpp",
+      "method": "static_oracle_gate",
+      "task": "head_on",
+      "strict_backend": true,
+      "opponent_stage": "independent_ppo_vpp"
+    },
+    {
+      "opponent": "independent_ppo_vpp",
+      "method": "static_oracle_gate",
+      "task": "crossing_feasible",
+      "strict_backend": true,
+      "opponent_stage": "independent_ppo_vpp"
+    },
+    {
+      "opponent": "independent_ppo_vpp",
+      "method": "canonical_ppo",
+      "task": "head_on",
+      "strict_backend": true,
+      "opponent_stage": "independent_ppo_vpp"
+    },
+    {
+      "opponent": "independent_ppo_vpp",
+      "method": "canonical_ppo",
+      "task": "crossing_feasible",
+      "strict_backend": true,
+      "opponent_stage": "independent_ppo_vpp"
+    },
+    {
+      "opponent": "independent_ppo_vpp",
+      "method": "ppo_unbootstrapped_crossing",
+      "task": "head_on",
+      "strict_backend": true,
+      "opponent_stage": "independent_ppo_vpp"
+    },
+    {
+      "opponent": "independent_ppo_vpp",
+      "method": "ppo_unbootstrapped_crossing",
+      "task": "crossing_feasible",
+      "strict_backend": true,
+      "opponent_stage": "independent_ppo_vpp"
+    }
+  ],
+  "runtime": {
+    "assets": [
+      {
+        "id": "canonical_ppo_high_level_policy",
+        "exists": true,
+        "hash_matches": true,
+        "obs_dim_matches": true,
+        "action_dim_matches": true
+      },
+      {
+        "id": "head_on_vpp_specialist",
+        "exists": true,
+        "hash_matches": true,
+        "obs_dim_matches": true,
+        "action_dim_matches": true
+      },
+      {
+        "id": "crossing_vpp_specialist",
+        "exists": true,
+        "hash_matches": true,
+        "obs_dim_matches": true,
+        "action_dim_matches": true
+      },
+      {
+        "id": "trajectory_prediction_asset",
+        "exists": true,
+        "hash_matches": true,
+        "obs_dim_matches": true,
+        "action_dim_matches": true
+      },
+      {
+        "id": "end_to_end_neural_opponent",
+        "exists": true,
+        "hash_matches": true,
+        "obs_dim_matches": true,
+        "action_dim_matches": true
+      },
+      {
+        "id": "independent_ppo_vpp_opponent",
+        "exists": true,
+        "hash_matches": true,
+        "obs_dim_matches": true,
+        "action_dim_matches": true
+      }
+    ],
+    "source_worktree_git_verifiable": false,
+    "source_worktree_git_matches": true,
+    "jsbsim_data_dir": "E:\\uav-vpp-guidance-can20260705\\envs\\JSBSim\\data",
+    "jsbsim_data_exists": true,
+    "jsbsim_data_expected_sha256": "18fa1c4107fbcccb41ecdcf31e565ec5809fac16f45d1e1c006c6f691c42c10a",
+    "jsbsim_data_actual_sha256": "18fa1c4107fbcccb41ecdcf31e565ec5809fac16f45d1e1c006c6f691c42c10a"
+  },
+  "p2_smoke": {
+    "source_id": "THESIS-DUALSKILL-TAXONOMY60-3OPP-V1-P2-SMOKE",
+    "formal_source_id": "THESIS-DUALSKILL-TAXONOMY60-3OPP-V1",
+    "expected_records": 15,
+    "records": 15,
+    "prediction_valid_steps": 165,
+    "prediction_fallback_steps": 135,
+    "per_opponent": {
+      "expert": {
+        "records": [
+          {
+            "method": "fixed_head_on",
+            "steps": 20,
+            "prediction_valid_steps": 11,
+            "prediction_fallback_steps": 9
+          },
+          {
+            "method": "fixed_crossing",
+            "steps": 20,
+            "prediction_valid_steps": 11,
+            "prediction_fallback_steps": 9
+          },
+          {
+            "method": "static_oracle_gate",
+            "steps": 20,
+            "prediction_valid_steps": 11,
+            "prediction_fallback_steps": 9
+          },
+          {
+            "method": "canonical_ppo",
+            "steps": 20,
+            "prediction_valid_steps": 11,
+            "prediction_fallback_steps": 9
+          },
+          {
+            "method": "ppo_unbootstrapped_crossing",
+            "steps": 20,
+            "prediction_valid_steps": 11,
+            "prediction_fallback_steps": 9
+          }
+        ],
+        "passes": true
+      },
+      "end_to_end": {
+        "records": [
+          {
+            "method": "fixed_head_on",
+            "steps": 20,
+            "prediction_valid_steps": 11,
+            "prediction_fallback_steps": 9
+          },
+          {
+            "method": "fixed_crossing",
+            "steps": 20,
+            "prediction_valid_steps": 11,
+            "prediction_fallback_steps": 9
+          },
+          {
+            "method": "static_oracle_gate",
+            "steps": 20,
+            "prediction_valid_steps": 11,
+            "prediction_fallback_steps": 9
+          },
+          {
+            "method": "canonical_ppo",
+            "steps": 20,
+            "prediction_valid_steps": 11,
+            "prediction_fallback_steps": 9
+          },
+          {
+            "method": "ppo_unbootstrapped_crossing",
+            "steps": 20,
+            "prediction_valid_steps": 11,
+            "prediction_fallback_steps": 9
+          }
+        ],
+        "passes": true
+      },
+      "independent_ppo_vpp": {
+        "records": [
+          {
+            "method": "fixed_head_on",
+            "steps": 20,
+            "prediction_valid_steps": 11,
+            "prediction_fallback_steps": 9
+          },
+          {
+            "method": "fixed_crossing",
+            "steps": 20,
+            "prediction_valid_steps": 11,
+            "prediction_fallback_steps": 9
+          },
+          {
+            "method": "static_oracle_gate",
+            "steps": 20,
+            "prediction_valid_steps": 11,
+            "prediction_fallback_steps": 9
+          },
+          {
+            "method": "canonical_ppo",
+            "steps": 20,
+            "prediction_valid_steps": 11,
+            "prediction_fallback_steps": 9
+          },
+          {
+            "method": "ppo_unbootstrapped_crossing",
+            "steps": 20,
+            "prediction_valid_steps": 11,
+            "prediction_fallback_steps": 9
+          }
+        ],
+        "passes": true
+      }
+    },
+    "verdict": "pass",
+    "paper_evidence": false,
+    "formal_telemetry_contract_checked": false
+  },
+  "verdict": "pass",
+  "formal_execution_authorized": false
+}

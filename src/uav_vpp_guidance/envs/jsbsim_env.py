@@ -326,6 +326,7 @@ class _JSBSimAircraft:
             "q_rps": 0.0,
             "r_rps": 0.0,
             "nz_g": 1.0,
+            "alpha_rad": 0.0,
             "beta_rad": 0.0,
             "sideslip_rad": 0.0,
             "speed_mps": 250.0,
@@ -406,6 +407,9 @@ class _JSBSimAircraft:
 
         # Sideslip angle (beta) from body velocities; needed by lateral-directional
         # controllers for rudder/beta-suppression coordination.
+        # AoA is the body-axis incidence angle. Record it here rather than
+        # reconstructing it from combat geometry in downstream telemetry.
+        alpha = float(math.atan2(w_b, u_b + 1e-9))
         beta = float(math.atan2(v_b, u_b + 1e-9))
 
         # 统一别名字段，供上层模块（TerminationChecker、feature_builder 等）直接使用
@@ -426,6 +430,7 @@ class _JSBSimAircraft:
             "q_rps": float(q_rps),
             "r_rps": float(r_rps),
             "nz_g": float(nz_g),
+            "alpha_rad": alpha,
             "beta_rad": beta,
             "sideslip_rad": beta,
             "speed_mps": float(vt),

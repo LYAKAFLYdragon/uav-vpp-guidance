@@ -87,6 +87,7 @@ class EpisodeRecorder:
         target_state: dict,
         info: dict,
         reward: float,
+        action: Any = None,
     ) -> None:
         """Append one step to the trajectory."""
         if not self.save_full:
@@ -99,6 +100,10 @@ class EpisodeRecorder:
         target_pos = _vec3(
             target_state.get("position_m", target_state.get("position_neu"))
         )
+        # Preserve the exact bounded 3-D action sent to the VPP environment.
+        # Biases alone cannot distinguish an identical geometry from a clipped
+        # or otherwise transformed policy action during a formal audit.
+        vpp_action = _vec3(action)
         virtual_point = info.get("virtual_point") or {}
         vp_source = info.get("vp_position_neu")
         if vp_source is None:
@@ -1262,12 +1267,15 @@ class EpisodeRecorder:
             "prediction_fallback": bool(info.get("prediction_fallback", False)),
             "vp_forward_bias_m": float(info.get("vp_forward_bias_m", np.nan)),
             "vp_lateral_bias_m": float(info.get("vp_lateral_bias_m", np.nan)),
+            "vpp_action": _tolist(vpp_action),
             "range_m": float(info.get("range_m", np.nan)),
             "range_rate_mps": float(info.get("range_rate_mps", np.nan)),
             "ata_deg": float(info.get("ata_deg", np.nan)),
             "aa_deg": float(info.get("aa_deg", info.get("aspect_deg", np.nan))),
             "ego_attack_aoa_deg": float(info.get("ego_attack_aoa_deg", np.nan)),
             "target_attack_aoa_deg": float(info.get("target_attack_aoa_deg", np.nan)),
+            "aoa_rad": float(own_state.get("alpha_rad", np.nan)),
+            "aoa_deg": float(np.degrees(own_state.get("alpha_rad", np.nan))),
             "ego_in_attack_zone": bool(info.get("ego_in_attack_zone", False)),
             "target_in_attack_zone": bool(info.get("target_in_attack_zone", False)),
             "ego_hp": float(info.get("ego_hp", np.nan)),
@@ -1293,6 +1301,7 @@ class EpisodeRecorder:
                 )
             ),
             "nz_g": float(own_state.get("nz_g", 1.0)),
+            "nz_actual": float(own_state.get("nz_g", 1.0)),
             "nz_cmd": float(info.get("nz_cmd", np.nan)),
             "roll_rad": float(own_state.get("roll_rad", np.nan)),
             "roll_deg": float(np.degrees(own_state.get("roll_rad", np.nan))),
@@ -1301,6 +1310,19 @@ class EpisodeRecorder:
             "nz_saturated": float(info.get("nz_saturated", np.nan)),
             "roll_rate_saturated": float(info.get("roll_rate_saturated", np.nan)),
             "throttle_saturated": float(info.get("throttle_saturated", np.nan)),
+            "guidance_telemetry": {
+                "effective_guidance_mode": info.get("effective_guidance_mode"),
+                "nz_cmd": float(info.get("nz_cmd", np.nan)),
+                "roll_rate_cmd": float(info.get("roll_rate_cmd", np.nan)),
+                "throttle_cmd": float(info.get("throttle_cmd", np.nan)),
+                "nz_actual": float(own_state.get("nz_g", 1.0)),
+            },
+            "clipping": {
+                "nz_saturated": bool(info.get("nz_saturated", False)),
+                "roll_rate_saturated": bool(info.get("roll_rate_saturated", False)),
+                "throttle_saturated": bool(info.get("throttle_saturated", False)),
+                "any_saturated": bool(info.get("saturation_flag", False)),
+            },
             "virtual_point_source": info.get("virtual_point_source"),
             "direct_track_mode_requested": bool(
                 info.get("direct_track_mode_requested", False)
@@ -1376,6 +1398,10 @@ class EpisodeRecorder:
             "git_commit": self.git_commit,
             "success": success,
             "termination_reason": termination_reason,
+            # Formal evaluators use explicit terminal/outcome names instead of
+            # inferring their semantics from the legacy tracking field.
+            "terminal_reason": termination_reason,
+            "outcome": None,
             "steps": steps,
             "total_time_s": total_time_s,
             "total_reward": total_reward,

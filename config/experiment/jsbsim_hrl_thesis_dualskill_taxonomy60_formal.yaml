@@ -26,6 +26,8 @@ thesis_dualskill_taxonomy60_formal:
     warmup_fallback_high_level_steps: 9
     first_required_valid_high_level_step: 10
     fallback_after_warmup_permitted: false
+  jsbsim_legacy_root: E:/uav-vpp-guidance-can20260705
+  jsbsim_data_manifest_sha256: 18fa1c4107fbcccb41ecdcf31e565ec5809fac16f45d1e1c006c6f691c42c10a
   stop_rule: >
     No training, tuning, scenario replacement, seed replacement, checkpoint
     replacement, reward change, VPP change, guidance change, PID change, or
@@ -37,7 +39,7 @@ env:
 scenario_manifest:
   path: ./manifests/thesis_dualskill_taxonomy60_v1.yaml
   source_id: THESIS-DUALSKILL-TAXONOMY60-3OPP-V1
-  payload_sha256: b67d892d44b1b070076a1e1bee67cd98dddd902c0a7ae142977cfe430f2cb8b0
+  payload_sha256: 3b9eb214b621e03daa0dde37ea5130af53680a2f01b9a781c66709d9763f0ca4
   task_key_field: task_registry_key
   expected_task_counts:
     head_on: 48

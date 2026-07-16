@@ -1,0 +1,255 @@
+contract_id: THESIS-DUALSKILL-TAXONOMY60-NO-GO-V3
+version: 3
+supersedes:
+  contract_id: THESIS-DUALSKILL-TAXONOMY60-NO-GO-V2
+  reason: >
+    V2 described the appropriate interpretations, but did not provide a
+    machine-readable route for every precedence classification. V3 closes that
+    pre-execution ambiguity without changing any scientific variable.
+applies_to_source: THESIS-DUALSKILL-TAXONOMY60-3OPP-V1
+purpose: >
+  Freeze the evidence thresholds and the sole allowed post-result routes before
+  the Taxonomy60 source is executed. This contract does not authorize training,
+  tuning, a new controller, or a result-driven rerun.
+
+formal_validity:
+  expected_episode_records: 900
+  required_backend: jsbsim
+  backend_fallback_permitted: false
+  prediction_receipt_contract:
+    warmup_fallback_high_level_steps: 9
+    first_required_valid_high_level_step: 10
+    fallback_after_warmup_permitted: false
+    interpretation: >
+      The frozen predicted-target interface is in deterministic history warm-up
+      for the first nine high-level steps. It must be recorded, is not backend
+      or checkpoint fallback, and cannot support a claim that prediction is
+      available throughout an episode.
+  required_per_episode_fields:
+    - scenario_id
+    - scenario_seed
+    - method
+    - opponent
+    - terminal_reason
+    - outcome
+    - requested_mode
+    - effective_mode
+    - guard_reason
+    - vpp_action
+    - guidance_telemetry
+    - aoa
+    - nz_command
+    - nz_actual
+    - clipping
+    - prediction_receipt
+  invalid_record_rule: >
+    Any missing required field, non-JSBSim backend, backend fallback, checkpoint
+    substitution, non-finite telemetry, prediction fallback after the frozen
+    nine-step warm-up, or unverifiable asset/config/manifest hash invalidates
+    the whole formal universe. Partial records must not be analysed as
+    performance data.
+
+evidence_scope:
+  primary_opponents: [expert, end_to_end]
+  supporting_opponents: [independent_ppo_vpp]
+  supporting_opponent_limit: >
+    The independent PPO/VPP opponent is provenance-limited. It may corroborate
+    or qualify a result but can never satisfy a cross-opponent repetition gate
+    by itself or replace either primary opponent.
+  repetition_unit:
+    required_primary_opponents: [expert, end_to_end]
+    minimum_mirror_signs: 2
+    minimum_height_conditions: 2
+    minimum_complete_scenarios_per_opponent: 4
+    audit_requirements:
+      - no_fallback_or_checkpoint_substitution
+      - frozen_prediction_warmup_receipt_checked
+      - terminal_semantics_checked
+      - early_opponent_trajectory_divergence_checked
+      - common_execution_chain_checked
+
+comparison_contract:
+  fixed_head_on:
+    requested_policy: frozen_head_on_specialist
+    deterministic_recovery_guard: disabled
+  fixed_crossing:
+    requested_policy: frozen_crossing_specialist
+    deterministic_recovery_guard: disabled
+    observation_adapter: required_exact_feature_name_match
+  static_oracle_gate:
+    role: legacy_static_task_gate_baseline_not_dynamic_oracle
+    mapping:
+      crossing_entry: frozen_crossing_specialist
+      advantage: frozen_head_on_specialist
+      head_on: frozen_head_on_specialist
+      disadvantage: frozen_head_on_specialist
+      neutral: frozen_head_on_specialist
+    deterministic_recovery_guard: disabled
+  canonical_ppo:
+    ppo_checkpoint: canonical_frozen
+    crossing_initial_task_bootstrap: enabled
+    crossing_pre_merge_mode_lock: disabled
+    deterministic_recovery_guard: enabled
+  ppo_unbootstrapped_crossing:
+    ppo_checkpoint: canonical_frozen
+    crossing_initial_task_bootstrap: disabled
+    crossing_pre_merge_mode_lock: disabled
+    deterministic_recovery_guard: enabled
+
+classification:
+  precedence:
+    - implementation_invalid
+    - technical_recovery_r1
+    - paper_two_opponent_only
+    - mixed_interface_guard_bound
+    - opponent_dependent_or_non_discriminative
+    - routing_sensitive_candidate
+    - two_skill_capacity_boundary_candidate
+    - crossing_constraint_mechanism
+    - terminal_semantic_qualification
+    - paper_closure
+  routing_sensitive_candidate:
+    per_scenario_pattern: >
+      canonical_ppo is a resolved loss while fixed_head_on or fixed_crossing is
+      a resolved win on the same scenario and seed.
+    extra_requirements:
+      - repetition_unit_satisfied_on_both_primary_opponents
+      - canonical_ppo_guard_did_not_change_requested_mode
+      - requested_and_effective_mode_telemetry_is_complete
+      - successful_fixed_specialist_vpp_geometry_is_audited
+    prohibited_interpretation: PPO_routing_performance_advantage_or_new_training_authorization
+  two_skill_capacity_boundary_candidate:
+    per_scenario_pattern: >
+      fixed_head_on, fixed_crossing, and canonical_ppo are all resolved losses
+      with compatible terminal semantics on the same scenario and seed.
+    extra_requirements:
+      - repetition_unit_satisfied_on_both_primary_opponents
+      - no_guard_or_execution_chain_confound
+      - no_early_opponent_trajectory_divergence
+    prohibited_interpretation: proof_that_a_third_specialist_is_needed
+  mixed_interface_guard_bound:
+    trigger: >
+      The deterministic recovery guard changes canonical_ppo requested mode on
+      a scenario used for a routing or fixed-specialist performance comparison.
+    consequence: >
+      Retain the result only as deployed mixed-interface evidence. Do not
+      attribute its performance difference to PPO routing.
+  opponent_dependent_or_non_discriminative:
+    trigger: >
+      A pattern fails the primary-opponent repetition unit, or all five methods
+      have the same resolved outcome and materially similar terminal/attack-zone
+      pathway in a scenario cell.
+    consequence: split_specific_or_non_discriminative_reporting_only
+  optional_new_interface_memo:
+    automatic_authorization: false
+    all_required:
+      - two_skill_capacity_boundary_candidate_on_both_primary_opponents
+      - repetition_unit_satisfied
+      - vpp_guidance_aoa_nz_clipping_terminal_audit_excludes_common_execution_failure
+      - action_envelope_or_task_dynamics_change_not_covered_by_prior_negative_evidence
+      - independent_reviewer_approves_a_separate_decision_memo
+
+allowed_routes:
+  implementation_invalid:
+    next_action: smoke_only_root_cause_fix_then_revalidate
+    maximum_recovery_cycles: 2
+    source_action: do_not_create_or_interpret_source
+  technical_recovery_r1:
+    next_action: one_full_900_episode_rerun_with_identical_scientific_variables
+    maximum_reruns: 1
+    required_proof: smoke_reproduction_test_and_independent_diff_audit
+  paper_two_opponent_only:
+    next_action: close_with_taxonomy30_and_calibration_v2_evidence
+    prohibited: [r2, v2, partial_record_selection, three_opponent_claim]
+  paper_closure:
+    next_action: read_only_analysis_artifact_bundle_and_thesis_writing
+    prohibited: [training, tuning, scenario_replacement, result_driven_rerun]
+  optional_new_interface_memo:
+    next_action: draft_only_one_independent_decision_memo_after_paper_closure
+    prohibited: [automatic_training, automatic_pilot, v2_or_v3_followup]
+
+# Every precedence classification maps to one and only one study route. A
+# capacity-boundary finding can make a later memo eligible, but never changes
+# the selected route away from paper closure during this Source.
+classification_routes:
+  implementation_invalid:
+    selected_study_route: implementation_invalid
+    transition_condition: >
+      Before formal records exist, repair only the reproduced engineering cause
+      in disposable smoke. After a started formal source, use R1 only when the
+      required proof is complete and no R1 has been consumed.
+    otherwise_route: paper_two_opponent_only
+  technical_recovery_r1:
+    selected_study_route: technical_recovery_r1
+    transition_condition: >
+      One complete R1 is permitted only after an implementation-invalid formal
+      universe, a reproduced smoke root cause, and an independent diff audit.
+    otherwise_route: paper_two_opponent_only
+  paper_two_opponent_only:
+    selected_study_route: paper_two_opponent_only
+    transition_condition: >
+      The formal universe remains invalid after the permitted recovery path, or
+      the recovery proof is absent. Use only already-valid Taxonomy30 and
+      Calibration v2 evidence; do not salvage partial Taxonomy60 records.
+  mixed_interface_guard_bound:
+    selected_study_route: paper_closure
+    transition_condition: >
+      Retain only deployed mixed-interface and guard-telemetry evidence.
+    paper_action: capability_atlas_with_guard_confound_annotation
+  opponent_dependent_or_non_discriminative:
+    selected_study_route: paper_closure
+    transition_condition: >
+      Keep split-specific or non-discriminative cells in the complete matrix.
+    paper_action: capability_card_and_complete_cell_reporting
+  routing_sensitive_candidate:
+    selected_study_route: paper_closure
+    transition_condition: >
+      Report the audited routing-sensitive mechanism without a routing patch or
+      retraining authorization.
+    paper_action: mode_vpp_terminal_mechanism_analysis
+  two_skill_capacity_boundary_candidate:
+    selected_study_route: paper_closure
+    transition_condition: >
+      Report a bounded dual-skill capacity limit only. This is not proof that a
+      third specialist is needed.
+    paper_action: capacity_boundary_analysis
+    post_closure_eligibility: optional_new_interface_memo_only_if_all_required
+  crossing_constraint_mechanism:
+    selected_study_route: paper_closure
+    transition_condition: >
+      Describe bootstrap differences, if repeated, as a deterministic
+      preservation constraint rather than task-label-free learned recognition.
+    paper_action: crossing_constraint_mechanism_analysis
+  terminal_semantic_qualification:
+    selected_study_route: paper_closure
+    transition_condition: >
+      Decompose terminal pathways before reporting win rate; do not relabel it
+      as kill rate, aerodynamic superiority, or safety certification.
+    paper_action: terminal_and_safety_semantic_table
+  paper_closure:
+    selected_study_route: paper_closure
+    transition_condition: >
+      A formally valid universe with no higher-precedence route closes through
+      read-only analysis, an artifact bundle, and thesis writing.
+    paper_action: complete_evidence_matrix_and_thesis_writing
+
+route_decision_artifact:
+  filename: taxonomy60_route_decision.json
+  producer: P4_formal_verifier
+  required_fields:
+    - source_id
+    - decision_contract_sha256
+    - manifest_payload_sha256
+    - formal_validity_verdict
+    - primary_opponent_evidence
+    - supporting_opponent_evidence
+    - cell_classifications
+    - guard_confounded_episode_ids
+    - route_candidates_in_precedence_order
+    - selected_study_route
+    - route_transition_reason
+    - post_closure_eligibility
+    - allowed_next_action
+    - prohibited_actions
+    - recovery_state
+    - reviewer_signoff

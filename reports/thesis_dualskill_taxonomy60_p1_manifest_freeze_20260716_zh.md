@@ -13,7 +13,7 @@
 | Manifest | `config/experiment/manifests/thesis_dualskill_taxonomy60_v1.yaml` |
 | Source ID | `THESIS-DUALSKILL-TAXONOMY60-3OPP-V1` |
 | 生成 Git SHA | `01051e1` |
-| Manifest version / payload SHA-256 | `3` / `b67d892d44b1b070076a1e1bee67cd98dddd902c0a7ae142977cfe430f2cb8b0` |
+| Manifest version / payload SHA-256 | `4` / `3b9eb214b621e03daa0dde37ea5130af53680a2f01b9a781c66709d9763f0ca4` |
 | 场景与计划 records | `60` 场景；`60 x 3 opponents x 5 methods = 900` episodes |
 | 几何场景层 | Advantage、Head-on、Disadvantage、Neutral 四象限各 12；Crossing-entry 交战上下文 12 |
 | 高度与镜像 | own-below/co-altitude/own-above 各 20；negative/positive 各 30 |
@@ -31,11 +31,11 @@
 ## 已冻结的解释边界
 
 - M2 是 legacy static task gate baseline，不是动态五态势 Oracle：仅 crossing-entry 选 frozen crossing，其余四类选 frozen head-on。
-- resolved-config 审计发现 canonical 配置没有启用 pre-merge lock；历史 RQ3 的 `crossing_initial_task_bootstrap.enabled: false` 也未被 policy 消费。已以默认行为不变的最小补丁使该字段生效，并为其补齐 per-step telemetry 与回归测试；manifest 初次以 version 2 重冻。P2 又验证了冻结预测器的 9-step history warm-up，故 version 3 追加 receipt boundary：第 10 step 起不得 fallback。
+- resolved-config 审计发现 canonical 配置没有启用 pre-merge lock；历史 RQ3 的 `crossing_initial_task_bootstrap.enabled: false` 也未被 policy 消费。已以默认行为不变的最小补丁使该字段生效，并为其补齐 per-step telemetry 与回归测试；manifest 初次以 version 2 重冻。P2 又验证了冻结预测器的 9-step history warm-up，故 version 3 追加 receipt boundary：第 10 step 起不得 fallback。正式运行前的二次 no-go 审核发现 v2 没有将全部 precedence 分类映射到唯一研究出口；version 4 因此仅绑定 No-Go v3 的完整路线映射与 P4 route JSON 字段，不改变场景、方法、资产或任何科学变量。
 - 更正后 M3/M4 使用相同 canonical PPO checkpoint；仅 M3 启用 canonical crossing initial-task bootstrap，M4 显式关闭它；两者均不启用 pre-merge lock，并保留 recovery guard。
 - 若 guard 改写 M3/M4 的 requested mode，该 episode 只可解释为 deployed mixed-interface evidence，不能归因于 PPO routing。
 - expert 与 end-to-end 是跨对手重复的两个主证据；independent PPO/VPP 只能作 provenance-limited 支持或反例。
-- 所有有效/负结果的唯一出口由 [No-Go 决策器 v2](E:/uav-vpp-guidance-five-state-heldout-envelope-v1/reports/thesis_dualskill_taxonomy60_no_go_route_router_v2_20260716_zh.md) 和其 YAML 哈希合同固定。
+- 所有有效/负结果的唯一出口由 [No-Go 决策器 v3](E:/uav-vpp-guidance-five-state-heldout-envelope-v1/reports/thesis_dualskill_taxonomy60_no_go_route_router_v3_20260716_zh.md) 和其 YAML 哈希合同固定；P4 必须写出结果分类候选、唯一路线、切换理由、后闭合 memo 资格和恢复状态。
 
 ## P2 开始门
 

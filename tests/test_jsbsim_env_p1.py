@@ -75,6 +75,7 @@ class TestJSBSimEnv:
             "q_rps": 0.0,
             "r_rps": 0.0,
             "nz_g": 0.9,
+            "alpha_rad": 0.0,
             "beta_rad": 0.0,
             "sideslip_rad": 0.0,
             "speed_mps": 200.0,
@@ -92,9 +93,9 @@ class TestJSBSimEnv:
             "velocities/v-east-fps": 0.0,
             "velocities/v-down-fps": 0.0,
             "velocities/vt-fps": float("nan"),
-            "velocities/u-fps": float("nan"),
+            "velocities/u-fps": 700.0,
             "velocities/v-fps": 0.0,
-            "velocities/w-fps": 0.0,
+            "velocities/w-fps": 70.0,
             "velocities/p-rad_sec": 0.0,
             "velocities/q-rad_sec": 0.0,
             "velocities/r-rad_sec": 0.0,
@@ -112,6 +113,7 @@ class TestJSBSimEnv:
         assert state["altitude_m"] == pytest.approx(3000.0)
         assert state["speed_mps"] == pytest.approx(200.0)
         assert state["nz_g"] == pytest.approx(0.9)
+        assert state["alpha_rad"] == pytest.approx(np.arctan2(70.0, 700.0))
         assert any("Non-finite JSBSim state" in rec.message for rec in caplog.records)
 
     def test_init_reads_config(self):

@@ -1,5 +1,5 @@
 source_id: THESIS-DUALSKILL-TAXONOMY60-3OPP-V1
-manifest_version: 3
+manifest_version: 4
 status: preregistered_before_evaluation
 frozen_source:
   generation_git_sha: 01051e184aaa6050b4efe9b035fcad18533c9fc8
@@ -23,9 +23,9 @@ protocol:
   stop_rule: No training, tuning, scenario replacement, seed replacement, reward change,
     VPP change, guidance change, PID change, or result-driven rerun is permitted.
 decision_contract:
-  id: THESIS-DUALSKILL-TAXONOMY60-NO-GO-V2
-  path: config/experiment/decision_contracts/thesis_dualskill_taxonomy60_no_go_v2.yaml
-  sha256: 0958b743bce49dd9b038a6ee06a23dfef8b041827e3fec5e137917941dc4c9d3
+  id: THESIS-DUALSKILL-TAXONOMY60-NO-GO-V3
+  path: config/experiment/decision_contracts/thesis_dualskill_taxonomy60_no_go_v3.yaml
+  sha256: f104b176d788829860713b66782ca799a6a7d888eed39f554651523c509e8e10
   route_decision_artifact: taxonomy60_route_decision.json
 prediction_receipt_contract:
   warmup_fallback_high_level_steps: 9
@@ -2732,6 +2732,6 @@ disjointness:
       path: reports/thesis_five_state_heldout40_v1_manifest_freeze.yaml
     unique_signature_count: 40
 integrity:
-  builder_code_sha256: cfc653c7406f513ac808f25d6e3a2fc574f88ea17c63626cbb3a174e604021e2
+  builder_code_sha256: 08926b577c4d215b96d272c5f736c1988f890f01f8715cc7dc374e4141443597
   classifier_code_sha256: 9736dd64b13d3f8bd51372f650b51d324f258626bc96439e9788524b6267f05b
-  payload_sha256: b67d892d44b1b070076a1e1bee67cd98dddd902c0a7ae142977cfe430f2cb8b0
+  payload_sha256: 3b9eb214b621e03daa0dde37ea5130af53680a2f01b9a781c66709d9763f0ca4

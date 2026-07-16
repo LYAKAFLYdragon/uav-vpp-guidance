@@ -10,7 +10,7 @@ import yaml
 ROOT = Path(__file__).resolve().parent.parent
 CONFIG = ROOT / "config" / "experiment" / "jsbsim_hrl_thesis_dualskill_taxonomy60_formal.yaml"
 MANIFEST = ROOT / "config" / "experiment" / "manifests" / "thesis_dualskill_taxonomy60_v1.yaml"
-DECISION_CONTRACT = ROOT / "config" / "experiment" / "decision_contracts" / "thesis_dualskill_taxonomy60_no_go_v2.yaml"
+DECISION_CONTRACT = ROOT / "config" / "experiment" / "decision_contracts" / "thesis_dualskill_taxonomy60_no_go_v3.yaml"
 RUNNER = ROOT / "scripts" / "run_jsbsim_hrl_comparison.py"
 
 
@@ -99,7 +99,7 @@ def test_formal_manifest_and_decision_contract_freeze_the_prediction_warmup_boun
         "fallback_after_warmup_permitted": False,
     }
 
-    assert manifest["manifest_version"] == 3
+    assert manifest["manifest_version"] == 4
     assert {
         key: manifest["prediction_receipt_contract"][key] for key in expected
     } == expected

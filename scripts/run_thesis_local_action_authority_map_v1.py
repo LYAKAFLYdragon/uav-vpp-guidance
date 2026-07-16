@@ -177,6 +177,12 @@ def _authorize(config: Mapping[str, Any], expected: int) -> None:
         raise RuntimeError("local-authority execution is not authorized")
     if subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip() != execution.get("required_implementation_git_sha"):
         raise RuntimeError("local-authority implementation SHA mismatch")
+    smoke = _resolve(execution.get("required_smoke_gate", ""))
+    if not smoke.is_file() or _hash(smoke) != execution.get("required_smoke_gate_sha256"):
+        raise RuntimeError("local-authority required smoke gate mismatch")
+    smoke_payload = _json(smoke)
+    if smoke_payload.get("source_id_under_test") != SOURCE_ID or smoke_payload.get("passes") is not True:
+        raise RuntimeError("local-authority required smoke gate did not pass")
     for item in execution.get("authorized_code_files", []):
         path = _resolve(item["path"])
         if not path.is_file() or _hash(path) != item["sha256"]:

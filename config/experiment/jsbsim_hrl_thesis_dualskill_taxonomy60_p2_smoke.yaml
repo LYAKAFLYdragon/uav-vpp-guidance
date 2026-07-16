@@ -1,0 +1,112 @@
+includes:
+  - ./jsbsim_hrl_thesis_five_state_heldout40_v1.yaml
+
+experiment:
+  name: jsbsim_hrl_thesis_dualskill_taxonomy60_p2_smoke
+  description: >
+    Disposable strict-JSBSim engineering smoke for the frozen Taxonomy60
+    comparison contract. It must never be reported as Heldout60 evidence.
+
+thesis_dualskill_taxonomy60_p2_smoke:
+  source_id: THESIS-DUALSKILL-TAXONOMY60-3OPP-V1-P2-SMOKE
+  formal_source_id: THESIS-DUALSKILL-TAXONOMY60-3OPP-V1
+  expected_episodes: 15
+  expected_episodes_per_opponent: 5
+  disposable_engineering_only: true
+  paper_evidence: false
+  required_opponents: [expert, end_to_end, independent_ppo_vpp]
+  required_methods:
+    - fixed_head_on
+    - fixed_crossing
+    - static_oracle_gate
+    - canonical_ppo
+    - ppo_unbootstrapped_crossing
+  required_task: crossing_feasible
+  stop_rule: >
+    This smoke reads no comparative performance metric. Any failure may only
+    trigger a bounded engineering repair under the frozen no-go contract.
+
+env:
+  strict_backend: true
+
+scenario_manifest:
+  path: ./manifests/thesis_dualskill_taxonomy60_engineering_smoke_v1.yaml
+  source_id: THESIS-DUALSKILL-TAXONOMY60-3OPP-V1-P2-SMOKE
+  payload_sha256: 87a5becad96c95919cdc68b851ed06cb3752bcaf5b46c6814a5f9704e8a458ab
+  task_key_field: task_registry_key
+  expected_task_counts:
+    crossing_feasible: 1
+  active_task_groups: [crossing_feasible]
+  task_labels:
+    crossing_feasible: Disposable Taxonomy60 engineering smoke only
+  use_scenario_seed: true
+
+methods:
+  fixed_head_on:
+    label: Frozen head-on VPP specialist without routing or recovery override
+    agent_type: ppo
+    checkpoint: E:/uav-vpp-guidance-thesis-five-state-v1-assets/canonical_head_on_specialist_best.pt
+    config_path: config/experiment/train_prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp_combat_finetune_mixed_opponent_aware_32k_task_type_headon_weighted.yaml
+    prediction_variant: learned
+  fixed_crossing:
+    label: Frozen crossing VPP specialist without routing or recovery override
+    agent_type: ppo
+    checkpoint: E:/uav-vpp-guidance-thesis-five-state-v1-assets/canonical_crossing_specialist_last.pt
+    config_path: config/experiment/train_prediction_vpp_ppo_crossing_v3.yaml
+    prediction_variant: learned
+    observation_contract:
+      checkpoint_obs_dim: 18
+      include_task_type: false
+    config_overrides:
+      observation.include_task_type: false
+  static_oracle_gate:
+    label: Legacy static task gate baseline, not a dynamic taxonomy oracle
+    agent_type: oracle_task_gate
+    prediction_variant: learned
+    specialists:
+      head_on:
+        specialist_key: head_on
+        specialist_mode_name: head_on_specialist
+        checkpoint: E:/uav-vpp-guidance-thesis-five-state-v1-assets/canonical_head_on_specialist_best.pt
+        config_path: config/experiment/train_prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp_combat_finetune_mixed_opponent_aware_32k_task_type_headon_weighted.yaml
+      crossing_feasible:
+        specialist_key: crossing_feasible
+        specialist_mode_name: crossing_specialist
+        checkpoint: E:/uav-vpp-guidance-thesis-five-state-v1-assets/canonical_crossing_specialist_last.pt
+        config_path: config/experiment/train_prediction_vpp_ppo_crossing_v3.yaml
+  canonical_ppo:
+    label: Frozen canonical PPO with initial-task crossing bootstrap
+    agent_type: hierarchical_commander
+    checkpoint: E:/uav-vpp-guidance-thesis-five-state-v1-assets/canonical_two_skill_commander_best.pt
+    config_path: config/experiment/train_prediction_vpp_hierarchical_commander_ppo_reset075_tactical_basis_3mode_post_merge_recovery_bootstrap.yaml
+    prediction_variant: learned
+    config_overrides:
+      commander.crossing_initial_task_bootstrap.enabled: true
+      commander.crossing_pre_merge_mode_lock.enabled: false
+  ppo_unbootstrapped_crossing:
+    label: Same frozen PPO with initial-task crossing bootstrap disabled
+    agent_type: hierarchical_commander
+    checkpoint: E:/uav-vpp-guidance-thesis-five-state-v1-assets/canonical_two_skill_commander_best.pt
+    config_path: config/experiment/train_prediction_vpp_hierarchical_commander_ppo_reset075_tactical_basis_3mode_post_merge_recovery_bootstrap.yaml
+    prediction_variant: learned
+    config_overrides:
+      commander.crossing_initial_task_bootstrap.enabled: false
+      commander.crossing_pre_merge_mode_lock.enabled: false
+
+run_defaults:
+  backend: jsbsim
+  tasks: [crossing_feasible]
+  main_methods:
+    - fixed_head_on
+    - fixed_crossing
+    - static_oracle_gate
+    - canonical_ppo
+    - ppo_unbootstrapped_crossing
+  ablation_methods:
+    - fixed_head_on
+    - fixed_crossing
+    - static_oracle_gate
+    - canonical_ppo
+    - ppo_unbootstrapped_crossing
+  seeds: [0]
+  n_episodes: 1

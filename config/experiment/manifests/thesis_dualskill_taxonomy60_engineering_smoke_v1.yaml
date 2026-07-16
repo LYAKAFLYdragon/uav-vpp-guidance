@@ -1,0 +1,37 @@
+source_id: THESIS-DUALSKILL-TAXONOMY60-3OPP-V1-P2-SMOKE
+manifest_version: 1
+status: disposable_engineering_smoke_only
+protocol:
+  evaluation_only: true
+  paper_evidence: false
+  training_permitted: false
+  tuning_permitted: false
+  formal_source_id_not_created: THESIS-DUALSKILL-TAXONOMY60-3OPP-V1
+scenarios:
+  - name: taxonomy60_engineering_smoke_crossing_entry
+    own_init:
+      position_m: [0.0, 0.0, 5300.0]
+      velocity_mps: 240.0
+      heading_deg: 0.0
+    target_init:
+      position_m: [3000.0, 0.0, 5300.0]
+      velocity_mps: 220.0
+      heading_deg: 90.0
+    metadata:
+      manifest_family: thesis_dualskill_taxonomy60_engineering_smoke_v1
+      initial_class: crossing_entry
+      taxonomy_geometry_state: transition
+      task_registry_key: crossing_feasible
+      ppo_task_bit: 1
+      crossing_context: true
+      scenario_seed: 89100
+      disposable_engineering_only: true
+      excluded_from_heldout60: true
+      initial_range_m: 3000.0
+      own_speed_mps: 240.0
+      target_speed_mps: 220.0
+      altitude_diff_m: 0.0
+      own_to_target_los_angle_deg: 0.0
+      target_velocity_to_own_los_angle_deg: 90.0
+integrity:
+  payload_sha256: 87a5becad96c95919cdc68b851ed06cb3752bcaf5b46c6814a5f9704e8a458ab

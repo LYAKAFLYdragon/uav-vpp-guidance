@@ -279,7 +279,7 @@ def build_manifest(frozen_git_sha: str) -> Mapping[str, Any]:
                     scenario_index += 1
     return {
         "source_id": SOURCE_ID,
-        "manifest_version": 2,
+        "manifest_version": 3,
         "status": "preregistered_before_evaluation",
         "frozen_source": {
             "generation_git_sha": frozen_git_sha,
@@ -309,6 +309,15 @@ def build_manifest(frozen_git_sha: str) -> Mapping[str, Any]:
             "path": str(NO_GO_ROUTER_PATH.relative_to(REPO_ROOT)).replace("\\", "/"),
             "sha256": _sha256_file(NO_GO_ROUTER_PATH),
             "route_decision_artifact": "taxonomy60_route_decision.json",
+        },
+        "prediction_receipt_contract": {
+            "warmup_fallback_high_level_steps": 9,
+            "first_required_valid_high_level_step": 10,
+            "fallback_after_warmup_permitted": False,
+            "paper_claim_boundary": (
+                "Prediction is not available throughout the first nine high-level "
+                "steps of an episode."
+            ),
         },
         "method_contracts": {
             "fixed_head_on": {

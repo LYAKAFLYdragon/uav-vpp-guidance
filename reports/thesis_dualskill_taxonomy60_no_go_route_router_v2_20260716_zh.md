@@ -19,6 +19,8 @@ v1 的方向正确，但还不足以防止结果后的解释漂移：它没有�
 - 每条均有 scenario/seed/method/opponent、终端语义、requested/effective mode、guard reason、VPP、guidance、AoA、`n_z` command/actual、clipping、prediction receipt。
 - manifest、资产、config 与统计代码的哈希均可由独立 verifier 复算；所有遥测为有限值。
 
+冻结 predicted-target 接口的前 9 个 high-level steps 是 history warm-up，必须记录为 `prediction_fallback`，但不属于 backend 或 checkpoint fallback。第 10 个 step 起必须为 valid prediction；任何此后的 prediction fallback 使 record 无效。论文只能称预测接口在 warm-up 后可用，不能称其在 episode 全程可用。
+
 若任一条件失败，整套正式 universe 为 `implementation_invalid`，不可从 partial records 提取性能结论。只允许修复可由 disposable smoke 复现且有测试覆盖的工程根因；最多两个 smoke 修复周期。若正式 Source 已启动且完整记录无效，可执行一次科学变量完全不变的 `-R1`；R1 仍无效则退回 **Taxonomy30 + Calibration v2 的双对手写作路线**，不形成虚假的三对手结论。
 
 ## 2. 证据优先级与“重复”的可验收定义

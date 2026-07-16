@@ -12,8 +12,8 @@
 | --- | --- |
 | Manifest | `config/experiment/manifests/thesis_dualskill_taxonomy60_v1.yaml` |
 | Source ID | `THESIS-DUALSKILL-TAXONOMY60-3OPP-V1` |
-| 生成 Git SHA | `61180c9d53918d5e83370ae8ec6db30ce192c6db` |
-| Manifest version / payload SHA-256 | `2` / `664ef7880c7b95a336848972d91b973904c0c6ea2516516e087940351c4d8630` |
+| 生成 Git SHA | `01051e1` |
+| Manifest version / payload SHA-256 | `3` / `b67d892d44b1b070076a1e1bee67cd98dddd902c0a7ae142977cfe430f2cb8b0` |
 | 场景与计划 records | `60` 场景；`60 x 3 opponents x 5 methods = 900` episodes |
 | 几何场景层 | Advantage、Head-on、Disadvantage、Neutral 四象限各 12；Crossing-entry 交战上下文 12 |
 | 高度与镜像 | own-below/co-altitude/own-above 各 20；negative/positive 各 30 |
@@ -31,7 +31,7 @@
 ## 已冻结的解释边界
 
 - M2 是 legacy static task gate baseline，不是动态五态势 Oracle：仅 crossing-entry 选 frozen crossing，其余四类选 frozen head-on。
-- resolved-config 审计发现 canonical 配置没有启用 pre-merge lock；历史 RQ3 的 `crossing_initial_task_bootstrap.enabled: false` 也未被 policy 消费。已以默认行为不变的最小补丁使该字段生效，并为其补齐 per-step telemetry 与回归测试；manifest 以 version 2 重冻。
+- resolved-config 审计发现 canonical 配置没有启用 pre-merge lock；历史 RQ3 的 `crossing_initial_task_bootstrap.enabled: false` 也未被 policy 消费。已以默认行为不变的最小补丁使该字段生效，并为其补齐 per-step telemetry 与回归测试；manifest 初次以 version 2 重冻。P2 又验证了冻结预测器的 9-step history warm-up，故 version 3 追加 receipt boundary：第 10 step 起不得 fallback。
 - 更正后 M3/M4 使用相同 canonical PPO checkpoint；仅 M3 启用 canonical crossing initial-task bootstrap，M4 显式关闭它；两者均不启用 pre-merge lock，并保留 recovery guard。
 - 若 guard 改写 M3/M4 的 requested mode，该 episode 只可解释为 deployed mixed-interface evidence，不能归因于 PPO routing。
 - expert 与 end-to-end 是跨对手重复的两个主证据；independent PPO/VPP 只能作 provenance-limited 支持或反例。

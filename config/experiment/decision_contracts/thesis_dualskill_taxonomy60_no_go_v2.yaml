@@ -10,6 +10,15 @@ formal_validity:
   expected_episode_records: 900
   required_backend: jsbsim
   backend_fallback_permitted: false
+  prediction_receipt_contract:
+    warmup_fallback_high_level_steps: 9
+    first_required_valid_high_level_step: 10
+    fallback_after_warmup_permitted: false
+    interpretation: >
+      The frozen predicted-target interface is in deterministic history warm-up
+      for the first nine high-level steps. It must be recorded, is not backend
+      or checkpoint fallback, and cannot support a claim that prediction is
+      available throughout an episode.
   required_per_episode_fields:
     - scenario_id
     - scenario_seed
@@ -28,9 +37,11 @@ formal_validity:
     - clipping
     - prediction_receipt
   invalid_record_rule: >
-    Any missing required field, non-JSBSim backend, backend fallback, non-finite
-    telemetry, or unverifiable asset/config/manifest hash invalidates the whole
-    formal universe. Partial records must not be analysed as performance data.
+    Any missing required field, non-JSBSim backend, backend fallback, checkpoint
+    substitution, non-finite telemetry, prediction fallback after the frozen
+    nine-step warm-up, or unverifiable asset/config/manifest hash invalidates
+    the whole formal universe. Partial records must not be analysed as
+    performance data.
 
 evidence_scope:
   primary_opponents: [expert, end_to_end]
@@ -46,6 +57,7 @@ evidence_scope:
     minimum_complete_scenarios_per_opponent: 4
     audit_requirements:
       - no_fallback_or_checkpoint_substitution
+      - frozen_prediction_warmup_receipt_checked
       - terminal_semantics_checked
       - early_opponent_trajectory_divergence_checked
       - common_execution_chain_checked

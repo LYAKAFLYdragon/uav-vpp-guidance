@@ -99,7 +99,7 @@
 
 - [ ] 每个 `state × opponent × method` 报告 `N_total/N_resolved`、win/loss/draw、Wilson CI、terminal reason 与 ego/target crash-OOB。
 - [ ] 同场景同 seed 计算 M3 相对 M0/M1/M2/M4 的 paired delta；不同 opponent 不池化。
-- [ ] 分层报告 phase、攻击区、range/range-rate、AA/ATA、能量、高度、VPP、AoA、`n_z` command/actual、clipping/fallback。
+- [ ] 分层报告 phase、攻击区、range/range-rate、AA/ATA、能量、高度、VPP、AoA、`n_z` command/actual、clipping/fallback；predicted-target 的前 9 个 high-level-step warm-up fallback 必须单列，之后任何 fallback 均为 formal invalid。
 - [ ] `-0.05` 只作为 legacy preservation 的实用门，不改写为统计显著优越。
 - [ ] target crash/OOB 是合法胜利，但不是飞控安全认证；aggregate win rate 不是 kill rate。
 - [ ] Source 完成即冻结：只允许 verifier、只读分析、图表与论文写作；不重跑子集、不换 checkpoint、不追加场景。
@@ -129,3 +129,4 @@
 
 - [x] **P0 development preflight：** 资产哈希、解释器、容量、空输出根与现有 Taxonomy30 测试已核验通过；详情见 [P0 preflight record](E:/uav-vpp-guidance-five-state-heldout-envelope-v1/reports/thesis_dualskill_taxonomy60_p0_preflight_20260716.md)。P1 manifest 开发获准，P2 smoke 与正式 Source 仍未授权。
 - [x] **P1 Heldout60 manifest freeze：** 60 个场景、49 个 Git-replayed 历史来源与 `0` full-state intersection 已冻结；resolved-config 审计后以 manifest version 2 更正为 canonical bootstrap vs no-bootstrap，no-go contract 和五方法组件合同均已重哈希。详情见 [P1 manifest freeze record](E:/uav-vpp-guidance-five-state-heldout-envelope-v1/reports/thesis_dualskill_taxonomy60_p1_manifest_freeze_20260716_zh.md)。P2 仅获准开发并执行 15 条 disposable engineering smoke；900 条正式 Source 仍未授权。
+- [x] **P2 strict-JSBSim engineering smoke：** R0 缺少显式 JSBSim root，已作为无 episode 的工程 no-go 归档；R1 在冻结 data hash 下完成 `15/15` strict-JSBSim records、无 backend fallback、五方法与三对手 telemetry 均可读。预测器存在固定的前 9 个 high-level-step warm-up fallback，故 P3 必须将该语义边界写入正式 verifier；详情见 [P2 smoke record](E:/uav-vpp-guidance-five-state-heldout-envelope-v1/reports/thesis_dualskill_taxonomy60_p2_strict_jsbsim_smoke_20260716_zh.md)。900 条正式 Source 仍未授权。

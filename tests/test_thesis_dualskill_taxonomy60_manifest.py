@@ -71,7 +71,7 @@ def test_builder_generates_balanced_sixty_scenarios_and_protocol():
         "fast_closure": 30,
     }
     assert manifest["decision_contract"]["id"] == "THESIS-DUALSKILL-TAXONOMY60-NO-GO-V2"
-    assert manifest["manifest_version"] == 2
+    assert manifest["manifest_version"] == 3
     assert manifest["protocol"]["methods"] == [
         "fixed_head_on",
         "fixed_crossing",
@@ -97,6 +97,15 @@ def test_builder_generates_balanced_sixty_scenarios_and_protocol():
         "crossing_initial_task_bootstrap": False,
         "crossing_pre_merge_mode_lock": False,
         "deterministic_recovery_guard": True,
+    }
+    assert manifest["prediction_receipt_contract"] == {
+        "warmup_fallback_high_level_steps": 9,
+        "first_required_valid_high_level_step": 10,
+        "fallback_after_warmup_permitted": False,
+        "paper_claim_boundary": (
+            "Prediction is not available throughout the first nine high-level "
+            "steps of an episode."
+        ),
     }
 
 

@@ -1,0 +1,21 @@
+source_id: THESIS-FIVE-STATE-LOCAL-ACTION-AUTHORITY-MAP-V2
+status: preregistered_design_not_authorized
+authorization:
+  execution_permitted: false
+  training_permitted: false
+  tuning_permitted: false
+  reward_change_permitted: false
+  candidate_policy_loading_permitted: false
+  high_level_ppo_training_permitted: false
+  four_skill_training_permitted: false
+  combat_finetune_permitted: false
+inputs:
+  cohort_manifest: config/experiment/manifests/thesis_local_action_authority_map_v2_cohort12.yaml
+  cohort_manifest_sha256: add3c0832ff99f5722ea35321714dda170cf8917a0e241e71ae4d4b101d1d66f
+methods: [reference, longitudinal_plus, longitudinal_minus, lateral_plus, lateral_minus, vertical_plus, vertical_minus]
+opponents: [expert, end_to_end, independent_ppo_vpp]
+replay_contract: {historical_hash_match: required, continuous_reset_replay_only: true, snapshot_restore: prohibited, future_state_injection: prohibited, reset_at_handoff: prohibited, strict_backend: jsbsim}
+pulse: {normalized_delta: 0.08, pulse_steps: 3, local_window_steps: 20, action_clip: [-1.0, 1.0]}
+metrics: [aa_deg, ata_deg, range_m, range_rate_mps, specific_energy_height_m, altitude_m]
+gates: {expected_records: 84, min_pairs_per_opponent: 2, min_abs_median_response: 0.01, min_sign_fraction: 0.75, opponents_required: 2}
+outputs: {root: E:/uav-vpp-guidance-five-state-heldout-envelope-v1-results/local_action_authority_map_v2, paper_safe: false}

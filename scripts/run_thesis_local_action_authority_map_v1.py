@@ -202,11 +202,15 @@ def main() -> int:
         print(json.dumps(preflight, ensure_ascii=False, indent=2)); return 0
     if args.smoke:
         if config["authorization"]["execution_permitted"] is not False: raise RuntimeError("local-authority smoke requires design config")
-        selected = [next(entry for entry in cohort["entries"] if entry["opponent"] == opponent) for opponent in config["opponents"]]
+        selected = [
+            next(entry for entry in cohort["entries"] if entry["opponent"] == opponent and entry["historical_source_kind"] == source_kind)
+            for source_kind in ("v15", "v2")
+            for opponent in config["opponents"]
+        ]
         output = args.output or ROOT / "outputs/diagnostics/local_action_authority_map_v1_smoke"
         if not output.is_absolute(): output = ROOT / output
         if output.exists(): raise RuntimeError("local-authority smoke output exists")
-        output.mkdir(parents=True); gate = _run(config, cohort, output, selected, ("reference",)); passed = gate["records"] == 3 and all(row["replay_matched"] and row["window_complete"] for row in [json.loads(path.read_text(encoding="utf-8"))["record"] for path in (output / "records" / "reference").rglob("*.json")]); _write(output / "smoke_gate.json", {"source_id_under_test": SOURCE_ID, "records": 3, "passes": passed}); print(json.dumps({"output": str(output), "passes": passed}, ensure_ascii=False)); return 0
+        output.mkdir(parents=True); gate = _run(config, cohort, output, selected, ("reference",)); passed = gate["records"] == 6 and all(row["replay_matched"] and row["window_complete"] for row in [json.loads(path.read_text(encoding="utf-8"))["record"] for path in (output / "records" / "reference").rglob("*.json")]); _write(output / "smoke_gate.json", {"source_id_under_test": SOURCE_ID, "records": 6, "passes": passed}); print(json.dumps({"output": str(output), "passes": passed}, ensure_ascii=False)); return 0
     _authorize(config, preflight["planned_records"])
     if subprocess.check_output(["git", "status", "--porcelain"], cwd=ROOT, text=True).strip(): raise RuntimeError("local-authority requires clean worktree")
     output = _resolve(config["outputs"]["root"]); output.mkdir(parents=True); _write(output / "authorized_config.json", {"config": config, "config_sha256": _hash(args.config)}); gate = _run(config, cohort, output, cohort["entries"], METHODS); _write(output / "run_manifest.json", {"source_id": SOURCE_ID, "records": preflight["planned_records"], "git_sha": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip(), "training": "prohibited"}); print(json.dumps({"source_id": SOURCE_ID, **gate}, ensure_ascii=False, indent=2)); return 0

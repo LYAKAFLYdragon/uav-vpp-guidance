@@ -391,6 +391,8 @@ primary formal methods 为：
 
 ## 12. 当前状态
 
+- [x] **V1--V22 尝试的最终状态以 [尝试账本](E:/uav-vpp-guidance-five-state-heldout-envelope-v1/reports/thesis_five_state_v1_v22_attempt_ledger_20260716_zh.md) 为唯一索引。** 账本区分 `valid_positive_mechanism`、`valid_negative_mechanism` 与 `implementation_invalid`，并给出每轮的 Source ID、运行/配置入口、结果位置、复现边界和后续启示。
+- [x] 下列涉及 V1--V22 的早期“design-only / 待授权”叙述只保留为时间线，不代表最终状态；若与账本冲突，一律以账本和其链接的最终结果归档为准。
 - [x] 研究目标、五态势 taxonomy、4 skills、7 profiles、预测器边界、三 opponent 计划、时序 encoder 方案、训练阶段、数据切分和成功门槛已通过访谈冻结。
 - [x] 已有 Taxonomy30 诊断证据支持“不应继续对双技能 canonical family 做 routing patch”，但它不构成新系统的训练证据。
 - [x] P0 的 clean worktree、[asset manifest](E:/uav-vpp-guidance-thesis-five-state-v1/reports/thesis_five_state_shared_intent_v1_asset_manifest.yaml)、[容量策略](E:/uav-vpp-guidance-thesis-five-state-v1/config/experiment/thesis_five_state_shared_intent_v1_output_retention.yaml) 和 [preflight 记录](E:/uav-vpp-guidance-thesis-five-state-v1/reports/thesis_five_state_shared_intent_v1_p0_preflight_20260713.json) 已完成；六个 baseline/predictor/opponent assets 的 SHA/shape 均通过。

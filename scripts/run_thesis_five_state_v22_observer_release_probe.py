@@ -111,6 +111,11 @@ def _require_execution_authorization(config: Mapping[str, Any], expected_records
 
 
 class Episode(V22ObserverReleaseMixin, v17.PathContextEpisode):
+    def _observe(self, observation: Mapping[str, Any]) -> None:
+        """Record each observer receipt immediately after the base observation update."""
+        super()._observe(observation)
+        self._v22_after_observation()
+
     def run(self, scenario: Mapping[str, Any], seed: int) -> dict[str, Any]:
         self._v22_reset_observer_protocol()
         result = super().run(scenario, seed)

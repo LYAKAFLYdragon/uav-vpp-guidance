@@ -5,6 +5,8 @@
 **取代关系：** 本文是 [Five-State v2 长期蓝图](E:/uav-vpp-guidance-five-state-heldout-envelope-v1/reports/thesis_five_state_v2_evidence_closure_checklist_20260716_zh.md) 的执行收缩版。长期蓝图保留为研究备忘；不得按其 P0--P7 自动启动训练。  
 **目标：** 用一套无训练、可复核的证据包，闭合当前原双技能层级 VPP 硕士论文的场景、对手和消融三项缺口。
 
+**No-Go 路线：** 正式运行发生工程 no-go 或得到有效混合/负结果时，必须按 [Taxonomy60 No-Go 路线决策器](E:/uav-vpp-guidance-five-state-heldout-envelope-v1/reports/thesis_dualskill_taxonomy60_no_go_route_router_v1_20260716_zh.md) 切换；不得根据结果临时发明新的训练或调参任务。
+
 ## 1. 重新定义成功
 
 本方案不以“所有场景、所有对手均获胜”为目标。成功是：
@@ -19,8 +21,8 @@
 
 | 类别 | 数量上限 | 规则 |
 | --- | ---: | --- |
-| 工程 smoke / unit test | 不限 | 不占 Source ID，不产生性能结论，必须在正式运行前完成。 |
-| 论文证据闭合 Source | **1** | 仅 `THESIS-DUALSKILL-TAXONOMY60-3OPP-V1`；无训练、无调参、无新 policy。 |
+| 工程 smoke / unit test | 最多 2 个根因修复周期 | 不占 Source ID，不产生性能结论；两次后转入独立审查与现有证据写作路线。 |
+| 论文证据闭合 Source | **1 个有效科学 universe + 至多 1 个技术 R1** | 仅 `THESIS-DUALSKILL-TAXONOMY60-3OPP-V1`；R1 只能修复 smoke 已覆盖的工程根因，科学变量完全不变。 |
 | 可选新接口 Source | **0（默认）** | 只有主 Source 完成并经独立决策备忘录批准，才可开放 **1** 个。 |
 | 同一接口 family 后续版本 | **0** | 合法负结果后禁止通过 scale、reward、窗口、profile、场景或 action variant 另起 V2/V3。 |
 
@@ -73,7 +75,7 @@
 - [ ] M4 不关闭 recovery guard；guard 的作用由 requested/effective mode 和 guard telemetry 解释，而非用无保护策略冒险比较。
 - [ ] 每个 PPO macro-step 记录 requested/effective mode、bootstrap/lock reason、guard reason、mode fraction、switch count。
 
-**消融问题的完成判定：** M0--M4 的配对结果和 mode/guard telemetry 完整后，双技能系统的所有真实模块都有可解释对照。该结论不延伸到未训练的“四技能 + profile + encoder”架构。
+**消融问题的完成判定：** M0--M4 为两个 specialist、静态 gate、PPO routing 与 bootstrap/lock 提供可解释对照；recovery guard 仅有机制透明度，不声称因果性能增益，具体边界见 No-Go 路线决策器。该结论不延伸到未训练的“四技能 + profile + encoder”架构。
 
 ### 3.3 对手 Capability Card v3
 
@@ -101,6 +103,7 @@
 - [ ] `-0.05` 只作为 legacy preservation 的实用门，不改写为统计显著优越。
 - [ ] target crash/OOB 是合法胜利，但不是飞控安全认证；aggregate win rate 不是 kill rate。
 - [ ] Source 完成即冻结：只允许 verifier、只读分析、图表与论文写作；不重跑子集、不换 checkpoint、不追加场景。
+- [ ] 任一 no-go 只能按 No-Go 路线决策器进入预注册的“工程恢复 / 论文边界 / 对手条件化 / 可选新接口”之一；不得在结果后新增第五条路线。
 
 ## 6. 可选新算法线：默认不启动
 

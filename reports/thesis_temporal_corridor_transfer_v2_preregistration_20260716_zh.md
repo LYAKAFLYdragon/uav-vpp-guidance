@@ -22,7 +22,7 @@ engineering smoke。它对 expert、end-to-end、independent PPO/VPP 分别使�
 中的同一冻结 reset：
 
 1. 实际调用 `build_record_only_env` 构造 strict-JSBSim 环境。
-2. reset 后同步冻结预测器，并检查预测目标三维位置有限且无 fallback。
+2. 完整执行冻结 V16 run-in 填满预测历史；随后同步冻结预测器，并检查预测目标三维位置有限且无 fallback。
 3. 使用冻结 fixed head-on specialist 走一步，读取 VPP world offset、guidance command 与
    actual `n_z` 响应。
 4. 任一对手出现 backend/prediction fallback、非有限 observation/action/telemetry 或缺字段，

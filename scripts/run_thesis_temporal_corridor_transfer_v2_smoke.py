@@ -21,6 +21,7 @@ import run_thesis_temporal_corridor_transfer_v2 as runner
 from uav_vpp_guidance.envs.observation import compute_relative_geometry
 from uav_vpp_guidance.evaluation.thesis_temporal_corridor_transfer_v2 import OPPONENTS
 from uav_vpp_guidance.training import thesis_neutral_postmerge_reentry_recovery_pilot as engine
+from uav_vpp_guidance.training.thesis_shared_skill_geometry import FrozenP3Encoder
 
 
 SMOKE_ID = "ENGINEERING-TEMPORAL-CORRIDOR-TRANSFER-V2-BUILD-SMOKE-NOT-A-SOURCE-ID"
@@ -40,36 +41,50 @@ def _finite_vector(value: Any, name: str) -> list[float]:
     return vector.tolist()
 
 
-def _prepare_prediction(env: Any) -> list[float]:
-    own, target = env._get_current_states(noisy=True)
-    target = env._task_get_target_state(target, own)
-    own, target = env._task_pre_step(own, target)
-    if not env._sync_prediction_buffer_for_current_state(own, target, compute_relative_geometry(own, target)):
-        raise TemporalCorridorTransferV2SmokeError("smoke predictor synchronization failed")
-    predicted, _, info = env.trajectory_predictor_adapter.predict(target)
-    vector = _finite_vector(predicted, "predicted_target_position")
-    if bool(info.get("fallback", False)):
-        raise TemporalCorridorTransferV2SmokeError("smoke prediction fallback")
-    return vector
+class SmokeEpisode(runner.Episode):
+    """Record the V16 run-in receipts before making the predictor-ready assertion."""
+
+    def run(self, *args: Any, **kwargs: Any) -> dict[str, Any]:
+        self.smoke_reference_trace: list[Mapping[str, Any]] = []
+        return super().run(*args, **kwargs)
+
+    def _reference_step(self):
+        info, done = super()._reference_step()
+        self.smoke_reference_trace.append(dict(info))
+        return info, done
 
 
 def _record_one(config: Mapping[str, Any], registry: Mapping[str, Any], scenario: Mapping[str, Any], opponent: str) -> dict[str, Any]:
     env = runner.build_record_only_env(config, registry, opponent)
+    policy = engine._specialist(registry, "frozen_fixed_head_on")
+    encoder = FrozenP3Encoder(
+        Path(config["inputs"]["frozen_p3_encoder"]),
+        config["inputs"]["frozen_p3_encoder_sha256"],
+    )
+    episode = SmokeEpisode(env, policy, encoder, config, runner.v16._compiler(config))
     try:
         if env._backend != "jsbsim":
             raise TemporalCorridorTransferV2SmokeError("smoke did not construct strict JSBSim")
-        observation = env.reset(scenario=copy.deepcopy(dict(scenario)), seed=int(scenario["metadata"]["scenario_seed"]))
+        result = episode.run(
+            copy.deepcopy(dict(scenario)),
+            int(scenario["metadata"]["scenario_seed"]),
+            runner.REFERENCE_METHOD,
+            None,
+        )
+        observation = episode.observation
+        if not isinstance(observation, Mapping):
+            raise TemporalCorridorTransferV2SmokeError("smoke lost the final observation")
         vector = np.asarray(observation["observation_vector"], dtype=np.float64).reshape(-1)
         if vector.size == 0 or not np.isfinite(vector).all():
             raise TemporalCorridorTransferV2SmokeError("smoke observation is invalid")
-        predicted = _prepare_prediction(env)
-        policy = engine._specialist(registry, "frozen_fixed_head_on")
-        action = np.asarray(policy.get_deterministic_action(observation["observation_vector"]), dtype=np.float32).reshape(-1)
-        if action.shape != (3,) or not np.isfinite(action).all() or np.any(np.abs(action) > 1.0 + 1e-6):
-            raise TemporalCorridorTransferV2SmokeError("smoke specialist action is invalid")
-        _next, _reward, _terminated, _truncated, info = env.step(action)
-        if bool(info.get("backend_fallback_occurred", False)) or info.get("prediction_fallback") is True:
-            raise TemporalCorridorTransferV2SmokeError("smoke runtime fallback")
+        if not episode.smoke_reference_trace:
+            raise TemporalCorridorTransferV2SmokeError("smoke did not execute the V16 run-in")
+        if any(bool(info.get("backend_fallback_occurred", False)) for info in episode.smoke_reference_trace):
+            raise TemporalCorridorTransferV2SmokeError("smoke backend fallback")
+        info = episode.smoke_reference_trace[-1]
+        if info.get("prediction_valid") is not True or info.get("prediction_fallback") is True:
+            raise TemporalCorridorTransferV2SmokeError("smoke predictor was not ready after V16 run-in")
+        _own, _target, predicted = episode._context()
         guidance = info.get("guidance_command")
         if not isinstance(guidance, Mapping):
             raise TemporalCorridorTransferV2SmokeError("smoke guidance command is missing")
@@ -88,7 +103,9 @@ def _record_one(config: Mapping[str, Any], registry: Mapping[str, Any], scenario
             "backend": env._backend,
             "observation_dim": int(vector.size),
             "predicted_target_position_neu": predicted,
-            "specialist_action": action.tolist(),
+            "run_in_steps": len(episode.smoke_reference_trace),
+            "handoff_reached": bool(result["handoff_reached"]),
+            "phase_trace_steps": len(result["phase_trace"]),
             "vpp_world_offset_m": _finite_vector(info.get("vp_world_offset"), "vp_world_offset"),
             "guidance_command": command,
             "actual_nz_g": float(own_state["nz_g"]),
@@ -97,7 +114,7 @@ def _record_one(config: Mapping[str, Any], registry: Mapping[str, Any], scenario
             "telemetry_passed": True,
         }
     finally:
-        env.close()
+        episode.close()
 
 
 def run(config_path: Path, output: Path) -> dict[str, Any]:

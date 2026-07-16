@@ -6,6 +6,7 @@ import math
 from pathlib import Path
 import subprocess
 import sys
+import copy
 
 import pytest
 import yaml
@@ -13,6 +14,14 @@ import yaml
 
 ROOT = Path(__file__).resolve().parent.parent
 BUILDER_PATH = ROOT / "scripts" / "build_thesis_dualskill_taxonomy60_manifest.py"
+MANIFEST_PATH = ROOT / "config" / "experiment" / "manifests" / "thesis_dualskill_taxonomy60_v1.yaml"
+DECISION_CONTRACT_PATH = (
+    ROOT
+    / "config"
+    / "experiment"
+    / "decision_contracts"
+    / "thesis_dualskill_taxonomy60_no_go_v2.yaml"
+)
 
 
 def _load_builder():
@@ -60,6 +69,14 @@ def test_builder_generates_balanced_sixty_scenarios_and_protocol():
     assert Counter(s["metadata"]["geometry_package"] for s in scenarios) == {
         "wide_balanced": 30,
         "fast_closure": 30,
+    }
+    assert manifest["decision_contract"]["id"] == "THESIS-DUALSKILL-TAXONOMY60-NO-GO-V2"
+    assert manifest["method_contracts"]["static_oracle_gate"]["mapping"] == {
+        "crossing_entry": "frozen_crossing_specialist",
+        "advantage": "frozen_head_on_specialist",
+        "head_on": "frozen_head_on_specialist",
+        "disadvantage": "frozen_head_on_specialist",
+        "neutral": "frozen_head_on_specialist",
     }
 
 
@@ -151,3 +168,32 @@ def test_cli_writes_a_manifest_from_a_clean_python_process(tmp_path):
     frozen = yaml.safe_load(output.read_text(encoding="utf-8"))
     assert frozen["source_id"] == "THESIS-DUALSKILL-TAXONOMY60-3OPP-V1"
     assert len(frozen["scenarios"]) == 60
+
+
+def test_frozen_manifest_matches_builder_and_records_disjoint_source_files():
+    builder = _load_builder()
+    frozen = yaml.safe_load(MANIFEST_PATH.read_text(encoding="utf-8"))
+    source_sha = frozen["frozen_source"]["generation_git_sha"]
+    expected = dict(builder.build_manifest(source_sha))
+
+    assert frozen["scenarios"] == expected["scenarios"]
+    assert frozen["protocol"] == expected["protocol"]
+    assert frozen["disjointness"]["intersection_count"] == 0
+    assert len(frozen["disjointness"]["source_files"]) >= 40
+    payload = copy.deepcopy(frozen)
+    expected_hash = payload["integrity"].pop("payload_sha256")
+    assert builder._payload_sha256(payload) == expected_hash
+
+
+def test_no_go_contract_has_primary_opponent_gate_and_guard_confound_route():
+    contract = yaml.safe_load(DECISION_CONTRACT_PATH.read_text(encoding="utf-8"))
+    assert contract["applies_to_source"] == "THESIS-DUALSKILL-TAXONOMY60-3OPP-V1"
+    assert contract["evidence_scope"]["primary_opponents"] == ["expert", "end_to_end"]
+    assert contract["evidence_scope"]["supporting_opponents"] == ["independent_ppo_vpp"]
+    assert contract["classification"]["mixed_interface_guard_bound"]["trigger"]
+    assert contract["allowed_routes"]["paper_closure"]["prohibited"] == [
+        "training",
+        "tuning",
+        "scenario_replacement",
+        "result_driven_rerun",
+    ]

@@ -5,7 +5,7 @@
 **取代关系：** 本文是 [Five-State v2 长期蓝图](E:/uav-vpp-guidance-five-state-heldout-envelope-v1/reports/thesis_five_state_v2_evidence_closure_checklist_20260716_zh.md) 的执行收缩版。长期蓝图保留为研究备忘；不得按其 P0--P7 自动启动训练。  
 **目标：** 用一套无训练、可复核的证据包，闭合当前原双技能层级 VPP 硕士论文的场景、对手和消融三项缺口。
 
-**No-Go 路线：** 正式运行发生工程 no-go 或得到有效混合/负结果时，必须按 [Taxonomy60 No-Go 路线决策器](E:/uav-vpp-guidance-five-state-heldout-envelope-v1/reports/thesis_dualskill_taxonomy60_no_go_route_router_v1_20260716_zh.md) 切换；不得根据结果临时发明新的训练或调参任务。
+**No-Go 路线：** 正式运行发生工程 no-go 或得到有效混合/负结果时，必须按 [Taxonomy60 No-Go 路线决策器 v2](E:/uav-vpp-guidance-five-state-heldout-envelope-v1/reports/thesis_dualskill_taxonomy60_no_go_route_router_v2_20260716_zh.md) 及其机器可读合同切换；不得根据结果临时发明新的训练或调参任务。
 
 ## 1. 重新定义成功
 
@@ -44,7 +44,7 @@
 | 性质 | evaluation-only，严格 JSBSim，无训练、无 reward/VPP/guidance/PID 修改 |
 | 目标系统 | 当前冻结 canonical dual-skill hierarchical VPP；不伪装为五技能系统 |
 | 对手 | expert、end-to-end、independent PPO/VPP；严格分开报告 |
-| 场景 | 60 个全新、不重合的五态势场景 |
+| 场景 | 60 个全新、不重合的场景层：四个相对几何象限加 crossing-entry 交战上下文 |
 | 方法 | M0--M4 五个冻结方法 |
 | 规模 | `60 × 3 × 5 = 900` 条 episode |
 | 结果后动作 | 仅只读分析、论文写作与 artifact bundle；禁止因结果重训或追加 Source |
@@ -66,7 +66,7 @@
 | --- | --- | --- |
 | M0 `fixed_head_on` | 仅迎头 specialist；无 routing/Oracle/recovery override | 迎头技能的跨态势边界 |
 | M1 `fixed_crossing` | 仅交叉 specialist；已验证 adapter；无 routing/override | 交叉技能的跨态势边界 |
-| M2 `static_oracle_gate` | 旧静态 task gate；非五态势最优 Oracle | 静态标签映射的作用与局限 |
+| M2 `static_oracle_gate` | 旧静态 task gate：仅 crossing-entry 选 crossing，其余四类选 head-on；非动态 Oracle | 静态标签映射的作用与局限 |
 | M3 `canonical_ppo` | PPO + canonical bootstrap/lock + deterministic recovery guard | 当前部署系统的实际表现 |
 | M4 `ppo_unlocked_crossing` | 与 M3 同 checkpoint；仅关 crossing bootstrap/pre-merge lock；保留 recovery guard | crossing 首拍是否来自 task-aware PPO |
 
@@ -75,7 +75,7 @@
 - [ ] M4 不关闭 recovery guard；guard 的作用由 requested/effective mode 和 guard telemetry 解释，而非用无保护策略冒险比较。
 - [ ] 每个 PPO macro-step 记录 requested/effective mode、bootstrap/lock reason、guard reason、mode fraction、switch count。
 
-**消融问题的完成判定：** M0--M4 为两个 specialist、静态 gate、PPO routing 与 bootstrap/lock 提供可解释对照；recovery guard 仅有机制透明度，不声称因果性能增益，具体边界见 No-Go 路线决策器。该结论不延伸到未训练的“四技能 + profile + encoder”架构。
+**消融问题的完成判定：** M0--M4 为两个 specialist、静态 gate、PPO routing 与 bootstrap/lock 提供可解释对照；若 M3/M4 的 recovery guard 改写 requested mode，则该 episode 只可作为混合接口证据，不能归因于 PPO routing。独立 PPO/VPP 仅为 provenance-limited 支持对手，不能代替 expert 与 end-to-end 满足跨对手重复门。具体边界见 No-Go 路线决策器 v2。该结论不延伸到未训练的“四技能 + profile + encoder”架构。
 
 ### 3.3 对手 Capability Card v3
 
@@ -103,7 +103,7 @@
 - [ ] `-0.05` 只作为 legacy preservation 的实用门，不改写为统计显著优越。
 - [ ] target crash/OOB 是合法胜利，但不是飞控安全认证；aggregate win rate 不是 kill rate。
 - [ ] Source 完成即冻结：只允许 verifier、只读分析、图表与论文写作；不重跑子集、不换 checkpoint、不追加场景。
-- [ ] 任一 no-go 只能按 No-Go 路线决策器进入预注册的“工程恢复 / 论文边界 / 对手条件化 / 可选新接口”之一；不得在结果后新增第五条路线。
+- [ ] 任一 no-go 只能按 No-Go 路线决策器 v2 进入预注册的“工程恢复 / Taxonomy30 双对手收束 / Taxonomy60 论文边界 / 对手条件化 / 可选新接口 memo”之一；不得在结果后新增第五条路线。
 
 ## 6. 可选新算法线：默认不启动
 

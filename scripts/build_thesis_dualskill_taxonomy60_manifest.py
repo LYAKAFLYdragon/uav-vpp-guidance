@@ -25,6 +25,14 @@ from uav_vpp_guidance.evaluation.engagement_geometry_taxonomy import (
 SOURCE_ID = "THESIS-DUALSKILL-TAXONOMY60-3OPP-V1"
 TAXONOMY_VERSION = "v1"
 TRANSITION_BAND_DEG = (85.0, 95.0)
+NO_GO_ROUTER_ID = "THESIS-DUALSKILL-TAXONOMY60-NO-GO-V2"
+NO_GO_ROUTER_PATH = (
+    REPO_ROOT
+    / "config"
+    / "experiment"
+    / "decision_contracts"
+    / "thesis_dualskill_taxonomy60_no_go_v2.yaml"
+)
 
 CLASS_ANGLE_TARGETS_DEG = {
     "advantage": (20.0, 160.0),
@@ -282,6 +290,46 @@ def build_manifest(frozen_git_sha: str) -> Mapping[str, Any]:
                 "No training, tuning, scenario replacement, seed replacement, reward change, "
                 "VPP change, guidance change, PID change, or result-driven rerun is permitted."
             ),
+        },
+        "decision_contract": {
+            "id": NO_GO_ROUTER_ID,
+            "path": str(NO_GO_ROUTER_PATH.relative_to(REPO_ROOT)).replace("\\", "/"),
+            "sha256": _sha256_file(NO_GO_ROUTER_PATH),
+            "route_decision_artifact": "taxonomy60_route_decision.json",
+        },
+        "method_contracts": {
+            "fixed_head_on": {
+                "requested_policy": "frozen_head_on_specialist",
+                "deterministic_recovery_guard": False,
+            },
+            "fixed_crossing": {
+                "requested_policy": "frozen_crossing_specialist",
+                "deterministic_recovery_guard": False,
+                "observation_adapter": "required_exact_feature_name_match",
+            },
+            "static_oracle_gate": {
+                "role": "legacy_static_task_gate_baseline_not_dynamic_oracle",
+                "mapping": {
+                    "crossing_entry": "frozen_crossing_specialist",
+                    "advantage": "frozen_head_on_specialist",
+                    "head_on": "frozen_head_on_specialist",
+                    "disadvantage": "frozen_head_on_specialist",
+                    "neutral": "frozen_head_on_specialist",
+                },
+                "deterministic_recovery_guard": False,
+            },
+            "canonical_ppo": {
+                "ppo_checkpoint": "canonical_frozen",
+                "crossing_bootstrap": True,
+                "pre_merge_lock": True,
+                "deterministic_recovery_guard": True,
+            },
+            "ppo_unlocked_crossing": {
+                "ppo_checkpoint": "canonical_frozen",
+                "crossing_bootstrap": False,
+                "pre_merge_lock": False,
+                "deterministic_recovery_guard": True,
+            },
         },
         "generation_contract": {
             "taxonomy_version": TAXONOMY_VERSION,

@@ -118,14 +118,21 @@
 
 ## 7. 最终交付物
 
-- [ ] manifest60、scene table、disjointness proof、asset manifest、preflight receipt。
-- [ ] 900 raw episode index、summary CSV、paired matrix、terminal/safety table、dynamic taxonomy/phase table。
-- [ ] 三张 opponent capability card v3。
-- [ ] M0--M4 ablation report、mode/guard telemetry report、声明边界。
-- [ ] 五态势×三 opponent×五方法 heatmap、paired-delta forest plot、代表性轨迹。
-- [ ] paper evidence matrix、artifact bundle、independent verifier、最终 go/no-go memo。
+- [x] manifest60、scene table、disjointness proof、asset manifest、preflight receipt。
+- [x] 900 raw episode index、summary CSV、paired matrix、terminal/safety table、dynamic taxonomy/phase table。
+- [x] 三张 opponent capability card v3。
+- [x] M0--M4 ablation report、mode/guard telemetry report、声明边界。
+- [x] 五态势×三 opponent×五方法 heatmap、paired-delta forest plot、代表性轨迹。
+- [x] paper evidence matrix、artifact bundle、independent verifier、最终 go/no-go memo。
 
 ## 8. 执行状态
+
+### P5--P7 paper-closure 更新（2026-07-16）
+
+- [x] **P5 formal Source 与只读动态分析：** 已从 clean SHA 执行唯一 `60 × 3 × 5 = 900` strict-JSBSim formal universe；independent verifier 为 `pass`，No-Go v3 将结果唯一切换到 `paper_closure`。`analysis_read_only_v3` 对 900 个 raw trajectory 完成动态 `(AA, ATA)` taxonomy 与 pre-merge/post-merge/re-entry 汇总，初始 taxonomy `900/900` 对齐，并将 68 条 guard-confounded PPO record 标为非纯 routing 因果证据。
+- [x] **P6 opponent / ablation / figure package：** 三张 opponent capability card v3、M0--M4 report、mode/guard table、五态势×三 opponent×五方法 heatmap、descriptive paired-delta forest 和按预先字典序规则选择的代表轨迹均已生成并视觉复核；独立 PPO/VPP 保持 provenance-limited supporting role。
+- [x] **P7 evidence closure：** [evidence matrix 与最终 memo](E:/uav-vpp-guidance-five-state-heldout-envelope-v1/reports/thesis_dualskill_taxonomy60_evidence_matrix_and_final_memo_20260716_zh.md) 已冻结论文 Go 与研发 No-Go；[slim portable bundle](E:/uav-vpp-guidance-thesis-evidence/THESIS-DUALSKILL-TAXONOMY60-3OPP-V1/paper_evidence_bundle_v3) 的 40 个文件已被 verifier 校验通过，未复制 3.4+ GiB raw archive 但保留 raw joint hash 与逐 episode SHA 表。
+- **时间边界：** 下方 P0--P4 保留其执行当日的预检/授权措辞，作为不可改写的历史收据；其“未授权/未执行”状态已由上方 P5 的正式 Source completion 明确取代，不构成当前待办。
 
 - [x] **P0 development preflight：** 资产哈希、解释器、容量、空输出根与现有 Taxonomy30 测试已核验通过；详情见 [P0 preflight record](E:/uav-vpp-guidance-five-state-heldout-envelope-v1/reports/thesis_dualskill_taxonomy60_p0_preflight_20260716.md)。P1 manifest 开发获准，P2 smoke 与正式 Source 仍未授权。
 - [x] **P1 Heldout60 manifest freeze：** 60 个场景、49 个 Git-replayed 历史来源与 `0` full-state intersection 已冻结；resolved-config 审计后以 manifest version 4 固化 canonical bootstrap vs no-bootstrap 及 No-Go v3 的完整分类到路线映射。v3 不改变任何科学变量，但要求 P4 formal verifier 为全部 10 个分类输出预注册的唯一出口。详情见 [P1 manifest freeze record](E:/uav-vpp-guidance-five-state-heldout-envelope-v1/reports/thesis_dualskill_taxonomy60_p1_manifest_freeze_20260716_zh.md) 和 [No-Go 路线决策器 v3](E:/uav-vpp-guidance-five-state-heldout-envelope-v1/reports/thesis_dualskill_taxonomy60_no_go_route_router_v3_20260716_zh.md)。P2 仅获准开发并执行 15 条 disposable engineering smoke；900 条正式 Source 仍未授权。

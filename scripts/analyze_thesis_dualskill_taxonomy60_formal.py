@@ -18,12 +18,19 @@ import json
 import math
 from pathlib import Path
 import shutil
+import sys
 from typing import Any, Iterable, Mapping, Sequence
 
 import yaml
 
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(REPO_ROOT / "src"))
+from uav_vpp_guidance.evaluation.engagement_geometry_taxonomy import (  # noqa: E402
+    classify_relative_geometry,
+)
+
+
 SOURCE_ID = "THESIS-DUALSKILL-TAXONOMY60-3OPP-V1"
 OPPONENTS = ("expert", "end_to_end", "independent_ppo_vpp")
 PRIMARY_OPPONENTS = ("expert", "end_to_end")
@@ -187,6 +194,7 @@ def load_summary_records(root: Path, metadata_by_scenario: Mapping[str, Mapping[
                 "opponent": opponent,
                 "method": method,
                 "seed": expected_seed,
+                "episode": int(row.get("episode", 0)),
                 "task": row.get("task"),
                 "initial_class": metadata_by_scenario[scenario]["initial_class"],
                 "height_condition": metadata_by_scenario[scenario]["height_condition"],
@@ -199,10 +207,15 @@ def load_summary_records(root: Path, metadata_by_scenario: Mapping[str, Mapping[
                 "draw": _as_bool(row.get("draw")),
                 "steps": _as_float(row.get("steps")),
                 "total_time_s": _as_float(row.get("total_time_s")),
+                "ego_hp": _as_float(row.get("ego_hp")),
+                "target_hp": _as_float(row.get("target_hp")),
+                "hp_advantage": _as_float(row.get("hp_advantage")),
                 "mean_range_m": _as_float(row.get("mean_range_m")),
                 "mean_abs_ata_deg": _as_float(row.get("mean_abs_ata_deg")),
                 "mean_speed_mps": _as_float(row.get("mean_speed_mps")),
                 "mean_altitude_m": _as_float(row.get("mean_altitude_m")),
+                "final_speed_mps": _as_float(row.get("final_speed_mps")),
+                "final_altitude_m": _as_float(row.get("final_altitude_m")),
                 "envelope_fraction": _as_float(row.get("envelope_fraction")),
                 "saturation_fraction": _as_float(row.get("saturation_fraction")),
                 "prediction_valid_rate": _as_float(row.get("prediction_valid_rate")),
@@ -222,6 +235,160 @@ def load_summary_records(root: Path, metadata_by_scenario: Mapping[str, Mapping[
     if actual != expected or len(records) != 900:
         raise FormalAnalysisError("summary records are not the exact 900-record formal matrix")
     return records
+
+
+def _phase_name(frame: Mapping[str, Any]) -> str:
+    """Use the existing frozen descriptive phase definition from Taxonomy30."""
+    if _as_bool(frame.get("pre_merge")):
+        return "pre_merge"
+    range_rate = _as_float(frame.get("range_rate_mps"))
+    return "re_entry" if range_rate is not None and range_rate < 0.0 else "post_merge"
+
+
+def _dynamic_taxonomy(frame: Mapping[str, Any]) -> str:
+    """Preserve the established `(AA, ATA)` classifier argument order."""
+    return classify_relative_geometry(frame.get("aa_deg"), frame.get("ata_deg"))
+
+
+def _mean_frame_values(frames: Sequence[Mapping[str, Any]], key: str) -> float | None:
+    return _mean(_as_float(frame.get(key)) for frame in frames)
+
+
+def _mean_action_axis(frames: Sequence[Mapping[str, Any]], axis: int) -> float | None:
+    values: list[float | None] = []
+    for frame in frames:
+        action = frame.get("vpp_action")
+        values.append(_as_float(action[axis]) if isinstance(action, list) and len(action) == 3 else None)
+    return _mean(values)
+
+
+def _fraction_true(frames: Sequence[Mapping[str, Any]], key: str) -> float | None:
+    return sum(_as_bool(frame.get(key)) for frame in frames) / len(frames) if frames else None
+
+
+def _first_true_step(frames: Sequence[Mapping[str, Any]], key: str) -> int | None:
+    for index, frame in enumerate(frames, start=1):
+        if _as_bool(frame.get(key)):
+            return index
+    return None
+
+
+def _raw_phase_summary(
+    raw: Mapping[str, Any],
+    *,
+    record: Mapping[str, Any],
+    raw_path: Path,
+    raw_sha256: str,
+) -> dict[str, Any]:
+    trajectory = raw.get("trajectory")
+    if not isinstance(trajectory, list) or not trajectory or not all(isinstance(frame, Mapping) for frame in trajectory):
+        raise FormalAnalysisError("raw episode has no usable trajectory: {}".format(raw_path))
+    frames = [dict(frame) for frame in trajectory]
+    phase_counts = Counter(_phase_name(frame) for frame in frames)
+    dynamic_counts = Counter(_dynamic_taxonomy(frame) for frame in frames)
+    dynamic_phase_counts = Counter(
+        "{}:{}".format(_dynamic_taxonomy(frame), _phase_name(frame)) for frame in frames
+    )
+    clipping_fraction = _mean(
+        1.0
+        if isinstance(frame.get("clipping"), Mapping) and _as_bool(frame["clipping"].get("any_saturated"))
+        else 0.0
+        for frame in frames
+    )
+    first = frames[0]
+    last = frames[-1]
+    return {
+        "source_id": SOURCE_ID,
+        "source_raw_path": str(raw_path),
+        "source_raw_sha256": raw_sha256,
+        "scenario_id": record["scenario_id"],
+        "opponent": record["opponent"],
+        "method": record["method"],
+        "seed": record["seed"],
+        "episode": record["episode"],
+        "initial_class": record["initial_class"],
+        "height_condition": record["height_condition"],
+        "mirror_sign": record["mirror_sign"],
+        "outcome": record["outcome"],
+        "terminal_reason": record["terminal_reason"],
+        "trajectory_steps": len(frames),
+        "initial_dynamic_taxonomy": _dynamic_taxonomy(first),
+        "terminal_dynamic_taxonomy": _dynamic_taxonomy(last),
+        "pre_merge_steps": phase_counts["pre_merge"],
+        "post_merge_steps": phase_counts["post_merge"],
+        "re_entry_steps": phase_counts["re_entry"],
+        "pre_merge_fraction": phase_counts["pre_merge"] / len(frames),
+        "post_merge_fraction": phase_counts["post_merge"] / len(frames),
+        "re_entry_fraction": phase_counts["re_entry"] / len(frames),
+        "first_pass_complete_seen": any(_as_bool(frame.get("first_pass_complete")) for frame in frames),
+        "first_pass_complete_step": _first_true_step(frames, "first_pass_complete"),
+        "dynamic_taxonomy_step_counts": json.dumps(dict(sorted(dynamic_counts.items())), sort_keys=True),
+        "dynamic_taxonomy_phase_step_counts": json.dumps(dict(sorted(dynamic_phase_counts.items())), sort_keys=True),
+        "ego_attack_zone_fraction": _fraction_true(frames, "ego_in_attack_zone"),
+        "target_attack_zone_fraction": _fraction_true(frames, "target_in_attack_zone"),
+        "first_ego_attack_zone_step": _first_true_step(frames, "ego_in_attack_zone"),
+        "first_target_attack_zone_step": _first_true_step(frames, "target_in_attack_zone"),
+        "mean_range_m": _mean_frame_values(frames, "range_m"),
+        "mean_range_rate_mps": _mean_frame_values(frames, "range_rate_mps"),
+        "mean_ata_deg": _mean_frame_values(frames, "ata_deg"),
+        "mean_aa_deg": _mean_frame_values(frames, "aa_deg"),
+        "mean_speed_mps": _mean_frame_values(frames, "speed_mps"),
+        "mean_altitude_m": _mean_frame_values(frames, "altitude_m"),
+        "mean_vpp_action_x": _mean_action_axis(frames, 0),
+        "mean_vpp_action_y": _mean_action_axis(frames, 1),
+        "mean_vpp_action_z": _mean_action_axis(frames, 2),
+        "mean_aoa_deg": _mean_frame_values(frames, "aoa_deg"),
+        "mean_nz_command": _mean_frame_values(frames, "nz_cmd"),
+        "mean_nz_actual": _mean_frame_values(frames, "nz_actual"),
+        "clipping_fraction": clipping_fraction,
+    }
+
+
+def load_raw_phase_records(
+    root: Path, summary_records: Sequence[Mapping[str, Any]]
+) -> tuple[list[dict[str, Any]], str]:
+    """Scan each frozen raw episode once and produce the dynamic phase contract."""
+    summary_by_key = {
+        (str(record["scenario_id"]), str(record["opponent"]), str(record["method"])): record
+        for record in summary_records
+    }
+    raw_records: list[dict[str, Any]] = []
+    seen: set[tuple[str, str, str]] = set()
+    digest = hashlib.sha256()
+    for opponent in OPPONENTS:
+        raw_root = root / "{}-{}".format(SOURCE_ID, opponent) / "raw"
+        raw_paths = sorted(raw_root.rglob("episode_*.json")) if raw_root.is_dir() else []
+        if len(raw_paths) != 300:
+            raise FormalAnalysisError("{} raw directory has {} rather than 300 episodes".format(opponent, len(raw_paths)))
+        for raw_path in raw_paths:
+            payload = raw_path.read_bytes()
+            raw_sha256 = hashlib.sha256(payload).hexdigest()
+            digest.update(raw_path.relative_to(root).as_posix().encode("utf-8"))
+            digest.update(raw_sha256.encode("ascii"))
+            raw = json.loads(payload)
+            if not isinstance(raw, Mapping):
+                raise FormalAnalysisError("raw episode is not a JSON object")
+            scenario = str(raw.get("scenario", ""))
+            method = str(raw.get("controller") or raw.get("method") or "")
+            key = (scenario, opponent, method)
+            summary = summary_by_key.get(key)
+            if summary is None or key in seen:
+                raise FormalAnalysisError("raw episode does not pair one-to-one with a summary record")
+            if (
+                str(raw.get("opponent_stage")) != opponent
+                or str(raw.get("task")) != str(summary["task"])
+                or int(raw.get("seed", -1)) != int(summary["seed"])
+                or str(raw.get("outcome")) != str(summary["outcome"])
+                or str(raw.get("terminal_reason")) != str(summary["terminal_reason"])
+            ):
+                raise FormalAnalysisError("raw/summary provenance mismatch for {}".format(key))
+            if str(raw.get("backend")) != "jsbsim" or not _as_bool(raw.get("strict_backend")):
+                raise FormalAnalysisError("raw phase record violates the strict JSBSim contract")
+            raw_records.append(_raw_phase_summary(raw, record=summary, raw_path=raw_path, raw_sha256=raw_sha256))
+            seen.add(key)
+    if seen != set(summary_by_key) or len(raw_records) != 900:
+        raise FormalAnalysisError("raw phase records are not the exact 900-record formal matrix")
+    return raw_records, digest.hexdigest()
 
 
 def _group_records(
@@ -260,6 +427,9 @@ def result_summary(records: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]
                     "wilson_95_upper": upper,
                     "mean_range_m": _mean(record["mean_range_m"] for record in group),
                     "mean_abs_ata_deg": _mean(record["mean_abs_ata_deg"] for record in group),
+                    "mean_ego_hp": _mean(record["ego_hp"] for record in group),
+                    "mean_target_hp": _mean(record["target_hp"] for record in group),
+                    "mean_hp_advantage": _mean(record["hp_advantage"] for record in group),
                     "mean_speed_mps": _mean(record["mean_speed_mps"] for record in group),
                     "mean_altitude_m": _mean(record["mean_altitude_m"] for record in group),
                     "mean_saturation_fraction": _mean(record["saturation_fraction"] for record in group),
@@ -267,6 +437,83 @@ def result_summary(records: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]
                 }
             )
     return summary_rows
+
+
+def dynamic_taxonomy_phase_rows(raw_records: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:
+    """Aggregate the frozen dynamic taxonomy x descriptive phase occupancy."""
+    group_totals: Counter[tuple[str, str, str]] = Counter()
+    occupancy: Counter[tuple[str, str, str, str, str]] = Counter()
+    episode_presence: Counter[tuple[str, str, str, str, str]] = Counter()
+    for record in raw_records:
+        group = (str(record["initial_class"]), str(record["opponent"]), str(record["method"]))
+        group_totals[group] += int(record["trajectory_steps"])
+        dynamic_phase = json.loads(str(record["dynamic_taxonomy_phase_step_counts"]))
+        for compound, count in dynamic_phase.items():
+            dynamic_taxonomy, phase = compound.split(":", 1)
+            key = (*group, dynamic_taxonomy, phase)
+            occupancy[key] += int(count)
+            if int(count) > 0:
+                episode_presence[key] += 1
+    rows: list[dict[str, Any]] = []
+    for key, step_count in sorted(occupancy.items()):
+        initial_class, opponent, method, dynamic_taxonomy, phase = key
+        total_steps = group_totals[(initial_class, opponent, method)]
+        rows.append(
+            {
+                "initial_class": initial_class,
+                "opponent": opponent,
+                "opponent_role": "primary" if opponent in PRIMARY_OPPONENTS else "supporting_provenance_limited",
+                "method": method,
+                "dynamic_taxonomy": dynamic_taxonomy,
+                "phase": phase,
+                "step_count": step_count,
+                "group_total_steps": total_steps,
+                "step_fraction_within_state_opponent_method": step_count / total_steps if total_steps else None,
+                "episode_count_with_occupancy": episode_presence[key],
+                "phase_semantics": "pre_merge; post_merge; or post_merge_closing_re_entry",
+            }
+        )
+    return rows
+
+
+def phase_geometry_mechanism_rows(raw_records: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:
+    """Summarize phase, geometry, VPP and command/response telemetry by formal cell."""
+    rows: list[dict[str, Any]] = []
+    for (initial_class, opponent, method), group in sorted(
+        _group_records(raw_records, ("initial_class", "opponent", "method")).items()
+    ):
+        rows.append(
+            {
+                "initial_class": initial_class,
+                "opponent": opponent,
+                "opponent_role": "primary" if opponent in PRIMARY_OPPONENTS else "supporting_provenance_limited",
+                "method": method,
+                "episode_count": len(group),
+                "episodes_with_first_pass": sum(bool(record["first_pass_complete_seen"]) for record in group),
+                "episodes_with_post_merge": sum(int(record["post_merge_steps"]) > 0 for record in group),
+                "episodes_with_re_entry": sum(int(record["re_entry_steps"]) > 0 for record in group),
+                "mean_pre_merge_fraction": _mean(record["pre_merge_fraction"] for record in group),
+                "mean_post_merge_fraction": _mean(record["post_merge_fraction"] for record in group),
+                "mean_re_entry_fraction": _mean(record["re_entry_fraction"] for record in group),
+                "mean_ego_attack_zone_fraction": _mean(record["ego_attack_zone_fraction"] for record in group),
+                "mean_target_attack_zone_fraction": _mean(record["target_attack_zone_fraction"] for record in group),
+                "mean_range_m": _mean(record["mean_range_m"] for record in group),
+                "mean_range_rate_mps": _mean(record["mean_range_rate_mps"] for record in group),
+                "mean_ata_deg": _mean(record["mean_ata_deg"] for record in group),
+                "mean_aa_deg": _mean(record["mean_aa_deg"] for record in group),
+                "mean_speed_mps": _mean(record["mean_speed_mps"] for record in group),
+                "mean_altitude_m": _mean(record["mean_altitude_m"] for record in group),
+                "mean_vpp_action_x": _mean(record["mean_vpp_action_x"] for record in group),
+                "mean_vpp_action_y": _mean(record["mean_vpp_action_y"] for record in group),
+                "mean_vpp_action_z": _mean(record["mean_vpp_action_z"] for record in group),
+                "mean_aoa_deg": _mean(record["mean_aoa_deg"] for record in group),
+                "mean_nz_command": _mean(record["mean_nz_command"] for record in group),
+                "mean_nz_actual": _mean(record["mean_nz_actual"] for record in group),
+                "mean_clipping_fraction": _mean(record["clipping_fraction"] for record in group),
+                "interpretation_boundary": "descriptive phase/geometry telemetry; not a safety certificate or causal routing estimate",
+            }
+        )
+    return rows
 
 
 def paired_deltas(records: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:
@@ -421,7 +668,15 @@ def _write_csv(
         writer.writerows(rows)
 
 
-def _write_markdown(path: Path, *, verification: Mapping[str, Any], decision: Mapping[str, Any], records: Sequence[Mapping[str, Any]], guard_count: int) -> None:
+def _write_markdown(
+    path: Path,
+    *,
+    verification: Mapping[str, Any],
+    decision: Mapping[str, Any],
+    records: Sequence[Mapping[str, Any]],
+    guard_count: int,
+    raw_phase_digest: str,
+) -> None:
     primary = [record for record in records if record["opponent"] in PRIMARY_OPPONENTS]
     outcomes = Counter((record["opponent"], record["outcome"]) for record in primary)
     lines = [
@@ -437,6 +692,7 @@ def _write_markdown(path: Path, *, verification: Mapping[str, Any], decision: Ma
         "- The pre-registered decision selects `paper_closure`; therefore training, tuning, scenario replacement, and result-driven reruns remain prohibited.",
         "- Primary evidence is reported separately for `expert` and `end_to_end`; `independent_ppo_vpp` remains supporting, provenance-limited evidence.",
         "- {} PPO records are guard-confounded. They remain deployed mixed-interface evidence but are excluded from pure routing-causality interpretation.".format(guard_count),
+        "- The phase table scans all 900 raw trajectories under the existing `(AA, ATA)` taxonomy and pre-merge/post-merge/re-entry definitions; raw joint digest: `{}`.".format(raw_phase_digest),
         "",
         "## Primary Outcome Counts",
         "",
@@ -462,7 +718,8 @@ def _write_markdown(path: Path, *, verification: Mapping[str, Any], decision: Ma
             "1. Use `method_state_opponent_summary.csv` for the main/supplementary outcome table; Wilson intervals exclude draws from their denominator.",
             "2. Use `paired_ppo_deltas.csv` descriptively, never as a pooled significance test or generalization claim.",
             "3. Use `mode_guard_transparency.csv` and `routing_sensitive_candidates.csv` to state the recovery override boundary honestly.",
-            "4. Use `terminal_safety_semantics.csv` to avoid describing timeout HP outcomes as kill rate, aerodynamic superiority, or safety certification.",
+            "4. Use `dynamic_taxonomy_phase_episode_index.csv` and `phase_geometry_mechanism_summary.csv` only as descriptive trajectory evidence; phase labels are not extra training tasks.",
+            "5. Use `terminal_safety_semantics.csv` to avoid describing timeout HP outcomes as kill rate, aerodynamic superiority, or safety certification.",
         ]
     )
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
@@ -476,6 +733,7 @@ def export_analysis(root: Path, analysis_dir: Path, *, manifest_path: Path = MAN
     metadata = _scenario_metadata(Path(manifest_path).resolve())
     guard = _guard_keys(decision)
     records = load_summary_records(root, metadata, guard)
+    raw_phase_records, raw_phase_digest = load_raw_phase_records(root, records)
     if analysis_dir.exists():
         if not overwrite:
             raise FormalAnalysisError("analysis directory already exists; use --overwrite only for disposable exports")
@@ -488,6 +746,9 @@ def export_analysis(root: Path, analysis_dir: Path, *, manifest_path: Path = MAN
         "terminal_safety_semantics.csv": terminal_safety_rows(records),
         "mode_guard_transparency.csv": mode_guard_rows(records),
         "routing_sensitive_candidates.csv": candidate_rows(records, decision),
+        "dynamic_taxonomy_phase_episode_index.csv": raw_phase_records,
+        "dynamic_taxonomy_phase_summary.csv": dynamic_taxonomy_phase_rows(raw_phase_records),
+        "phase_geometry_mechanism_summary.csv": phase_geometry_mechanism_rows(raw_phase_records),
     }
     for filename, rows in tables.items():
         _write_csv(
@@ -509,6 +770,7 @@ def export_analysis(root: Path, analysis_dir: Path, *, manifest_path: Path = MAN
         decision=decision,
         records=records,
         guard_count=len(guard),
+        raw_phase_digest=raw_phase_digest,
     )
     inputs = {
         "formal_verification.json": _sha256(root / "formal_verification.json"),
@@ -525,6 +787,8 @@ def export_analysis(root: Path, analysis_dir: Path, *, manifest_path: Path = MAN
         "formal_verdict": verification["verdict"],
         "selected_study_route": decision["selected_study_route"],
         "record_count": len(records),
+        "raw_phase_record_count": len(raw_phase_records),
+        "raw_phase_joint_sha256": raw_phase_digest,
         "guard_confounded_record_count": len(guard),
         "execution_manifest_payload_sha256": execution.get("manifest_payload_sha256"),
         "input_sha256": inputs,

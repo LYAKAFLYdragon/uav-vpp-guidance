@@ -23,7 +23,7 @@ def _load_module():
 
 def _write_summary(path: Path, *, opponent: str, scenarios: list[dict], methods: tuple[str, ...]):
     fieldnames = [
-        "scenario", "method", "opponent_stage", "seed", "task", "backend", "strict_backend",
+        "scenario", "method", "opponent_stage", "seed", "episode", "task", "backend", "strict_backend",
         "backend_fallback_occurred", "run_status", "combat_outcome", "win", "loss", "draw",
         "termination_reason", "steps", "total_time_s", "mean_range_m", "mean_abs_ata_deg",
         "mean_speed_mps", "mean_altitude_m", "envelope_fraction", "saturation_fraction",
@@ -40,7 +40,7 @@ def _write_summary(path: Path, *, opponent: str, scenarios: list[dict], methods:
                 writer.writerow(
                     {
                         "scenario": scenario["name"], "method": method, "opponent_stage": opponent,
-                        "seed": scenario["metadata"]["scenario_seed"],
+                        "seed": scenario["metadata"]["scenario_seed"], "episode": scenario_index,
                         "task": scenario["metadata"]["task_registry_key"], "backend": "jsbsim",
                         "strict_backend": "True", "backend_fallback_occurred": "False", "run_status": "formal",
                         "combat_outcome": outcome, "win": str(outcome == "win"), "loss": str(outcome == "loss"),
@@ -57,6 +57,52 @@ def _write_summary(path: Path, *, opponent: str, scenarios: list[dict], methods:
                 )
 
 
+def _write_raw_episodes(run_dir: Path, *, opponent: str, scenarios: list[dict], methods: tuple[str, ...]):
+    for scenario_index, scenario in enumerate(scenarios):
+        metadata = scenario["metadata"]
+        for method in methods:
+            outcome = "loss" if method == "fixed_crossing" and scenario_index == 0 else "win"
+            trajectory = [
+                {
+                    "time_s": 0.2, "pre_merge": True, "first_pass_complete": False,
+                    "range_rate_mps": -100.0, "aa_deg": 20.0, "ata_deg": 20.0,
+                    "ego_in_attack_zone": True, "target_in_attack_zone": False,
+                    "range_m": 2400.0, "speed_mps": 250.0, "altitude_m": 5000.0,
+                    "vpp_action": [0.1, -0.1, 0.2], "aoa_deg": 4.0, "nz_cmd": 1.3,
+                    "nz_actual": 1.1, "clipping": {"any_saturated": False},
+                },
+                {
+                    "time_s": 0.4, "pre_merge": False, "first_pass_complete": True,
+                    "range_rate_mps": 30.0, "aa_deg": 100.0, "ata_deg": 20.0,
+                    "ego_in_attack_zone": False, "target_in_attack_zone": True,
+                    "range_m": 2500.0, "speed_mps": 245.0, "altitude_m": 5010.0,
+                    "vpp_action": [0.2, -0.2, 0.1], "aoa_deg": 5.0, "nz_cmd": 1.4,
+                    "nz_actual": 1.2, "clipping": {"any_saturated": False},
+                },
+                {
+                    "time_s": 0.6, "pre_merge": False, "first_pass_complete": True,
+                    "range_rate_mps": -30.0, "aa_deg": 100.0, "ata_deg": 100.0,
+                    "ego_in_attack_zone": False, "target_in_attack_zone": False,
+                    "range_m": 2450.0, "speed_mps": 240.0, "altitude_m": 5020.0,
+                    "vpp_action": [0.3, -0.3, 0.0], "aoa_deg": 6.0, "nz_cmd": 1.5,
+                    "nz_actual": 1.3, "clipping": {"any_saturated": True},
+                },
+            ]
+            raw = {
+                "controller": method, "task": metadata["task_registry_key"], "opponent_stage": opponent,
+                "scenario": scenario["name"], "seed": metadata["scenario_seed"], "episode": scenario_index,
+                "backend": "jsbsim", "strict_backend": True, "outcome": outcome,
+                "terminal_reason": "timeout_hp_advantage" if outcome == "win" else "timeout_hp_disadvantage",
+                "trajectory": trajectory,
+            }
+            raw_path = (
+                run_dir / "raw" / metadata["task_registry_key"] / method
+                / f"seed_{metadata['scenario_seed']}" / f"episode_{scenario_index:03d}.json"
+            )
+            raw_path.parent.mkdir(parents=True, exist_ok=True)
+            raw_path.write_text(json.dumps(raw), encoding="utf-8")
+
+
 def _write_formal_fixture(tmp_path: Path, module):
     manifest = yaml.safe_load(MANIFEST.read_text(encoding="utf-8"))
     root = tmp_path / "formal"
@@ -68,6 +114,7 @@ def _write_formal_fixture(tmp_path: Path, module):
         run_dir = root / f"{module.SOURCE_ID}-{opponent}"
         run_dir.mkdir()
         _write_summary(run_dir / "summary.csv", opponent=opponent, scenarios=manifest["scenarios"], methods=module.METHODS)
+        _write_raw_episodes(run_dir, opponent=opponent, scenarios=manifest["scenarios"], methods=module.METHODS)
     return root
 
 
@@ -86,6 +133,7 @@ def test_read_only_export_builds_complete_900_record_package(tmp_path):
     artifact = module.export_analysis(formal_root, analysis_dir)
 
     assert artifact["record_count"] == 900
+    assert artifact["raw_phase_record_count"] == 900
     assert artifact["selected_study_route"] == "paper_closure"
     with (analysis_dir / "episode_index.csv").open(encoding="utf-8", newline="") as handle:
         assert len(list(csv.DictReader(handle))) == 900
@@ -94,4 +142,10 @@ def test_read_only_export_builds_complete_900_record_package(tmp_path):
     assert len(rows) == 90
     assert {row["opponent"] for row in rows} == set(module.OPPONENTS)
     assert (analysis_dir / "paper_closure_handoff.md").is_file()
+    with (analysis_dir / "dynamic_taxonomy_phase_episode_index.csv").open(encoding="utf-8", newline="") as handle:
+        phase_rows = list(csv.DictReader(handle))
+    assert len(phase_rows) == 900
+    assert {row["terminal_dynamic_taxonomy"] for row in phase_rows} == {"neutral"}
+    assert (analysis_dir / "dynamic_taxonomy_phase_summary.csv").is_file()
+    assert (analysis_dir / "phase_geometry_mechanism_summary.csv").is_file()
     assert (analysis_dir / "analysis_manifest.json").is_file()

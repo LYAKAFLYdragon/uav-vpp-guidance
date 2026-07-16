@@ -59,6 +59,10 @@ def test_smoke_config_materializes_one_nonformal_crossing_episode_per_method():
 
     assert materialized["thesis_dualskill_taxonomy60_p2_smoke"]["expected_episodes"] == 15
     assert materialized["env"]["strict_backend"] is True
+    assert (
+        materialized["thesis_dualskill_taxonomy60_p2_smoke"]["jsbsim_legacy_root"]
+        == "E:/uav-vpp-guidance-can20260705"
+    )
     assert materialized["scenario_manifest_resolution"]["task_counts"] == {
         "crossing_feasible": 1
     }
@@ -114,6 +118,8 @@ def test_smoke_plan_is_exactly_fifteen_disposable_jsbsim_episodes(tmp_path):
         command = item["command"]
         assert "--run-status" in command and command[command.index("--run-status") + 1] == "smoke"
         assert "--backend" in command and command[command.index("--backend") + 1] == "jsbsim"
+        assert "--jsbsim-root" in command
+        assert command[command.index("--jsbsim-root") + 1] == "E:/uav-vpp-guidance-can20260705"
         assert "--methods" in command
         assert command[command.index("--methods") + 1 : command.index("--tasks")] == list(
             smoke_runner.METHODS

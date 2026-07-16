@@ -52,6 +52,11 @@ def _require_smoke_contract(config_path: Path) -> Dict[str, Any]:
         raise ValueError("P2 smoke config episode count does not match")
     if contract.get("paper_evidence") is not False:
         raise ValueError("P2 smoke must be explicitly excluded from paper evidence")
+    jsbsim_root = Path(str(contract.get("jsbsim_legacy_root", "")))
+    if not (jsbsim_root / "envs" / "JSBSim" / "data").is_dir():
+        raise ValueError("P2 smoke JSBSim data directory is unavailable: {}".format(jsbsim_root))
+    if not str(contract.get("jsbsim_data_manifest_sha256", "")):
+        raise ValueError("P2 smoke JSBSim data hash is not frozen")
     return contract
 
 
@@ -63,7 +68,7 @@ def build_smoke_plan(
 ) -> List[Dict[str, Any]]:
     """Build, but do not execute, one five-method child run for each opponent."""
 
-    _require_smoke_contract(config_path)
+    contract = _require_smoke_contract(config_path)
     runner = REPO_ROOT / "scripts" / "run_jsbsim_hrl_comparison.py"
     plan = []
     for opponent in OPPONENTS:
@@ -89,6 +94,8 @@ def build_smoke_plan(
             "1",
             "--backend",
             "jsbsim",
+            "--jsbsim-root",
+            str(contract["jsbsim_legacy_root"]),
             "--opponent-stage",
             opponent,
             "--run-status",
@@ -122,6 +129,12 @@ def _write_execution_manifest(
         "paper_evidence": False,
         "config_path": str(config_path),
         "config_sha256": _sha256(config_path),
+        "jsbsim_legacy_root": _require_smoke_contract(config_path)[
+            "jsbsim_legacy_root"
+        ],
+        "jsbsim_data_manifest_sha256": _require_smoke_contract(config_path)[
+            "jsbsim_data_manifest_sha256"
+        ],
         "expected_records": len(OPPONENTS) * len(METHODS),
         "plan": plan,
         "executions": executions,

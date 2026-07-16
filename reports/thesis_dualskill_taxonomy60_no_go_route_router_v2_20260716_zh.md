@@ -7,7 +7,7 @@
 
 ## 审核结论
 
-v1 的方向正确，但还不足以防止结果后的解释漂移：它没有量化“重复”和有效记录，未限制 provenance-limited 的独立对手在跨对手结论中的权重，也未处理 M3/M4 的 deterministic recovery guard 对 routing 因果归因的混杂。v2 将这三项固定为合同；它**不改变** Heldout60 场景、五个方法、冻结资产或任何性能变量。
+v1 的方向正确，但还不足以防止结果后的解释漂移：它没有量化“重复”和有效记录，未限制 provenance-limited 的独立对手在跨对手结论中的权重，也未处理 M3/M4 的 deterministic recovery guard 对 routing 因果归因的混杂。v2 将这三项固定为合同；它**不改变** Heldout60 场景、五个方法、冻结资产或任何性能变量。2026-07-16 的 resolved-config 审计还确认 canonical 只有 crossing initial-task bootstrap、没有 pre-merge lock；因此 M4 被准确更名为 `ppo_unbootstrapped_crossing`，两者都保留 lock disabled。
 
 本决策器的唯一目的，是使有效负结果也能平稳转入论文写作路线，而非触发新一轮训练。Taxonomy60 完成后默认的终点永远是 `paper_closure`；“新接口”最多是论文闭合后的独立 decision memo，不是自动研发授权。
 
@@ -38,8 +38,8 @@ v1 的方向正确，但还不足以防止结果后的解释漂移：它没有�
 | 任何用于 M3 routing 比较的场景中 guard 改写 requested mode | `mixed-interface guard-bound` | 仅报告部署系统的混合接口表现和 guard telemetry；不得将差值归因于 PPO routing |
 | 模式仅见于一个主对手，或 `independent_ppo_vpp` 是唯一第二支持 | `opponent-dependent sensitivity` | 更新 capability card，使用 split-specific 文字；不做绝对强弱或普适系统缺陷主张 |
 | 五方法 outcome 相同且 terminal/攻击区路径实质一致 | `ceiling/non-discriminative cell` | 保留在热图与补充材料中，说明它没有组件区分能力；不删场景、不补新场景 |
-| M3/M4 在 crossing-entry 一致，且 M4 首拍仍为 crossing | task-aware 条件下的 crossing 首拍不依赖 bootstrap/lock | 仅报告有限的 task-aware PPO selection，不扩展为 task-label-free 几何识别 |
-| M3/M4 有重复差异或安全差异 | bootstrap/lock 是 deterministic preservation constraint 的候选原因 | 将系统定位为混合接口；不声称纯 learned routing，也不在本 Source 移除 guard |
+| M3/M4 在 crossing-entry 一致，且 M4 首拍仍为 crossing | task-aware 条件下的 crossing 首拍不依赖 canonical bootstrap | 仅报告有限的 task-aware PPO selection，不扩展为 task-label-free 几何识别 |
+| M3/M4 有重复差异或安全差异 | initial-task bootstrap 是 deterministic preservation constraint 的候选原因 | 将系统定位为混合接口；不声称纯 learned routing，也不在本 Source 移除 guard |
 | target crash/OOB 主导某方法胜率或方法间 terminal mix 不同 | win rate 受 terminal pathway 影响 | 报告 terminal decomposition；不改写为 kill rate、气动优势或安全认证 |
 
 ## 4. 唯一可能的算法分支

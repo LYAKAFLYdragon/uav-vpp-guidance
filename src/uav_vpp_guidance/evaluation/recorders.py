@@ -152,6 +152,12 @@ class EpisodeRecorder:
             "commander_crossing_pre_merge_mode_lock_active": bool(
                 info.get("commander_crossing_pre_merge_mode_lock_active", False)
             ),
+            "commander_crossing_initial_task_bootstrap_enabled": bool(
+                info.get("commander_crossing_initial_task_bootstrap_enabled", True)
+            ),
+            "commander_crossing_initial_task_bootstrap_active": bool(
+                info.get("commander_crossing_initial_task_bootstrap_active", False)
+            ),
             "commander_initial_macro_mode_override_active": bool(
                 info.get("commander_initial_macro_mode_override_active", False)
             ),

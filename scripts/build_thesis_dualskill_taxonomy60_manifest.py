@@ -279,7 +279,7 @@ def build_manifest(frozen_git_sha: str) -> Mapping[str, Any]:
                     scenario_index += 1
     return {
         "source_id": SOURCE_ID,
-        "manifest_version": 1,
+        "manifest_version": 2,
         "status": "preregistered_before_evaluation",
         "frozen_source": {
             "generation_git_sha": frozen_git_sha,
@@ -295,7 +295,7 @@ def build_manifest(frozen_git_sha: str) -> Mapping[str, Any]:
                 "fixed_crossing",
                 "static_oracle_gate",
                 "canonical_ppo",
-                "ppo_unlocked_crossing",
+                "ppo_unbootstrapped_crossing",
             ],
             "episodes_per_scenario_method_opponent": 1,
             "episodes_total": 900,
@@ -333,14 +333,14 @@ def build_manifest(frozen_git_sha: str) -> Mapping[str, Any]:
             },
             "canonical_ppo": {
                 "ppo_checkpoint": "canonical_frozen",
-                "crossing_bootstrap": True,
-                "pre_merge_lock": True,
+                "crossing_initial_task_bootstrap": True,
+                "crossing_pre_merge_mode_lock": False,
                 "deterministic_recovery_guard": True,
             },
-            "ppo_unlocked_crossing": {
+            "ppo_unbootstrapped_crossing": {
                 "ppo_checkpoint": "canonical_frozen",
-                "crossing_bootstrap": False,
-                "pre_merge_lock": False,
+                "crossing_initial_task_bootstrap": False,
+                "crossing_pre_merge_mode_lock": False,
                 "deterministic_recovery_guard": True,
             },
         },

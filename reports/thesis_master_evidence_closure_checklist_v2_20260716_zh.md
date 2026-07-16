@@ -13,7 +13,7 @@
 
 1. 原双技能 PPO 在明确的五态势包线中的表现和边界都被透明报告。
 2. 三个 opponent 的来源、接口、行为压力和终端结构可复核。
-3. 两个 specialist、PPO routing、crossing bootstrap/lock 和 deterministic recovery guard 的作用被分离说明。
+3. 两个 specialist、PPO routing、crossing initial-task bootstrap 和 deterministic recovery guard 的作用被分离说明。
 
 即使 PPO 在某些态势失败，只要预注册矩阵完整且解释链闭合，三项论文证据质量问题依然得到解决。
 
@@ -67,15 +67,15 @@
 | M0 `fixed_head_on` | 仅迎头 specialist；无 routing/Oracle/recovery override | 迎头技能的跨态势边界 |
 | M1 `fixed_crossing` | 仅交叉 specialist；已验证 adapter；无 routing/override | 交叉技能的跨态势边界 |
 | M2 `static_oracle_gate` | 旧静态 task gate：仅 crossing-entry 选 crossing，其余四类选 head-on；非动态 Oracle | 静态标签映射的作用与局限 |
-| M3 `canonical_ppo` | PPO + canonical bootstrap/lock + deterministic recovery guard | 当前部署系统的实际表现 |
-| M4 `ppo_unlocked_crossing` | 与 M3 同 checkpoint；仅关 crossing bootstrap/pre-merge lock；保留 recovery guard | crossing 首拍是否来自 task-aware PPO |
+| M3 `canonical_ppo` | PPO + canonical crossing initial-task bootstrap + deterministic recovery guard；pre-merge lock 未启用 | 当前部署系统的实际表现 |
+| M4 `ppo_unbootstrapped_crossing` | 与 M3 同 checkpoint；仅关 crossing initial-task bootstrap；两者均不启用 pre-merge lock，并保留 recovery guard | crossing 首拍是否来自 task-aware PPO |
 
 - [ ] 五方法固定相同 JSBSim、predictor、VPP、guidance、PID、terminal semantics、scenario seed 和 horizon。
 - [ ] M1 通过 observation shape/feature-name preflight；禁止 fallback、padding、截断。
 - [ ] M4 不关闭 recovery guard；guard 的作用由 requested/effective mode 和 guard telemetry 解释，而非用无保护策略冒险比较。
-- [ ] 每个 PPO macro-step 记录 requested/effective mode、bootstrap/lock reason、guard reason、mode fraction、switch count。
+- [ ] 每个 PPO macro-step 记录 requested/effective mode、initial-task bootstrap、lock、guard reason、mode fraction、switch count。
 
-**消融问题的完成判定：** M0--M4 为两个 specialist、静态 gate、PPO routing 与 bootstrap/lock 提供可解释对照；若 M3/M4 的 recovery guard 改写 requested mode，则该 episode 只可作为混合接口证据，不能归因于 PPO routing。独立 PPO/VPP 仅为 provenance-limited 支持对手，不能代替 expert 与 end-to-end 满足跨对手重复门。具体边界见 No-Go 路线决策器 v2。该结论不延伸到未训练的“四技能 + profile + encoder”架构。
+**消融问题的完成判定：** M0--M4 为两个 specialist、静态 gate、PPO routing 与 canonical initial-task bootstrap 提供可解释对照；当前 canonical contract 中 pre-merge lock 未启用，因而不把它伪装成已消融组件。若 M3/M4 的 recovery guard 改写 requested mode，则该 episode 只可作为混合接口证据，不能归因于 PPO routing。独立 PPO/VPP 仅为 provenance-limited 支持对手，不能代替 expert 与 end-to-end 满足跨对手重复门。具体边界见 No-Go 路线决策器 v2。该结论不延伸到未训练的“四技能 + profile + encoder”架构。
 
 ### 3.3 对手 Capability Card v3
 
@@ -128,4 +128,4 @@
 ## 8. 执行状态
 
 - [x] **P0 development preflight：** 资产哈希、解释器、容量、空输出根与现有 Taxonomy30 测试已核验通过；详情见 [P0 preflight record](E:/uav-vpp-guidance-five-state-heldout-envelope-v1/reports/thesis_dualskill_taxonomy60_p0_preflight_20260716.md)。P1 manifest 开发获准，P2 smoke 与正式 Source 仍未授权。
-- [x] **P1 Heldout60 manifest freeze：** 60 个场景、49 个 Git-replayed 历史来源与 `0` full-state intersection 已冻结；no-go contract 和五方法组件合同已写入 manifest。详情见 [P1 manifest freeze record](E:/uav-vpp-guidance-five-state-heldout-envelope-v1/reports/thesis_dualskill_taxonomy60_p1_manifest_freeze_20260716_zh.md)。P2 仅获准开发并执行 15 条 disposable engineering smoke；900 条正式 Source 仍未授权。
+- [x] **P1 Heldout60 manifest freeze：** 60 个场景、49 个 Git-replayed 历史来源与 `0` full-state intersection 已冻结；resolved-config 审计后以 manifest version 2 更正为 canonical bootstrap vs no-bootstrap，no-go contract 和五方法组件合同均已重哈希。详情见 [P1 manifest freeze record](E:/uav-vpp-guidance-five-state-heldout-envelope-v1/reports/thesis_dualskill_taxonomy60_p1_manifest_freeze_20260716_zh.md)。P2 仅获准开发并执行 15 条 disposable engineering smoke；900 条正式 Source 仍未授权。

@@ -71,12 +71,32 @@ def test_builder_generates_balanced_sixty_scenarios_and_protocol():
         "fast_closure": 30,
     }
     assert manifest["decision_contract"]["id"] == "THESIS-DUALSKILL-TAXONOMY60-NO-GO-V2"
+    assert manifest["manifest_version"] == 2
+    assert manifest["protocol"]["methods"] == [
+        "fixed_head_on",
+        "fixed_crossing",
+        "static_oracle_gate",
+        "canonical_ppo",
+        "ppo_unbootstrapped_crossing",
+    ]
     assert manifest["method_contracts"]["static_oracle_gate"]["mapping"] == {
         "crossing_entry": "frozen_crossing_specialist",
         "advantage": "frozen_head_on_specialist",
         "head_on": "frozen_head_on_specialist",
         "disadvantage": "frozen_head_on_specialist",
         "neutral": "frozen_head_on_specialist",
+    }
+    assert manifest["method_contracts"]["canonical_ppo"] == {
+        "ppo_checkpoint": "canonical_frozen",
+        "crossing_initial_task_bootstrap": True,
+        "crossing_pre_merge_mode_lock": False,
+        "deterministic_recovery_guard": True,
+    }
+    assert manifest["method_contracts"]["ppo_unbootstrapped_crossing"] == {
+        "ppo_checkpoint": "canonical_frozen",
+        "crossing_initial_task_bootstrap": False,
+        "crossing_pre_merge_mode_lock": False,
+        "deterministic_recovery_guard": True,
     }
 
 

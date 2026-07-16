@@ -2012,6 +2012,59 @@ def test_hierarchical_commander_policy_crossing_pre_merge_lock_holds_until_first
     assert post_merge_metadata["commander_selected_specialist"] == "head_on"
 
 
+def test_hierarchical_commander_policy_can_disable_crossing_initial_bootstrap():
+    head_on = MagicMock()
+    head_on.get_deterministic_action.return_value = np.array(
+        [1.0, 0.0, 0.0], dtype=np.float32
+    )
+    crossing = MagicMock()
+    crossing.get_deterministic_action.return_value = np.array(
+        [0.0, 1.0, 0.0], dtype=np.float32
+    )
+    mock_registry = {
+        0: {
+            "id": 0,
+            "name": "head_on_specialist",
+            "specialist_key": "head_on",
+            "policy": head_on,
+        },
+        1: {
+            "id": 1,
+            "name": "crossing_specialist",
+            "specialist_key": "crossing_feasible",
+            "policy": crossing,
+        },
+    }
+    mock_commander = MagicMock()
+    mock_commander.get_deterministic_action.return_value = 0
+    cfg = _config()
+    cfg["commander"]["macro_action_repeat_steps"] = 1
+    cfg["commander"]["crossing_initial_task_bootstrap"] = {"enabled": False}
+
+    with patch(
+        "uav_vpp_guidance.evaluation.hierarchical_commander_policy.load_frozen_specialist_registry",
+        return_value=mock_registry,
+    ), patch(
+        "uav_vpp_guidance.evaluation.hierarchical_commander_policy.CommanderPPOAgent",
+        return_value=mock_commander,
+    ):
+        from uav_vpp_guidance.evaluation.hierarchical_commander_policy import (
+            HierarchicalCommanderPolicy,
+        )
+
+        policy = HierarchicalCommanderPolicy(
+            checkpoint_path="commander.pt", config=cfg, obs_dim=6, device="cpu"
+        )
+        policy.set_task_name("crossing_feasible")
+        action = policy.get_deterministic_action(np.zeros(6, dtype=np.float32))
+        metadata = policy.get_last_step_metadata()
+
+    np.testing.assert_allclose(action, np.array([1.0, 0.0, 0.0], dtype=np.float32))
+    assert mock_commander.get_deterministic_action.call_count == 1
+    assert metadata["commander_crossing_initial_task_bootstrap_enabled"] is False
+    assert metadata["commander_crossing_initial_task_bootstrap_active"] is False
+
+
 def test_initial_macro_mode_override_forces_only_the_first_macro_then_resumes_ppo():
     head_on = MagicMock()
     head_on.get_deterministic_action.return_value = np.array(

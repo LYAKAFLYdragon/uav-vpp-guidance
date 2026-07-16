@@ -81,6 +81,9 @@ class HierarchicalCommanderPolicy:
         self.crossing_pre_merge_mode_lock = dict(
             commander_cfg.get("crossing_pre_merge_mode_lock", {}) or {}
         )
+        self.crossing_initial_task_bootstrap = dict(
+            commander_cfg.get("crossing_initial_task_bootstrap", {}) or {}
+        )
         # This is an evaluation-only intervention.  It is inert unless an
         # explicitly isolated comparison method enables it through YAML.
         self.initial_macro_mode_override = dict(
@@ -192,11 +195,18 @@ class HierarchicalCommanderPolicy:
 
     def _initial_task_bootstrap_mode_id(self) -> Optional[int]:
         """Narrow repair: guarantee crossing starts in crossing specialist."""
+        cfg = self.crossing_initial_task_bootstrap
+        if not bool(cfg.get("enabled", True)):
+            return None
         if self._active_mode_id is not None:
             return None
-        if str(self.current_task_name) != "crossing_feasible":
+        if str(self.current_task_name) != str(
+            cfg.get("task_name", "crossing_feasible")
+        ):
             return None
-        return self._mode_id_for_specialist_key("crossing_feasible")
+        return self._mode_id_for_specialist_key(
+            str(cfg.get("forced_specialist_key", "crossing_feasible"))
+        )
 
     def _crossing_pre_merge_mode_lock_id(
         self, commander_snapshot: Dict[str, Any]
@@ -540,6 +550,7 @@ class HierarchicalCommanderPolicy:
         constraint_triggered = False
         constraint_reason = None
         crossing_pre_merge_mode_lock_active = False
+        crossing_initial_task_bootstrap_active = False
         initial_macro_mode_override_applied_this_step = False
         first_recovery_entry_hold_state = {
             "configured": bool(
@@ -572,6 +583,7 @@ class HierarchicalCommanderPolicy:
                 bootstrap_mode_id = self._initial_task_bootstrap_mode_id()
                 if bootstrap_mode_id is not None:
                     requested_mode_id = bootstrap_mode_id
+                    crossing_initial_task_bootstrap_active = True
                 else:
                     crossing_pre_merge_lock_mode_id = self._crossing_pre_merge_mode_lock_id(
                         commander_snapshot
@@ -816,6 +828,12 @@ class HierarchicalCommanderPolicy:
             "commander_requested_mode_name": requested_mode_name,
             "commander_crossing_pre_merge_mode_lock_active": bool(
                 crossing_pre_merge_mode_lock_active
+            ),
+            "commander_crossing_initial_task_bootstrap_enabled": bool(
+                self.crossing_initial_task_bootstrap.get("enabled", True)
+            ),
+            "commander_crossing_initial_task_bootstrap_active": bool(
+                crossing_initial_task_bootstrap_active
             ),
             "commander_initial_macro_mode_override_active": bool(
                 initial_macro_mode_override_metadata["active"]

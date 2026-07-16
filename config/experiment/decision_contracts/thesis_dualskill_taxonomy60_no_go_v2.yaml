@@ -69,13 +69,13 @@ comparison_contract:
     deterministic_recovery_guard: disabled
   canonical_ppo:
     ppo_checkpoint: canonical_frozen
-    crossing_bootstrap: enabled
-    pre_merge_lock: enabled
+    crossing_initial_task_bootstrap: enabled
+    crossing_pre_merge_mode_lock: disabled
     deterministic_recovery_guard: enabled
-  ppo_unlocked_crossing:
+  ppo_unbootstrapped_crossing:
     ppo_checkpoint: canonical_frozen
-    crossing_bootstrap: disabled
-    pre_merge_lock: disabled
+    crossing_initial_task_bootstrap: disabled
+    crossing_pre_merge_mode_lock: disabled
     deterministic_recovery_guard: enabled
 
 classification:

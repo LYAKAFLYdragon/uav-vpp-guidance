@@ -124,3 +124,7 @@
 - [ ] M0--M4 ablation report、mode/guard telemetry report、声明边界。
 - [ ] 五态势×三 opponent×五方法 heatmap、paired-delta forest plot、代表性轨迹。
 - [ ] paper evidence matrix、artifact bundle、independent verifier、最终 go/no-go memo。
+
+## 8. 执行状态
+
+- [x] **P0 development preflight：** 资产哈希、解释器、容量、空输出根与现有 Taxonomy30 测试已核验通过；详情见 [P0 preflight record](E:/uav-vpp-guidance-five-state-heldout-envelope-v1/reports/thesis_dualskill_taxonomy60_p0_preflight_20260716.md)。P1 manifest 开发获准，P2 smoke 与正式 Source 仍未授权。

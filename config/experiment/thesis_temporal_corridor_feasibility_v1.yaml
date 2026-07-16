@@ -1,0 +1,17 @@
+kind: read_only_temporal_corridor_feasibility
+inputs:
+  v16_output_root: E:/uav-vpp-guidance-five-state-heldout-envelope-v1-results/five_state_reentry_v16_dynamic_reference_path
+raw_action_ranges: [[-1500.0, 1500.0], [-800.0, 800.0], [-500.0, 500.0]]
+candidates:
+  - id: moderate_left
+    compiler: {horizon_steps: 20, longitudinal_extent_m: 450.0, lateral_extent_m: 300.0, vertical_extent_m: 100.0, lateral_sign: 1, max_action_delta: 0.18}
+  - id: moderate_right
+    compiler: {horizon_steps: 20, longitudinal_extent_m: 450.0, lateral_extent_m: 300.0, vertical_extent_m: 100.0, lateral_sign: -1, max_action_delta: 0.18}
+  - id: assertive_left
+    compiler: {horizon_steps: 20, longitudinal_extent_m: 750.0, lateral_extent_m: 500.0, vertical_extent_m: 180.0, lateral_sign: 1, max_action_delta: 0.18}
+  - id: assertive_right
+    compiler: {horizon_steps: 20, longitudinal_extent_m: 750.0, lateral_extent_m: 500.0, vertical_extent_m: 180.0, lateral_sign: -1, max_action_delta: 0.18}
+gate:
+  min_episodes: 4
+  max_mean_residual_m: 25.0
+  min_peak_action_norm: 0.25

@@ -15,8 +15,15 @@ from uav_vpp_guidance.training.thesis_shared_skill_geometry import FrozenP3Encod
 SOURCE_ID='THESIS-FIVE-STATE-V21-WARMUP-ANCHOR-PROTOCOL'
 OPPONENTS=('expert','end_to_end','independent_ppo_vpp')
 
+def _load_config(path):
+ d=v17._load(path)
+ if 'base_config' not in d:return d
+ base=v17._resolve(d['base_config'])
+ if v17._hash(base)!=d.get('base_config_sha256'):raise RuntimeError('V21 authorization base hash mismatch')
+ result=copy.deepcopy(v17._load(base));result['authorization']=copy.deepcopy(d.get('authorization',{}));return result
+
 def main():
- p=argparse.ArgumentParser();p.add_argument('--config',type=Path,required=True);p.add_argument('--execute',action='store_true');a=p.parse_args();d=v17._load(a.config)
+ p=argparse.ArgumentParser();p.add_argument('--config',type=Path,required=True);p.add_argument('--execute',action='store_true');a=p.parse_args();d=_load_config(a.config)
  m=v17._load(v17._resolve(d['inputs']['manifest']));out=v17._resolve(d['outputs']['root'])
  pre={'source_id':SOURCE_ID,'planned_records':72,'output_root_absent':not out.exists(),'execution_permitted':bool(d['authorization']['execution_permitted'])}
  if not a.execute: print(json.dumps(pre,indent=2));return

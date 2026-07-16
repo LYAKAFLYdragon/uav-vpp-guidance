@@ -1,7 +1,8 @@
 # Taxonomy60 No-Go 路线决策器 v2
 
-**适用 Source：** `THESIS-DUALSKILL-TAXONOMY60-3OPP-V1`  
-**机器可读合同：** [thesis_dualskill_taxonomy60_no_go_v2.yaml](E:/uav-vpp-guidance-five-state-heldout-envelope-v1/config/experiment/decision_contracts/thesis_dualskill_taxonomy60_no_go_v2.yaml)  
+**适用 Source：** `THESIS-DUALSKILL-TAXONOMY60-3OPP-V1`
+
+**机器可读合同：** [thesis_dualskill_taxonomy60_no_go_v2.yaml](E:/uav-vpp-guidance-five-state-heldout-envelope-v1/config/experiment/decision_contracts/thesis_dualskill_taxonomy60_no_go_v2.yaml)
 **状态：** P1 预注册补强；正式运行前冻结。
 
 ## 审核结论

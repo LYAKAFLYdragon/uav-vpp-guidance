@@ -148,6 +148,21 @@ def test_disjointness_rejects_colliding_historical_signature():
         )
 
 
+def test_git_blob_source_replays_a_historical_yaml_include_chain():
+    builder = _load_builder()
+    relative_path = "config/experiment/manifests/thesis_taxonomy_ablation30_v1.yaml"
+    source = builder.GitConfigSource("HEAD", relative_path)
+
+    assert builder.load_git_config_signatures(source) == builder.load_config_signatures(
+        ROOT / relative_path
+    )
+    source_id, parsed = builder._parse_disjoint_source(
+        "HISTORICAL=git:HEAD:{}".format(relative_path)
+    )
+    assert source_id == "HISTORICAL"
+    assert isinstance(parsed, builder.GitConfigSource)
+
+
 def test_cli_writes_a_manifest_from_a_clean_python_process(tmp_path):
     output = tmp_path / "taxonomy60.yaml"
     completed = subprocess.run(

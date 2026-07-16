@@ -7,9 +7,10 @@ import hashlib
 import json
 import math
 from pathlib import Path
+import posixpath
 import subprocess
 import sys
-from typing import Any, Iterable, Mapping, Optional, Set, Tuple
+from typing import Any, Iterable, Mapping, Optional, Set, Tuple, Union
 
 import yaml
 
@@ -70,6 +71,18 @@ PACKAGE_SPECS = {
         },
     },
 }
+
+
+class GitConfigSource:
+    """A historical YAML config addressed by an immutable Git object."""
+
+    def __init__(self, revision: str, path: str) -> None:
+        self.revision = revision
+        self.path = path
+
+    @property
+    def label(self) -> str:
+        return "git:{}:{}".format(self.revision, self.path)
 
 
 def _normalize_heading_deg(value: float) -> float:
@@ -380,8 +393,12 @@ def _collect_scenarios(value: Any) -> list:
     return found
 
 
+def _payload_signatures(payload: Mapping[str, Any]) -> Set[Tuple[Any, ...]]:
+    return {scenario_signature(scenario) for scenario in _collect_scenarios(payload)}
+
+
 def load_config_signatures(path: Path, visited: Optional[Set[Path]] = None) -> Set[Tuple[Any, ...]]:
-    """Read explicit scenarios from a YAML include chain without executing configs."""
+    """Read explicit scenarios from a local YAML include chain without executing it."""
 
     resolved_path = path.resolve()
     seen = visited if visited is not None else set()
@@ -389,11 +406,43 @@ def load_config_signatures(path: Path, visited: Optional[Set[Path]] = None) -> S
         return set()
     seen.add(resolved_path)
     payload = yaml.safe_load(resolved_path.read_text(encoding="utf-8")) or {}
-    signatures = {scenario_signature(scenario) for scenario in _collect_scenarios(payload)}
+    signatures = _payload_signatures(payload)
     for include in payload.get("includes", []) or []:
         include_path = (resolved_path.parent / include).resolve()
         if include_path.exists():
             signatures.update(load_config_signatures(include_path, seen))
+    return signatures
+
+
+def _git_show_bytes(source: GitConfigSource) -> bytes:
+    return subprocess.check_output(
+        ["git", "show", "{}:{}".format(source.revision, source.path)],
+        cwd=REPO_ROOT,
+    )
+
+
+def load_git_config_signatures(
+    source: GitConfigSource,
+    visited: Optional[Set[Tuple[str, str]]] = None,
+) -> Set[Tuple[Any, ...]]:
+    """Rebuild historical scenario signatures from Git blobs, including YAML includes."""
+
+    key = (source.revision, source.path)
+    seen = visited if visited is not None else set()
+    if key in seen:
+        return set()
+    seen.add(key)
+    payload = yaml.safe_load(_git_show_bytes(source).decode("utf-8")) or {}
+    signatures = _payload_signatures(payload)
+    for include in payload.get("includes", []) or []:
+        include_path = posixpath.normpath(
+            posixpath.join(posixpath.dirname(source.path), str(include))
+        )
+        signatures.update(
+            load_git_config_signatures(
+                GitConfigSource(revision=source.revision, path=include_path), seen
+            )
+        )
     return signatures
 
 
@@ -410,10 +459,20 @@ def _git_head(root: Path) -> str:
     return subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=root, text=True).strip()
 
 
-def _parse_disjoint_source(value: str) -> Tuple[str, Path]:
+def _parse_disjoint_source(value: str) -> Tuple[str, Union[Path, GitConfigSource]]:
     if "=" not in value:
         raise argparse.ArgumentTypeError("Expected SOURCE_ID=PATH")
     source_id, raw_path = value.split("=", 1)
+    if raw_path.startswith("git:"):
+        _, revision, git_path = raw_path.split(":", 2)
+        source = GitConfigSource(revision=revision, path=git_path)
+        try:
+            _git_show_bytes(source)
+        except subprocess.CalledProcessError as error:
+            raise argparse.ArgumentTypeError(
+                "Missing Git YAML source: {}".format(raw_path)
+            ) from error
+        return source_id, source
     path = Path(raw_path)
     if not source_id or not path.is_file():
         raise argparse.ArgumentTypeError("Invalid disjoint source: {}".format(value))
@@ -444,14 +503,32 @@ def main() -> int:
     manifest = dict(build_manifest(args.source_git_sha or _git_head(root)))
     historical = {}
     source_files = []
-    for source_id, path in args.disjoint_source:
-        signatures = load_config_signatures(path)
+    for source_id, source in args.disjoint_source:
+        if isinstance(source, GitConfigSource):
+            source_bytes = _git_show_bytes(source)
+            signatures = load_git_config_signatures(source)
+            config_name = Path(source.path).name
+            source_descriptor = source.label
+            config_hash = hashlib.sha256(source_bytes).hexdigest()
+            provenance = {
+                "kind": "git_blob",
+                "revision": source.revision,
+                "path": source.path,
+            }
+        else:
+            signatures = load_config_signatures(source)
+            config_name = source.name
+            source_descriptor = str(source.resolve())
+            config_hash = _sha256_file(source)
+            provenance = {"kind": "local_file", "path": str(source.resolve())}
         historical[source_id] = signatures
         source_files.append(
             {
                 "source_id": source_id,
-                "config_name": path.name,
-                "config_sha256": _sha256_file(path),
+                "config_name": config_name,
+                "config_sha256": config_hash,
+                "source_descriptor": source_descriptor,
+                "provenance": provenance,
                 "unique_signature_count": len(signatures),
             }
         )

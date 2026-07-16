@@ -37,6 +37,25 @@ evaluation:
   corridor_window_steps: 20
   raw_si_first_pass_event: {closing_rate_threshold_mps: 0.0, opening_rate_threshold_mps: 0.0, minimum_closing_steps: 3, minimum_opening_steps: 2}
   objective_schedule: [range_extension, reentry_preparation]
+observability:
+  max_high_level_steps: 260
+  local_window_steps: 20
+  raw_si_first_pass_event: {closing_rate_threshold_mps: 0.0, opening_rate_threshold_mps: 0.0, minimum_closing_steps: 3, minimum_opening_steps: 2}
+observation_contract:
+  encoder_profile: range_extension
+  profile_role: fixed_66d_target_weight_anchor_only
+  dynamic_profile_in_66d: prohibited
+semantic_compiler:
+  raw_action_offset_frame: world_neu
+  raw_action_ranges: [[-1500.0, 1500.0], [-800.0, 800.0], [-500.0, 500.0]]
+  range_extent_m: 1200.0
+  turn_extent_m: 900.0
+  vertical_extent_m: 400.0
+  range_error_scale_m: 2000.0
+  range_rate_error_scale_mps: 200.0
+  turn_error_scale_deg: 90.0
+  energy_error_scale_m: 1000.0
+  altitude_error_scale_m: 1000.0
 raw_action_ranges: [[-1500.0, 1500.0], [-800.0, 800.0], [-500.0, 500.0]]
 gates:
   min_qualifying_pairs_per_opponent: 4

@@ -140,6 +140,31 @@ def validate_design(path: Path) -> dict[str, Any]:
     }
 
 
+def validate_required_smoke_gate(execution: Mapping[str, Any]) -> None:
+    """Require the three-opponent engineering gate before formal authorization."""
+
+    smoke_value = execution.get("required_smoke_gate")
+    expected_hash = str(execution.get("required_smoke_gate_sha256") or "")
+    if not smoke_value or not expected_hash:
+        raise TemporalCorridorTransferV2Error("V2 authorization must bind a passed smoke gate")
+    smoke_path = _resolve(str(smoke_value))
+    if not smoke_path.is_file() or _hash(smoke_path) != expected_hash:
+        raise TemporalCorridorTransferV2Error("V2 required smoke gate hash mismatch")
+    try:
+        gate = json.loads(smoke_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as error:
+        raise TemporalCorridorTransferV2Error("V2 required smoke gate is unreadable") from error
+    if (
+        gate.get("smoke_id") != "ENGINEERING-TEMPORAL-CORRIDOR-TRANSFER-V2-BUILD-SMOKE-NOT-A-SOURCE-ID"
+        or gate.get("source_id_under_test") != SOURCE_ID
+        or int(gate.get("records", 0)) != len(OPPONENTS)
+        or gate.get("all_opponents_present") is not True
+        or gate.get("all_telemetry_passed") is not True
+        or gate.get("passes") is not True
+    ):
+        raise TemporalCorridorTransferV2Error("V2 required smoke gate did not pass")
+
+
 def _authorize(config: Mapping[str, Any], expected_records: int) -> None:
     execution = config.get("_execution")
     if (
@@ -154,6 +179,7 @@ def _authorize(config: Mapping[str, Any], expected_records: int) -> None:
     files = execution.get("authorized_code_files")
     if not isinstance(files, list) or not files:
         raise TemporalCorridorTransferV2Error("V2 authorized file list is missing")
+    validate_required_smoke_gate(execution)
     for item in files:
         source = _resolve(str(item.get("path") or ""))
         if not source.is_file() or _hash(source) != str(item.get("sha256") or ""):

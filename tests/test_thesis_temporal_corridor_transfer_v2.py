@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import hashlib
 import json
 from pathlib import Path
 import sys
@@ -86,3 +87,25 @@ def test_v2_requires_execution_runtime_mapping() -> None:
 def test_smoke_prediction_receipt_is_json_safe() -> None:
     receipt = {"predicted_target_position_neu": smoke._finite_vector(np.asarray([1.0, 2.0, 3.0]), "prediction")}
     assert json.loads(json.dumps(receipt))["predicted_target_position_neu"] == [1.0, 2.0, 3.0]
+
+
+def test_v2_requires_a_hash_bound_passed_smoke_gate(tmp_path: Path) -> None:
+    gate_path = tmp_path / "smoke_gate.json"
+    gate = {
+        "smoke_id": "ENGINEERING-TEMPORAL-CORRIDOR-TRANSFER-V2-BUILD-SMOKE-NOT-A-SOURCE-ID",
+        "source_id_under_test": runner.SOURCE_ID,
+        "records": 3,
+        "all_opponents_present": True,
+        "all_telemetry_passed": True,
+        "passes": True,
+    }
+    gate_path.write_text(json.dumps(gate), encoding="utf-8")
+    execution = {
+        "required_smoke_gate": str(gate_path),
+        "required_smoke_gate_sha256": hashlib.sha256(gate_path.read_bytes()).hexdigest(),
+    }
+    runner.validate_required_smoke_gate(execution)
+
+    execution["required_smoke_gate_sha256"] = "0" * 64
+    with pytest.raises(runner.TemporalCorridorTransferV2Error, match="hash mismatch"):
+        runner.validate_required_smoke_gate(execution)

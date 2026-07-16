@@ -84,7 +84,8 @@ def _record_one(config: Mapping[str, Any], registry: Mapping[str, Any], scenario
         info = episode.smoke_reference_trace[-1]
         if info.get("prediction_valid") is not True or info.get("prediction_fallback") is True:
             raise TemporalCorridorTransferV2SmokeError("smoke predictor was not ready after V16 run-in")
-        _own, _target, predicted = episode._context()
+        _own, _target, predicted_raw = episode._context()
+        predicted = _finite_vector(predicted_raw, "predicted_target_position")
         guidance = info.get("guidance_command")
         if not isinstance(guidance, Mapping):
             raise TemporalCorridorTransferV2SmokeError("smoke guidance command is missing")

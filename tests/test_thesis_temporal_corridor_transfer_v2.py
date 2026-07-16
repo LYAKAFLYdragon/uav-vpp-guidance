@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import copy
+import json
 from pathlib import Path
 import sys
 
+import numpy as np
 import pytest
 
 
@@ -11,6 +13,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import run_thesis_temporal_corridor_transfer_v2 as runner
+import run_thesis_temporal_corridor_transfer_v2_smoke as smoke
 from uav_vpp_guidance.evaluation.thesis_temporal_corridor_transfer_v2 import summarize_records
 
 
@@ -78,3 +81,8 @@ def test_v2_requires_execution_runtime_mapping() -> None:
     mismatched["execution"]["runtime_template"] = "config/experiment/manifests/thesis_temporal_corridor_transfer_v2_dev12.yaml"
     with pytest.raises(runner.TemporalCorridorTransferV2Error, match="does not match"):
         runner.environment_config(mismatched)
+
+
+def test_smoke_prediction_receipt_is_json_safe() -> None:
+    receipt = {"predicted_target_position_neu": smoke._finite_vector(np.asarray([1.0, 2.0, 3.0]), "prediction")}
+    assert json.loads(json.dumps(receipt))["predicted_target_position_neu"] == [1.0, 2.0, 3.0]

@@ -1,0 +1,556 @@
+#!/usr/bin/env python3
+"""Export read-only paper evidence from the frozen Taxonomy60 formal source.
+
+The exporter intentionally reads the compact per-run summaries rather than
+replaying, rerunning, or modifying any JSBSim episode.  It refuses any source
+whose independent verifier did not select the pre-registered ``paper_closure``
+route.  Guard-confounded PPO episodes remain in deployed-interface summaries,
+but are flagged as ineligible for a pure routing-causality interpretation.
+"""
+
+from __future__ import annotations
+
+import argparse
+import csv
+from collections import Counter, defaultdict
+import hashlib
+import json
+import math
+from pathlib import Path
+import shutil
+from typing import Any, Iterable, Mapping, Sequence
+
+import yaml
+
+
+REPO_ROOT = Path(__file__).resolve().parent.parent
+SOURCE_ID = "THESIS-DUALSKILL-TAXONOMY60-3OPP-V1"
+OPPONENTS = ("expert", "end_to_end", "independent_ppo_vpp")
+PRIMARY_OPPONENTS = ("expert", "end_to_end")
+METHODS = (
+    "fixed_head_on",
+    "fixed_crossing",
+    "static_oracle_gate",
+    "canonical_ppo",
+    "ppo_unbootstrapped_crossing",
+)
+PPO_METHODS = {"canonical_ppo", "ppo_unbootstrapped_crossing"}
+REFERENCE_METHODS = (
+    "fixed_head_on",
+    "fixed_crossing",
+    "static_oracle_gate",
+    "ppo_unbootstrapped_crossing",
+)
+MANIFEST_PATH = REPO_ROOT / "config" / "experiment" / "manifests" / "thesis_dualskill_taxonomy60_v1.yaml"
+
+
+class FormalAnalysisError(RuntimeError):
+    """Raised for an invalid or incomplete read-only evidence source."""
+
+
+def _sha256(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _load_json(path: Path) -> Any:
+    with path.open("r", encoding="utf-8") as handle:
+        return json.load(handle)
+
+
+def _load_yaml(path: Path) -> dict[str, Any]:
+    return yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+
+
+def _as_bool(value: Any) -> bool:
+    if isinstance(value, bool):
+        return value
+    return str(value).strip().lower() in {"1", "true", "yes"}
+
+
+def _as_float(value: Any) -> float | None:
+    try:
+        parsed = float(value)
+    except (TypeError, ValueError):
+        return None
+    return parsed if math.isfinite(parsed) else None
+
+
+def _mean(values: Iterable[float | None]) -> float | None:
+    finite = [value for value in values if value is not None and math.isfinite(value)]
+    return sum(finite) / len(finite) if finite else None
+
+
+def wilson_95_interval(wins: int, resolved: int) -> tuple[float | None, float | None]:
+    """Return a two-sided 95% Wilson interval; draws are excluded upstream."""
+    if resolved <= 0:
+        return None, None
+    z = 1.959963984540054
+    proportion = wins / resolved
+    denominator = 1.0 + z * z / resolved
+    centre = (proportion + z * z / (2.0 * resolved)) / denominator
+    margin = z * math.sqrt(
+        proportion * (1.0 - proportion) / resolved + z * z / (4.0 * resolved * resolved)
+    ) / denominator
+    return max(0.0, centre - margin), min(1.0, centre + margin)
+
+
+def _scenario_metadata(manifest_path: Path) -> dict[str, dict[str, Any]]:
+    manifest = _load_yaml(manifest_path)
+    if manifest.get("source_id") != SOURCE_ID:
+        raise FormalAnalysisError("manifest Source ID mismatch")
+    scenarios = manifest.get("scenarios", [])
+    if len(scenarios) != 60:
+        raise FormalAnalysisError("Taxonomy60 manifest must contain exactly 60 scenarios")
+    result: dict[str, dict[str, Any]] = {}
+    for scenario in scenarios:
+        name = scenario.get("name")
+        metadata = scenario.get("metadata", {})
+        if not isinstance(name, str) or not isinstance(metadata, Mapping):
+            raise FormalAnalysisError("scenario lacks a usable name or metadata")
+        required = ("initial_class", "height_condition", "mirror_sign", "task_registry_key", "scenario_seed")
+        if any(key not in metadata for key in required):
+            raise FormalAnalysisError("scenario {} lacks taxonomy metadata".format(name))
+        result[name] = dict(metadata)
+    if len(result) != 60:
+        raise FormalAnalysisError("Taxonomy60 manifest scenario names are not unique")
+    return result
+
+
+def _guard_keys(route_decision: Mapping[str, Any]) -> set[tuple[str, str, str]]:
+    keys: set[tuple[str, str, str]] = set()
+    for value in route_decision.get("guard_confounded_episode_ids", []):
+        parts = str(value).split("|")
+        if len(parts) != 3:
+            raise FormalAnalysisError("malformed guard-confounded episode identity")
+        keys.add((parts[0], parts[1], parts[2]))
+    return keys
+
+
+def _verify_analysis_entrypoint(root: Path) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
+    verification_path = root / "formal_verification.json"
+    decision_path = root / "taxonomy60_route_decision.json"
+    execution_path = root / "formal_execution_manifest.json"
+    if not all(path.is_file() for path in (verification_path, decision_path, execution_path)):
+        raise FormalAnalysisError("formal root lacks verifier or execution receipts")
+    verification = _load_json(verification_path)
+    decision = _load_json(decision_path)
+    execution = _load_json(execution_path)
+    if verification.get("source_id") != SOURCE_ID or verification.get("verdict") != "pass":
+        raise FormalAnalysisError("formal verification is not a passing Taxonomy60 receipt")
+    if int(verification.get("records", 0)) != 900:
+        raise FormalAnalysisError("formal verification does not cover 900 records")
+    if decision.get("source_id") != SOURCE_ID or decision.get("formal_validity_verdict") != "pass":
+        raise FormalAnalysisError("route decision does not describe a valid formal source")
+    if decision.get("selected_study_route") != "paper_closure":
+        raise FormalAnalysisError("read-only exporter is only defined for the paper-closure route")
+    if execution.get("source_id") != SOURCE_ID or execution.get("execution_status") != "completed":
+        raise FormalAnalysisError("formal execution receipt is incomplete")
+    return verification, decision, execution
+
+
+def load_summary_records(root: Path, metadata_by_scenario: Mapping[str, Mapping[str, Any]], guard_keys: set[tuple[str, str, str]]) -> list[dict[str, Any]]:
+    """Load and validate the 900 compact summary rows without touching episode data."""
+    records: list[dict[str, Any]] = []
+    expected = {(scenario, opponent, method) for scenario in metadata_by_scenario for opponent in OPPONENTS for method in METHODS}
+    actual: set[tuple[str, str, str]] = set()
+    for opponent in OPPONENTS:
+        summary_path = root / "{}-{}".format(SOURCE_ID, opponent) / "summary.csv"
+        if not summary_path.is_file():
+            raise FormalAnalysisError("missing summary CSV for {}".format(opponent))
+        with summary_path.open("r", encoding="utf-8", newline="") as handle:
+            rows = list(csv.DictReader(handle))
+        if len(rows) != 300:
+            raise FormalAnalysisError("{} summary has {} rather than 300 records".format(opponent, len(rows)))
+        for row in rows:
+            scenario = row.get("scenario", "")
+            method = row.get("method", "")
+            key = (scenario, opponent, method)
+            if scenario not in metadata_by_scenario or method not in METHODS or row.get("opponent_stage") != opponent:
+                raise FormalAnalysisError("summary row lies outside the frozen record universe")
+            if key in actual:
+                raise FormalAnalysisError("duplicate summary record identity {}".format(key))
+            if row.get("backend") != "jsbsim" or not _as_bool(row.get("strict_backend")):
+                raise FormalAnalysisError("summary row violates the strict JSBSim contract")
+            if _as_bool(row.get("backend_fallback_occurred")):
+                raise FormalAnalysisError("summary row recorded backend fallback")
+            if row.get("run_status") != "formal":
+                raise FormalAnalysisError("summary row is not marked formal")
+            expected_seed = int(metadata_by_scenario[scenario]["scenario_seed"])
+            if int(row.get("seed", -1)) != expected_seed:
+                raise FormalAnalysisError("summary row seed is not the frozen scenario seed")
+            outcome = row.get("combat_outcome") or row.get("outcome")
+            if outcome not in {"win", "loss", "draw"}:
+                raise FormalAnalysisError("summary row has an unsupported outcome")
+            normalized = {
+                "source_id": SOURCE_ID,
+                "scenario_id": scenario,
+                "opponent": opponent,
+                "method": method,
+                "seed": expected_seed,
+                "task": row.get("task"),
+                "initial_class": metadata_by_scenario[scenario]["initial_class"],
+                "height_condition": metadata_by_scenario[scenario]["height_condition"],
+                "mirror_sign": metadata_by_scenario[scenario]["mirror_sign"],
+                "mirror_pair_id": metadata_by_scenario[scenario].get("mirror_pair_id"),
+                "outcome": outcome,
+                "terminal_reason": row.get("termination_reason"),
+                "win": _as_bool(row.get("win")),
+                "loss": _as_bool(row.get("loss")),
+                "draw": _as_bool(row.get("draw")),
+                "steps": _as_float(row.get("steps")),
+                "total_time_s": _as_float(row.get("total_time_s")),
+                "mean_range_m": _as_float(row.get("mean_range_m")),
+                "mean_abs_ata_deg": _as_float(row.get("mean_abs_ata_deg")),
+                "mean_speed_mps": _as_float(row.get("mean_speed_mps")),
+                "mean_altitude_m": _as_float(row.get("mean_altitude_m")),
+                "envelope_fraction": _as_float(row.get("envelope_fraction")),
+                "saturation_fraction": _as_float(row.get("saturation_fraction")),
+                "prediction_valid_rate": _as_float(row.get("prediction_valid_rate")),
+                "prediction_fallback_rate": _as_float(row.get("prediction_fallback_rate")),
+                "mode_head_on_fraction": _as_float(row.get("commander_mode_head_on_fraction")),
+                "mode_crossing_fraction": _as_float(row.get("commander_mode_crossing_fraction")),
+                "mode_recovery_fraction": _as_float(row.get("commander_mode_recovery_fraction")),
+                "mean_switch_count": _as_float(row.get("commander_mean_switch_count")),
+                "first_switch_step": _as_float(row.get("commander_first_switch_step")),
+                "guard_confounded": key in guard_keys,
+                "routing_attribution_eligible": method not in PPO_METHODS or key not in guard_keys,
+            }
+            if normalized["win"] != (outcome == "win") or normalized["loss"] != (outcome == "loss"):
+                raise FormalAnalysisError("summary outcome flags do not agree")
+            records.append(normalized)
+            actual.add(key)
+    if actual != expected or len(records) != 900:
+        raise FormalAnalysisError("summary records are not the exact 900-record formal matrix")
+    return records
+
+
+def _group_records(
+    records: Sequence[Mapping[str, Any]], fields: Sequence[str]
+) -> dict[tuple[Any, ...], list[Mapping[str, Any]]]:
+    groups: dict[tuple[Any, ...], list[Mapping[str, Any]]] = defaultdict(list)
+    for record in records:
+        groups[tuple(record[field] for field in fields)].append(record)
+    return groups
+
+
+def result_summary(records: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:
+    """Summarize results without pooling opponents; draws stay outside Wilson denominators."""
+    summary_rows: list[dict[str, Any]] = []
+    for include_all in (False, True):
+        source = records if not include_all else [dict(record, initial_class="all") for record in records]
+        for (initial_class, opponent, method), group in sorted(_group_records(source, ("initial_class", "opponent", "method")).items()):
+            wins = sum(bool(record["win"]) for record in group)
+            losses = sum(bool(record["loss"]) for record in group)
+            draws = sum(bool(record["draw"]) for record in group)
+            resolved = wins + losses
+            lower, upper = wilson_95_interval(wins, resolved)
+            summary_rows.append(
+                {
+                    "initial_class": initial_class,
+                    "opponent": opponent,
+                    "opponent_role": "primary" if opponent in PRIMARY_OPPONENTS else "supporting_provenance_limited",
+                    "method": method,
+                    "n_total": len(group),
+                    "n_resolved": resolved,
+                    "wins": wins,
+                    "losses": losses,
+                    "draws": draws,
+                    "win_rate_resolved": wins / resolved if resolved else None,
+                    "wilson_95_lower": lower,
+                    "wilson_95_upper": upper,
+                    "mean_range_m": _mean(record["mean_range_m"] for record in group),
+                    "mean_abs_ata_deg": _mean(record["mean_abs_ata_deg"] for record in group),
+                    "mean_speed_mps": _mean(record["mean_speed_mps"] for record in group),
+                    "mean_altitude_m": _mean(record["mean_altitude_m"] for record in group),
+                    "mean_saturation_fraction": _mean(record["saturation_fraction"] for record in group),
+                    "guard_confounded_records": sum(bool(record["guard_confounded"]) for record in group),
+                }
+            )
+    return summary_rows
+
+
+def paired_deltas(records: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:
+    """Return paired canonical-PPO deltas by state and opponent, never pooled."""
+    by_cell: dict[tuple[str, str], dict[str, Mapping[str, Any]]] = defaultdict(dict)
+    for record in records:
+        by_cell[(str(record["scenario_id"]), str(record["opponent"]))][str(record["method"])] = record
+    rows: list[dict[str, Any]] = []
+    for state in ("advantage", "head_on", "disadvantage", "neutral", "crossing_entry", "all"):
+        for opponent in OPPONENTS:
+            cells = []
+            for (scenario, cell_opponent), methods in by_cell.items():
+                if cell_opponent != opponent or set(methods) != set(METHODS):
+                    continue
+                canonical = methods["canonical_ppo"]
+                if state != "all" and canonical["initial_class"] != state:
+                    continue
+                cells.append(methods)
+            for reference in REFERENCE_METHODS:
+                eligible = [
+                    methods
+                    for methods in cells
+                    if methods["canonical_ppo"]["outcome"] in {"win", "loss"}
+                    and methods[reference]["outcome"] in {"win", "loss"}
+                ]
+                unconfounded = [
+                    methods
+                    for methods in eligible
+                    if methods["canonical_ppo"]["routing_attribution_eligible"]
+                    and methods[reference]["routing_attribution_eligible"]
+                ]
+                ppo_better = sum(
+                    methods["canonical_ppo"]["win"] and methods[reference]["loss"] for methods in eligible
+                )
+                ppo_worse = sum(
+                    methods["canonical_ppo"]["loss"] and methods[reference]["win"] for methods in eligible
+                )
+                rows.append(
+                    {
+                        "initial_class": state,
+                        "opponent": opponent,
+                        "opponent_role": "primary" if opponent in PRIMARY_OPPONENTS else "supporting_provenance_limited",
+                        "comparison": "canonical_ppo_minus_{}".format(reference),
+                        "n_cells": len(cells),
+                        "n_pair_resolved": len(eligible),
+                        "canonical_ppo_better": ppo_better,
+                        "canonical_ppo_worse": ppo_worse,
+                        "same_outcome": len(eligible) - ppo_better - ppo_worse,
+                        "paired_win_delta": (ppo_better - ppo_worse) / len(eligible) if eligible else None,
+                        "n_unconfounded_pair_resolved": len(unconfounded),
+                        "guard_confounded_pair_count": len(eligible) - len(unconfounded),
+                        "interpretation": "descriptive_paired_delta_not_significance_test",
+                    }
+                )
+    return rows
+
+
+def terminal_safety_rows(records: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for include_all in (False, True):
+        source = records if not include_all else [dict(record, initial_class="all") for record in records]
+        for (initial_class, opponent, method), group in sorted(_group_records(source, ("initial_class", "opponent", "method")).items()):
+            reasons = Counter(str(record["terminal_reason"]) for record in group)
+            for reason, count in sorted(reasons.items()):
+                rows.append(
+                    {
+                        "initial_class": initial_class,
+                        "opponent": opponent,
+                        "opponent_role": "primary" if opponent in PRIMARY_OPPONENTS else "supporting_provenance_limited",
+                        "method": method,
+                        "terminal_reason": reason,
+                        "episode_count": count,
+                        "fraction_of_group": count / len(group),
+                        "safety_semantics": "timeout_outcome_not_kill_rate_or_safety_certification"
+                        if reason.startswith("timeout")
+                        else "inspect_terminal_actor_before_any_safety_interpretation",
+                    }
+                )
+    return rows
+
+
+def mode_guard_rows(records: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for record in records:
+        if record["method"] not in PPO_METHODS:
+            continue
+        rows.append(
+            {
+                "scenario_id": record["scenario_id"],
+                "initial_class": record["initial_class"],
+                "height_condition": record["height_condition"],
+                "mirror_sign": record["mirror_sign"],
+                "opponent": record["opponent"],
+                "opponent_role": "primary" if record["opponent"] in PRIMARY_OPPONENTS else "supporting_provenance_limited",
+                "method": record["method"],
+                "outcome": record["outcome"],
+                "terminal_reason": record["terminal_reason"],
+                "effective_head_on_fraction": record["mode_head_on_fraction"],
+                "effective_crossing_fraction": record["mode_crossing_fraction"],
+                "effective_recovery_fraction": record["mode_recovery_fraction"],
+                "mean_switch_count": record["mean_switch_count"],
+                "first_switch_step": record["first_switch_step"],
+                "guard_confounded": record["guard_confounded"],
+                "pure_routing_attribution_eligible": record["routing_attribution_eligible"],
+                "note": "guard-confounded rows remain deployed-interface evidence only",
+            }
+        )
+    return rows
+
+
+def candidate_rows(records: Sequence[Mapping[str, Any]], route_decision: Mapping[str, Any]) -> list[dict[str, Any]]:
+    by_id = {(record["scenario_id"], record["opponent"], record["method"]): record for record in records}
+    rows: list[dict[str, Any]] = []
+    for cell in route_decision.get("cell_classifications", []):
+        if "routing_sensitive_candidate" not in cell.get("labels", []):
+            continue
+        scenario = cell["scenario_id"]
+        opponent = cell["opponent"]
+        for method in METHODS:
+            record = by_id[(scenario, opponent, method)]
+            rows.append(
+                {
+                    "scenario_id": scenario,
+                    "initial_class": record["initial_class"],
+                    "height_condition": record["height_condition"],
+                    "mirror_sign": record["mirror_sign"],
+                    "opponent": opponent,
+                    "opponent_role": "primary" if opponent in PRIMARY_OPPONENTS else "supporting_provenance_limited",
+                    "method": method,
+                    "outcome": record["outcome"],
+                    "terminal_reason": record["terminal_reason"],
+                    "guard_confounded": record["guard_confounded"],
+                    "pure_routing_attribution_eligible": record["routing_attribution_eligible"],
+                }
+            )
+    return rows
+
+
+def _write_csv(
+    path: Path,
+    rows: Sequence[Mapping[str, Any]],
+    *,
+    empty_fieldnames: Sequence[str] | None = None,
+) -> None:
+    """Write a table, preserving a header-only CSV for a valid zero-candidate result."""
+    if not rows and not empty_fieldnames:
+        raise FormalAnalysisError("refusing to write an empty analysis table without a schema")
+    fieldnames = list(rows[0].keys()) if rows else list(empty_fieldnames or ())
+    with path.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(rows)
+
+
+def _write_markdown(path: Path, *, verification: Mapping[str, Any], decision: Mapping[str, Any], records: Sequence[Mapping[str, Any]], guard_count: int) -> None:
+    primary = [record for record in records if record["opponent"] in PRIMARY_OPPONENTS]
+    outcomes = Counter((record["opponent"], record["outcome"]) for record in primary)
+    lines = [
+        "# Taxonomy60 Formal Evidence Closure",
+        "",
+        "**Source ID:** `{}`  ".format(SOURCE_ID),
+        "**Route:** `{}`  ".format(decision["selected_study_route"]),
+        "**Scope:** read-only export from the verified 900-record universe; no simulator, training, tuning, or result-driven rerun was run.",
+        "",
+        "## Independent Entry Check",
+        "",
+        "- Formal verifier verdict: `{}` with `{}` records.".format(verification["verdict"], verification["records"]),
+        "- The pre-registered decision selects `paper_closure`; therefore training, tuning, scenario replacement, and result-driven reruns remain prohibited.",
+        "- Primary evidence is reported separately for `expert` and `end_to_end`; `independent_ppo_vpp` remains supporting, provenance-limited evidence.",
+        "- {} PPO records are guard-confounded. They remain deployed mixed-interface evidence but are excluded from pure routing-causality interpretation.".format(guard_count),
+        "",
+        "## Primary Outcome Counts",
+        "",
+        "| Opponent | Wins | Losses | Draws |",
+        "| --- | ---: | ---: | ---: |",
+    ]
+    for opponent in PRIMARY_OPPONENTS:
+        lines.append(
+            "| {} | {} | {} | {} |".format(
+                opponent,
+                outcomes[(opponent, "win")],
+                outcomes[(opponent, "loss")],
+                outcomes[(opponent, "draw")],
+            )
+        )
+    lines.extend(
+        [
+            "",
+            "These are all-method totals, not policy-level superiority claims. Policy comparisons are retained only in the paired, split-specific tables.",
+            "",
+            "## Paper-Closure Handoff",
+            "",
+            "1. Use `method_state_opponent_summary.csv` for the main/supplementary outcome table; Wilson intervals exclude draws from their denominator.",
+            "2. Use `paired_ppo_deltas.csv` descriptively, never as a pooled significance test or generalization claim.",
+            "3. Use `mode_guard_transparency.csv` and `routing_sensitive_candidates.csv` to state the recovery override boundary honestly.",
+            "4. Use `terminal_safety_semantics.csv` to avoid describing timeout HP outcomes as kill rate, aerodynamic superiority, or safety certification.",
+        ]
+    )
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+def export_analysis(root: Path, analysis_dir: Path, *, manifest_path: Path = MANIFEST_PATH, overwrite: bool = False) -> dict[str, Any]:
+    """Export the complete read-only paper-closure package and return its manifest."""
+    root = Path(root).resolve()
+    analysis_dir = Path(analysis_dir).resolve()
+    verification, decision, execution = _verify_analysis_entrypoint(root)
+    metadata = _scenario_metadata(Path(manifest_path).resolve())
+    guard = _guard_keys(decision)
+    records = load_summary_records(root, metadata, guard)
+    if analysis_dir.exists():
+        if not overwrite:
+            raise FormalAnalysisError("analysis directory already exists; use --overwrite only for disposable exports")
+        shutil.rmtree(analysis_dir)
+    analysis_dir.mkdir(parents=True)
+    tables: dict[str, Sequence[Mapping[str, Any]]] = {
+        "episode_index.csv": records,
+        "method_state_opponent_summary.csv": result_summary(records),
+        "paired_ppo_deltas.csv": paired_deltas(records),
+        "terminal_safety_semantics.csv": terminal_safety_rows(records),
+        "mode_guard_transparency.csv": mode_guard_rows(records),
+        "routing_sensitive_candidates.csv": candidate_rows(records, decision),
+    }
+    for filename, rows in tables.items():
+        _write_csv(
+            analysis_dir / filename,
+            rows,
+            empty_fieldnames=(
+                (
+                    "scenario_id", "initial_class", "height_condition", "mirror_sign", "opponent",
+                    "opponent_role", "method", "outcome", "terminal_reason", "guard_confounded",
+                    "pure_routing_attribution_eligible",
+                )
+                if filename == "routing_sensitive_candidates.csv"
+                else None
+            ),
+        )
+    _write_markdown(
+        analysis_dir / "paper_closure_handoff.md",
+        verification=verification,
+        decision=decision,
+        records=records,
+        guard_count=len(guard),
+    )
+    inputs = {
+        "formal_verification.json": _sha256(root / "formal_verification.json"),
+        "taxonomy60_route_decision.json": _sha256(root / "taxonomy60_route_decision.json"),
+        "formal_execution_manifest.json": _sha256(root / "formal_execution_manifest.json"),
+        "taxonomy60_manifest.yaml": _sha256(Path(manifest_path).resolve()),
+    }
+    for opponent in OPPONENTS:
+        inputs["{}_summary.csv".format(opponent)] = _sha256(root / "{}-{}".format(SOURCE_ID, opponent) / "summary.csv")
+    output_hashes = {path.name: _sha256(path) for path in sorted(analysis_dir.iterdir()) if path.is_file()}
+    artifact = {
+        "source_id": SOURCE_ID,
+        "analysis_kind": "read_only_paper_closure_export",
+        "formal_verdict": verification["verdict"],
+        "selected_study_route": decision["selected_study_route"],
+        "record_count": len(records),
+        "guard_confounded_record_count": len(guard),
+        "execution_manifest_payload_sha256": execution.get("manifest_payload_sha256"),
+        "input_sha256": inputs,
+        "output_sha256": output_hashes,
+        "primary_opponents": list(PRIMARY_OPPONENTS),
+        "supporting_opponents": ["independent_ppo_vpp"],
+        "prohibited_actions": decision.get("prohibited_actions", []),
+    }
+    (analysis_dir / "analysis_manifest.json").write_text(json.dumps(artifact, indent=2) + "\n", encoding="utf-8")
+    return artifact
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--output-root", type=Path, required=True, help="verified Taxonomy60 formal root")
+    parser.add_argument("--analysis-dir", type=Path, required=True, help="new analysis directory")
+    parser.add_argument("--manifest", type=Path, default=MANIFEST_PATH)
+    parser.add_argument("--overwrite", action="store_true", help="replace an existing disposable analysis directory")
+    args = parser.parse_args()
+    try:
+        artifact = export_analysis(args.output_root, args.analysis_dir, manifest_path=args.manifest, overwrite=args.overwrite)
+    except FormalAnalysisError as error:
+        parser.error(str(error))
+    print(json.dumps(artifact, indent=2))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

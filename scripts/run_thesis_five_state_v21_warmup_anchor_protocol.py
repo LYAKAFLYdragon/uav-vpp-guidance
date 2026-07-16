@@ -8,7 +8,7 @@ import sys
 ROOT=Path(__file__).resolve().parent.parent
 sys.path[:0]=[str(ROOT/'src'),str(ROOT/'scripts')]
 import run_thesis_five_state_v17_path_context_preflight as v17
-from thesis_five_state_v21_warmup_anchor_protocol import V21PathContextEpisode
+from v21_path_context_episode import V21PathContextEpisode
 from uav_vpp_guidance.training import thesis_neutral_postmerge_reentry_recovery_pilot as engine
 from uav_vpp_guidance.training.thesis_shared_skill_geometry import FrozenP3Encoder
 

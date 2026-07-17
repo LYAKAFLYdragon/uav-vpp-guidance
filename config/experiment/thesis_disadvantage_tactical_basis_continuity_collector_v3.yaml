@@ -4,10 +4,10 @@ replace_sections: [authorization, execution, research_boundary, observability, o
 schema_version: 1
 source_id: THESIS-DISADVANTAGE-TACTICAL-BASIS-CONTINUITY-COLLECTOR-V3
 stage: continuous_baseline_data_contract
-status: engineering_smoke_required_execution_not_authorized
+status: authorized_nonlearning_collection_once
 
 authorization:
-  execution_permitted: false
+  execution_permitted: true
   training_permitted: false
   tuning_permitted: false
   reward_change_permitted: false
@@ -21,7 +21,25 @@ authorization:
   require_clean_worktree: true
   one_collection_run_only: true
 
-execution: {}
+execution:
+  expected_records: 36
+  required_implementation_git_sha: 9410404d7cce350b68233428e610738d507afd3b
+  required_smoke_id: ENGINEERING-TACTICAL-BASIS-CONTINUITY-COLLECTOR-NOT-A-SOURCE-ID
+  required_smoke_gate: reports/thesis_disadvantage_tactical_basis_continuity_collector_v3_engineering_smoke_20260717.json
+  required_smoke_gate_sha256: 4321033d62bb5f257242f38ff93e89c1591767c62647b63ad7f8af97bb9dba10
+  authorized_code_files:
+    - path: scripts/run_thesis_disadvantage_tactical_basis_continuity_collector_v1.py
+      sha256: e18b83b36f997c5b714d672c1e2470dd033a1aaca92c20d346f44d638c9f87a2
+    - path: scripts/verify_thesis_disadvantage_tactical_basis_continuity_collector_v1.py
+      sha256: 7002cffa990a2c44ce5a85405e95229d76fe95ef9f7d1ad5f08abbe98a9ca954
+    - path: src/uav_vpp_guidance/evaluation/tactical_basis_continuity_contract.py
+      sha256: be6d8c9650ceed284d5570bf13c704cedad22b7f6c13389eec5877239ad88fae
+    - path: src/uav_vpp_guidance/evaluation/thesis_five_state_raw_si_v5_record_only.py
+      sha256: 8e80f8285e1c26aae68fa0bc3519a31a8ac5bd0e1c15f40b8448db07fdca223e
+    - path: src/uav_vpp_guidance/envs/tracking_env.py
+      sha256: 83dc5144197842ccd0e321fe4094279d364969fd3fc3627caa38440397ec235a
+    - path: src/uav_vpp_guidance/virtual_point/generator.py
+      sha256: a3e91ebd989e6c3f1a5463cbe96e17227f9dd63e0cab221f080b20415fcdf3a6
 
 research_boundary:
   parent_sources:

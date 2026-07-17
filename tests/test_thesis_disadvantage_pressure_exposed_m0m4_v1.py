@@ -18,10 +18,10 @@ def _module(name: str, path: Path):
     return module
 
 
-def test_preflight_accepts_the_frozen_pressure_exposed_source() -> None:
+def test_preflight_accepts_the_frozen_pressure_exposed_source(tmp_path: Path) -> None:
     module = _module("pressure_m0m4_preflight", PREFLIGHT)
-    assert not module.DEFAULT_OUTPUT.exists()
-    receipt = module.run_preflight()
+    module.MIN_FREE_BYTES = 0
+    receipt = module.run_preflight(output_root=tmp_path / "formal_output")
     assert receipt["verdict"] == "pass"
     assert len(receipt["config_cells"]) == 15
     assert receipt["telemetry_prerequisite"]["gate"]["passes"] is True

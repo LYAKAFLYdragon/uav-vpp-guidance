@@ -52,6 +52,12 @@ evaluation_contract:
   output_root: E:/uav-vpp-guidance-disadvantage-capability-v1-results/temporal_reference_reachability_v1
   formal_runs_allowed: 1
 
+runtime_contract:
+  python_executable: D:/Anaconda3/envs/jsbenv/python.exe
+  python_version: 3.8.0
+  jsbsim_version: 1.1.6
+  strict_backend: true
+
 temporal_reference:
   high_level_dt_s: 0.2
   horizon_steps: 40
@@ -91,6 +97,10 @@ frozen_inputs:
     path: src/uav_vpp_guidance/evaluation/temporal_reference_compiler.py
   - id: virtual_point_generator
     path: src/uav_vpp_guidance/virtual_point/generator.py
+  - id: head_on_vpp_guidance_pid_config
+    path: config/experiment/train_prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp_combat_finetune_mixed_opponent_aware_32k_task_type_headon_weighted.yaml
+    sha256: df22434cebac54ba5ae6c99a0b232caa4bdb3ffef0aecd4e4ce6b9c2d77ad63a
+    include_closure: true
   - id: canonical_head_on_specialist
     path: E:/uav-vpp-guidance-thesis-five-state-v1-assets/canonical_head_on_specialist_best.pt
     sha256: 0aeadd11cd8c7723c8963bcc5da21dd97c365e64f234d07b86c2b8f0d7ec5fb6

@@ -31,21 +31,22 @@
 
 ### P0.1 冻结已知负证据
 
-- [ ] 记录 clean Git SHA、分支、Python/JSBSim 版本、P3 encoder SHA、三名 opponent checkpoint SHA、预测器 SHA 和 VPP/guidance/PID 配置 SHA。
-- [ ] 在 provenance 中明确引用 Plan1 V2 与 Plan2 V1 的权威输出，而不复制或改写其数字。
-- [ ] 声明 Plan2 已排除的解释：动作未进入 VPP/guidance、basis rank 缺失、JSBSim 后端失效。
-- [ ] 声明尚未排除的解释：更长时域、状态条件化参考、不同 action-envelope 参数化，或对手条件依赖。
+- [x] 记录 clean Git SHA、分支、Python/JSBSim 版本、P3 encoder SHA、三名 opponent checkpoint SHA、预测器 SHA 和 VPP/guidance/PID 配置 SHA。
+- [x] 在 provenance 中明确引用 Plan1 V2 与 Plan2 V1 的权威输出，而不复制或改写其数字。
+- [x] 声明 Plan2 已排除的解释：动作未进入 VPP/guidance、basis rank 缺失、JSBSim 后端失效。
+- [x] 声明尚未排除的解释：更长时域、状态条件化参考、不同 action-envelope 参数化，或对手条件依赖。
 
 **验收：** `source_manifest.json` 能从空目录复核所有输入 SHA；旧结果文件字节哈希不变。
 
 ### P0.2 预注册研究边界
 
-- [ ] 创建独立 output root：`.../temporal_reference_reachability_v1/`，禁止复用 Plan2 输出目录。
-- [ ] 生成与 Plan1/Plan2/Taxonomy60 不重合的连续 run-in manifest；三名对手分别固定报告，禁止 pooled gate。
-- [ ] 将结果标签预先限定为四类：`interface_not_executable`、`physical_envelope_limited`、`opponent_dependent_authority`、`cross_opponent_authority_established`。
-- [ ] 规定该 Source 仅有一次正式矩阵运行；任何配置、门槛或 manifest 改动都必须新建 Source ID。
+- [x] 创建独立 output root：`.../temporal_reference_reachability_v1/`，禁止复用 Plan2 输出目录。
+- [x] 生成与 Plan1/Plan2/Taxonomy60 不重合的连续 run-in manifest；三名对手分别固定报告，禁止 pooled gate。
+- [x] 将结果标签预先限定为四类：`interface_not_executable`、`physical_envelope_limited`、`opponent_dependent_authority`、`cross_opponent_authority_established`。
+- [x] 规定该 Source 仅有一次正式矩阵运行；任何配置、门槛或 manifest 改动都必须新建 Source ID。
 
 **验收：** manifest disjointness test 通过；preregistration、config 和 verifier 中的 Source ID、场景数、方法名完全一致。
+**完成记录：** [`source_manifest.json`](temporal_reference_reachability_v1/source_manifest.json) 已在 clean SHA `161036e3176eca40c5e716f4bc683f37db0b8f50` 生成并通过独立 verifier。
 
 ---
 
@@ -55,10 +56,10 @@
 
 新模块必须是“参考生成/编译器”，不是新的 PPO、reward 或隐藏的专家训练。
 
-- [ ] **输入仅限：** 当前真实 observation、合法历史、冻结预测器输出、当前 VPP/guidance/PID 状态、固定意图 `defensive_extension`。
-- [ ] **输出定义为：** 长度为 `K` 的连续 3-D VPP 参考序列；推荐每 `0.2 s` 再编译一次，候选参考时域固定在 `6–10 s`，最终值须在预注册前冻结。
-- [ ] **禁止输入：** 对手未来真值、episode 终端标签、未来 reward、人工注入的 future state。
-- [ ] 保留当前 predicted-target VPP 锚点和底层 VPP/guidance/PID；只改变 handoff 之后的参考指令表示。
+- [x] **输入仅限：** 当前真实 observation、合法历史、冻结预测器输出、当前 VPP/guidance/PID 状态、固定意图 `defensive_extension`。
+- [x] **输出定义为：** 长度为 `K` 的连续 3-D VPP 参考序列；推荐每 `0.2 s` 再编译一次，候选参考时域固定在 `6–10 s`，最终值须在预注册前冻结。
+- [x] **禁止输入：** 对手未来真值、episode 终端标签、未来 reward、人工注入的 future state。
+- [x] 保留当前 predicted-target VPP 锚点和底层 VPP/guidance/PID；只改变 handoff 之后的参考指令表示。
 
 ### P1.2 固定最小候选模板库
 
@@ -70,9 +71,9 @@
 | `vertical_extension` | 用有限高度差换取脱离与能量保护空间 | 上/下符号、垂向目标、固定时域 | 飞行包线与 reset 语义 |
 | `combined_break_extension` | 侧向与垂向平滑协同，避免单轴脉冲 | 两轴比例、符号、固定时域 | 额外专家、reward 与未来信息 |
 
-- [ ] 每种模板以少量 control knots 或解析曲线定义，并强制 `C1` 连续，禁止阶跃 VPP。
-- [ ] 参数必须在 config 中显式列出；模板数、knot 数、时域和候选网格在正式运行前冻结。
-- [ ] 编译器记录 `requested_reference`、`projected_reference`、`projection_residual`、逐步 action、VPP、guidance、AoA、`n_z` command/actual、saturation 与预测有效性。
+- [x] 每种模板以少量 control knots 或解析曲线定义，并强制 `C1` 连续，禁止阶跃 VPP。
+- [x] 参数必须在 config 中显式列出；模板数、knot 数、时域和候选网格在正式运行前冻结。
+- [x] 编译器记录 `requested_reference`、`projected_reference`、`projection_residual` 与逐步 action；P3 的 runtime telemetry contract 已预留 VPP、guidance、AoA、`n_z` command/actual、saturation 与预测有效性字段，尚未运行。
 
 **验收：** 对同一状态和随机种子，编译输出逐元素一致；所有输出维度正确、有限，且任何参数均可在 provenance 还原。
 
@@ -206,8 +207,8 @@ P5 的目的不是马上证明全面优势，而是检验新接口是否能支�
 
 ## 执行顺序核对
 
-1. [ ] P0：冻结 SHA、输入资产、旧负证据和新 Source。
-2. [ ] P1：实现并测试时域参考编译器，冻结三模板及参数。
+1. [x] P0：冻结 SHA、输入资产、旧负证据和新 Source。
+2. [x] P1：实现并测试时域参考编译器，冻结三模板及参数。
 3. [ ] P2：做离线包线筛选；未通过即停止该模板。
 4. [ ] P3：做三对手工程 smoke；未通过只修工程链。
 5. [ ] P4：执行唯一一次非学习正式矩阵，并由独立 verifier 判定。

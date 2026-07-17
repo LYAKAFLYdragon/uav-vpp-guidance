@@ -7,6 +7,7 @@ import argparse
 import hashlib
 import json
 from pathlib import Path
+import subprocess
 import sys
 from typing import Any, Mapping
 
@@ -51,6 +52,62 @@ def _load_config(path: Path) -> dict[str, Any]:
     if not isinstance(payload, dict):
         raise TemporalReferenceSourceManifestError("design config must be a mapping")
     return payload
+
+
+def _yaml_include_closure(path: Path) -> list[Path]:
+    """Return one config and its YAML include closure without resolving overrides."""
+
+    visited: set[Path] = set()
+    ordered: list[Path] = []
+
+    def visit(current: Path) -> None:
+        resolved = current.resolve()
+        if resolved in visited:
+            return
+        if not resolved.is_file():
+            raise TemporalReferenceSourceManifestError(f"included runtime config is missing: {resolved}")
+        visited.add(resolved)
+        ordered.append(resolved)
+        payload = yaml.safe_load(resolved.read_text(encoding="utf-8")) or {}
+        includes = payload.get("includes", []) if isinstance(payload, Mapping) else []
+        if not isinstance(includes, list):
+            raise TemporalReferenceSourceManifestError(f"includes must be a list: {resolved}")
+        for include in includes:
+            include_path = Path(str(include))
+            visit(include_path if include_path.is_absolute() else resolved.parent / include_path)
+
+    visit(path)
+    return ordered
+
+
+def _runtime_provenance(config: Mapping[str, Any]) -> dict[str, str]:
+    runtime = config.get("runtime_contract")
+    if not isinstance(runtime, Mapping):
+        raise TemporalReferenceSourceManifestError("runtime_contract is missing")
+    executable = _resolve(runtime.get("python_executable"))
+    if not executable.is_file():
+        raise TemporalReferenceSourceManifestError(f"planned Python executable is missing: {executable}")
+    probe = (
+        "import json, platform, sys; import jsbsim; "
+        "print(json.dumps({'python_version': platform.python_version(), "
+        "'platform': platform.platform(), 'jsbsim_version': getattr(jsbsim, '__version__', None), "
+        "'jsbsim_file': jsbsim.__file__}, sort_keys=True))"
+    )
+    try:
+        actual = json.loads(subprocess.check_output([str(executable), "-c", probe], text=True).strip())
+    except (OSError, subprocess.CalledProcessError, json.JSONDecodeError) as error:
+        raise TemporalReferenceSourceManifestError("could not inspect the planned JSBSim runtime") from error
+    if str(actual.get("python_version")) != str(runtime.get("python_version")):
+        raise TemporalReferenceSourceManifestError("planned Python version drifted")
+    if str(actual.get("jsbsim_version")) != str(runtime.get("jsbsim_version")):
+        raise TemporalReferenceSourceManifestError("planned JSBSim version drifted")
+    return {
+        "python_executable": str(executable),
+        "python_version": str(actual["python_version"]),
+        "platform": str(actual["platform"]),
+        "jsbsim_version": str(actual["jsbsim_version"]),
+        "jsbsim_file": str(actual["jsbsim_file"]),
+    }
 
 
 def _validate_config(config: Mapping[str, Any]) -> TemporalReferenceConfig:
@@ -142,11 +199,24 @@ def build_source_manifest(config_path: Path = DEFAULT_CONFIG, *, require_clean_g
                 "declared_sha256": expected_sha,
             }
         )
+        if item.get("include_closure"):
+            for included in _yaml_include_closure(path)[1:]:
+                entries.append(
+                    {
+                        "id": f"{item['id']}::include::{included.name}",
+                        "path": str(included.relative_to(ROOT)),
+                        "resolved_path": str(included),
+                        "size_bytes": included.stat().st_size,
+                        "sha256": _hash(included),
+                        "declared_sha256": None,
+                    }
+                )
     return {
         "schema_version": 1,
         "source_id": SOURCE_ID,
         "status": "p0_p1_frozen_design_execution_not_authorized",
         "snapshot_git_info": git_info,
+        "runtime_provenance": _runtime_provenance(config),
         "authorization": dict(config["authorization"]),
         "evaluation_contract": dict(config["evaluation_contract"]),
         "temporal_reference_contract": {

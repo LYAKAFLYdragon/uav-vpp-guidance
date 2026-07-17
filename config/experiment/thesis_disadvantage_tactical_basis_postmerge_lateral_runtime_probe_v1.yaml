@@ -1,10 +1,10 @@
 schema_version: 1
 source_id: THESIS-DISADVANTAGE-TACTICAL-BASIS-POSTMERGE-LATERAL-RUNTIME-PROBE-V1
 stage: paired_nonlearning_postmerge_runtime_probe
-status: design_frozen_execution_not_authorized
+status: execution_authorized_one_off_runtime_matrix
 
 authorization:
-  execution_permitted: false
+  execution_permitted: true
   training_permitted: false
   tuning_permitted: false
   reward_change_permitted: false
@@ -170,3 +170,24 @@ outputs:
     - runtime_probe_gate.json
     - run_manifest.json
     - runtime_probe_verification.json
+
+execution:
+  expected_records: 72
+  required_implementation_git_sha: e8cee1e12993d784980943c8f9b7e1327109051c
+  required_smoke_gate: E:/uav-vpp-guidance-disadvantage-capability-v1-results/tactical_basis_postmerge_lateral_runtime_probe_v1_engineering_smoke_r3/engineering_smoke_gate.json
+  required_smoke_gate_sha256: 940a80e805ea6dc73fd2a68a361bcc155af0de79aa17f922cb77b252ebb584a0
+  authorized_code_files:
+    - path: scripts/run_thesis_disadvantage_tactical_basis_postmerge_lateral_runtime_probe_v1.py
+      sha256: 03afd5d1ae9002b29bae246fa09cc6988261c7e390f8f65184f0b30dec56ea19
+    - path: scripts/verify_thesis_disadvantage_tactical_basis_postmerge_lateral_runtime_probe_v1.py
+      sha256: 6f1539826881359eb2f3304118c46c642972f06f0b9bd8db4ee2c506379203d7
+    - path: src/uav_vpp_guidance/evaluation/tactical_basis_lateral_runtime_probe_contract.py
+      sha256: 7db0ba7f589a40bbafdbfcaad286491f7e575eb93db1a0f5cf10b2f0d0157014
+    - path: src/uav_vpp_guidance/evaluation/temporal_reference_compiler.py
+      sha256: 82433db26dbd687940279898960c3fadba9e5e35ac7ddff7cf1746620a2876a1
+    - path: scripts/run_thesis_disadvantage_tactical_basis_continuity_collector_v1.py
+      sha256: e18b83b36f997c5b714d672c1e2470dd033a1aaca92c20d346f44d638c9f87a2
+    - path: src/uav_vpp_guidance/envs/tracking_env.py
+      sha256: 83dc5144197842ccd0e321fe4094279d364969fd3fc3627caa38440397ec235a
+    - path: src/uav_vpp_guidance/virtual_point/generator.py
+      sha256: a3e91ebd989e6c3f1a5463cbe96e17227f9dd63e0cab221f080b20415fcdf3a6

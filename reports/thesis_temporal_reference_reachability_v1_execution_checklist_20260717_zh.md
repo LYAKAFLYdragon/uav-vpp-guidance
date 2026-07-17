@@ -126,19 +126,19 @@
 
 新 collector 必须从合法 reset 起，以当前 `tactical_basis_v1` frozen fixed-head-on baseline 连续采集并保存：
 
-- [ ] active/configured action semantics，以及三个 tactical-basis world vectors、basis rank 与 condition。
-- [ ] frozen specialist reference action、prediction validity/fallback、VPP、guidance、AoA、`n_z` command/actual、saturation。
-- [ ] phase、dynamic taxonomy、handoff hash、observation/history continuity；不得出现 future injection、padding、非法 reset、backend fallback 或 checkpoint fallback。
-- [ ] 每条 qualifying handoff 均连续保存完整 40-step baseline reference/basis sequence，而非只保存单步快照。
+- [x] active/configured action semantics、三个 tactical-basis world vectors、basis rank 与 condition；V3 qualifying steps 均为 rank 3，condition 为 2.67--3.10。
+- [x] frozen specialist reference action、prediction validity/fallback、VPP、guidance、AoA、`n_z` command/actual、saturation 已写入 V3 ledger。
+- [x] phase、dynamic taxonomy、handoff hash 与 observation/history continuity 已写入；qualifying window 内无 future injection、padding、backend fallback 或 checkpoint fallback。
+- [x] 每条 qualifying handoff 均保存完整 40-step baseline reference/basis sequence；共 17 条、680 个 post-merge step。
 
 **新 collector 的 phase + contract gate：**
 
-- [ ] 全部记录使用 strict JSBSim，且 action、basis、history 和 telemetry 均有限、可独立读取、无 fallback/reset/padding。
-- [ ] 至少两个 opponent 各自至少有 4 条 qualifying handoff，覆盖至少 4 个 scenario signature 与双镜像；每条均满足完整 40-step continuity。
-- [ ] 未通过时，停止 temporal-reference/shared-skill training line；不得训练、调参或以新场景重跑掩盖缺口。
-- [ ] 仅在通过后，以新的独立 Source ID 重新设计新的 P2 offline envelope screen；不得追溯性地恢复本 Source 的 P2/P3。
+- [x] V3 qualifying windows 使用 strict JSBSim，action、basis、history 和 telemetry 均有限且可独立读取；预测器 warm-up 仅发生于候选 handoff 之前，window 内为零 fallback/zero padding。
+- [x] `end_to_end`（5 条、4 signatures、双镜像）与 `independent_ppo_vpp`（7 条、4 signatures、双镜像）通过；`expert` 有 5 条但仅 3 signatures，按预注册门槛不通过。
+- [x] gate 通过，故“不训练”的 stop rule 不触发；但该 gate 只解除新 P2 的**设计资格**，不自动授权训练或 P2 执行。
+- [x] 后续只能以新的独立 Source ID 设计新的 post-merge P2 offline envelope screen；不得追溯性地恢复本 Source 的 P2/P3。
 
-**Collector 执行台账（2026-07-17）：** `THESIS-DISADVANTAGE-TACTICAL-BASIS-CONTINUITY-COLLECTOR-V1` 的 36 条记录均在 `RawSIFirstPassConfig` 初始化时因错误字段名停止，未进入任何 JSBSim step；`V2` 已修复该字段，但在首次 JSBSim reset 时因 JSBSim-ML/PyTorch OpenMP 重复运行时中止，同样未产生任何物理 step。两个 Source 均封存为 engineering-invalid evidence；独立 verifier 对 V1 只确认了空记录结构与哈希一致，不能形成 phase、basis 或物理可达性结论。V3 的唯一新增前置是一个不占 Source ID 的三对手 runtime smoke，复用项目既有 `KMP_DUPLICATE_LIB_OK=TRUE` Windows 兼容设置。预测器在 10-frame history 形成前的 warm-up fallback 只可记录，不能触发 handoff；每个 40-step qualifying window 内仍必须零 fallback、零 padding。只有 smoke 通过，才允许 V3 重新冻结并采集；场景、资产、动作语义、门槛和禁止项保持不变。
+**Collector 执行台账（2026-07-17）：** `THESIS-DISADVANTAGE-TACTICAL-BASIS-CONTINUITY-COLLECTOR-V1` 的 36 条记录均在 `RawSIFirstPassConfig` 初始化时因错误字段名停止，未进入任何 JSBSim step；`V2` 已修复该字段，但在首次 JSBSim reset 时因 JSBSim-ML/PyTorch OpenMP 重复运行时中止，同样未产生任何物理 step。两个 Source 均封存为 engineering-invalid evidence。V3 经不占 Source ID 的三对手 runtime smoke 后完成 36 条采集，并被独立 verifier 复核为 gate pass；这建立的是 post-merge continuous data contract，而非 temporal reference 已改善几何、更非训练收益。预测器在 10-frame history 形成前的 warm-up fallback 仅可记录，不能触发 handoff；每个 qualifying 40-step window 仍必须零 fallback、零 padding。详见下方 V3 结果报告。
 
 ---
 

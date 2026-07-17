@@ -1,0 +1,320 @@
+{
+  "authorization": {
+    "action_envelope_expansion_permitted": false,
+    "execution_permitted": false,
+    "future_state_injection_permitted": false,
+    "guidance_pid_change_permitted": false,
+    "high_level_ppo_training_permitted": false,
+    "history_padding_permitted": false,
+    "reward_change_permitted": false,
+    "shared_skill_training_permitted": false,
+    "snapshot_restore_permitted": false,
+    "training_permitted": false,
+    "tuning_permitted": false
+  },
+  "evaluation_contract": {
+    "action_semantics": "tactical_basis_v1",
+    "backend": "jsbsim",
+    "disjoint_against": [
+      "config/experiment/manifests/thesis_disadvantage_capability_plan1_v2.yaml",
+      "config/experiment/manifests/thesis_disadvantage_capability_plan2_v1.yaml",
+      "config/experiment/manifests/thesis_dualskill_taxonomy60_v1.yaml"
+    ],
+    "formal_manifest": "config/experiment/manifests/thesis_temporal_reference_reachability_v1.yaml",
+    "formal_manifest_sha256": "7a11edcdaa2e63656812c5f71efbee1731f7c1d46359d5c3c6ce40b2e4952974",
+    "formal_runs_allowed": 1,
+    "opponents": [
+      "expert",
+      "end_to_end",
+      "independent_ppo_vpp"
+    ],
+    "output_root": "E:/uav-vpp-guidance-disadvantage-capability-v1-results/temporal_reference_reachability_v1",
+    "pooled_gate_permitted": false,
+    "reference_specialist": "frozen_head_on",
+    "report_opponents_separately": true,
+    "strict_backend": true
+  },
+  "inputs": [
+    {
+      "declared_sha256": "06085ad38927c7da4e64d2fd066cffce432117b9ea4e299ef0be5795f3a7611a",
+      "id": "plan1_v2_result",
+      "path": "reports/thesis_disadvantage_capability_plan1_v2_result_and_decision_20260717_zh.md",
+      "resolved_path": "E:\\uav-vpp-guidance-disadvantage-capability-v1\\reports\\thesis_disadvantage_capability_plan1_v2_result_and_decision_20260717_zh.md",
+      "sha256": "06085ad38927c7da4e64d2fd066cffce432117b9ea4e299ef0be5795f3a7611a",
+      "size_bytes": 4703
+    },
+    {
+      "declared_sha256": "8db3f8d1b4abb26189dc6cc555066d37e1bc27069bcbca06e530898d66522263",
+      "id": "plan2_v1_authoritative_verifier",
+      "path": "E:/uav-vpp-guidance-disadvantage-capability-v1-results/plan2_motif_capacity_v1_clean_repro/plan2_verification.json",
+      "resolved_path": "E:\\uav-vpp-guidance-disadvantage-capability-v1-results\\plan2_motif_capacity_v1_clean_repro\\plan2_verification.json",
+      "sha256": "8db3f8d1b4abb26189dc6cc555066d37e1bc27069bcbca06e530898d66522263",
+      "size_bytes": 10206
+    },
+    {
+      "declared_sha256": null,
+      "id": "plan2_v1_config",
+      "path": "config/experiment/thesis_disadvantage_capability_plan2_v1.yaml",
+      "resolved_path": "E:\\uav-vpp-guidance-disadvantage-capability-v1\\config\\experiment\\thesis_disadvantage_capability_plan2_v1.yaml",
+      "sha256": "d79e6c14375bd89645d6c4d344133bcd22cce035239fa38a40d03ce079580e28",
+      "size_bytes": 7088
+    },
+    {
+      "declared_sha256": null,
+      "id": "temporal_reference_design",
+      "path": "config/experiment/thesis_disadvantage_temporal_reference_reachability_v1_design.yaml",
+      "resolved_path": "E:\\uav-vpp-guidance-disadvantage-capability-v1\\config\\experiment\\thesis_disadvantage_temporal_reference_reachability_v1_design.yaml",
+      "sha256": "7580651fdb9965c9036e4d2cb78133765b3cf8fbf4278fd8bccc6d4622e48f5c",
+      "size_bytes": 5826
+    },
+    {
+      "declared_sha256": null,
+      "id": "temporal_reference_manifest",
+      "path": "config/experiment/manifests/thesis_temporal_reference_reachability_v1.yaml",
+      "resolved_path": "E:\\uav-vpp-guidance-disadvantage-capability-v1\\config\\experiment\\manifests\\thesis_temporal_reference_reachability_v1.yaml",
+      "sha256": "a62256535dd4aa4e6918f13f22268cad22dd0ce20556e4a4d0cc08059d4f62b6",
+      "size_bytes": 13805
+    },
+    {
+      "declared_sha256": null,
+      "id": "temporal_reference_compiler",
+      "path": "src/uav_vpp_guidance/evaluation/temporal_reference_compiler.py",
+      "resolved_path": "E:\\uav-vpp-guidance-disadvantage-capability-v1\\src\\uav_vpp_guidance\\evaluation\\temporal_reference_compiler.py",
+      "sha256": "82433db26dbd687940279898960c3fadba9e5e35ac7ddff7cf1746620a2876a1",
+      "size_bytes": 10268
+    },
+    {
+      "declared_sha256": null,
+      "id": "virtual_point_generator",
+      "path": "src/uav_vpp_guidance/virtual_point/generator.py",
+      "resolved_path": "E:\\uav-vpp-guidance-disadvantage-capability-v1\\src\\uav_vpp_guidance\\virtual_point\\generator.py",
+      "sha256": "a3e91ebd989e6c3f1a5463cbe96e17227f9dd63e0cab221f080b20415fcdf3a6",
+      "size_bytes": 71913
+    },
+    {
+      "declared_sha256": "df22434cebac54ba5ae6c99a0b232caa4bdb3ffef0aecd4e4ce6b9c2d77ad63a",
+      "id": "head_on_vpp_guidance_pid_config",
+      "path": "config/experiment/train_prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp_combat_finetune_mixed_opponent_aware_32k_task_type_headon_weighted.yaml",
+      "resolved_path": "E:\\uav-vpp-guidance-disadvantage-capability-v1\\config\\experiment\\train_prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp_combat_finetune_mixed_opponent_aware_32k_task_type_headon_weighted.yaml",
+      "sha256": "df22434cebac54ba5ae6c99a0b232caa4bdb3ffef0aecd4e4ce6b9c2d77ad63a",
+      "size_bytes": 458
+    },
+    {
+      "declared_sha256": null,
+      "id": "head_on_vpp_guidance_pid_config::include::train_prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp_combat_finetune_mixed_opponent_aware_32k_task_type.yaml",
+      "path": "config\\experiment\\train_prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp_combat_finetune_mixed_opponent_aware_32k_task_type.yaml",
+      "resolved_path": "E:\\uav-vpp-guidance-disadvantage-capability-v1\\config\\experiment\\train_prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp_combat_finetune_mixed_opponent_aware_32k_task_type.yaml",
+      "sha256": "b4b9df96775206af3815cf8814ea4d580de642ef43a5b656c2962a96a5a96123",
+      "size_bytes": 394
+    },
+    {
+      "declared_sha256": null,
+      "id": "head_on_vpp_guidance_pid_config::include::train_prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp_combat_finetune_mixed_opponent_aware_32k.yaml",
+      "path": "config\\experiment\\train_prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp_combat_finetune_mixed_opponent_aware_32k.yaml",
+      "resolved_path": "E:\\uav-vpp-guidance-disadvantage-capability-v1\\config\\experiment\\train_prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp_combat_finetune_mixed_opponent_aware_32k.yaml",
+      "sha256": "bcbc52d96a6475c360e2c246cf1ca6e7074fdbf8fd5ebb8234e7c38bc7e81596",
+      "size_bytes": 495
+    },
+    {
+      "declared_sha256": null,
+      "id": "head_on_vpp_guidance_pid_config::include::train_prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp_combat_finetune.yaml",
+      "path": "config\\experiment\\train_prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp_combat_finetune.yaml",
+      "resolved_path": "E:\\uav-vpp-guidance-disadvantage-capability-v1\\config\\experiment\\train_prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp_combat_finetune.yaml",
+      "sha256": "707ca785a9e994b609cb6b569ee2ae3ea83f3fa2709c79870d694b6dc14aed55",
+      "size_bytes": 1318
+    },
+    {
+      "declared_sha256": null,
+      "id": "head_on_vpp_guidance_pid_config::include::train_prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp.yaml",
+      "path": "config\\experiment\\train_prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp.yaml",
+      "resolved_path": "E:\\uav-vpp-guidance-disadvantage-capability-v1\\config\\experiment\\train_prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp.yaml",
+      "sha256": "b129c0e37c31bdee99df243c2a85091db95f7c9a7477ebabccc739b037573edf",
+      "size_bytes": 1042
+    },
+    {
+      "declared_sha256": null,
+      "id": "head_on_vpp_guidance_pid_config::include::train_prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00.yaml",
+      "path": "config\\experiment\\train_prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00.yaml",
+      "resolved_path": "E:\\uav-vpp-guidance-disadvantage-capability-v1\\config\\experiment\\train_prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00.yaml",
+      "sha256": "fccaf43f016cb49e173ec5b4006c5f796aaecf73133fbe47ffb0be6eb86c3d01",
+      "size_bytes": 484
+    },
+    {
+      "declared_sha256": null,
+      "id": "head_on_vpp_guidance_pid_config::include::train_prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch.yaml",
+      "path": "config\\experiment\\train_prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch.yaml",
+      "resolved_path": "E:\\uav-vpp-guidance-disadvantage-capability-v1\\config\\experiment\\train_prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch.yaml",
+      "sha256": "845bafc28305d943bbe07686d07abbd3d3bf2949fb3223adf89e1fd6a95d30ef",
+      "size_bytes": 423
+    },
+    {
+      "declared_sha256": null,
+      "id": "head_on_vpp_guidance_pid_config::include::train_prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075.yaml",
+      "path": "config\\experiment\\train_prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075.yaml",
+      "resolved_path": "E:\\uav-vpp-guidance-disadvantage-capability-v1\\config\\experiment\\train_prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075.yaml",
+      "sha256": "874e072f8af375000f1b7700cc257c00489571a2242178522d69b0538238ed1f",
+      "size_bytes": 1408
+    },
+    {
+      "declared_sha256": null,
+      "id": "head_on_vpp_guidance_pid_config::include::train_prediction_vpp_ppo_jsbsim_compare_long_lh1p0.yaml",
+      "path": "config\\experiment\\train_prediction_vpp_ppo_jsbsim_compare_long_lh1p0.yaml",
+      "resolved_path": "E:\\uav-vpp-guidance-disadvantage-capability-v1\\config\\experiment\\train_prediction_vpp_ppo_jsbsim_compare_long_lh1p0.yaml",
+      "sha256": "b9bc3f86cec03bc126f517c6d96c8aa408c0956265d9be34b44a5f7da0158f1d",
+      "size_bytes": 521
+    },
+    {
+      "declared_sha256": null,
+      "id": "head_on_vpp_guidance_pid_config::include::train_prediction_vpp_ppo_jsbsim_compare.yaml",
+      "path": "config\\experiment\\train_prediction_vpp_ppo_jsbsim_compare.yaml",
+      "resolved_path": "E:\\uav-vpp-guidance-disadvantage-capability-v1\\config\\experiment\\train_prediction_vpp_ppo_jsbsim_compare.yaml",
+      "sha256": "b9647a9d41c31ea368ef9181fc6e1a3491478b51412dc7a537d7108a1ef42df6",
+      "size_bytes": 5545
+    },
+    {
+      "declared_sha256": null,
+      "id": "head_on_vpp_guidance_pid_config::include::env.yaml",
+      "path": "config\\env.yaml",
+      "resolved_path": "E:\\uav-vpp-guidance-disadvantage-capability-v1\\config\\env.yaml",
+      "sha256": "8579332e6c315fe3dd80fca100d89f11225f40cf3c88709d5016134cdada8087",
+      "size_bytes": 462
+    },
+    {
+      "declared_sha256": null,
+      "id": "head_on_vpp_guidance_pid_config::include::ppo.yaml",
+      "path": "config\\ppo.yaml",
+      "resolved_path": "E:\\uav-vpp-guidance-disadvantage-capability-v1\\config\\ppo.yaml",
+      "sha256": "1956a7dde36757b03052ecea972e4547a3202e4bdab05404e3cc5a51d4bf5889",
+      "size_bytes": 318
+    },
+    {
+      "declared_sha256": null,
+      "id": "head_on_vpp_guidance_pid_config::include::guidance.yaml",
+      "path": "config\\guidance.yaml",
+      "resolved_path": "E:\\uav-vpp-guidance-disadvantage-capability-v1\\config\\guidance.yaml",
+      "sha256": "2f78d8c65f4379ace326b6f7792ba5d21575e27f38105b66030c5e8a3daa3306",
+      "size_bytes": 2715
+    },
+    {
+      "declared_sha256": null,
+      "id": "head_on_vpp_guidance_pid_config::include::reward.yaml",
+      "path": "config\\reward.yaml",
+      "resolved_path": "E:\\uav-vpp-guidance-disadvantage-capability-v1\\config\\reward.yaml",
+      "sha256": "fb915a170e075ef7431f2a4f6f47a56146b05d0a13d73373d344bc440d6c6958",
+      "size_bytes": 450
+    },
+    {
+      "declared_sha256": null,
+      "id": "head_on_vpp_guidance_pid_config::include::curriculum_default.yaml",
+      "path": "config\\success_criteria\\curriculum_default.yaml",
+      "resolved_path": "E:\\uav-vpp-guidance-disadvantage-capability-v1\\config\\success_criteria\\curriculum_default.yaml",
+      "sha256": "e7c9ecd1cd8bf67073235058e2f2389487b0ac9bbd1fb313b329127f9b451eb0",
+      "size_bytes": 845
+    },
+    {
+      "declared_sha256": "0aeadd11cd8c7723c8963bcc5da21dd97c365e64f234d07b86c2b8f0d7ec5fb6",
+      "id": "canonical_head_on_specialist",
+      "path": "E:/uav-vpp-guidance-thesis-five-state-v1-assets/canonical_head_on_specialist_best.pt",
+      "resolved_path": "E:\\uav-vpp-guidance-thesis-five-state-v1-assets\\canonical_head_on_specialist_best.pt",
+      "sha256": "0aeadd11cd8c7723c8963bcc5da21dd97c365e64f234d07b86c2b8f0d7ec5fb6",
+      "size_bytes": 259418
+    },
+    {
+      "declared_sha256": "5eddc138bff55a5466da1129e840ef7dfb3677347a05276c3877746c8e89148b",
+      "id": "canonical_crossing_specialist",
+      "path": "E:/uav-vpp-guidance-thesis-five-state-v1-assets/canonical_crossing_specialist_last.pt",
+      "resolved_path": "E:\\uav-vpp-guidance-thesis-five-state-v1-assets\\canonical_crossing_specialist_last.pt",
+      "sha256": "5eddc138bff55a5466da1129e840ef7dfb3677347a05276c3877746c8e89148b",
+      "size_bytes": 258650
+    },
+    {
+      "declared_sha256": "96bc8e5e1aebd32ca6a528fb3149cfd58aeff276c18bca66388d650f00495931",
+      "id": "frozen_trajectory_predictor",
+      "path": "E:/uav-vpp-guidance-thesis-five-state-v1-assets/frozen_trajectory_predictor_best_model.pt",
+      "resolved_path": "E:\\uav-vpp-guidance-thesis-five-state-v1-assets\\frozen_trajectory_predictor_best_model.pt",
+      "sha256": "96bc8e5e1aebd32ca6a528fb3149cfd58aeff276c18bca66388d650f00495931",
+      "size_bytes": 865909
+    },
+    {
+      "declared_sha256": "385663281a9c48c0416ea4d1a1bb8dc08ed64a0cfebb0f01083cbbb8bcfbdc59",
+      "id": "frozen_p3_temporal_encoder",
+      "path": "E:/uav-vpp-guidance-thesis-five-state-v1-results/p3_temporal_encoder_phaseconditional_v2/checkpoints/best.pt",
+      "resolved_path": "E:\\uav-vpp-guidance-thesis-five-state-v1-results\\p3_temporal_encoder_phaseconditional_v2\\checkpoints\\best.pt",
+      "sha256": "385663281a9c48c0416ea4d1a1bb8dc08ed64a0cfebb0f01083cbbb8bcfbdc59",
+      "size_bytes": 84348
+    },
+    {
+      "declared_sha256": "d38828338d5e7e22167129b2e9972d52ecf5fc3fda5d52caff95a8374c35b8bc",
+      "id": "end_to_end_opponent",
+      "path": "E:/uav-vpp-guidance-thesis-five-state-v1-assets/canonical_end_to_end_neural_opponent_best.pt",
+      "resolved_path": "E:\\uav-vpp-guidance-thesis-five-state-v1-assets\\canonical_end_to_end_neural_opponent_best.pt",
+      "sha256": "d38828338d5e7e22167129b2e9972d52ecf5fc3fda5d52caff95a8374c35b8bc",
+      "size_bytes": 246810
+    },
+    {
+      "declared_sha256": "43cd37fc86c0eb01d96a693f68d30894de7e768de01aed6dba41fa4761edfc60",
+      "id": "independent_ppo_vpp_opponent",
+      "path": "E:/uav-vpp-guidance-thesis-five-state-v1-assets/independent_ppo_vpp_opponent_v1_step_32768.pt",
+      "resolved_path": "E:\\uav-vpp-guidance-thesis-five-state-v1-assets\\independent_ppo_vpp_opponent_v1_step_32768.pt",
+      "sha256": "43cd37fc86c0eb01d96a693f68d30894de7e768de01aed6dba41fa4761edfc60",
+      "size_bytes": 256930
+    }
+  ],
+  "research_boundary": {
+    "excluded_explanations": [
+      "action_not_entering_vpp_or_guidance",
+      "tactical_basis_rank_deficiency",
+      "jsbsim_backend_failure"
+    ],
+    "no_go_consequences": [
+      "do_not_tune_mechanical_routing",
+      "do_not_add_reward_or_training_steps",
+      "do_not_train_new_low_level_specialist"
+    ],
+    "open_hypotheses": [
+      "bounded_time_extended_reference_program",
+      "state_conditioned_tactical_basis_projection",
+      "opponent_conditioned_control_authority"
+    ],
+    "prior_negative_evidence": {
+      "plan1_result": "reports/thesis_disadvantage_capability_plan1_v2_result_and_decision_20260717_zh.md",
+      "plan1_result_sha256": "06085ad38927c7da4e64d2fd066cffce432117b9ea4e299ef0be5795f3a7611a",
+      "plan1_source_id": "THESIS-DISADVANTAGE-CAPABILITY-PLAN1-V2",
+      "plan2_source_id": "THESIS-DISADVANTAGE-CAPABILITY-PLAN2-V1",
+      "plan2_verifier": "E:/uav-vpp-guidance-disadvantage-capability-v1-results/plan2_motif_capacity_v1_clean_repro/plan2_verification.json",
+      "plan2_verifier_sha256": "8db3f8d1b4abb26189dc6cc555066d37e1bc27069bcbca06e530898d66522263"
+    }
+  },
+  "runtime_provenance": {
+    "jsbsim_file": "D:\\Anaconda3\\envs\\jsbenv\\lib\\site-packages\\jsbsim.cp38-win_amd64.pyd",
+    "jsbsim_version": "1.1.6",
+    "platform": "Windows-10-10.0.22621-SP0",
+    "python_executable": "D:\\Anaconda3\\envs\\jsbenv\\python.exe",
+    "python_version": "3.8.0",
+    "temporal_reference_compiler_importable": true
+  },
+  "schema_version": 1,
+  "snapshot_git_info": {
+    "branch": "codex/disadvantage-capability-v1",
+    "commit": "de1de570732b34868a405d94ddf7d6f66756dbcc",
+    "description": "codex/disadvantage-capability-v1@de1de570732b",
+    "dirty": false,
+    "short_commit": "de1de570732b"
+  },
+  "source_id": "THESIS-DISADVANTAGE-TEMPORAL-REFERENCE-REACHABILITY-V1",
+  "status": "p0_p1_frozen_design_execution_not_authorized",
+  "temporal_reference_contract": {
+    "action_semantics": "tactical_basis_v1",
+    "duration_s": 8.0,
+    "high_level_dt_s": 0.2,
+    "horizon_steps": 40,
+    "max_action_delta": 0.35,
+    "max_action_slew": 0.1,
+    "max_basis_condition_number": 100.0,
+    "template_names": [
+      "lateral_extension",
+      "vertical_extension",
+      "combined_break_extension"
+    ]
+  }
+}

@@ -46,7 +46,7 @@
 - [x] 规定该 Source 仅有一次正式矩阵运行；任何配置、门槛或 manifest 改动都必须新建 Source ID。
 
 **验收：** manifest disjointness test 通过；preregistration、config 和 verifier 中的 Source ID、场景数、方法名完全一致。
-**完成记录：** [`source_manifest.json`](temporal_reference_reachability_v1/source_manifest.json) 已在 clean SHA `46ba3e8310cbbf97c213b344b9cdac961badf5e8` 生成并通过独立 verifier。
+**完成记录：** [`source_manifest.json`](temporal_reference_reachability_v1/source_manifest.json) 已在 clean SHA `de1de570732b34868a405d94ddf7d6f66756dbcc` 生成并通过独立 verifier。
 
 ---
 

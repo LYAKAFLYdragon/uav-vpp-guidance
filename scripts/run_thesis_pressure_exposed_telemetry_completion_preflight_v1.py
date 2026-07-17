@@ -108,9 +108,19 @@ def _reset_receipt(env: Any, scenario: Mapping[str, Any], seed: int) -> dict[str
     return {"expected": expected, "actual": actual, "tolerance": tolerance, "passes": passes}
 
 
-def _physical_trace(ledger: Mapping[str, Any]) -> list[dict[str, Any]]:
+def _finite_vector(value: Any, dimension: int) -> bool:
+    return bool(
+        isinstance(value, (list, tuple, np.ndarray))
+        and len(value) == dimension
+        and all(_finite(item) is not None for item in value)
+    )
+
+
+def _physical_trace(ledger: Mapping[str, Any], vpp_info: list[Mapping[str, Any]]) -> list[dict[str, Any]]:
+    if len(ledger["steps"]) != len(vpp_info):
+        raise TelemetryPreflightError("VPP info capture is not one-to-one with ledger steps")
     trace = []
-    for step in ledger["steps"]:
+    for step, captured in zip(ledger["steps"], vpp_info):
         own = step.get("own_state")
         target = step.get("target_state")
         if not isinstance(own, Mapping) or not isinstance(target, Mapping):
@@ -141,7 +151,12 @@ def _physical_trace(ledger: Mapping[str, Any]) -> list[dict[str, Any]]:
             "ego_in_attack_zone": bool(step["ego_in_attack_zone"]),
             "observation_66d_valid": isinstance(observation_66d, list) and len(observation_66d) == 66 and all(_finite(value) is not None for value in observation_66d),
             "vpp_action_valid": isinstance(action, list) and len(action) == 3 and all(_finite(value) is not None for value in action),
-            "vp_bias_valid": all(_finite(step.get(key)) is not None for key in ("vp_forward_bias_m", "vp_lateral_bias_m", "vp_vertical_bias_m")),
+            "tactical_basis_enabled": captured.get("tactical_basis_enabled") is True,
+            "tactical_basis_world_offset": captured.get("tactical_basis_world_offset"),
+            "tactical_basis_world_offset_valid": _finite_vector(captured.get("tactical_basis_world_offset"), 3),
+            "tactical_basis_ll_world_valid": _finite_vector(captured.get("tactical_basis_ll_world"), 3),
+            "tactical_basis_io_world_valid": _finite_vector(captured.get("tactical_basis_io_world"), 3),
+            "tactical_basis_cd_world_valid": _finite_vector(captured.get("tactical_basis_cd_world"), 3),
             "guidance_command_present": step.get("guidance_command") is not None,
             "aoa_present": _finite(own.get("alpha_rad", own.get("aoa_rad"))) is not None,
             "nz_command_present": step.get("nz_cmd") is not None,
@@ -166,7 +181,9 @@ def _trace_passes(trace: list[Mapping[str, Any]]) -> bool:
     # 66-D vectors are unavailable only during the fixed ten-frame warm-up.
     post_warmup = trace[9:]
     return bool(post_warmup) and all(
-        row["observation_66d_valid"] and row["vpp_action_valid"] and row["vp_bias_valid"]
+        row["observation_66d_valid"] and row["vpp_action_valid"] and row["tactical_basis_enabled"]
+        and row["tactical_basis_world_offset_valid"] and row["tactical_basis_ll_world_valid"]
+        and row["tactical_basis_io_world_valid"] and row["tactical_basis_cd_world_valid"]
         and row["guidance_command_present"] and row["aoa_present"]
         and row["nz_command_present"] and row["nz_actual_g"] is not None
         for row in post_warmup
@@ -189,9 +206,25 @@ def run(config_path: Path, output_root: Path) -> dict[str, Any]:
             try:
                 receipt = _reset_receipt(env, scenario, int(scenario["metadata"]["scenario_seed"]))
                 encoder = runner.FrozenP3Encoder(runner._resolve(str(config["inputs"]["frozen_p3_encoder"])), str(config["inputs"]["frozen_p3_encoder_sha256"]))
+                captured_vpp_info: list[Mapping[str, Any]] = []
+                original_step = env.step
+
+                def _capturing_step(action: Any):
+                    outcome = original_step(action)
+                    info = outcome[4]
+                    captured_vpp_info.append({
+                        key: info.get(key)
+                        for key in (
+                            "tactical_basis_enabled", "tactical_basis_world_offset",
+                            "tactical_basis_ll_world", "tactical_basis_io_world", "tactical_basis_cd_world",
+                        )
+                    })
+                    return outcome
+
+                env.step = _capturing_step
                 episode = runner.raw_v5.FiveStateRawSIV5Episode(env, runner._specialist(registry), encoder, config)
                 result, ledger = episode.run(scenario, int(scenario["metadata"]["scenario_seed"]))
-                trace = _physical_trace(ledger)
+                trace = _physical_trace(ledger, captured_vpp_info)
                 record = {
                     "preflight_id": PREFLIGHT_ID,
                     "opponent": opponent,

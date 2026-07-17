@@ -23,7 +23,9 @@ def test_trace_gate_accepts_complete_post_warmup_physical_telemetry() -> None:
         "range_m": 1000.0, "range_rate_mps": 10.0, "aa_deg": 150.0, "ata_deg": 30.0,
         "own_speed_mps": 250.0, "target_speed_mps": 280.0,
         "own_altitude_m": 5000.0, "target_altitude_m": 5500.0, "own_specific_energy_m": 8186.0,
-        "observation_66d_valid": True, "vpp_action_valid": True, "vp_bias_valid": True,
+        "observation_66d_valid": True, "vpp_action_valid": True, "tactical_basis_enabled": True,
+        "tactical_basis_world_offset_valid": True, "tactical_basis_ll_world_valid": True,
+        "tactical_basis_io_world_valid": True, "tactical_basis_cd_world_valid": True,
         "guidance_command_present": True, "aoa_present": True, "nz_command_present": True,
         "nz_actual_g": 1.0,
     }
@@ -37,7 +39,9 @@ def test_trace_gate_rejects_missing_raw_nz_response() -> None:
         "range_m": 1000.0, "range_rate_mps": 10.0, "aa_deg": 150.0, "ata_deg": 30.0,
         "own_speed_mps": 250.0, "target_speed_mps": 280.0,
         "own_altitude_m": 5000.0, "target_altitude_m": 5500.0, "own_specific_energy_m": 8186.0,
-        "observation_66d_valid": True, "vpp_action_valid": True, "vp_bias_valid": True,
+        "observation_66d_valid": True, "vpp_action_valid": True, "tactical_basis_enabled": True,
+        "tactical_basis_world_offset_valid": True, "tactical_basis_ll_world_valid": True,
+        "tactical_basis_io_world_valid": True, "tactical_basis_cd_world_valid": True,
         "guidance_command_present": True, "aoa_present": True, "nz_command_present": True,
         "nz_actual_g": None,
     }

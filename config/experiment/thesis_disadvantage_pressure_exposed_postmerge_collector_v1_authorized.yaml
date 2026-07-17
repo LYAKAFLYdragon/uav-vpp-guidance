@@ -1,0 +1,44 @@
+base_config: config/experiment/thesis_disadvantage_pressure_exposed_postmerge_collector_v1.yaml
+replace_sections: [authorization, execution, outputs]
+
+schema_version: 1
+source_id: THESIS-DISADVANTAGE-PRESSURE-EXPOSED-POSTMERGE-COLLECTOR-V1
+stage: nonlearning_pressure_exposed_postmerge_collection
+status: authorized_nonlearning_collection_once
+
+authorization:
+  execution_permitted: true
+  training_permitted: false
+  tuning_permitted: false
+  reward_change_permitted: false
+  candidate_action_execution_permitted: false
+  high_level_ppo_training_permitted: false
+  shared_skill_training_permitted: false
+  guidance_pid_change_permitted: false
+  snapshot_restore_permitted: false
+  future_state_injection_permitted: false
+  history_padding_permitted: false
+  require_clean_worktree: true
+  one_collection_run_only: true
+
+execution:
+  expected_records: 48
+  required_implementation_git_sha: 498d889bc4a64b8f7fa4e295e80056649083f6fd
+  required_smoke_gate: reports/thesis_pressure_exposed_postmerge_collector_v1_engineering_smoke_20260717.json
+  required_smoke_gate_sha256: dffb4c147f98003d7bf177f9d2ac3b078261433a47b8c2627e258d09d7837bb2
+  authorized_code_files:
+    - path: scripts/run_thesis_disadvantage_pressure_exposed_postmerge_collector_v1.py
+      sha256: fa7b8927c8a8f6a67ee2b0f13a6d43fda4d4f39e27ffce7745e7afc9d0606181
+    - path: src/uav_vpp_guidance/evaluation/pressure_exposed_postmerge_contract.py
+      sha256: c422a9f73ef869e9679c24f9dc9153ecb4c01b32be8a40ff593cfedec7b5d185
+    - path: src/uav_vpp_guidance/evaluation/thesis_five_state_raw_si_v5_record_only.py
+      sha256: 8e80f8285e1c26aae68fa0bc3519a31a8ac5bd0e1c15f40b8448db07fdca223e
+    - path: src/uav_vpp_guidance/envs/tracking_env.py
+      sha256: 83dc5144197842ccd0e321fe4094279d364969fd3fc3627caa38440397ec235a
+    - path: src/uav_vpp_guidance/virtual_point/generator.py
+      sha256: a3e91ebd989e6c3f1a5463cbe96e17227f9dd63e0cab221f080b20415fcdf3a6
+
+outputs:
+  root: E:/uav-vpp-guidance-disadvantage-capability-v1-results/pressure_exposed_postmerge_collector_v1
+  paper_safe: false
+  overwrite_permitted: false

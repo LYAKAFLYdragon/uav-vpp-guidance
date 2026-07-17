@@ -1,10 +1,10 @@
 schema_version: 1
 source_id: THESIS-DISADVANTAGE-TACTICAL-BASIS-CONTINUITY-COLLECTOR-V1
 stage: continuous_baseline_data_contract
-status: implementation_ready_execution_not_authorized
+status: authorized_nonlearning_collection_once
 
 authorization:
-  execution_permitted: false
+  execution_permitted: true
   training_permitted: false
   tuning_permitted: false
   reward_change_permitted: false
@@ -17,6 +17,23 @@ authorization:
   history_padding_permitted: false
   require_clean_worktree: true
   one_collection_run_only: true
+
+execution:
+  expected_records: 36
+  required_implementation_git_sha: f776c39029b6b87b6480fd7e6ce823fab64d7d17
+  authorized_code_files:
+    - path: scripts/run_thesis_disadvantage_tactical_basis_continuity_collector_v1.py
+      sha256: 5abfa19952fd4f3eb59d640bfa2d693be73bdbcb40548705dae630f6ac5cab11
+    - path: scripts/verify_thesis_disadvantage_tactical_basis_continuity_collector_v1.py
+      sha256: c4f426df2a48ad8e5f84c3b57d6f3306c8ca2a4cb8a118b053979caab2ea4200
+    - path: src/uav_vpp_guidance/evaluation/tactical_basis_continuity_contract.py
+      sha256: be6d8c9650ceed284d5570bf13c704cedad22b7f6c13389eec5877239ad88fae
+    - path: src/uav_vpp_guidance/evaluation/thesis_five_state_raw_si_v5_record_only.py
+      sha256: 8e80f8285e1c26aae68fa0bc3519a31a8ac5bd0e1c15f40b8448db07fdca223e
+    - path: src/uav_vpp_guidance/envs/tracking_env.py
+      sha256: 83dc5144197842ccd0e321fe4094279d364969fd3fc3627caa38440397ec235a
+    - path: src/uav_vpp_guidance/virtual_point/generator.py
+      sha256: a3e91ebd989e6c3f1a5463cbe96e17227f9dd63e0cab221f080b20415fcdf3a6
 
 research_boundary:
   parent_source:

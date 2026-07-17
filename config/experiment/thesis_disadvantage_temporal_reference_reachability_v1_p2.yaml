@@ -1,0 +1,51 @@
+source_id: THESIS-DISADVANTAGE-TEMPORAL-REFERENCE-REACHABILITY-V1
+stage: P2_offline_envelope_screen
+status: authorized_nonlearning_baseline_replay_only
+
+authorization:
+  execution_permitted: true
+  baseline_replay_permitted: true
+  candidate_action_execution_permitted: false
+  training_permitted: false
+  tuning_permitted: false
+  reward_change_permitted: false
+  guidance_pid_change_permitted: false
+  snapshot_restore_permitted: false
+  future_state_injection_permitted: false
+  history_padding_permitted: false
+
+inputs:
+  p0_source_manifest: reports/temporal_reference_reachability_v1/source_manifest.json
+  p0_source_manifest_sha256: a2bc0197dacf3b4c622e37c9fc1122738a73fc4d8f803f96e4c1373a8ddcd129
+  p1_design: config/experiment/thesis_disadvantage_temporal_reference_reachability_v1_design.yaml
+  p1_design_sha256: 7580651fdb9965c9036e4d2cb78133765b3cf8fbf4278fd8bccc6d4622e48f5c
+  historical_cohort: config/experiment/manifests/thesis_local_action_authority_map_v2_cohort12.yaml
+  historical_cohort_sha256: add3c0832ff99f5722ea35321714dda170cf8917a0e241e71ae4d4b101d1d66f
+  historical_cohort_source_id: THESIS-FIVE-STATE-LOCAL-ACTION-AUTHORITY-MAP-V2-COHORT12
+
+collection_contract:
+  backend: jsbsim
+  strict_backend: true
+  historical_source_kind: v2
+  require_historical_handoff_hash_match: true
+  continuous_reset_replay_only: true
+  reset_at_handoff: false
+  baseline_continuation_steps: 40
+  action_semantics: tactical_basis_v1
+  record_candidate_actions: false
+  candidate_actions_must_not_enter_env: true
+
+gates:
+  min_baseline_steps_per_state: 40
+  max_action_box_limited_fraction: 0.0
+  max_mean_projection_residual_m: 50.0
+  min_peak_actual_reference_delta_m: 100.0
+  min_states_per_opponent: 4
+  min_distinct_signatures_per_opponent: 4
+  min_mirror_signs_per_opponent: 2
+  candidate_opponents_required: 2
+
+outputs:
+  root: E:/uav-vpp-guidance-disadvantage-capability-v1-results/temporal_reference_reachability_v1/p2_offline_envelope
+  paper_safe: false
+  overwrite_permitted: false

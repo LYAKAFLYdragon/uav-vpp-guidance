@@ -97,3 +97,15 @@ def test_runtime_summary_freezes_on_candidate_clipping() -> None:
 
     assert result["passes"] is False
     assert result["decision"] == "runtime_contract_failure"
+
+
+def test_runtime_summary_calls_zero_pressure_coverage_not_evaluable() -> None:
+    records = _records()
+    for record in records:
+        for step in record["program_window"]:
+            step["target_attack_score"] = 0.0
+
+    result = summarize_runtime_records(records, scenarios_per_opponent=12, metrics=METRICS, gates=GATES)
+
+    assert result["passes"] is False
+    assert result["decision"] == "runtime_not_evaluable"

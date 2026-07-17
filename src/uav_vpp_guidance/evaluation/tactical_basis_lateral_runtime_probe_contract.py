@@ -305,6 +305,7 @@ def summarize_runtime_records(
         valid_pairs: list[dict[str, Any]] = []
         pressure_pairs: list[dict[str, Any]] = []
         handoff_hashes_match = True
+        handoff_hash_pairs = 0
         for scenario in sorted(set(baseline_by_scenario) | set(candidate_by_scenario)):
             baseline = baseline_by_scenario.get(scenario)
             candidate = candidate_by_scenario.get(scenario)
@@ -325,12 +326,17 @@ def summarize_runtime_records(
                 "end_specific_energy_delta_m": None,
             }
             if baseline is not None and candidate is not None:
+                baseline_handoff_hash = baseline.get("result", {}).get("handoff_state_hash")
+                candidate_handoff_hash = candidate.get("result", {}).get("handoff_state_hash")
                 pair["handoff_hash_match"] = (
-                    baseline.get("result", {}).get("handoff_state_hash")
-                    == candidate.get("result", {}).get("handoff_state_hash")
-                    and baseline.get("result", {}).get("handoff_state_hash") is not None
+                    baseline_handoff_hash == candidate_handoff_hash
+                    and baseline_handoff_hash is not None
                 )
-                handoff_hashes_match &= bool(pair["handoff_hash_match"])
+                # Non-handoff episodes are not candidate interventions and cannot
+                # invalidate the causal hash check for qualifying pairs.
+                if baseline_handoff_hash is not None and candidate_handoff_hash is not None:
+                    handoff_hash_pairs += 1
+                    handoff_hashes_match &= bool(pair["handoff_hash_match"])
             if pair["baseline_window_valid"] and pair["candidate_window_valid"] and pair["handoff_hash_match"]:
                 baseline_metrics = _window_metrics(baseline, response_steps=response_steps)
                 candidate_metrics = _window_metrics(candidate, response_steps=response_steps)
@@ -392,6 +398,7 @@ def summarize_runtime_records(
             "distinct_signatures": sorted(signatures),
             "mirror_signs": sorted(mirrors),
             "handoff_hashes_match": handoff_hashes_match,
+            "handoff_hash_pairs": handoff_hash_pairs,
             "mean_primary_pressure_delta": primary_delta,
             "mean_range_rate_delta_mps": range_rate_delta,
             "mean_end_range_delta_m": end_range_delta,
@@ -419,7 +426,10 @@ def summarize_runtime_records(
     elif required_passes:
         decision = "opponent_conditional_authority"
         next_action = "report_condition_boundary_do_not_train_shared_skills"
-    elif any(not matrix[opponent]["coverage_pass"] for opponent in REQUIRED_OPPONENTS):
+    elif any(
+        not matrix[opponent]["coverage_pass"] or not matrix[opponent]["pressure_coverage_pass"]
+        for opponent in REQUIRED_OPPONENTS
+    ):
         decision = "runtime_not_evaluable"
         next_action = "freeze_source_do_not_train_or_rerun"
     else:

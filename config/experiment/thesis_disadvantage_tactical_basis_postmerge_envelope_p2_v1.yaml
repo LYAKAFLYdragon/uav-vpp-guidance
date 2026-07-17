@@ -1,10 +1,10 @@
 schema_version: 1
 source_id: THESIS-DISADVANTAGE-TACTICAL-BASIS-POSTMERGE-ENVELOPE-P2-V1
 stage: postmerge_offline_envelope_screen
-status: implementation_ready_execution_not_authorized
+status: execution_authorized_one_off_offline_screen
 
 authorization:
-  execution_permitted: false
+  execution_permitted: true
   training_permitted: false
   tuning_permitted: false
   reward_change_permitted: false
@@ -91,3 +91,16 @@ outputs:
   root: E:/uav-vpp-guidance-disadvantage-capability-v1-results/tactical_basis_postmerge_envelope_p2_v1
   paper_safe: false
   overwrite_permitted: false
+
+execution:
+  expected_rows: 136
+  required_implementation_git_sha: 6cb1440ded5c128667a8d2668b9c39e30b08965a
+  authorized_code_files:
+    - path: src/uav_vpp_guidance/evaluation/tactical_basis_postmerge_p2.py
+      sha256: c8c6dda45b8fe9d9cc8c44a7aee23bc2e18522871173595bbd7c3183069b0a83
+    - path: scripts/run_thesis_disadvantage_tactical_basis_postmerge_p2_v1.py
+      sha256: 277cc48f9565621333e8cef626a1b5d81d95e5ff3c0b4aeca6d6f28c1102ecb5
+    - path: scripts/verify_thesis_disadvantage_tactical_basis_postmerge_p2_v1.py
+      sha256: bc4582b78ded73d52b002d2a455588e2d8fc8dac91bf865d4b4be346464bad03
+    - path: src/uav_vpp_guidance/evaluation/temporal_reference_compiler.py
+      sha256: 82433db26dbd687940279898960c3fadba9e5e35ac7ddff7cf1746620a2876a1

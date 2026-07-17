@@ -75,9 +75,11 @@ def validate_design(config_path: Path) -> dict[str, Any]:
     continuity_gate = _require_input(config, "continuity_gate", loader="json")
     probe_manifest = _require_input(config, "probe_manifest", loader="yaml")
     parent_manifest = _require_input(config, "parent_manifest", loader="yaml")
+    _require_input(config, "runtime_config", loader="yaml")
     _require_input(config, "runtime_registry", loader="yaml")
     _require_input(config, "frozen_p3_encoder", loader="file")
     _require_input(config, "frozen_head_on_specialist", loader="file")
+    _require_input(config, "temporal_reference_design", loader="yaml")
     _require_input(config, "temporal_reference_compiler", loader="file")
     output = _resolve(str(config["outputs"]["root"]))
     if not output.is_absolute() or output.exists():
@@ -96,7 +98,7 @@ def validate_design(config_path: Path) -> dict[str, Any]:
             "mode": "design_only_preflight",
             "output_root_absent": True,
             "free_disk_gb": round(shutil.disk_usage(output.parent).free / 1024**3, 3),
-            "runtime_execution": "prohibited_pending_independent_runner_and_verifier",
+            "runtime_execution": "prohibited_pending_one_off_authorization",
         }
     )
     return result

@@ -15,6 +15,8 @@ authorization:
   snapshot_restore_permitted: false
   future_state_injection_permitted: false
   history_padding_permitted: false
+  require_clean_worktree: true
+  one_formal_runtime_matrix_run: true
 
 research_boundary:
   parent_source:
@@ -48,12 +50,16 @@ inputs:
   probe_manifest_sha256: 1d7f08cdab6919f81a08d92a3830b7af3590538eb8748de05e13617e7b3ae6fd
   parent_manifest: config/experiment/manifests/thesis_temporal_reference_reachability_v1.yaml
   parent_manifest_sha256: a62256535dd4aa4e6918f13f22268cad22dd0ce20556e4a4d0cc08059d4f62b6
+  runtime_config: config/experiment/thesis_disadvantage_tactical_basis_continuity_collector_v3.yaml
+  runtime_config_sha256: 992b46608f1f028f61bd1250652d6c5dc3ad3df398d51f60cd35606730cd56b7
   runtime_registry: config/experiment/thesis_defext_rangeext_feasibility_pilot_v1_runtime_registry.yaml
   runtime_registry_sha256: c87edfed4be69a8293a889c9caa55c520fdab7dd93c44c9c6e057be869f435c5
   frozen_p3_encoder: E:/uav-vpp-guidance-thesis-five-state-v1-results/p3_temporal_encoder_phaseconditional_v2/checkpoints/best.pt
   frozen_p3_encoder_sha256: 385663281a9c48c0416ea4d1a1bb8dc08ed64a0cfebb0f01083cbbb8bcfbdc59
   frozen_head_on_specialist: E:/uav-vpp-guidance-thesis-five-state-v1-assets/canonical_head_on_specialist_best.pt
   frozen_head_on_specialist_sha256: 0aeadd11cd8c7723c8963bcc5da21dd97c365e64f234d07b86c2b8f0d7ec5fb6
+  temporal_reference_design: config/experiment/thesis_disadvantage_temporal_reference_reachability_v1_design.yaml
+  temporal_reference_design_sha256: 7580651fdb9965c9036e4d2cb78133765b3cf8fbf4278fd8bccc6d4622e48f5c
   temporal_reference_compiler: src/uav_vpp_guidance/evaluation/temporal_reference_compiler.py
   temporal_reference_compiler_sha256: 82433db26dbd687940279898960c3fadba9e5e35ac7ddff7cf1746620a2876a1
 
@@ -142,6 +148,15 @@ gates:
   safety_stop: any_candidate_nonfinite_clipping_fallback_reset_or_checkpoint_failure_freezes_source
   no_go_action: stop_temporal_reference_and_shared_skill_training_line
   pass_action: design_single_skill_pilot_preregistration_only
+
+engineering_smoke:
+  smoke_id: ENGINEERING-POSTMERGE-LATERAL-RUNTIME-PROBE-R3-NOT-A-SOURCE-ID
+  output_root: E:/uav-vpp-guidance-disadvantage-capability-v1-results/tactical_basis_postmerge_lateral_runtime_probe_v1_engineering_smoke_r3
+  scenario_by_opponent:
+    expert: thesis_temporal_reference_reachability_v1_trv1_long_escape_own_below_negative
+    end_to_end: thesis_temporal_reference_reachability_v1_trv1_long_escape_own_below_negative
+    independent_ppo_vpp: thesis_temporal_reference_reachability_v1_trv1_long_escape_own_below_negative
+  expected_records: 6
 
 outputs:
   root: E:/uav-vpp-guidance-disadvantage-capability-v1-results/tactical_basis_postmerge_lateral_runtime_probe_v1

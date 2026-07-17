@@ -167,12 +167,52 @@ def _validate_config(config: Mapping[str, Any]) -> TemporalReferenceConfig:
     return compiler_config
 
 
-def build_source_manifest(config_path: Path = DEFAULT_CONFIG, *, require_clean_git: bool = True) -> dict[str, Any]:
+def _snapshot_git_info(*, output_path: Path, require_clean_git: bool) -> dict[str, Any]:
+    """Require a clean source tree while allowing the manifest artifact itself.
+
+    The snapshot is intentionally generated inside the repository.  Its own
+    untracked output must not make the code/config snapshot appear dirty, but
+    every other tracked or untracked change remains a hard P0 failure.
+    """
+
+    try:
+        lines = subprocess.check_output(
+            ["git", "status", "--short"], cwd=ROOT, text=True
+        ).splitlines()
+    except (OSError, subprocess.CalledProcessError) as error:
+        raise TemporalReferenceSourceManifestError("could not inspect Git worktree status") from error
+    try:
+        allowed = output_path.resolve().relative_to(ROOT.resolve()).as_posix()
+    except ValueError:
+        # Temporary verifier outputs outside the repository never appear in
+        # ``git status`` and therefore cannot need a self-output exemption.
+        allowed = None
+    unexpected = [
+        line for line in lines if allowed is None or line[3:].replace("\\", "/") != allowed
+    ]
+    if require_clean_git and unexpected:
+        raise TemporalReferenceSourceManifestError(
+            "P0 source snapshot requires a clean Git worktree; unexpected changes: "
+            + ", ".join(unexpected)
+        )
+    git_info = get_git_info(str(ROOT))
+    if not unexpected:
+        # ``get_git_info`` sees the generated output as untracked; normalize
+        # that self-output away only after the explicit status check above.
+        git_info["dirty"] = False
+        git_info["description"] = f"{git_info.get('branch') or 'HEAD'}@{git_info.get('short_commit')}"
+    return git_info
+
+
+def build_source_manifest(
+    config_path: Path = DEFAULT_CONFIG,
+    *,
+    output_path: Path = DEFAULT_OUTPUT,
+    require_clean_git: bool = True,
+) -> dict[str, Any]:
     config = _load_config(config_path)
     compiler_config = _validate_config(config)
-    git_info = get_git_info(str(ROOT))
-    if require_clean_git and git_info.get("dirty") is not False:
-        raise TemporalReferenceSourceManifestError("P0 source snapshot requires a clean Git worktree")
+    git_info = _snapshot_git_info(output_path=output_path, require_clean_git=require_clean_git)
     inputs = config.get("frozen_inputs")
     if not isinstance(inputs, list) or not inputs:
         raise TemporalReferenceSourceManifestError("frozen_inputs must be a non-empty list")
@@ -264,7 +304,11 @@ def main() -> int:
     if args.verify:
         result = verify_source_manifest(args.output)
     else:
-        result = build_source_manifest(args.config, require_clean_git=not args.allow_dirty)
+        result = build_source_manifest(
+            args.config,
+            output_path=args.output,
+            require_clean_git=not args.allow_dirty,
+        )
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(json.dumps(result, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     print(json.dumps(result, indent=2, sort_keys=True))

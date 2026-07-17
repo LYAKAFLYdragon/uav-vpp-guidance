@@ -38,3 +38,37 @@ def test_first_difference_accepts_mode_or_action_change() -> None:
     assert module._first_difference(base, mode_changed) is True
     assert module._first_difference(base, action_changed) is True
     assert module._first_difference(base, base) is False
+
+
+def test_initial_observation_accepts_flat_and_nested_runtime_receipts() -> None:
+    module = _module("task_interface_runtime_verifier", VERIFIER)
+    expected = {"feature_names": ["range_m", "is_crossing"], "vector": [0.2, 1.0]}
+    assert module._initial_observation(expected) == expected
+    assert module._initial_observation({"initial_observation": expected}) == expected
+
+
+def test_same_except_task_bit_accepts_flat_runtime_receipts() -> None:
+    module = _module("task_interface_runtime_verifier", VERIFIER)
+    reset = {"own_position_m": [0.0, 0.0, 0.0], "target_position_m": [1.0, 0.0, 0.0]}
+    base = {"physical_reset_receipt": reset, "feature_names": ["range_m", "is_crossing"], "vector": [0.2, 0.0]}
+    crossing = {"physical_reset_receipt": reset, "feature_names": ["range_m", "is_crossing"], "vector": [0.2, 1.0]}
+    module._same_except_task_bit(base, crossing, "flat")
+
+
+def test_trajectory_accepts_episode_level_backend_provenance() -> None:
+    module = _module("task_interface_runtime_verifier", VERIFIER)
+    trajectory = []
+    for index in range(20):
+        trajectory.append(
+            {
+                "vpp_action": [0.0, 0.0, 0.0],
+                "own_pos_m": [0.0, 0.0, 0.0],
+                "target_pos_m": [1.0, 0.0, 0.0],
+                "aoa_deg": 0.0,
+                "nz_cmd": 1.0,
+                "nz_actual": 1.0,
+                "prediction_valid": index >= 9,
+                "prediction_fallback": index < 9,
+            }
+        )
+    module._verify_trajectory({"trajectory": trajectory}, "episode-level-backend")

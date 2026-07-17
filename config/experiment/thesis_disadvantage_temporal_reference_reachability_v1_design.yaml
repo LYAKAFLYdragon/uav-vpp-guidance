@@ -1,0 +1,111 @@
+source_id: THESIS-DISADVANTAGE-TEMPORAL-REFERENCE-REACHABILITY-V1
+status: p0_p1_design_frozen_execution_not_authorized
+
+authorization:
+  execution_permitted: false
+  training_permitted: false
+  tuning_permitted: false
+  reward_change_permitted: false
+  high_level_ppo_training_permitted: false
+  shared_skill_training_permitted: false
+  guidance_pid_change_permitted: false
+  action_envelope_expansion_permitted: false
+  snapshot_restore_permitted: false
+  future_state_injection_permitted: false
+  history_padding_permitted: false
+
+research_boundary:
+  prior_negative_evidence:
+    plan1_source_id: THESIS-DISADVANTAGE-CAPABILITY-PLAN1-V2
+    plan1_result: reports/thesis_disadvantage_capability_plan1_v2_result_and_decision_20260717_zh.md
+    plan1_result_sha256: 06085ad38927c7da4e64d2fd066cffce432117b9ea4e299ef0be5795f3a7611a
+    plan2_source_id: THESIS-DISADVANTAGE-CAPABILITY-PLAN2-V1
+    plan2_verifier: E:/uav-vpp-guidance-disadvantage-capability-v1-results/plan2_motif_capacity_v1_clean_repro/plan2_verification.json
+    plan2_verifier_sha256: 8db3f8d1b4abb26189dc6cc555066d37e1bc27069bcbca06e530898d66522263
+  excluded_explanations:
+    - action_not_entering_vpp_or_guidance
+    - tactical_basis_rank_deficiency
+    - jsbsim_backend_failure
+  open_hypotheses:
+    - bounded_time_extended_reference_program
+    - state_conditioned_tactical_basis_projection
+    - opponent_conditioned_control_authority
+  no_go_consequences:
+    - do_not_tune_mechanical_routing
+    - do_not_add_reward_or_training_steps
+    - do_not_train_new_low_level_specialist
+
+evaluation_contract:
+  backend: jsbsim
+  strict_backend: true
+  action_semantics: tactical_basis_v1
+  reference_specialist: frozen_head_on
+  opponents: [expert, end_to_end, independent_ppo_vpp]
+  report_opponents_separately: true
+  pooled_gate_permitted: false
+  formal_manifest: config/experiment/manifests/thesis_temporal_reference_reachability_v1.yaml
+  formal_manifest_sha256: 7a11edcdaa2e63656812c5f71efbee1731f7c1d46359d5c3c6ce40b2e4952974
+  disjoint_against:
+    - config/experiment/manifests/thesis_disadvantage_capability_plan1_v2.yaml
+    - config/experiment/manifests/thesis_disadvantage_capability_plan2_v1.yaml
+    - config/experiment/manifests/thesis_dualskill_taxonomy60_v1.yaml
+  output_root: E:/uav-vpp-guidance-disadvantage-capability-v1-results/temporal_reference_reachability_v1
+  formal_runs_allowed: 1
+
+temporal_reference:
+  high_level_dt_s: 0.2
+  horizon_steps: 40
+  duration_s: 8.0
+  temporal_profile: sin_squared_c1
+  max_action_delta: 0.35
+  max_action_slew: 0.10
+  max_basis_condition_number: 100.0
+  templates:
+    lateral_extension:
+      peak_action_delta: [0.20, 0.32, 0.00]
+      lateral_sign_candidates: [-1, 1]
+      vertical_sign_candidates: [1]
+    vertical_extension:
+      peak_action_delta: [0.18, 0.00, 0.28]
+      lateral_sign_candidates: [1]
+      vertical_sign_candidates: [-1, 1]
+    combined_break_extension:
+      peak_action_delta: [0.20, 0.24, 0.22]
+      lateral_sign_candidates: [-1, 1]
+      vertical_sign_candidates: [-1, 1]
+
+frozen_inputs:
+  - id: plan1_v2_result
+    path: reports/thesis_disadvantage_capability_plan1_v2_result_and_decision_20260717_zh.md
+    sha256: 06085ad38927c7da4e64d2fd066cffce432117b9ea4e299ef0be5795f3a7611a
+  - id: plan2_v1_authoritative_verifier
+    path: E:/uav-vpp-guidance-disadvantage-capability-v1-results/plan2_motif_capacity_v1_clean_repro/plan2_verification.json
+    sha256: 8db3f8d1b4abb26189dc6cc555066d37e1bc27069bcbca06e530898d66522263
+  - id: plan2_v1_config
+    path: config/experiment/thesis_disadvantage_capability_plan2_v1.yaml
+  - id: temporal_reference_design
+    path: config/experiment/thesis_disadvantage_temporal_reference_reachability_v1_design.yaml
+  - id: temporal_reference_manifest
+    path: config/experiment/manifests/thesis_temporal_reference_reachability_v1.yaml
+  - id: temporal_reference_compiler
+    path: src/uav_vpp_guidance/evaluation/temporal_reference_compiler.py
+  - id: virtual_point_generator
+    path: src/uav_vpp_guidance/virtual_point/generator.py
+  - id: canonical_head_on_specialist
+    path: E:/uav-vpp-guidance-thesis-five-state-v1-assets/canonical_head_on_specialist_best.pt
+    sha256: 0aeadd11cd8c7723c8963bcc5da21dd97c365e64f234d07b86c2b8f0d7ec5fb6
+  - id: canonical_crossing_specialist
+    path: E:/uav-vpp-guidance-thesis-five-state-v1-assets/canonical_crossing_specialist_last.pt
+    sha256: 5eddc138bff55a5466da1129e840ef7dfb3677347a05276c3877746c8e89148b
+  - id: frozen_trajectory_predictor
+    path: E:/uav-vpp-guidance-thesis-five-state-v1-assets/frozen_trajectory_predictor_best_model.pt
+    sha256: 96bc8e5e1aebd32ca6a528fb3149cfd58aeff276c18bca66388d650f00495931
+  - id: frozen_p3_temporal_encoder
+    path: E:/uav-vpp-guidance-thesis-five-state-v1-results/p3_temporal_encoder_phaseconditional_v2/checkpoints/best.pt
+    sha256: 385663281a9c48c0416ea4d1a1bb8dc08ed64a0cfebb0f01083cbbb8bcfbdc59
+  - id: end_to_end_opponent
+    path: E:/uav-vpp-guidance-thesis-five-state-v1-assets/canonical_end_to_end_neural_opponent_best.pt
+    sha256: d38828338d5e7e22167129b2e9972d52ecf5fc3fda5d52caff95a8374c35b8bc
+  - id: independent_ppo_vpp_opponent
+    path: E:/uav-vpp-guidance-thesis-five-state-v1-assets/independent_ppo_vpp_opponent_v1_step_32768.pt
+    sha256: 43cd37fc86c0eb01d96a693f68d30894de7e768de01aed6dba41fa4761edfc60

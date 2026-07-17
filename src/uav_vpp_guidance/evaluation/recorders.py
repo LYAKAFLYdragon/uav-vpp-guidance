@@ -430,6 +430,22 @@ class EpisodeRecorder:
                 "phase_rule_first_switch_step"
             ),
             "phase_rule_uses_future_state": info.get("phase_rule_uses_future_state"),
+            "temporal_schedule_phase": info.get("temporal_schedule_phase"),
+            "temporal_schedule_selected_specialist": info.get(
+                "temporal_schedule_selected_specialist"
+            ),
+            "temporal_schedule_initial_high_level_steps": info.get(
+                "temporal_schedule_initial_high_level_steps"
+            ),
+            "temporal_schedule_switch_count": info.get(
+                "temporal_schedule_switch_count"
+            ),
+            "temporal_schedule_first_switch_step": info.get(
+                "temporal_schedule_first_switch_step"
+            ),
+            "temporal_schedule_uses_future_state": info.get(
+                "temporal_schedule_uses_future_state"
+            ),
             "own_pos_m": own_pos,
             "target_pos_m": target_pos,
             "ego_pos_x": own_pos[0],

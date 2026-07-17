@@ -18,7 +18,6 @@ sys.path.insert(0, str(ROOT / "scripts"))
 import verify_thesis_disadvantage_capability_plan1 as verifier
 
 
-SOURCE_ID = verifier.SOURCE_ID
 DEFAULT_CONFIG = ROOT / "config" / "experiment" / "thesis_disadvantage_capability_plan1_v1.yaml"
 
 
@@ -30,6 +29,7 @@ def _git_clean() -> bool:
 def build_plan(config_path: Path, output_root: Path, python_executable: str) -> list[dict]:
     config = verifier._load_config(config_path)
     protocol = config["disadvantage_capability_plan1"]
+    source_id = str(protocol["source_id"])
     if protocol.get("execution_permitted") is not True:
         raise RuntimeError("Plan 1 execution is not authorized by config")
     jsbsim_root = str(ROOT)
@@ -37,12 +37,12 @@ def build_plan(config_path: Path, output_root: Path, python_executable: str) -> 
     return [
         {
             "opponent": opponent,
-            "run_id": f"{SOURCE_ID}-{opponent}",
+            "run_id": f"{source_id}-{opponent}",
             "command": [
                 python_executable,
                 str(runner),
                 "--config", str(config_path),
-                "--run-id", f"{SOURCE_ID}-{opponent}",
+                "--run-id", f"{source_id}-{opponent}",
                 "--output-root", str(output_root),
                 "--preset", "ablation",
                 "--methods", *protocol["methods"],
@@ -69,16 +69,17 @@ def main() -> int:
     args = parser.parse_args()
     config_path = args.config.resolve()
     output_root = args.output_root.resolve()
+    source_id = str(verifier._load_config(config_path)["disadvantage_capability_plan1"]["source_id"])
     plan = build_plan(config_path, output_root, args.python_executable)
     if not args.execute:
-        print(json.dumps({"source_id": SOURCE_ID, "execute": False, "plan": plan}, ensure_ascii=False, indent=2))
+        print(json.dumps({"source_id": source_id, "execute": False, "plan": plan}, ensure_ascii=False, indent=2))
         return 0
     if output_root.exists():
         raise FileExistsError(f"Refusing to overwrite Plan 1 output root: {output_root}")
     if not _git_clean():
         raise RuntimeError("Plan 1 requires a clean Git worktree")
     output_root.mkdir(parents=True)
-    receipt = {"source_id": SOURCE_ID, "plan": plan, "executions": []}
+    receipt = {"source_id": source_id, "plan": plan, "executions": []}
     for item in plan:
         completed = subprocess.run(item["command"], cwd=ROOT, check=False)
         receipt["executions"].append({"opponent": item["opponent"], "returncode": completed.returncode})

@@ -104,3 +104,28 @@ def test_runner_preflight_checks_phase_rule_specialist_assets(tmp_path, monkeypa
     assert len(checks) == 4
     assert any("specialist cross checkpoint missing" in error for error in errors)
     assert any("specialist cross config missing" in error for error in errors)
+
+
+def test_runner_preflight_checks_temporal_schedule_specialist_assets(tmp_path, monkeypatch):
+    sys.path.insert(0, str(ROOT / "scripts"))
+    import run_jsbsim_hrl_comparison as runner
+
+    checkpoint = tmp_path / "head.pt"
+    config = tmp_path / "head.yaml"
+    checkpoint.write_bytes(b"frozen")
+    config.write_text("policy: {}\n", encoding="utf-8")
+    monkeypatch.setattr(runner, "_repo_path", lambda value: None if value is None else tmp_path / str(value))
+    comparison = {
+        "methods": {
+            "schedule": {
+                "agent_type": "temporal_schedule_specialist",
+                "specialists": {"head": {"checkpoint": "head.pt", "config_path": "head.yaml"}},
+            }
+        },
+        "opponent_registry": {},
+    }
+
+    checks, errors = runner._checkpoint_checks(comparison, ["schedule"], "none", allow_missing=False)
+
+    assert len(checks) == 2
+    assert not errors

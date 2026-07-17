@@ -97,3 +97,31 @@ def test_plan1_verifier_rejects_phase_rule_that_violates_observed_phase(tmp_path
 
     with pytest.raises(module.Plan1VerificationError, match="inconsistent with observed phase"):
         module.verify(ROOT / "config/experiment/thesis_disadvantage_capability_plan1_v1.yaml", tmp_path)
+
+
+def test_plan1_verifier_accepts_only_the_predeclared_temporal_switch():
+    module = _module()
+    record = {
+        "trajectory": [
+            {
+                "temporal_schedule_selected_specialist": "head_on",
+                "temporal_schedule_uses_future_state": False,
+                "temporal_schedule_initial_high_level_steps": 2,
+            },
+            {
+                "temporal_schedule_selected_specialist": "head_on",
+                "temporal_schedule_uses_future_state": False,
+                "temporal_schedule_initial_high_level_steps": 2,
+            },
+            {
+                "temporal_schedule_selected_specialist": "crossing_feasible",
+                "temporal_schedule_uses_future_state": False,
+                "temporal_schedule_initial_high_level_steps": 2,
+            },
+        ]
+    }
+
+    assert module._validate_temporal_schedule_record(record, 2)["switches"] == 1
+    record["trajectory"][2]["temporal_schedule_selected_specialist"] = "head_on"
+    with pytest.raises(module.Plan1VerificationError, match="inconsistent with its predeclared step"):
+        module._validate_temporal_schedule_record(record, 2)

@@ -20,12 +20,12 @@ import run_jsbsim_hrl_comparison as comparison
 
 
 SOURCE_ID = "THESIS-DISADVANTAGE-CAPABILITY-PLAN1-V1"
-HEIGHTS = (
+HEIGHTS_V1 = (
     ("own_below", 5000.0, 5800.0),
     ("co_altitude", 5400.0, 5400.0),
     ("own_above", 5800.0, 5000.0),
 )
-PACKAGES = (
+PACKAGES_V1 = (
     {
         "id": "dcv1_close_fast",
         "range_m": 2800.0,
@@ -41,6 +41,43 @@ PACKAGES = (
         "target_speed_mps": 265.0,
     },
 )
+VARIANTS = {
+    "v1": {
+        "source_id": SOURCE_ID,
+        "family": "thesis_disadvantage_capability_plan1_v1",
+        "heights": HEIGHTS_V1,
+        "packages": PACKAGES_V1,
+        "seed_base": 272100,
+        "methods": ["canonical_ppo", "fixed_head_on", "fixed_crossing", "phase_rule_head_to_cross"],
+    },
+    "v2": {
+        "source_id": "THESIS-DISADVANTAGE-CAPABILITY-PLAN1-V2",
+        "family": "thesis_disadvantage_capability_plan1_v2",
+        "heights": (
+            ("own_below", 4800.0, 5700.0),
+            ("co_altitude", 5300.0, 5300.0),
+            ("own_above", 5800.0, 4900.0),
+        ),
+        "packages": (
+            {
+                "id": "dcv2_close_fast",
+                "range_m": 3000.0,
+                "los_azimuth_abs_deg": 24.0,
+                "own_speed_mps": 230.0,
+                "target_speed_mps": 265.0,
+            },
+            {
+                "id": "dcv2_wide_balanced",
+                "range_m": 4100.0,
+                "los_azimuth_abs_deg": 30.0,
+                "own_speed_mps": 250.0,
+                "target_speed_mps": 260.0,
+            },
+        ),
+        "seed_base": 273100,
+        "methods": ["canonical_ppo", "fixed_head_on", "fixed_crossing", "temporal_head_to_cross_after_warmup"],
+    },
+}
 
 
 def _wrap_deg(value: float) -> float:
@@ -51,7 +88,7 @@ def _signed_angle_deg(left: float, right: float) -> float:
     return (left - right + 180.0) % 360.0 - 180.0
 
 
-def _scenario(*, package: dict[str, Any], height: tuple[str, float, float], mirror_sign: str, index: int) -> dict[str, Any]:
+def _scenario(*, variant: Mapping[str, Any], package: dict[str, Any], height: tuple[str, float, float], mirror_sign: str, index: int) -> dict[str, Any]:
     height_name, own_altitude_m, target_altitude_m = height
     sign = -1.0 if mirror_sign == "negative" else 1.0
     azimuth_deg = sign * float(package["los_azimuth_abs_deg"])
@@ -68,7 +105,8 @@ def _scenario(*, package: dict[str, Any], height: tuple[str, float, float], mirr
     if not math.isclose(own_to_target, 160.0, abs_tol=1e-9) or not math.isclose(target_to_own, 20.0, abs_tol=1e-9):
         raise AssertionError("disadvantage angle construction drifted")
     package_id = str(package["id"])
-    name = f"disadvantage_capability_plan1_{package_id}_{height_name}_{mirror_sign}"
+    family = str(variant["family"])
+    name = f"{family}_{package_id}_{height_name}_{mirror_sign}"
     return {
         "name": name,
         "own_init": {
@@ -82,7 +120,7 @@ def _scenario(*, package: dict[str, Any], height: tuple[str, float, float], mirr
             "heading_deg": round(heading_deg, 9),
         },
         "metadata": {
-            "manifest_family": "thesis_disadvantage_capability_plan1_v1",
+            "manifest_family": family,
             "initial_class": "disadvantage",
             "taxonomy_geometry_state": "disadvantage",
             "height_condition": height_name,
@@ -93,7 +131,7 @@ def _scenario(*, package: dict[str, Any], height: tuple[str, float, float], mirr
             "task_registry_key": "head_on",
             "ppo_task_bit": 0,
             "crossing_context": False,
-            "scenario_seed": 272100 + index,
+            "scenario_seed": int(variant["seed_base"]) + index,
             "initial_range_m": range_m,
             "horizontal_range_m": round(range_m, 9),
             "altitude_diff_m": target_altitude_m - own_altitude_m,
@@ -106,13 +144,17 @@ def _scenario(*, package: dict[str, Any], height: tuple[str, float, float], mirr
     }
 
 
-def build_manifest() -> dict[str, Any]:
+def build_manifest(variant_name: str = "v1") -> dict[str, Any]:
+    if variant_name not in VARIANTS:
+        raise ValueError(f"Unknown Plan 1 manifest variant: {variant_name}")
+    variant = VARIANTS[variant_name]
     scenarios = []
-    for package in PACKAGES:
-        for height in HEIGHTS:
+    for package in variant["packages"]:
+        for height in variant["heights"]:
             for mirror_sign in ("negative", "positive"):
                 scenarios.append(
                     _scenario(
+                        variant=variant,
                         package=package,
                         height=height,
                         mirror_sign=mirror_sign,
@@ -120,14 +162,14 @@ def build_manifest() -> dict[str, Any]:
                     )
                 )
     payload = {
-        "source_id": SOURCE_ID,
+        "source_id": str(variant["source_id"]),
         "manifest_version": 1,
         "protocol": {
             "evaluation_only": True,
             "training_permitted": False,
             "tuning_permitted": False,
             "opponents": ["expert", "end_to_end", "independent_ppo_vpp"],
-            "methods": ["canonical_ppo", "fixed_head_on", "fixed_crossing", "phase_rule_head_to_cross"],
+            "methods": list(variant["methods"]),
             "episodes_per_scenario_method_opponent": 1,
             "episodes_total": 144,
             "no_future_state_or_outcome_routing": True,
@@ -140,7 +182,8 @@ def build_manifest() -> dict[str, Any]:
 
 
 def validate_manifest(manifest: dict[str, Any]) -> None:
-    if manifest.get("source_id") != SOURCE_ID or len(manifest.get("scenarios", [])) != 12:
+    valid_sources = {str(value["source_id"]) for value in VARIANTS.values()}
+    if manifest.get("source_id") not in valid_sources or len(manifest.get("scenarios", [])) != 12:
         raise ValueError("Plan 1 manifest must contain exactly 12 scenarios")
     names = [str(item["name"]) for item in manifest["scenarios"]]
     seeds = [int(item["metadata"]["scenario_seed"]) for item in manifest["scenarios"]]
@@ -162,11 +205,12 @@ def validate_manifest(manifest: dict[str, Any]) -> None:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--variant", choices=sorted(VARIANTS), default="v1")
     parser.add_argument("--overwrite", action="store_true")
     args = parser.parse_args()
     if args.output.exists() and not args.overwrite:
         raise FileExistsError(f"Refusing to overwrite manifest: {args.output}")
-    manifest = build_manifest()
+    manifest = build_manifest(args.variant)
     validate_manifest(manifest)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(yaml.safe_dump(manifest, sort_keys=False, allow_unicode=True), encoding="utf-8")

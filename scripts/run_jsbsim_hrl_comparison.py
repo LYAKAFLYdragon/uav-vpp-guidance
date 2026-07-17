@@ -1952,7 +1952,7 @@ def build_eval_config(
     method_def = methods[method_name]
     task_def = _resolve_task_def(tasks[task_name])
     agent_type = method_def.get("agent_type", "ppo")
-    if agent_type in {"oracle_task_gate", "random_task_gate", "hierarchical_commander", "phase_rule_specialist"}:
+    if agent_type in {"oracle_task_gate", "random_task_gate", "hierarchical_commander", "phase_rule_specialist", "temporal_schedule_specialist"}:
         # oracle/random gate and hierarchical commander use the comparison config
         # as the evaluation environment base.
         config = copy.deepcopy(comparison_config)
@@ -2052,6 +2052,18 @@ def _build_agent(
             specialists_config=method_def.get("specialists", {}),
             pre_merge_specialist=str(method_def.get("pre_merge_specialist", "head_on")),
             post_merge_specialist=str(method_def.get("post_merge_specialist", "crossing")),
+            device=device,
+        )
+    elif agent_type == "temporal_schedule_specialist":
+        from uav_vpp_guidance.evaluation.temporal_schedule_specialist_policy import (
+            TemporalScheduleSpecialistPolicy,
+        )
+
+        agent = TemporalScheduleSpecialistPolicy(
+            specialists_config=method_def.get("specialists", {}),
+            initial_specialist=str(method_def.get("initial_specialist", "head_on")),
+            later_specialist=str(method_def.get("later_specialist", "crossing")),
+            initial_high_level_steps=int(method_def.get("initial_high_level_steps", 10)),
             device=device,
         )
     elif agent_type == "random_task_gate":
@@ -3815,7 +3827,7 @@ def _checkpoint_checks(
         agent_type = method_def.get("agent_type", "ppo")
         # Gate/schedule policies load declared frozen specialists rather than
         # a single policy checkpoint. Validate every declared asset explicitly.
-        if agent_type in {"oracle_task_gate", "random_task_gate", "phase_rule_specialist"}:
+        if agent_type in {"oracle_task_gate", "random_task_gate", "phase_rule_specialist", "temporal_schedule_specialist"}:
             specialists = method_def.get("specialists", {})
             if not isinstance(specialists, dict) or not specialists:
                 errors.append(f"{method}:specialists missing or empty")

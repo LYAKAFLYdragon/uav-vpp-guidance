@@ -47,3 +47,18 @@ def test_plan1_manifest_rejects_integrity_drift():
         assert "integrity hash mismatch" in str(error)
     else:
         raise AssertionError("integrity drift must be rejected")
+
+
+def test_plan1_v2_manifest_has_a_distinct_source_and_seed_range():
+    module = _module()
+    v1 = module.build_manifest("v1")
+    v2 = module.build_manifest("v2")
+    module.validate_manifest(v2)
+
+    assert v1["source_id"] != v2["source_id"]
+    assert {item["name"] for item in v1["scenarios"]}.isdisjoint(
+        item["name"] for item in v2["scenarios"]
+    )
+    assert {item["metadata"]["scenario_seed"] for item in v1["scenarios"]}.isdisjoint(
+        item["metadata"]["scenario_seed"] for item in v2["scenarios"]
+    )

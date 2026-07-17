@@ -1,0 +1,112 @@
+includes:
+  - ./jsbsim_hrl_thesis_five_state_heldout40_v1.yaml
+
+experiment:
+  name: thesis_disadvantage_capability_plan1_v2
+  description: >
+    New research-only routing-capacity experiment for opening-pressure
+    disadvantage geometry. It supersedes V1 before formal execution.
+
+disadvantage_capability_plan1:
+  source_id: THESIS-DISADVANTAGE-CAPABILITY-PLAN1-V2
+  execution_permitted: true
+  evaluation_only: true
+  training_permitted: false
+  tuning_permitted: false
+  reward_change_permitted: false
+  vpp_change_permitted: false
+  guidance_change_permitted: false
+  pid_change_permitted: false
+  future_state_or_outcome_routing_permitted: false
+  manifest: config/experiment/manifests/thesis_disadvantage_capability_plan1_v2.yaml
+  manifest_sha256: 4196147ef79e4425023f90c8d3a69acc4f1f9a2a4aaa19751f1fc5063efe956c
+  opponents: [expert, end_to_end, independent_ppo_vpp]
+  primary_opponents: [expert, end_to_end]
+  methods: [canonical_ppo, fixed_head_on, fixed_crossing, temporal_head_to_cross_after_warmup]
+  route_schedule_method: temporal_head_to_cross_after_warmup
+  schedule_type: temporal_warmup
+  expected_records_per_opponent: 48
+  expected_records_total: 144
+  temporal_schedule_contract:
+    initial_specialist: head_on
+    later_specialist: crossing
+    initial_high_level_steps: 10
+    rationale: Align the one allowed switch with the frozen predictor's nine-step warm-up.
+    maximum_switches: 1
+    no_future_state_or_outcome: true
+  gates:
+    routing_explanation:
+      primary_opponents_required: 2
+      min_schedule_resolved_improvements_per_primary: 2
+      min_opponent_attack_zone_time_reduction_s_per_primary: 1.0
+      max_ego_crash_oob_delta_vs_best_fixed: 0.05
+    next_action_if_routing_gate_fails: >
+      Do not patch routing. Proceed only to a separate non-learning motif
+      feasibility probe that first verifies VPP-to-guidance transmission.
+
+env:
+  max_high_level_steps: 240
+  strict_backend: true
+
+scenario_manifest:
+  path: ./manifests/thesis_disadvantage_capability_plan1_v2.yaml
+  source_id: THESIS-DISADVANTAGE-CAPABILITY-PLAN1-V2
+  payload_sha256: 4196147ef79e4425023f90c8d3a69acc4f1f9a2a4aaa19751f1fc5063efe956c
+  task_key_field: task_registry_key
+  active_task_groups: [head_on]
+  expected_task_counts:
+    head_on: 12
+  task_labels:
+    head_on: "Plan 1 V2: newly generated opening-pressure disadvantage geometry"
+  use_scenario_seed: true
+
+methods:
+  canonical_ppo:
+    label: Frozen canonical PPO high-level policy; deployed guard semantics retained.
+    agent_type: hierarchical_commander
+    checkpoint: E:/uav-vpp-guidance-thesis-five-state-v1-assets/canonical_two_skill_commander_best.pt
+    config_path: config/experiment/train_prediction_vpp_hierarchical_commander_ppo_reset075_tactical_basis_3mode_post_merge_recovery_bootstrap.yaml
+    prediction_variant: learned
+  fixed_head_on:
+    label: Frozen head-on specialist without routing.
+    agent_type: ppo
+    checkpoint: E:/uav-vpp-guidance-thesis-five-state-v1-assets/canonical_head_on_specialist_best.pt
+    config_path: config/experiment/train_prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp_combat_finetune_mixed_opponent_aware_32k_task_type_headon_weighted.yaml
+    prediction_variant: learned
+  fixed_crossing:
+    label: Frozen crossing specialist without routing.
+    agent_type: ppo
+    checkpoint: E:/uav-vpp-guidance-thesis-five-state-v1-assets/canonical_crossing_specialist_last.pt
+    config_path: config/experiment/train_prediction_vpp_ppo_crossing_v3.yaml
+    prediction_variant: learned
+    observation_contract:
+      checkpoint_obs_dim: 18
+      include_task_type: false
+    config_overrides:
+      observation.include_task_type: false
+  temporal_head_to_cross_after_warmup:
+    label: Frozen H-to-C schedule with a ten-step predictor-aligned warm-up.
+    agent_type: temporal_schedule_specialist
+    prediction_variant: learned
+    initial_specialist: head_on
+    later_specialist: crossing
+    initial_high_level_steps: 10
+    specialists:
+      head_on:
+        specialist_key: head_on
+        specialist_mode_name: head_on_specialist
+        checkpoint: E:/uav-vpp-guidance-thesis-five-state-v1-assets/canonical_head_on_specialist_best.pt
+        config_path: config/experiment/train_prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp_combat_finetune_mixed_opponent_aware_32k_task_type_headon_weighted.yaml
+      crossing:
+        specialist_key: crossing_feasible
+        specialist_mode_name: crossing_specialist
+        checkpoint: E:/uav-vpp-guidance-thesis-five-state-v1-assets/canonical_crossing_specialist_last.pt
+        config_path: config/experiment/train_prediction_vpp_ppo_crossing_v3.yaml
+
+run_defaults:
+  backend: jsbsim
+  tasks: [head_on]
+  main_methods: [canonical_ppo, fixed_head_on, fixed_crossing, temporal_head_to_cross_after_warmup]
+  ablation_methods: [canonical_ppo, fixed_head_on, fixed_crossing, temporal_head_to_cross_after_warmup]
+  formal_small_seeds: [0]
+  n_episodes: 1

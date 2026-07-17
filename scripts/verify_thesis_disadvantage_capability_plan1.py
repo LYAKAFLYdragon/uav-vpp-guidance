@@ -95,6 +95,27 @@ def _validate_phase_rule_record(record: Mapping[str, Any]) -> dict[str, Any]:
     }
 
 
+def _validate_temporal_schedule_record(record: Mapping[str, Any], initial_steps: int) -> dict[str, Any]:
+    trajectory = [step for step in record.get("trajectory", []) if isinstance(step, Mapping)]
+    if not trajectory:
+        raise Plan1VerificationError("temporal-schedule raw trajectory is missing")
+    selections = []
+    for index, step in enumerate(trajectory, start=1):
+        selected = step.get("temporal_schedule_selected_specialist")
+        if selected is None or step.get("temporal_schedule_uses_future_state") is not False:
+            raise Plan1VerificationError("temporal-schedule telemetry is incomplete")
+        expected = "head_on" if index <= initial_steps else "crossing_feasible"
+        if str(selected) != expected:
+            raise Plan1VerificationError("temporal schedule selected a specialist inconsistent with its predeclared step")
+        if int(step.get("temporal_schedule_initial_high_level_steps", -1)) != initial_steps:
+            raise Plan1VerificationError("temporal schedule warm-up contract drifted")
+        selections.append(str(selected))
+    switches = sum(left != right for left, right in zip(selections, selections[1:]))
+    if switches > 1:
+        raise Plan1VerificationError("temporal schedule switched more than once")
+    return {"switches": switches, "trajectory_steps": len(trajectory), "switch_observed": switches == 1}
+
+
 def _best_fixed(records: Mapping[str, Mapping[str, Any]]) -> tuple[str, Mapping[str, Any]]:
     candidates = [(method, records[method]) for method in FIXED_METHODS]
     return max(
@@ -110,8 +131,9 @@ def _best_fixed(records: Mapping[str, Mapping[str, Any]]) -> tuple[str, Mapping[
 def _load_config(path: Path) -> dict[str, Any]:
     config = comparison._load_config_with_includes(path)
     protocol = config.get("disadvantage_capability_plan1", {})
-    if protocol.get("source_id") != SOURCE_ID:
-        raise Plan1VerificationError("Plan 1 source ID drifted")
+    source_id = str(protocol.get("source_id") or "")
+    if source_id not in {SOURCE_ID, "THESIS-DISADVANTAGE-CAPABILITY-PLAN1-V2"}:
+        raise Plan1VerificationError("Plan 1 source ID is not recognized")
     if not protocol.get("evaluation_only") or any(
         protocol.get(key) is not False
         for key in (
@@ -125,7 +147,11 @@ def _load_config(path: Path) -> dict[str, Any]:
         )
     ):
         raise Plan1VerificationError("Plan 1 authorization contract drifted")
-    if tuple(protocol.get("opponents", ())) != OPPONENTS or tuple(protocol.get("methods", ())) != METHODS:
+    if tuple(protocol.get("opponents", ())) != OPPONENTS:
+        raise Plan1VerificationError("Plan 1 opponent matrix drifted")
+    methods = tuple(protocol.get("methods", ()))
+    schedule_method = str(protocol.get("route_schedule_method") or "phase_rule_head_to_cross")
+    if len(methods) != 4 or not {"canonical_ppo", "fixed_head_on", "fixed_crossing", schedule_method}.issubset(methods):
         raise Plan1VerificationError("Plan 1 method/opponent matrix drifted")
     return config
 
@@ -135,16 +161,20 @@ def verify(config_path: Path, output_root: Path) -> dict[str, Any]:
     protocol = config["disadvantage_capability_plan1"]
     manifest_path = ROOT / str(protocol["manifest"])
     manifest = yaml.safe_load(manifest_path.read_text(encoding="utf-8")) or {}
-    if manifest.get("source_id") != SOURCE_ID or len(manifest.get("scenarios", [])) != 12:
+    source_id = str(protocol["source_id"])
+    methods = tuple(str(item) for item in protocol["methods"])
+    schedule_method = str(protocol.get("route_schedule_method") or "phase_rule_head_to_cross")
+    schedule_type = str(protocol.get("schedule_type") or "phase_first_pass")
+    if manifest.get("source_id") != source_id or len(manifest.get("scenarios", [])) != 12:
         raise Plan1VerificationError("Plan 1 manifest is invalid")
     if str(protocol.get("manifest_sha256")) != comparison._scenario_manifest_payload_sha256(manifest):
         raise Plan1VerificationError("Plan 1 manifest hash drifted")
     scenarios = {str(item["name"]) for item in manifest["scenarios"]}
-    expected = {(scenario, method) for scenario in scenarios for method in METHODS}
+    expected = {(scenario, method) for scenario in scenarios for method in methods}
     by_opponent: dict[str, dict[tuple[str, str], Mapping[str, Any]]] = {}
     phase_rule_checks: dict[str, list[dict[str, Any]]] = {}
     for opponent in OPPONENTS:
-        run_dir = output_root / f"{SOURCE_ID}-{opponent}"
+        run_dir = output_root / f"{source_id}-{opponent}"
         failures = _read_json(run_dir / "failures.json").get("failures", [])
         if failures:
             raise Plan1VerificationError(f"Plan 1 run has failures: {opponent}")
@@ -159,7 +189,7 @@ def verify(config_path: Path, output_root: Path) -> dict[str, Any]:
                 raise Plan1VerificationError("Plan 1 record is not a mapping")
             scenario = str(record.get("scenario"))
             method = str(record.get("controller") or record.get("method"))
-            if scenario not in scenarios or method not in METHODS:
+            if scenario not in scenarios or method not in methods:
                 raise Plan1VerificationError(f"Plan 1 unexpected record: {opponent}/{scenario}/{method}")
             if record.get("opponent_stage") != opponent or record.get("backend") != "jsbsim" or not bool(record.get("strict_backend")):
                 raise Plan1VerificationError(f"Plan 1 backend/opponent contract failed: {opponent}/{scenario}/{method}")
@@ -167,8 +197,14 @@ def verify(config_path: Path, output_root: Path) -> dict[str, Any]:
             if key in index:
                 raise Plan1VerificationError(f"Plan 1 duplicate record: {opponent}/{key}")
             index[key] = record
-            if method == "phase_rule_head_to_cross":
-                checks.append({"scenario": scenario, **_validate_phase_rule_record(record)})
+            if method == schedule_method:
+                if schedule_type == "phase_first_pass":
+                    checks.append({"scenario": scenario, **_validate_phase_rule_record(record)})
+                elif schedule_type == "temporal_warmup":
+                    warmup = int(protocol["temporal_schedule_contract"]["initial_high_level_steps"])
+                    checks.append({"scenario": scenario, **_validate_temporal_schedule_record(record, warmup)})
+                else:
+                    raise Plan1VerificationError("Plan 1 schedule type is unknown")
         if set(index) != expected:
             raise Plan1VerificationError(f"Plan 1 record universe incomplete: {opponent}")
         by_opponent[opponent] = index
@@ -183,35 +219,45 @@ def verify(config_path: Path, output_root: Path) -> dict[str, Any]:
         phase_ego_failures = []
         paired_rows = []
         for scenario in sorted(scenarios):
-            row = {method: records[(scenario, method)] for method in METHODS}
+            row = {method: records[(scenario, method)] for method in methods}
             fixed_name, fixed = _best_fixed(row)
-            phase = row["phase_rule_head_to_cross"]
-            improvement = _ordinal(phase) > _ordinal(fixed) and _outcome(phase) == "win"
+            schedule = row[schedule_method]
+            improvement = _ordinal(schedule) > _ordinal(fixed) and _outcome(schedule) == "win"
             improvements += int(improvement)
-            exposure_delta = _target_attack_zone_seconds(fixed) - _target_attack_zone_seconds(phase)
+            exposure_delta = _target_attack_zone_seconds(fixed) - _target_attack_zone_seconds(schedule)
             exposure_deltas.append(exposure_delta)
             fixed_ego_failures.append(float(_ego_crash_or_oob(fixed)))
-            phase_ego_failures.append(float(_ego_crash_or_oob(phase)))
+            phase_ego_failures.append(float(_ego_crash_or_oob(schedule)))
             paired_rows.append(
                 {
                     "scenario": scenario,
                     "selected_fixed_baseline": fixed_name,
-                    "phase_rule_outcome": _outcome(phase),
+                    "route_schedule_outcome": _outcome(schedule),
                     "best_fixed_outcome": _outcome(fixed),
-                    "phase_rule_resolved_improvement": improvement,
-                    "opponent_attack_zone_delta_s_phase_minus_best_fixed": -exposure_delta,
+                    "route_schedule_resolved_improvement": improvement,
+                    "opponent_attack_zone_delta_s_schedule_minus_best_fixed": -exposure_delta,
                 }
             )
         mean_exposure_reduction = sum(exposure_deltas) / len(exposure_deltas)
         ego_delta = sum(phase_ego_failures) / len(phase_ego_failures) - sum(fixed_ego_failures) / len(fixed_ego_failures)
+        minimum_improvements = int(
+            gate_cfg.get("min_schedule_resolved_improvements_per_primary")
+            if "min_schedule_resolved_improvements_per_primary" in gate_cfg
+            else gate_cfg["min_phase_rule_resolved_improvements_per_primary"]
+        )
+        minimum_exposure_reduction = float(
+            gate_cfg.get("min_opponent_attack_zone_time_reduction_s_per_primary")
+            if "min_opponent_attack_zone_time_reduction_s_per_primary" in gate_cfg
+            else gate_cfg["min_attack_zone_time_reduction_s_per_primary"]
+        )
         passes = (
-            improvements >= int(gate_cfg["min_phase_rule_resolved_improvements_per_primary"])
-            and mean_exposure_reduction >= float(gate_cfg["min_attack_zone_time_reduction_s_per_primary"])
+            improvements >= minimum_improvements
+            and mean_exposure_reduction >= minimum_exposure_reduction
             and ego_delta <= float(gate_cfg["max_ego_crash_oob_delta_vs_best_fixed"])
         )
         opponent_summary[opponent] = {
             "records": len(records),
-            "phase_rule_resolved_improvements_vs_best_fixed": improvements,
+            "route_schedule_resolved_improvements_vs_best_fixed": improvements,
             "mean_opponent_attack_zone_time_reduction_s": mean_exposure_reduction,
             "ego_crash_oob_delta_vs_best_fixed": ego_delta,
             "passes_practical_routing_gate": passes,
@@ -220,10 +266,11 @@ def verify(config_path: Path, output_root: Path) -> dict[str, Any]:
     primary_passes = [opponent_summary[item]["passes_practical_routing_gate"] for item in PRIMARY_OPPONENTS]
     routing_supported = all(primary_passes)
     return {
-        "source_id": SOURCE_ID,
+        "source_id": source_id,
         "manifest_sha256": protocol["manifest_sha256"],
         "total_records": sum(len(rows) for rows in by_opponent.values()),
-        "phase_rule_checks": phase_rule_checks,
+        "route_schedule_checks": phase_rule_checks,
+        "route_schedule_method": schedule_method,
         "opponents": opponent_summary,
         "primary_opponents": list(PRIMARY_OPPONENTS),
         "routing_explanation_supported": routing_supported,

@@ -80,18 +80,21 @@ def _yaml_include_closure(path: Path) -> list[Path]:
     return ordered
 
 
-def _runtime_provenance(config: Mapping[str, Any]) -> dict[str, str]:
+def _runtime_provenance(config: Mapping[str, Any]) -> dict[str, Any]:
     runtime = config.get("runtime_contract")
     if not isinstance(runtime, Mapping):
         raise TemporalReferenceSourceManifestError("runtime_contract is missing")
     executable = _resolve(runtime.get("python_executable"))
     if not executable.is_file():
         raise TemporalReferenceSourceManifestError(f"planned Python executable is missing: {executable}")
+    source_root = repr(str(ROOT / "src"))
     probe = (
-        "import json, platform, sys; import jsbsim; "
+        f"import json, platform, sys; sys.path.insert(0, {source_root}); import jsbsim; "
+        "from uav_vpp_guidance.evaluation.temporal_reference_compiler import TemporalReferenceConfig; "
         "print(json.dumps({'python_version': platform.python_version(), "
         "'platform': platform.platform(), 'jsbsim_version': getattr(jsbsim, '__version__', None), "
-        "'jsbsim_file': jsbsim.__file__}, sort_keys=True))"
+        "'jsbsim_file': jsbsim.__file__, "
+        "'temporal_reference_compiler_importable': TemporalReferenceConfig.__name__ == 'TemporalReferenceConfig'}, sort_keys=True))"
     )
     try:
         actual = json.loads(subprocess.check_output([str(executable), "-c", probe], text=True).strip())
@@ -101,12 +104,15 @@ def _runtime_provenance(config: Mapping[str, Any]) -> dict[str, str]:
         raise TemporalReferenceSourceManifestError("planned Python version drifted")
     if str(actual.get("jsbsim_version")) != str(runtime.get("jsbsim_version")):
         raise TemporalReferenceSourceManifestError("planned JSBSim version drifted")
+    if actual.get("temporal_reference_compiler_importable") is not True:
+        raise TemporalReferenceSourceManifestError("planned runtime cannot import the P1 compiler through src/")
     return {
         "python_executable": str(executable),
         "python_version": str(actual["python_version"]),
         "platform": str(actual["platform"]),
         "jsbsim_version": str(actual["jsbsim_version"]),
         "jsbsim_file": str(actual["jsbsim_file"]),
+        "temporal_reference_compiler_importable": bool(actual["temporal_reference_compiler_importable"]),
     }
 
 

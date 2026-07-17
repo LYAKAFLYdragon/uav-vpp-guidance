@@ -415,6 +415,21 @@ class EpisodeRecorder:
             "commander_mode_switched": info.get("commander_mode_switched"),
             "commander_macro_step_index": info.get("commander_macro_step_index"),
             "commander_first_switch_step": info.get("commander_first_switch_step"),
+            "phase_rule_schedule_phase": info.get("phase_rule_schedule_phase"),
+            "phase_rule_first_pass_complete": info.get(
+                "phase_rule_first_pass_complete"
+            ),
+            "phase_rule_selected_specialist": info.get(
+                "phase_rule_selected_specialist"
+            ),
+            "phase_rule_selected_specialist_mode_name": info.get(
+                "phase_rule_selected_specialist_mode_name"
+            ),
+            "phase_rule_switch_count": info.get("phase_rule_switch_count"),
+            "phase_rule_first_switch_step": info.get(
+                "phase_rule_first_switch_step"
+            ),
+            "phase_rule_uses_future_state": info.get("phase_rule_uses_future_state"),
             "own_pos_m": own_pos,
             "target_pos_m": target_pos,
             "ego_pos_x": own_pos[0],

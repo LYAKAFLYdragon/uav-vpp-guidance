@@ -1952,7 +1952,7 @@ def build_eval_config(
     method_def = methods[method_name]
     task_def = _resolve_task_def(tasks[task_name])
     agent_type = method_def.get("agent_type", "ppo")
-    if agent_type in {"oracle_task_gate", "random_task_gate", "hierarchical_commander"}:
+    if agent_type in {"oracle_task_gate", "random_task_gate", "hierarchical_commander", "phase_rule_specialist"}:
         # oracle/random gate and hierarchical commander use the comparison config
         # as the evaluation environment base.
         config = copy.deepcopy(comparison_config)
@@ -2041,6 +2041,17 @@ def _build_agent(
         from uav_vpp_guidance.evaluation.oracle_task_gate_policy import OracleTaskGatePolicy
         agent = OracleTaskGatePolicy(
             specialists_config=method_def.get("specialists", {}),
+            device=device,
+        )
+    elif agent_type == "phase_rule_specialist":
+        from uav_vpp_guidance.evaluation.phase_rule_specialist_policy import (
+            PhaseRuleSpecialistPolicy,
+        )
+
+        agent = PhaseRuleSpecialistPolicy(
+            specialists_config=method_def.get("specialists", {}),
+            pre_merge_specialist=str(method_def.get("pre_merge_specialist", "head_on")),
+            post_merge_specialist=str(method_def.get("post_merge_specialist", "crossing")),
             device=device,
         )
     elif agent_type == "random_task_gate":
@@ -3802,8 +3813,37 @@ def _checkpoint_checks(
     for method in methods:
         method_def = comparison_config.get("methods", {}).get(method, {})
         agent_type = method_def.get("agent_type", "ppo")
-        # oracle_task_gate, random_task_gate, and rule_guidance do not require a single policy checkpoint
-        if agent_type in {"oracle_task_gate", "random_task_gate", "rule_guidance"}:
+        # Gate/schedule policies load declared frozen specialists rather than
+        # a single policy checkpoint. Validate every declared asset explicitly.
+        if agent_type in {"oracle_task_gate", "random_task_gate", "phase_rule_specialist"}:
+            specialists = method_def.get("specialists", {})
+            if not isinstance(specialists, dict) or not specialists:
+                errors.append(f"{method}:specialists missing or empty")
+                continue
+            for specialist_key, specialist_def in specialists.items():
+                if not isinstance(specialist_def, dict):
+                    errors.append(f"{method}:specialist {specialist_key} is invalid")
+                    continue
+                for role, raw_path in (
+                    ("checkpoint", specialist_def.get("checkpoint")),
+                    ("config", specialist_def.get("config_path")),
+                ):
+                    path = _repo_path(raw_path)
+                    exists = bool(path and path.exists())
+                    checks.append(
+                        {
+                            "method": method,
+                            "role": f"specialist_{specialist_key}_{role}",
+                            "path": str(path) if path else None,
+                            "exists": exists,
+                        }
+                    )
+                    if not exists and not allow_missing:
+                        errors.append(
+                            f"{method}:specialist {specialist_key} {role} missing: {path}"
+                        )
+            continue
+        if agent_type == "rule_guidance":
             continue
         paths = [("policy_checkpoint", method_def.get("checkpoint"))]
         variant = method_def.get("prediction_variant")
@@ -6553,8 +6593,8 @@ def main() -> int:
         for method in methods:
             method_def = comparison_config["methods"][method]
             agent_type = method_def.get("agent_type", "ppo")
-            # oracle_task_gate, random_task_gate, and rule_guidance do not require a single checkpoint
-            if agent_type in {"oracle_task_gate", "random_task_gate", "rule_guidance"}:
+            # Gate/schedule policies load their declared frozen specialists instead.
+            if agent_type in {"oracle_task_gate", "random_task_gate", "rule_guidance", "phase_rule_specialist"}:
                 checkpoint_path = None
             else:
                 checkpoint_path = _repo_path(method_def.get("checkpoint"))

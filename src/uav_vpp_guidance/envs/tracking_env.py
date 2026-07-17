@@ -2686,6 +2686,14 @@ class CloseRangeTrackingEnv:
     # Gym-like interface
     # ------------------------------------------------------------------
 
+    def get_runtime_phase_state(self) -> dict:
+        """Expose the current observed merge phase without advancing the env."""
+        return {
+            "first_pass_complete": bool(self._first_pass_complete),
+            "first_pass_completion_step": self._first_pass_completion_step,
+            "current_step": int(self.current_step),
+        }
+
     def reset(self, scenario=None, seed=None) -> dict:
         """
         Reset own aircraft and target aircraft.

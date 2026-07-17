@@ -187,9 +187,23 @@ def _snapshot_git_info(*, output_path: Path, require_clean_git: bool) -> dict[st
         # Temporary verifier outputs outside the repository never appear in
         # ``git status`` and therefore cannot need a self-output exemption.
         allowed = None
-    unexpected = [
-        line for line in lines if allowed is None or line[3:].replace("\\", "/") != allowed
-    ]
+    allowed_parent = output_path.resolve().parent
+
+    def is_self_output(line: str) -> bool:
+        if allowed is None:
+            return False
+        reported = line[3:].replace("\\", "/").rstrip("/")
+        if reported == allowed:
+            return True
+        candidate = (ROOT / reported).resolve()
+        if candidate != allowed_parent or not candidate.is_dir():
+            return False
+        # Git reports an untracked directory as one line.  Accept it only
+        # when the directory contains exactly the requested manifest file.
+        files = [path.resolve() for path in candidate.rglob("*") if path.is_file()]
+        return files == [output_path.resolve()]
+
+    unexpected = [line for line in lines if not is_self_output(line)]
     if require_clean_git and unexpected:
         raise TemporalReferenceSourceManifestError(
             "P0 source snapshot requires a clean Git worktree; unexpected changes: "

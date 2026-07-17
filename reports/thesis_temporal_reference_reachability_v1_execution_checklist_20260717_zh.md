@@ -81,6 +81,8 @@
 
 ## P2. 离线包线可执行性筛选（不运行新策略）
 
+**执行状态（2026-07-17）：** `NO-GO, input-contract incompatible`。P2 baseline-only replay 已 fail-closed；历史 12 条连续 handoff 均为 `cartesian_offset`，而 P1 编译器固定要求 `tactical_basis_v1`，故不存在可合法用于离线投影的三轴 basis。详见 [P2 no-go 报告](thesis_temporal_reference_reachability_v1_p2_contract_no_go_20260717_zh.md)。P3 未启动且不允许启动。
+
 ### P2.1 选择合法初始状态
 
 - [ ] 仅从已验证连续 run-in 且真实达到 handoff 的 raw episode 中取样；按对手分别保存来源 episode、step、state hash 与 phase/taxonomy 标签。
@@ -209,7 +211,7 @@ P5 的目的不是马上证明全面优势，而是检验新接口是否能支�
 
 1. [x] P0：冻结 SHA、输入资产、旧负证据和新 Source。
 2. [x] P1：实现并测试时域参考编译器，冻结三模板及参数。
-3. [ ] P2：做离线包线筛选；未通过即停止该模板。
-4. [ ] P3：做三对手工程 smoke；未通过只修工程链。
+3. [x] P2：已执行为输入契约负证据；历史 cohort 未通过，停止该 Source 的模板筛选。
+4. [ ] P3：被 P2 no-go 阻止，未执行；不得绕过门槛。
 5. [ ] P4：执行唯一一次非学习正式矩阵，并由独立 verifier 判定。
 6. [ ] P5：仅在 P4 通过时起草单技能 pilot 预注册；未通过即停止训练线。

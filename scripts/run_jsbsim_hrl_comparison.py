@@ -66,6 +66,13 @@ from uav_vpp_guidance.virtual_point.generator import (
 SCRIPT_NAME = Path(__file__).name
 STAGE_NAME = "jsbsim_hrl_comparison"
 STAGE_VERSION = "0.1.0"
+NO_SINGLE_POLICY_CHECKPOINT_AGENT_TYPES = {
+    "oracle_task_gate",
+    "random_task_gate",
+    "rule_guidance",
+    "phase_rule_specialist",
+    "temporal_schedule_specialist",
+}
 
 TASK_METRIC_POLICY = {
     "head_on": {
@@ -2088,6 +2095,11 @@ def _select_methods(config: Dict[str, Any], preset: str, methods: Optional[List[
     if preset == "ablation":
         return list(defaults.get("ablation_methods", []))
     return list(defaults.get("main_methods", []))
+
+
+def _uses_single_policy_checkpoint(agent_type: Any) -> bool:
+    """Return whether evaluation must load ``method.checkpoint`` directly."""
+    return str(agent_type) not in NO_SINGLE_POLICY_CHECKPOINT_AGENT_TYPES
 
 
 def _select_tasks(config: Dict[str, Any], tasks: Optional[List[str]]) -> List[str]:
@@ -6606,7 +6618,7 @@ def main() -> int:
             method_def = comparison_config["methods"][method]
             agent_type = method_def.get("agent_type", "ppo")
             # Gate/schedule policies load their declared frozen specialists instead.
-            if agent_type in {"oracle_task_gate", "random_task_gate", "rule_guidance", "phase_rule_specialist"}:
+            if not _uses_single_policy_checkpoint(agent_type):
                 checkpoint_path = None
             else:
                 checkpoint_path = _repo_path(method_def.get("checkpoint"))

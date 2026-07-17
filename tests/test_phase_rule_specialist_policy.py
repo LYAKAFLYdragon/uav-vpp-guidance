@@ -129,3 +129,12 @@ def test_runner_preflight_checks_temporal_schedule_specialist_assets(tmp_path, m
 
     assert len(checks) == 2
     assert not errors
+
+
+def test_runner_does_not_expect_a_single_checkpoint_for_temporal_schedule():
+    sys.path.insert(0, str(ROOT / "scripts"))
+    import run_jsbsim_hrl_comparison as runner
+
+    assert runner._uses_single_policy_checkpoint("ppo") is True
+    assert runner._uses_single_policy_checkpoint("temporal_schedule_specialist") is False
+    assert runner._uses_single_policy_checkpoint("phase_rule_specialist") is False

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from uav_vpp_guidance.evaluation.raw_si_first_pass_event import RawSIFirstPassConfig
 from uav_vpp_guidance.evaluation.tactical_basis_continuity_contract import (
     record_passes,
     summarize_records,
@@ -88,3 +89,13 @@ def test_continuity_gate_rejects_insufficient_mirror_coverage() -> None:
     for record in records:
         record["mirror_sign"] = "positive"
     assert summarize_records(records, GATES)["passes"] is False
+
+
+def test_raw_si_contract_uses_the_runtime_dataclass_field_names() -> None:
+    config = RawSIFirstPassConfig(
+        closing_rate_threshold_mps=0.0,
+        opening_rate_threshold_mps=0.0,
+        minimum_closing_steps=3,
+        minimum_opening_steps=2,
+    )
+    assert config.minimum_closing_steps == 3

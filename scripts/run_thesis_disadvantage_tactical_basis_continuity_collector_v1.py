@@ -33,7 +33,10 @@ from uav_vpp_guidance.training import thesis_neutral_postmerge_reentry_recovery_
 from uav_vpp_guidance.training.thesis_shared_skill_geometry import FrozenP3Encoder
 
 
-SOURCE_ID = "THESIS-DISADVANTAGE-TACTICAL-BASIS-CONTINUITY-COLLECTOR-V1"
+SOURCE_IDS = {
+    "THESIS-DISADVANTAGE-TACTICAL-BASIS-CONTINUITY-COLLECTOR-V1",
+    "THESIS-DISADVANTAGE-TACTICAL-BASIS-CONTINUITY-COLLECTOR-V2",
+}
 
 
 class TacticalBasisContinuityCollectorError(RuntimeError):
@@ -58,6 +61,40 @@ def _load(path: Path) -> dict[str, Any]:
     if not isinstance(value, dict):
         raise TacticalBasisContinuityCollectorError(f"YAML mapping required: {path}")
     return value
+
+
+def _merge(base: Mapping[str, Any], overlay: Mapping[str, Any]) -> dict[str, Any]:
+    result = copy.deepcopy(dict(base))
+    for key, value in overlay.items():
+        if isinstance(value, Mapping) and isinstance(result.get(key), Mapping):
+            result[key] = _merge(result[key], value)
+        else:
+            result[key] = copy.deepcopy(value)
+    return result
+
+
+def _load_config(path: Path) -> dict[str, Any]:
+    overlay = _load(path)
+    base_value = overlay.pop("base_config", None)
+    if not base_value:
+        return overlay
+    base = _load(_resolve(str(base_value)))
+    replace_sections = overlay.pop("replace_sections", [])
+    if not isinstance(replace_sections, list) or any(not isinstance(item, str) for item in replace_sections):
+        raise TacticalBasisContinuityCollectorError("replace_sections must be a list of mapping names")
+    result = _merge(base, overlay)
+    for section in replace_sections:
+        if section not in overlay or not isinstance(overlay[section], Mapping):
+            raise TacticalBasisContinuityCollectorError(f"replacement section is missing: {section}")
+        result[section] = copy.deepcopy(dict(overlay[section]))
+    return result
+
+
+def _source_id(config: Mapping[str, Any]) -> str:
+    source_id = str(config.get("source_id") or "")
+    if source_id not in SOURCE_IDS:
+        raise TacticalBasisContinuityCollectorError("source identity drifted")
+    return source_id
 
 
 def _json_safe(value: Any) -> Any:
@@ -111,9 +148,10 @@ def _require_input(config: Mapping[str, Any], key: str) -> Path:
 
 
 def _validate_config(path: Path) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
-    config = _load(path)
-    if config.get("source_id") != SOURCE_ID or config.get("stage") != "continuous_baseline_data_contract":
-        raise TacticalBasisContinuityCollectorError("source identity drifted")
+    config = _load_config(path)
+    _source_id(config)
+    if config.get("stage") != "continuous_baseline_data_contract":
+        raise TacticalBasisContinuityCollectorError("collector stage drifted")
     authorization = config.get("authorization")
     if not isinstance(authorization, Mapping):
         raise TacticalBasisContinuityCollectorError("authorization mapping is required")
@@ -149,6 +187,10 @@ def _validate_config(path: Path) -> tuple[dict[str, Any], dict[str, Any], dict[s
         raise TacticalBasisContinuityCollectorError("window length contract drifted")
     if int(contract.get("history_window_steps", -1)) != 10:
         raise TacticalBasisContinuityCollectorError("history contract drifted")
+    try:
+        raw_v5.RawSIFirstPassConfig(**dict(config["observability"]["raw_si_first_pass_event"]))
+    except (TypeError, ValueError) as error:
+        raise TacticalBasisContinuityCollectorError("raw-SI first-pass event config is invalid") from error
     if config.get("runtime", {}).get("virtual_point", {}).get("action_semantics") != "tactical_basis_v1":
         raise TacticalBasisContinuityCollectorError("runtime does not deploy tactical_basis_v1")
 
@@ -177,7 +219,7 @@ def _validate_config(path: Path) -> tuple[dict[str, Any], dict[str, Any], dict[s
 def validate_design(path: Path) -> dict[str, Any]:
     config, manifest, _registry = _validate_config(path)
     return {
-        "source_id": SOURCE_ID,
+        "source_id": _source_id(config),
         "stage": config["stage"],
         "planned_records": len(manifest["scenarios"]) * len(OPPONENTS),
         "reference_window_steps": int(config["contract"]["reference_window_steps"]),
@@ -228,6 +270,10 @@ def _build_env(config: Mapping[str, Any], registry: Mapping[str, Any], opponent:
 
 class ContinuousTacticalBasisEpisode(raw_v5.FiveStateRawSIV5Episode):
     """One legal reset and one fixed-head-on trajectory, without a handoff reset."""
+
+    def __init__(self, *args: Any, source_id: str, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+        self.source_id = source_id
 
     def _step_payload(
         self,
@@ -424,7 +470,7 @@ class ContinuousTacticalBasisEpisode(raw_v5.FiveStateRawSIV5Episode):
             "terminal_reason": terminal_reason,
         }
         return {
-            "source_id": SOURCE_ID,
+            "source_id": self.source_id,
             "opponent": str(self.env._opponent_stage),
             "scenario_name": str(scenario["name"]),
             "scenario_signature": str(metadata["mirror_pair_id"]),
@@ -446,10 +492,10 @@ def _specialist(registry: Mapping[str, Any]) -> FrozenSpecialistPolicy:
     )
 
 
-def _failed_record(opponent: str, scenario: Mapping[str, Any], error: Exception) -> dict[str, Any]:
+def _failed_record(source_id: str, opponent: str, scenario: Mapping[str, Any], error: Exception) -> dict[str, Any]:
     metadata = scenario["metadata"]
     return {
-        "source_id": SOURCE_ID,
+        "source_id": source_id,
         "opponent": opponent,
         "scenario_name": str(scenario["name"]),
         "scenario_signature": str(metadata["mirror_pair_id"]),
@@ -496,6 +542,7 @@ def _authorize_execution(config: Mapping[str, Any], expected_records: int) -> No
 
 def run(path: Path) -> dict[str, Any]:
     config, manifest, registry = _validate_config(path)
+    source_id = _source_id(config)
     if config["authorization"].get("execution_permitted") is not True:
         raise TacticalBasisContinuityCollectorError("collector execution is not authorized")
     if config["authorization"].get("require_clean_worktree") is True and subprocess.check_output(
@@ -515,13 +562,15 @@ def run(path: Path) -> dict[str, Any]:
                         _resolve(str(config["inputs"]["frozen_p3_encoder"])),
                         str(config["inputs"]["frozen_p3_encoder_sha256"]),
                     )
-                    episode = ContinuousTacticalBasisEpisode(env, _specialist(registry), encoder, config)
+                    episode = ContinuousTacticalBasisEpisode(
+                        env, _specialist(registry), encoder, config, source_id=source_id
+                    )
                     try:
                         record = episode.run(scenario, int(scenario["metadata"]["scenario_seed"]))
                     finally:
                         episode.close()
                 except Exception as error:  # Preserve every failed attempt as evidence.
-                    record = _failed_record(opponent, scenario, error)
+                    record = _failed_record(source_id, opponent, scenario, error)
                 records.append(record)
                 filename = str(scenario["name"]).replace("/", "_").replace("\\", "_") + ".json"
                 _write_json(output / "episodes" / opponent / filename, {"record": record})
@@ -532,12 +581,12 @@ def run(path: Path) -> dict[str, Any]:
             )
             index.append({"path": str(path_value.relative_to(output)), "sha256": _hash(path_value)})
         summary = summarize_records(records, config["gates"])
-        _write_json(output / "records_index.json", {"source_id": SOURCE_ID, "records": index})
-        _write_json(output / "continuity_gate.json", {"source_id": SOURCE_ID, **summary})
+        _write_json(output / "records_index.json", {"source_id": source_id, "records": index})
+        _write_json(output / "continuity_gate.json", {"source_id": source_id, **summary})
         _write_json(
             output / "run_manifest.json",
             {
-                "source_id": SOURCE_ID,
+                "source_id": source_id,
                 "stage": config["stage"],
                 "git_sha": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip(),
                 "config_sha256": _hash(path),
@@ -551,7 +600,7 @@ def run(path: Path) -> dict[str, Any]:
         )
         return {"output": str(output), **summary}
     except Exception as error:
-        _write_json(output / "failure.json", {"source_id": SOURCE_ID, "error": repr(error), "completed_records": len(records)})
+        _write_json(output / "failure.json", {"source_id": source_id, "error": repr(error), "completed_records": len(records)})
         raise
 
 

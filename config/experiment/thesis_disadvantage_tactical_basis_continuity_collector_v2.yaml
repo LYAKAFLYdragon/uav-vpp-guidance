@@ -1,0 +1,57 @@
+base_config: config/experiment/thesis_disadvantage_tactical_basis_continuity_collector_v1.yaml
+replace_sections: [authorization, execution, research_boundary, observability, outputs]
+
+schema_version: 1
+source_id: THESIS-DISADVANTAGE-TACTICAL-BASIS-CONTINUITY-COLLECTOR-V2
+stage: continuous_baseline_data_contract
+status: implementation_ready_execution_not_authorized
+
+authorization:
+  execution_permitted: false
+  training_permitted: false
+  tuning_permitted: false
+  reward_change_permitted: false
+  candidate_action_execution_permitted: false
+  high_level_ppo_training_permitted: false
+  shared_skill_training_permitted: false
+  guidance_pid_change_permitted: false
+  snapshot_restore_permitted: false
+  future_state_injection_permitted: false
+  history_padding_permitted: false
+  require_clean_worktree: true
+  one_collection_run_only: true
+
+execution: {}
+
+research_boundary:
+  parent_source:
+    source_id: THESIS-DISADVANTAGE-TACTICAL-BASIS-CONTINUITY-COLLECTOR-V1
+    disposition: engineering_invalid_before_first_jsbsim_step
+    evidence_root: E:/uav-vpp-guidance-disadvantage-capability-v1-results/tactical_basis_continuity_collector_v1
+    reuse_of_gate_result: prohibited
+  permitted_change: raw_si_first_pass_event_field_names_only
+  prohibited_actions:
+    - scenario_change
+    - checkpoint_change
+    - action_semantics_change
+    - reward_change
+    - routing_change
+    - action_envelope_change
+    - threshold_change
+    - selective_rerun
+  performance_comparison: prohibited
+  win_rate_analysis: prohibited
+
+observability:
+  max_high_level_steps: 260
+  reference_profile: range_extension
+  raw_si_first_pass_event:
+    closing_rate_threshold_mps: 0.0
+    opening_rate_threshold_mps: 0.0
+    minimum_closing_steps: 3
+    minimum_opening_steps: 2
+
+outputs:
+  root: E:/uav-vpp-guidance-disadvantage-capability-v1-results/tactical_basis_continuity_collector_v2
+  paper_safe: false
+  overwrite_permitted: false

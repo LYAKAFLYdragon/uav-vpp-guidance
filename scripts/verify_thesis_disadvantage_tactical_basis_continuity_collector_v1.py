@@ -23,7 +23,10 @@ from uav_vpp_guidance.evaluation.tactical_basis_continuity_contract import (
 )
 
 
-SOURCE_ID = "THESIS-DISADVANTAGE-TACTICAL-BASIS-CONTINUITY-COLLECTOR-V1"
+SOURCE_IDS = {
+    "THESIS-DISADVANTAGE-TACTICAL-BASIS-CONTINUITY-COLLECTOR-V1",
+    "THESIS-DISADVANTAGE-TACTICAL-BASIS-CONTINUITY-COLLECTOR-V2",
+}
 
 
 def _hash(path: Path) -> str:
@@ -39,6 +42,36 @@ def _load_yaml(path: Path) -> dict[str, Any]:
     if not isinstance(value, dict):
         raise RuntimeError(f"YAML mapping required: {path}")
     return value
+
+
+def _merge(base: Mapping[str, Any], overlay: Mapping[str, Any]) -> dict[str, Any]:
+    result = dict(base)
+    for key, value in overlay.items():
+        if isinstance(value, Mapping) and isinstance(result.get(key), Mapping):
+            result[key] = _merge(result[key], value)
+        else:
+            result[key] = value
+    return result
+
+
+def _load_config(path: Path) -> dict[str, Any]:
+    overlay = _load_yaml(path)
+    base_value = overlay.pop("base_config", None)
+    if not base_value:
+        return overlay
+    base_path = Path(str(base_value))
+    if not base_path.is_absolute():
+        base_path = ROOT / base_path
+    base = _load_yaml(base_path)
+    replace_sections = overlay.pop("replace_sections", [])
+    if not isinstance(replace_sections, list):
+        raise RuntimeError("replace_sections must be a list")
+    result = _merge(base, overlay)
+    for section in replace_sections:
+        if section not in overlay or not isinstance(overlay[section], Mapping):
+            raise RuntimeError("replacement section is missing")
+        result[section] = dict(overlay[section])
+    return result
 
 
 def _load_json(path: Path) -> dict[str, Any]:
@@ -80,14 +113,15 @@ def _verify_chain(record: Mapping[str, Any]) -> None:
 
 
 def verify(config_path: Path, output: Path) -> dict[str, Any]:
-    config = _load_yaml(config_path)
-    if config.get("source_id") != SOURCE_ID:
+    config = _load_config(config_path)
+    source_id = str(config.get("source_id") or "")
+    if source_id not in SOURCE_IDS:
         raise RuntimeError("collector config source ID drifted")
     expected_output = Path(str(config["outputs"]["root"]))
     if output.resolve() != expected_output.resolve():
         raise RuntimeError("verifier output root differs from frozen config")
     index = _load_json(output / "records_index.json")
-    if index.get("source_id") != SOURCE_ID or not isinstance(index.get("records"), list):
+    if index.get("source_id") != source_id or not isinstance(index.get("records"), list):
         raise RuntimeError("records index is invalid")
     expected_records = len(OPPONENTS) * 12
     if len(index["records"]) != expected_records:
@@ -99,7 +133,7 @@ def verify(config_path: Path, output: Path) -> dict[str, Any]:
             raise RuntimeError("record hash mismatch")
         payload = _load_json(path)
         record = payload.get("record")
-        if not isinstance(record, dict) or record.get("source_id") != SOURCE_ID:
+        if not isinstance(record, dict) or record.get("source_id") != source_id:
             raise RuntimeError("record identity drifted")
         if record.get("opponent") not in OPPONENTS:
             raise RuntimeError("record opponent drifted")
@@ -108,13 +142,13 @@ def verify(config_path: Path, output: Path) -> dict[str, Any]:
         records.append(record)
     summary = summarize_records(records, config["gates"])
     reported = _load_json(output / "continuity_gate.json")
-    if reported != {"source_id": SOURCE_ID, **summary}:
+    if reported != {"source_id": source_id, **summary}:
         raise RuntimeError("reported continuity gate differs from independent recomputation")
     manifest = _load_json(output / "run_manifest.json")
-    if manifest.get("source_id") != SOURCE_ID or manifest.get("records") != expected_records:
+    if manifest.get("source_id") != source_id or manifest.get("records") != expected_records:
         raise RuntimeError("run manifest is incomplete")
     result = {
-        "source_id": SOURCE_ID,
+        "source_id": source_id,
         "records_verified": len(records),
         "gate_recomputed": summary,
         "passes": True,

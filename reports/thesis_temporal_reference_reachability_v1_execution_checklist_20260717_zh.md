@@ -138,6 +138,8 @@
 - [ ] 未通过时，停止 temporal-reference/shared-skill training line；不得训练、调参或以新场景重跑掩盖缺口。
 - [ ] 仅在通过后，以新的独立 Source ID 重新设计新的 P2 offline envelope screen；不得追溯性地恢复本 Source 的 P2/P3。
 
+**Collector 执行台账（2026-07-17）：** `THESIS-DISADVANTAGE-TACTICAL-BASIS-CONTINUITY-COLLECTOR-V1` 的 36 条记录均在 `RawSIFirstPassConfig` 初始化时因错误字段名停止，未进入任何 JSBSim step；独立 verifier 只确认了空记录的结构与哈希一致，不能形成 phase、basis 或物理可达性结论。V1 已封存为 engineering-invalid evidence，不得重跑。唯一后继为 `THESIS-DISADVANTAGE-TACTICAL-BASIS-CONTINUITY-COLLECTOR-V2`，其仅将 raw-SI 字段改为 `minimum_closing_steps` / `minimum_opening_steps`，其余场景、资产、动作语义、门槛和禁止项保持不变。
+
 ---
 
 ## P3. 三对手工程 smoke（不判断性能）

@@ -1319,6 +1319,7 @@ class EpisodeRecorder:
             "first_pass_complete": bool(info.get("first_pass_complete", False)),
             "heading_deg": float(np.degrees(own_state.get("yaw_rad", 0.0))),
             "speed_mps": float(own_state.get("speed_mps", 250.0)),
+            "target_speed_mps": float(target_state.get("speed_mps", np.nan)),
             "altitude_m": float(
                 own_state.get(
                     "altitude_m",
@@ -1326,6 +1327,18 @@ class EpisodeRecorder:
                         own_state.get(
                             "position_m",
                             own_state.get("position_neu", [np.nan, np.nan, np.nan]),
+                        ),
+                        dtype=float,
+                    )[2],
+                )
+            ),
+            "target_altitude_m": float(
+                target_state.get(
+                    "altitude_m",
+                    np.asarray(
+                        target_state.get(
+                            "position_m",
+                            target_state.get("position_neu", [np.nan, np.nan, np.nan]),
                         ),
                         dtype=float,
                     )[2],

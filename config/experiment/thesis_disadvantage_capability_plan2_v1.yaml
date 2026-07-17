@@ -1,0 +1,157 @@
+includes:
+  - ./jsbsim_hrl_thesis_five_state_heldout40_v1.yaml
+
+experiment:
+  name: thesis_disadvantage_capability_plan2_v1
+  description: >
+    Non-learning opening-pressure capability discriminator. It overlays one
+    bounded world-frame geometry primitive through the deployed tactical-basis
+    VPP action head and records the complete execution chain.
+
+disadvantage_capability_plan2:
+  source_id: THESIS-DISADVANTAGE-CAPABILITY-PLAN2-V1
+  execution_permitted: true
+  evaluation_only: true
+  training_permitted: false
+  tuning_permitted: false
+  reward_change_permitted: false
+  vpp_change_permitted: false
+  guidance_change_permitted: false
+  pid_change_permitted: false
+  future_state_or_outcome_routing_permitted: false
+  manifest: config/experiment/manifests/thesis_disadvantage_capability_plan2_v1.yaml
+  manifest_sha256: 29ed3ac80e89250b136f7607bf78868d0e977ca0f4f515ff765daf3b3d81a225
+  opponents: [expert, end_to_end, independent_ppo_vpp]
+  methods:
+    [fixed_head_on, fixed_crossing, lateral_break_same_side, range_extension_los, vertical_separation]
+  reference_method: fixed_head_on
+  expected_records_per_opponent: 60
+  expected_records_total: 180
+  warmup_high_level_steps: 10
+  intervention_high_level_steps: 20
+  next_action_if_candidate_exists: >
+    Only preregister one independent Plan 4 pilot for the selected motif. Do
+    not train a shared library, alter the action envelope, or retune this source.
+  next_action_if_interface_fails: >
+    Stop low-level skill training. Design a separately preregistered VPP
+    interface revision and verify physical transmission before any training.
+  next_action_if_no_motif_exists: >
+    Freeze a current-envelope physical/behavior reachability negative result;
+    do not add reward, steps, or alternate routing patches.
+  gates:
+    execution:
+      min_basis_rank: 3
+      max_basis_condition_number: 100.0
+      min_actual_world_delta_norm_m: 100.0
+      min_paired_vpp_delta_norm_m: 100.0
+      min_paired_guidance_delta_norm: 0.02
+      max_projection_residual_norm_m: 650.0
+      max_action_clip_fraction: 0.05
+      max_ego_crash_oob_delta_vs_reference: 0.05
+      max_saturation_fraction_delta_vs_reference: 0.05
+    geometry:
+      candidates_must_pass_opponents: 2
+      lateral_break_same_side:
+        max_target_attack_zone_fraction_delta_vs_reference: -0.10
+      range_extension_los:
+        min_range_rate_delta_mps_vs_reference: 5.0
+      vertical_separation:
+        min_abs_altitude_delta_increase_m_vs_reference: 50.0
+        min_specific_energy_delta_m_vs_reference: -100.0
+
+env:
+  max_high_level_steps: 240
+  strict_backend: true
+
+scenario_manifest:
+  path: ./manifests/thesis_disadvantage_capability_plan2_v1.yaml
+  source_id: THESIS-DISADVANTAGE-CAPABILITY-PLAN2-V1
+  payload_sha256: 29ed3ac80e89250b136f7607bf78868d0e977ca0f4f515ff765daf3b3d81a225
+  task_key_field: task_registry_key
+  active_task_groups: [head_on]
+  expected_task_counts:
+    head_on: 12
+  task_labels:
+    head_on: "Plan 2: new opening-pressure disadvantage geometry"
+  use_scenario_seed: true
+
+methods:
+  fixed_head_on:
+    label: Frozen head-on specialist without routing or intervention.
+    agent_type: ppo
+    checkpoint: E:/uav-vpp-guidance-thesis-five-state-v1-assets/canonical_head_on_specialist_best.pt
+    config_path: config/experiment/train_prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp_combat_finetune_mixed_opponent_aware_32k_task_type_headon_weighted.yaml
+    prediction_variant: learned
+  fixed_crossing:
+    label: Frozen crossing specialist without routing or intervention.
+    agent_type: ppo
+    checkpoint: E:/uav-vpp-guidance-thesis-five-state-v1-assets/canonical_crossing_specialist_last.pt
+    config_path: config/experiment/train_prediction_vpp_ppo_crossing_v3.yaml
+    prediction_variant: learned
+    observation_contract:
+      checkpoint_obs_dim: 18
+      include_task_type: false
+    config_overrides:
+      observation.include_task_type: false
+  lateral_break_same_side:
+    label: Frozen head-on action plus a bounded same-side lateral tactical-basis pulse.
+    agent_type: tactical_basis_motif_specialist
+    prediction_variant: learned
+    motif: lateral_break_same_side
+    specialist:
+      specialist_key: head_on
+      specialist_mode_name: head_on_lateral_break_probe
+      checkpoint: E:/uav-vpp-guidance-thesis-five-state-v1-assets/canonical_head_on_specialist_best.pt
+      config_path: config/experiment/train_prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp_combat_finetune_mixed_opponent_aware_32k_task_type_headon_weighted.yaml
+    pulse_config:
+      warmup_high_level_steps: 10
+      intervention_high_level_steps: 20
+      ramp_high_level_steps: 3
+      max_action_delta: 0.35
+      range_extension_extent_m: 700.0
+      vertical_separation_extent_m: 300.0
+      max_basis_condition_number: 100.0
+  range_extension_los:
+    label: Frozen head-on action plus a bounded LOS-toward-ego range-extension pulse.
+    agent_type: tactical_basis_motif_specialist
+    prediction_variant: learned
+    motif: range_extension_los
+    specialist:
+      specialist_key: head_on
+      specialist_mode_name: head_on_range_extension_probe
+      checkpoint: E:/uav-vpp-guidance-thesis-five-state-v1-assets/canonical_head_on_specialist_best.pt
+      config_path: config/experiment/train_prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp_combat_finetune_mixed_opponent_aware_32k_task_type_headon_weighted.yaml
+    pulse_config:
+      warmup_high_level_steps: 10
+      intervention_high_level_steps: 20
+      ramp_high_level_steps: 3
+      max_action_delta: 0.35
+      range_extension_extent_m: 700.0
+      vertical_separation_extent_m: 300.0
+      max_basis_condition_number: 100.0
+  vertical_separation:
+    label: Frozen head-on action plus a bounded vertical-separation pulse.
+    agent_type: tactical_basis_motif_specialist
+    prediction_variant: learned
+    motif: vertical_separation
+    specialist:
+      specialist_key: head_on
+      specialist_mode_name: head_on_vertical_separation_probe
+      checkpoint: E:/uav-vpp-guidance-thesis-five-state-v1-assets/canonical_head_on_specialist_best.pt
+      config_path: config/experiment/train_prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp_combat_finetune_mixed_opponent_aware_32k_task_type_headon_weighted.yaml
+    pulse_config:
+      warmup_high_level_steps: 10
+      intervention_high_level_steps: 20
+      ramp_high_level_steps: 3
+      max_action_delta: 0.35
+      range_extension_extent_m: 700.0
+      vertical_separation_extent_m: 300.0
+      max_basis_condition_number: 100.0
+
+run_defaults:
+  backend: jsbsim
+  tasks: [head_on]
+  main_methods: [fixed_head_on, fixed_crossing, lateral_break_same_side, range_extension_los, vertical_separation]
+  ablation_methods: [fixed_head_on, fixed_crossing, lateral_break_same_side, range_extension_los, vertical_separation]
+  formal_small_seeds: [0]
+  n_episodes: 1

@@ -72,6 +72,7 @@ NO_SINGLE_POLICY_CHECKPOINT_AGENT_TYPES = {
     "rule_guidance",
     "phase_rule_specialist",
     "temporal_schedule_specialist",
+    "tactical_basis_motif_specialist",
 }
 
 TASK_METRIC_POLICY = {
@@ -1959,7 +1960,14 @@ def build_eval_config(
     method_def = methods[method_name]
     task_def = _resolve_task_def(tasks[task_name])
     agent_type = method_def.get("agent_type", "ppo")
-    if agent_type in {"oracle_task_gate", "random_task_gate", "hierarchical_commander", "phase_rule_specialist", "temporal_schedule_specialist"}:
+    if agent_type in {
+        "oracle_task_gate",
+        "random_task_gate",
+        "hierarchical_commander",
+        "phase_rule_specialist",
+        "temporal_schedule_specialist",
+        "tactical_basis_motif_specialist",
+    }:
         # oracle/random gate and hierarchical commander use the comparison config
         # as the evaluation environment base.
         config = copy.deepcopy(comparison_config)
@@ -2071,6 +2079,20 @@ def _build_agent(
             initial_specialist=str(method_def.get("initial_specialist", "head_on")),
             later_specialist=str(method_def.get("later_specialist", "crossing")),
             initial_high_level_steps=int(method_def.get("initial_high_level_steps", 10)),
+            device=device,
+        )
+    elif agent_type == "tactical_basis_motif_specialist":
+        from uav_vpp_guidance.evaluation.tactical_basis_motif_policy import (
+            TacticalBasisMotifSpecialistPolicy,
+        )
+
+        specialist = method_def.get("specialist", {})
+        if not isinstance(specialist, dict):
+            raise ValueError("tactical_basis_motif_specialist requires a specialist mapping")
+        agent = TacticalBasisMotifSpecialistPolicy(
+            specialist_config=specialist,
+            motif=str(method_def.get("motif") or ""),
+            pulse_config=method_def.get("pulse_config", {}),
             device=device,
         )
     elif agent_type == "random_task_gate":
@@ -2807,6 +2829,7 @@ def _run_episode(
             obs, reward, terminated, truncated, info = env.step(**step_kwargs)
         else:
             obs, reward, terminated, truncated, info = env.step(action, **step_kwargs)
+        step_metadata: Dict[str, Any] = {}
         if hasattr(agent, "get_last_step_metadata"):
             step_metadata = agent.get_last_step_metadata()
             if step_metadata:
@@ -2842,6 +2865,10 @@ def _run_episode(
             float(reward),
             action=action,
         )
+        if step_metadata and recorder.trajectory:
+            # Store research-policy receipts without hard-coding every wrapper
+            # schema into the generic flight-control recorder.
+            recorder.trajectory[-1]["agent_step_metadata"] = copy.deepcopy(step_metadata)
 
         range_m = _safe_float(info.get("range_m"))
         abs_ata_deg = abs(_safe_float(info.get("ata_deg")))
@@ -3866,6 +3893,28 @@ def _checkpoint_checks(
                         errors.append(
                             f"{method}:specialist {specialist_key} {role} missing: {path}"
                         )
+            continue
+        if agent_type == "tactical_basis_motif_specialist":
+            specialist = method_def.get("specialist")
+            if not isinstance(specialist, dict):
+                errors.append(f"{method}:specialist missing or invalid")
+                continue
+            for role, raw_path in (
+                ("specialist_checkpoint", specialist.get("checkpoint")),
+                ("specialist_config", specialist.get("config_path")),
+            ):
+                path = _repo_path(raw_path)
+                exists = bool(path and path.exists())
+                checks.append(
+                    {
+                        "method": method,
+                        "role": role,
+                        "path": str(path) if path else None,
+                        "exists": exists,
+                    }
+                )
+                if not exists and not allow_missing:
+                    errors.append(f"{method}:{role} missing: {path}")
             continue
         if agent_type == "rule_guidance":
             continue
@@ -5070,6 +5119,12 @@ def _parse_args() -> argparse.Namespace:
         ),
     )
     parser.add_argument("--run-status", choices=["smoke", "formal-small", "formal"], default="smoke")
+    parser.add_argument(
+        "--max-scenarios",
+        type=int,
+        default=None,
+        help="Smoke-only cap on scenarios per task; formal runs must evaluate the frozen full manifest.",
+    )
     parser.add_argument("--device", choices=["cpu", "cuda"], default="cpu")
     parser.add_argument("--no-trajectory", action="store_true")
     parser.add_argument("--dry-run", action="store_true")
@@ -6453,6 +6508,11 @@ def _collect_vpp_cli_overrides(args: argparse.Namespace) -> Dict[str, Any]:
 
 def main() -> int:
     args = _parse_args()
+    if args.max_scenarios is not None:
+        if args.run_status != "smoke":
+            raise ValueError("--max-scenarios is permitted only with --run-status smoke")
+        if int(args.max_scenarios) < 1:
+            raise ValueError("--max-scenarios must be positive")
     config_path = _repo_path(args.config)
     if config_path is None:
         raise RuntimeError("Config path is required")
@@ -6492,6 +6552,7 @@ def main() -> int:
         "prediction_overrides": prediction_overrides,
         "vpp_overrides": vpp_overrides,
         "run_status": args.run_status,
+        "max_scenarios": args.max_scenarios,
         "dry_run": args.dry_run,
     }
     resolved_config_path = run_dir / "resolved_config.yaml"
@@ -6637,6 +6698,8 @@ def main() -> int:
                 if cfg is None:
                     continue
                 scenarios = _task_scenarios(task_def)
+                if args.max_scenarios is not None:
+                    scenarios = scenarios[: int(args.max_scenarios)]
                 try:
                     env = _build_env(cfg)
                     first_scenario = scenarios[0]

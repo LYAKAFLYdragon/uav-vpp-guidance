@@ -1,0 +1,65 @@
+includes:
+  - ./jsbsim_hrl_thesis_dualskill_taxonomy60_formal.yaml
+
+experiment:
+  name: jsbsim_hrl_thesis_task_interface_discriminability_preflight_v1
+  description: >
+    Design-only paired task-bit/interface discriminability preflight. It uses
+    identical physical resets under two legacy task contexts and records no
+    performance comparison or paper outcome.
+
+task_interface_discriminability_preflight:
+  preflight_id: ENGINEERING-TASK-INTERFACE-DISCRIMINABILITY-PREFLIGHT-V1-NOT-A-SOURCE-ID
+  execution_permitted: false
+  training_permitted: false
+  tuning_permitted: false
+  performance_comparison_permitted: false
+  expected_runtime_records_if_separately_authorized: 48
+  opponents: [expert, end_to_end, independent_ppo_vpp]
+  methods: [canonical_ppo, ppo_unbootstrapped_crossing]
+  contexts: [head_on, crossing_feasible]
+  physical_scenarios: 4
+  required_receipts:
+    - paired_reset_equivalence_except_task_context
+    - 19D_observation_differs_only_at_is_crossing
+    - canonical_crossing_bootstrap_active
+    - unbootstrapped_crossing_bootstrap_inactive
+    - first_effective_mode_and_vpp_action
+    - strict_JSBSim_no_fallback
+  runtime_go_gate:
+    primary_opponents: [expert, end_to_end]
+    min_context_pairs_per_primary_opponent: 3
+    required_effect: >
+      On crossing-context pairs, canonical and unbootstrapped PPO must differ
+      in first effective mode or first VPP action for at least the threshold
+      number of pairs. Otherwise a later M3/M4 formal ablation is prohibited.
+  stop_rule: >
+    This file designs a non-learning engineering probe only. It does not
+    authorize JSBSim execution, performance interpretation, formal source
+    creation, training, tuning, or any change to frozen policies and control.
+
+env:
+  strict_backend: true
+  max_high_level_steps: 20
+
+scenario_manifest:
+  path: ./manifests/thesis_task_interface_discriminability_preflight_v1.yaml
+  source_id: ENGINEERING-TASK-INTERFACE-DISCRIMINABILITY-PREFLIGHT-V1-NOT-A-SOURCE-ID
+  payload_sha256: 9ec141f1502afbb4345175748767941381ca3266c051ae0b061ed0efca1f40fe
+  task_key_field: task_registry_key
+  active_task_groups: [head_on, crossing_feasible]
+  expected_task_counts:
+    head_on: 4
+    crossing_feasible: 4
+  task_labels:
+    head_on: paired physical reset with legacy task bit zero
+    crossing_feasible: paired physical reset with legacy task bit one
+  use_scenario_seed: true
+
+run_defaults:
+  backend: jsbsim
+  tasks: [head_on, crossing_feasible]
+  main_methods: [canonical_ppo, ppo_unbootstrapped_crossing]
+  ablation_methods: [canonical_ppo, ppo_unbootstrapped_crossing]
+  formal_small_seeds: [0]
+  n_episodes: 1

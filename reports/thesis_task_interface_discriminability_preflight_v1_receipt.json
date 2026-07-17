@@ -1,0 +1,241 @@
+{
+  "preflight_id": "ENGINEERING-TASK-INTERFACE-DISCRIMINABILITY-PREFLIGHT-V1-NOT-A-SOURCE-ID",
+  "config_path": "E:\\uav-vpp-guidance-disadvantage-capability-v1\\config\\experiment\\jsbsim_hrl_thesis_task_interface_discriminability_preflight_v1.yaml",
+  "config_sha256": "b75f5ea6dff56f9512300cf1378488f6eb6c9d3b3e69eab8038c9982181ac24d",
+  "manifest_path": "E:\\uav-vpp-guidance-disadvantage-capability-v1\\config\\experiment\\manifests\\thesis_task_interface_discriminability_preflight_v1.yaml",
+  "manifest_sha256": "164efaf7799910d4745746910695796e3f00ec755d0dee90d43954e73929f87c",
+  "manifest_payload_sha256": "9ec141f1502afbb4345175748767941381ca3266c051ae0b061ed0efca1f40fe",
+  "config_cells": [
+    {
+      "opponent": "expert",
+      "context": "head_on",
+      "method": "canonical_ppo",
+      "strict_backend": true,
+      "opponent_stage": "expert",
+      "max_high_level_steps": 20,
+      "high_level_dt_s": 0.2
+    },
+    {
+      "opponent": "expert",
+      "context": "head_on",
+      "method": "ppo_unbootstrapped_crossing",
+      "strict_backend": true,
+      "opponent_stage": "expert",
+      "max_high_level_steps": 20,
+      "high_level_dt_s": 0.2
+    },
+    {
+      "opponent": "expert",
+      "context": "crossing_feasible",
+      "method": "canonical_ppo",
+      "strict_backend": true,
+      "opponent_stage": "expert",
+      "max_high_level_steps": 20,
+      "high_level_dt_s": 0.2
+    },
+    {
+      "opponent": "expert",
+      "context": "crossing_feasible",
+      "method": "ppo_unbootstrapped_crossing",
+      "strict_backend": true,
+      "opponent_stage": "expert",
+      "max_high_level_steps": 20,
+      "high_level_dt_s": 0.2
+    },
+    {
+      "opponent": "end_to_end",
+      "context": "head_on",
+      "method": "canonical_ppo",
+      "strict_backend": true,
+      "opponent_stage": "end_to_end",
+      "max_high_level_steps": 20,
+      "high_level_dt_s": 0.2
+    },
+    {
+      "opponent": "end_to_end",
+      "context": "head_on",
+      "method": "ppo_unbootstrapped_crossing",
+      "strict_backend": true,
+      "opponent_stage": "end_to_end",
+      "max_high_level_steps": 20,
+      "high_level_dt_s": 0.2
+    },
+    {
+      "opponent": "end_to_end",
+      "context": "crossing_feasible",
+      "method": "canonical_ppo",
+      "strict_backend": true,
+      "opponent_stage": "end_to_end",
+      "max_high_level_steps": 20,
+      "high_level_dt_s": 0.2
+    },
+    {
+      "opponent": "end_to_end",
+      "context": "crossing_feasible",
+      "method": "ppo_unbootstrapped_crossing",
+      "strict_backend": true,
+      "opponent_stage": "end_to_end",
+      "max_high_level_steps": 20,
+      "high_level_dt_s": 0.2
+    },
+    {
+      "opponent": "independent_ppo_vpp",
+      "context": "head_on",
+      "method": "canonical_ppo",
+      "strict_backend": true,
+      "opponent_stage": "independent_ppo_vpp",
+      "max_high_level_steps": 20,
+      "high_level_dt_s": 0.2
+    },
+    {
+      "opponent": "independent_ppo_vpp",
+      "context": "head_on",
+      "method": "ppo_unbootstrapped_crossing",
+      "strict_backend": true,
+      "opponent_stage": "independent_ppo_vpp",
+      "max_high_level_steps": 20,
+      "high_level_dt_s": 0.2
+    },
+    {
+      "opponent": "independent_ppo_vpp",
+      "context": "crossing_feasible",
+      "method": "canonical_ppo",
+      "strict_backend": true,
+      "opponent_stage": "independent_ppo_vpp",
+      "max_high_level_steps": 20,
+      "high_level_dt_s": 0.2
+    },
+    {
+      "opponent": "independent_ppo_vpp",
+      "context": "crossing_feasible",
+      "method": "ppo_unbootstrapped_crossing",
+      "strict_backend": true,
+      "opponent_stage": "independent_ppo_vpp",
+      "max_high_level_steps": 20,
+      "high_level_dt_s": 0.2
+    }
+  ],
+  "context_config_differences": {
+    "expert:canonical_ppo": [
+      "provenance.config_overrides",
+      "task.name",
+      "task.scenarios"
+    ],
+    "expert:ppo_unbootstrapped_crossing": [
+      "provenance.config_overrides",
+      "task.name",
+      "task.scenarios"
+    ],
+    "end_to_end:canonical_ppo": [
+      "provenance.config_overrides",
+      "task.name",
+      "task.scenarios"
+    ],
+    "end_to_end:ppo_unbootstrapped_crossing": [
+      "provenance.config_overrides",
+      "task.name",
+      "task.scenarios"
+    ],
+    "independent_ppo_vpp:canonical_ppo": [
+      "provenance.config_overrides",
+      "task.name",
+      "task.scenarios"
+    ],
+    "independent_ppo_vpp:ppo_unbootstrapped_crossing": [
+      "provenance.config_overrides",
+      "task.name",
+      "task.scenarios"
+    ]
+  },
+  "checkpoint_checks": [
+    {
+      "method": "canonical_ppo",
+      "role": "policy_checkpoint",
+      "path": "E:\\uav-vpp-guidance-thesis-five-state-v1-assets\\canonical_two_skill_commander_best.pt",
+      "exists": true
+    },
+    {
+      "method": "canonical_ppo",
+      "role": "predictor_checkpoint",
+      "path": "E:\\uav-vpp-guidance-thesis-five-state-v1-assets\\frozen_trajectory_predictor_best_model.pt",
+      "exists": true
+    },
+    {
+      "method": "ppo_unbootstrapped_crossing",
+      "role": "policy_checkpoint",
+      "path": "E:\\uav-vpp-guidance-thesis-five-state-v1-assets\\canonical_two_skill_commander_best.pt",
+      "exists": true
+    },
+    {
+      "method": "ppo_unbootstrapped_crossing",
+      "role": "predictor_checkpoint",
+      "path": "E:\\uav-vpp-guidance-thesis-five-state-v1-assets\\frozen_trajectory_predictor_best_model.pt",
+      "exists": true
+    },
+    {
+      "method": "canonical_ppo",
+      "role": "policy_checkpoint",
+      "path": "E:\\uav-vpp-guidance-thesis-five-state-v1-assets\\canonical_two_skill_commander_best.pt",
+      "exists": true
+    },
+    {
+      "method": "canonical_ppo",
+      "role": "predictor_checkpoint",
+      "path": "E:\\uav-vpp-guidance-thesis-five-state-v1-assets\\frozen_trajectory_predictor_best_model.pt",
+      "exists": true
+    },
+    {
+      "method": "ppo_unbootstrapped_crossing",
+      "role": "policy_checkpoint",
+      "path": "E:\\uav-vpp-guidance-thesis-five-state-v1-assets\\canonical_two_skill_commander_best.pt",
+      "exists": true
+    },
+    {
+      "method": "ppo_unbootstrapped_crossing",
+      "role": "predictor_checkpoint",
+      "path": "E:\\uav-vpp-guidance-thesis-five-state-v1-assets\\frozen_trajectory_predictor_best_model.pt",
+      "exists": true
+    },
+    {
+      "method": "__opponent__",
+      "role": "opponent_end_to_end_checkpoint",
+      "path": "E:\\uav-vpp-guidance-thesis-five-state-v1-assets\\canonical_end_to_end_neural_opponent_best.pt",
+      "exists": true
+    },
+    {
+      "method": "canonical_ppo",
+      "role": "policy_checkpoint",
+      "path": "E:\\uav-vpp-guidance-thesis-five-state-v1-assets\\canonical_two_skill_commander_best.pt",
+      "exists": true
+    },
+    {
+      "method": "canonical_ppo",
+      "role": "predictor_checkpoint",
+      "path": "E:\\uav-vpp-guidance-thesis-five-state-v1-assets\\frozen_trajectory_predictor_best_model.pt",
+      "exists": true
+    },
+    {
+      "method": "ppo_unbootstrapped_crossing",
+      "role": "policy_checkpoint",
+      "path": "E:\\uav-vpp-guidance-thesis-five-state-v1-assets\\canonical_two_skill_commander_best.pt",
+      "exists": true
+    },
+    {
+      "method": "ppo_unbootstrapped_crossing",
+      "role": "predictor_checkpoint",
+      "path": "E:\\uav-vpp-guidance-thesis-five-state-v1-assets\\frozen_trajectory_predictor_best_model.pt",
+      "exists": true
+    },
+    {
+      "method": "__opponent__",
+      "role": "opponent_independent_ppo_vpp_checkpoint",
+      "path": "E:\\uav-vpp-guidance-thesis-five-state-v1-assets\\independent_ppo_vpp_opponent_v1_step_32768.pt",
+      "exists": true
+    }
+  ],
+  "errors": [],
+  "verdict": "pass",
+  "runtime_probe_design_ready": true,
+  "execution_authorized": false,
+  "next_action_if_pass": "separately preregister and authorize one 48-episode non-learning runtime probe"
+}

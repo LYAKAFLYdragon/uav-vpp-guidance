@@ -1,0 +1,348 @@
+source_id: ENGINEERING-TASK-INTERFACE-DISCRIMINABILITY-PREFLIGHT-V1-NOT-A-SOURCE-ID
+manifest_version: 1
+status: design_only_runtime_probe_not_authorized
+protocol:
+  nonlearning_only: true
+  training_permitted: false
+  tuning_permitted: false
+  performance_comparison_permitted: false
+  physical_scenarios: 4
+  task_contexts_per_physical_scenario: 2
+  expected_runtime_records_if_authorized: 48
+  purpose: verify task-bit and bootstrap treatment discriminability, not tactical
+    task correctness
+source_manifest:
+  path: E:\uav-vpp-guidance-disadvantage-capability-v1\config\experiment\manifests\thesis_disadvantage_pressure_exposed_postmerge_v1.yaml
+  sha256: bbfefe734bfac636ec9ccc6654c7432c5b1bf86c800bdc12ab8cab7a34735da6
+scenarios:
+- name: pressure_postmerge_short_tight_own_below_negative__context_head_on
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5500.0
+    velocity_mps: 245.0
+    heading_deg: 148.0
+  target_init:
+    position_m:
+    - 2663.9935653135494
+    - -566.2493125541116
+    - 6150.0
+    velocity_mps: 290.0
+    heading_deg: 148.0
+  metadata:
+    manifest_family: thesis_task_interface_discriminability_preflight_v1
+    initial_class: disadvantage
+    taxonomy_geometry_state: disadvantage
+    height_condition: own_below
+    mirror_sign: negative
+    mirror_pair_id: pressure_short_tight__disadvantage__own_below
+    distance_speed_package: short_tight
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    ppo_task_bit: 0
+    crossing_context: false
+    scenario_seed: 871100
+    initial_range_m: 2800.0
+    horizontal_range_m: 2723.5087662792644
+    altitude_diff_m: 650.0
+    own_speed_mps: 245.0
+    target_speed_mps: 290.0
+    los_azimuth_abs_deg: 12.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    physical_scenario_id: pressure_postmerge_short_tight_own_below_negative
+    context_pair_id: pressure_postmerge_short_tight_own_below_negative
+    interface_context: head_on
+    same_physical_reset_required: true
+    same_seed_required: true
+- name: pressure_postmerge_short_tight_own_below_negative__context_crossing_feasible
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5500.0
+    velocity_mps: 245.0
+    heading_deg: 148.0
+  target_init:
+    position_m:
+    - 2663.9935653135494
+    - -566.2493125541116
+    - 6150.0
+    velocity_mps: 290.0
+    heading_deg: 148.0
+  metadata:
+    manifest_family: thesis_task_interface_discriminability_preflight_v1
+    initial_class: disadvantage
+    taxonomy_geometry_state: disadvantage
+    height_condition: own_below
+    mirror_sign: negative
+    mirror_pair_id: pressure_short_tight__disadvantage__own_below
+    distance_speed_package: short_tight
+    phase_at_reset: pre_merge
+    task_registry_key: crossing_feasible
+    ppo_task_bit: 1
+    crossing_context: true
+    scenario_seed: 871100
+    initial_range_m: 2800.0
+    horizontal_range_m: 2723.5087662792644
+    altitude_diff_m: 650.0
+    own_speed_mps: 245.0
+    target_speed_mps: 290.0
+    los_azimuth_abs_deg: 12.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    physical_scenario_id: pressure_postmerge_short_tight_own_below_negative
+    context_pair_id: pressure_postmerge_short_tight_own_below_negative
+    interface_context: crossing_feasible
+    same_physical_reset_required: true
+    same_seed_required: true
+- name: pressure_postmerge_short_tight_own_below_positive__context_head_on
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5500.0
+    velocity_mps: 245.0
+    heading_deg: 212.0
+  target_init:
+    position_m:
+    - 2663.9935653135494
+    - 566.2493125541116
+    - 6150.0
+    velocity_mps: 290.0
+    heading_deg: 212.0
+  metadata:
+    manifest_family: thesis_task_interface_discriminability_preflight_v1
+    initial_class: disadvantage
+    taxonomy_geometry_state: disadvantage
+    height_condition: own_below
+    mirror_sign: positive
+    mirror_pair_id: pressure_short_tight__disadvantage__own_below
+    distance_speed_package: short_tight
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    ppo_task_bit: 0
+    crossing_context: false
+    scenario_seed: 871101
+    initial_range_m: 2800.0
+    horizontal_range_m: 2723.5087662792644
+    altitude_diff_m: 650.0
+    own_speed_mps: 245.0
+    target_speed_mps: 290.0
+    los_azimuth_abs_deg: 12.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    physical_scenario_id: pressure_postmerge_short_tight_own_below_positive
+    context_pair_id: pressure_postmerge_short_tight_own_below_positive
+    interface_context: head_on
+    same_physical_reset_required: true
+    same_seed_required: true
+- name: pressure_postmerge_short_tight_own_below_positive__context_crossing_feasible
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5500.0
+    velocity_mps: 245.0
+    heading_deg: 212.0
+  target_init:
+    position_m:
+    - 2663.9935653135494
+    - 566.2493125541116
+    - 6150.0
+    velocity_mps: 290.0
+    heading_deg: 212.0
+  metadata:
+    manifest_family: thesis_task_interface_discriminability_preflight_v1
+    initial_class: disadvantage
+    taxonomy_geometry_state: disadvantage
+    height_condition: own_below
+    mirror_sign: positive
+    mirror_pair_id: pressure_short_tight__disadvantage__own_below
+    distance_speed_package: short_tight
+    phase_at_reset: pre_merge
+    task_registry_key: crossing_feasible
+    ppo_task_bit: 1
+    crossing_context: true
+    scenario_seed: 871101
+    initial_range_m: 2800.0
+    horizontal_range_m: 2723.5087662792644
+    altitude_diff_m: 650.0
+    own_speed_mps: 245.0
+    target_speed_mps: 290.0
+    los_azimuth_abs_deg: 12.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    physical_scenario_id: pressure_postmerge_short_tight_own_below_positive
+    context_pair_id: pressure_postmerge_short_tight_own_below_positive
+    interface_context: crossing_feasible
+    same_physical_reset_required: true
+    same_seed_required: true
+- name: pressure_postmerge_medium_wide_co_altitude_negative__context_head_on
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5500.0
+    velocity_mps: 235.0
+    heading_deg: 130.0
+  target_init:
+    position_m:
+    - 3550.7041555161986
+    - -2049.9999999999995
+    - 5500.0
+    velocity_mps: 300.0
+    heading_deg: 130.0
+  metadata:
+    manifest_family: thesis_task_interface_discriminability_preflight_v1
+    initial_class: disadvantage
+    taxonomy_geometry_state: disadvantage
+    height_condition: co_altitude
+    mirror_sign: negative
+    mirror_pair_id: pressure_medium_wide__disadvantage__co_altitude
+    distance_speed_package: medium_wide
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    ppo_task_bit: 0
+    crossing_context: false
+    scenario_seed: 871114
+    initial_range_m: 4100.0
+    horizontal_range_m: 4100.0
+    altitude_diff_m: 0.0
+    own_speed_mps: 235.0
+    target_speed_mps: 300.0
+    los_azimuth_abs_deg: 30.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    physical_scenario_id: pressure_postmerge_medium_wide_co_altitude_negative
+    context_pair_id: pressure_postmerge_medium_wide_co_altitude_negative
+    interface_context: head_on
+    same_physical_reset_required: true
+    same_seed_required: true
+- name: pressure_postmerge_medium_wide_co_altitude_negative__context_crossing_feasible
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5500.0
+    velocity_mps: 235.0
+    heading_deg: 130.0
+  target_init:
+    position_m:
+    - 3550.7041555161986
+    - -2049.9999999999995
+    - 5500.0
+    velocity_mps: 300.0
+    heading_deg: 130.0
+  metadata:
+    manifest_family: thesis_task_interface_discriminability_preflight_v1
+    initial_class: disadvantage
+    taxonomy_geometry_state: disadvantage
+    height_condition: co_altitude
+    mirror_sign: negative
+    mirror_pair_id: pressure_medium_wide__disadvantage__co_altitude
+    distance_speed_package: medium_wide
+    phase_at_reset: pre_merge
+    task_registry_key: crossing_feasible
+    ppo_task_bit: 1
+    crossing_context: true
+    scenario_seed: 871114
+    initial_range_m: 4100.0
+    horizontal_range_m: 4100.0
+    altitude_diff_m: 0.0
+    own_speed_mps: 235.0
+    target_speed_mps: 300.0
+    los_azimuth_abs_deg: 30.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    physical_scenario_id: pressure_postmerge_medium_wide_co_altitude_negative
+    context_pair_id: pressure_postmerge_medium_wide_co_altitude_negative
+    interface_context: crossing_feasible
+    same_physical_reset_required: true
+    same_seed_required: true
+- name: pressure_postmerge_medium_wide_co_altitude_positive__context_head_on
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5500.0
+    velocity_mps: 235.0
+    heading_deg: 230.0
+  target_init:
+    position_m:
+    - 3550.7041555161986
+    - 2049.9999999999995
+    - 5500.0
+    velocity_mps: 300.0
+    heading_deg: 230.0
+  metadata:
+    manifest_family: thesis_task_interface_discriminability_preflight_v1
+    initial_class: disadvantage
+    taxonomy_geometry_state: disadvantage
+    height_condition: co_altitude
+    mirror_sign: positive
+    mirror_pair_id: pressure_medium_wide__disadvantage__co_altitude
+    distance_speed_package: medium_wide
+    phase_at_reset: pre_merge
+    task_registry_key: head_on
+    ppo_task_bit: 0
+    crossing_context: false
+    scenario_seed: 871115
+    initial_range_m: 4100.0
+    horizontal_range_m: 4100.0
+    altitude_diff_m: 0.0
+    own_speed_mps: 235.0
+    target_speed_mps: 300.0
+    los_azimuth_abs_deg: 30.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    physical_scenario_id: pressure_postmerge_medium_wide_co_altitude_positive
+    context_pair_id: pressure_postmerge_medium_wide_co_altitude_positive
+    interface_context: head_on
+    same_physical_reset_required: true
+    same_seed_required: true
+- name: pressure_postmerge_medium_wide_co_altitude_positive__context_crossing_feasible
+  own_init:
+    position_m:
+    - 0.0
+    - 0.0
+    - 5500.0
+    velocity_mps: 235.0
+    heading_deg: 230.0
+  target_init:
+    position_m:
+    - 3550.7041555161986
+    - 2049.9999999999995
+    - 5500.0
+    velocity_mps: 300.0
+    heading_deg: 230.0
+  metadata:
+    manifest_family: thesis_task_interface_discriminability_preflight_v1
+    initial_class: disadvantage
+    taxonomy_geometry_state: disadvantage
+    height_condition: co_altitude
+    mirror_sign: positive
+    mirror_pair_id: pressure_medium_wide__disadvantage__co_altitude
+    distance_speed_package: medium_wide
+    phase_at_reset: pre_merge
+    task_registry_key: crossing_feasible
+    ppo_task_bit: 1
+    crossing_context: true
+    scenario_seed: 871115
+    initial_range_m: 4100.0
+    horizontal_range_m: 4100.0
+    altitude_diff_m: 0.0
+    own_speed_mps: 235.0
+    target_speed_mps: 300.0
+    los_azimuth_abs_deg: 30.0
+    own_to_target_los_angle_deg: 160.0
+    target_velocity_to_own_los_angle_deg: 20.0
+    physical_scenario_id: pressure_postmerge_medium_wide_co_altitude_positive
+    context_pair_id: pressure_postmerge_medium_wide_co_altitude_positive
+    interface_context: crossing_feasible
+    same_physical_reset_required: true
+    same_seed_required: true
+integrity:
+  scenario_count: 8
+  payload_sha256: 9ec141f1502afbb4345175748767941381ca3266c051ae0b061ed0efca1f40fe

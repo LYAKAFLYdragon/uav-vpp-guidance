@@ -263,3 +263,5 @@ P5 的目的不是马上证明全面优势，而是检验新接口是否能支�
 - [x] 结果边界：仅确认 post-merge temporal reference 在当前 action envelope 中可以离线无失真编译；不确认运行时几何/胜率/安全改善，不启动训练。
 
 **后继路线的唯一下一步：** 仅允许新建一个独立 Source 来设计 selected-variant paired non-learning runtime probe；必须以固定 `lateral_extension:lat+1:vert+1` 对固定 head-on baseline，另行冻结 manifest、MDE、安全 stop rule、输出根和独立 verifier。详见 [P2 V1 结果与决策](thesis_disadvantage_tactical_basis_postmerge_envelope_p2_v1_result_20260717_zh.md)。
+
+**后继路线设计状态（2026-07-17）：** [Selected Lateral Runtime Probe V1 预注册设计](thesis_disadvantage_tactical_basis_postmerge_lateral_runtime_probe_v1_preregistration_20260717_zh.md) 已完成并通过静态 preflight：12 个 P2 对齐场景、36 个因果配对、72 个计划 episode，候选固定为 `lateral_extension:lat+1:vert+1`，execution 仍为 `false`。该设计不是 runtime 结果，必须另行实现并验证独立 runner/verifier 后才能申请一次性执行。

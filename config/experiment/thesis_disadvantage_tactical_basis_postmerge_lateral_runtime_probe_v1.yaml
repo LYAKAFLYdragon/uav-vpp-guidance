@@ -1,0 +1,157 @@
+schema_version: 1
+source_id: THESIS-DISADVANTAGE-TACTICAL-BASIS-POSTMERGE-LATERAL-RUNTIME-PROBE-V1
+stage: paired_nonlearning_postmerge_runtime_probe
+status: design_frozen_execution_not_authorized
+
+authorization:
+  execution_permitted: false
+  training_permitted: false
+  tuning_permitted: false
+  reward_change_permitted: false
+  high_level_ppo_training_permitted: false
+  shared_skill_training_permitted: false
+  guidance_pid_change_permitted: false
+  action_envelope_expansion_permitted: false
+  snapshot_restore_permitted: false
+  future_state_injection_permitted: false
+  history_padding_permitted: false
+
+research_boundary:
+  parent_source:
+    source_id: THESIS-DISADVANTAGE-TACTICAL-BASIS-POSTMERGE-ENVELOPE-P2-V1
+    result: postmerge_physical_envelope_established
+  question: does_the_unique_offline_feasible_lateral_program_produce_safe_paired_postmerge_geometry_change
+  performance_claims_before_gate: prohibited
+  win_rate_as_primary_endpoint: prohibited
+  selected_variant_substitution: prohibited
+  prohibited_actions:
+    - template_or_sign_change
+    - reward_change
+    - policy_or_checkpoint_change
+    - routing_change
+    - action_envelope_change
+    - handoff_reset_or_snapshot_restore
+    - future_state_injection
+    - post_hoc_scenario_selection
+    - selective_rerun
+
+inputs:
+  p2_summary: E:/uav-vpp-guidance-disadvantage-capability-v1-results/tactical_basis_postmerge_envelope_p2_v1/offline_envelope_summary.json
+  p2_summary_sha256: 31aca3af55e055a9d4a187e917b0f464ddab56ca6095db162e7246276a0475a6
+  p2_verification: E:/uav-vpp-guidance-disadvantage-capability-v1-results/tactical_basis_postmerge_envelope_p2_v1/p2_verification.json
+  p2_verification_sha256: 2cad26cfe2cf936ba383aad62a4f40f2bdf36104a0d849df52dbbfe962319ab6
+  p2_config: config/experiment/thesis_disadvantage_tactical_basis_postmerge_envelope_p2_v1.yaml
+  p2_config_sha256: dd509793fd27070a36c5676918c99ddfb7a7373f33a29b5d0076fbb129d9485a
+  continuity_gate: E:/uav-vpp-guidance-disadvantage-capability-v1-results/tactical_basis_continuity_collector_v3/continuity_gate.json
+  continuity_gate_sha256: 5b5e71455074f19a0d179ab86dc5e19a50c9c6f438b968166e60341994d147ba
+  probe_manifest: config/experiment/manifests/thesis_disadvantage_tactical_basis_postmerge_lateral_runtime_probe_v1.yaml
+  probe_manifest_sha256: 1d7f08cdab6919f81a08d92a3830b7af3590538eb8748de05e13617e7b3ae6fd
+  parent_manifest: config/experiment/manifests/thesis_temporal_reference_reachability_v1.yaml
+  parent_manifest_sha256: a62256535dd4aa4e6918f13f22268cad22dd0ce20556e4a4d0cc08059d4f62b6
+  runtime_registry: config/experiment/thesis_defext_rangeext_feasibility_pilot_v1_runtime_registry.yaml
+  runtime_registry_sha256: c87edfed4be69a8293a889c9caa55c520fdab7dd93c44c9c6e057be869f435c5
+  frozen_p3_encoder: E:/uav-vpp-guidance-thesis-five-state-v1-results/p3_temporal_encoder_phaseconditional_v2/checkpoints/best.pt
+  frozen_p3_encoder_sha256: 385663281a9c48c0416ea4d1a1bb8dc08ed64a0cfebb0f01083cbbb8bcfbdc59
+  frozen_head_on_specialist: E:/uav-vpp-guidance-thesis-five-state-v1-assets/canonical_head_on_specialist_best.pt
+  frozen_head_on_specialist_sha256: 0aeadd11cd8c7723c8963bcc5da21dd97c365e64f234d07b86c2b8f0d7ec5fb6
+  temporal_reference_compiler: src/uav_vpp_guidance/evaluation/temporal_reference_compiler.py
+  temporal_reference_compiler_sha256: 82433db26dbd687940279898960c3fadba9e5e35ac7ddff7cf1746620a2876a1
+
+methods:
+  order: [fixed_head_on, lateral_extension_lat_pos_vert_pos]
+  reference: fixed_head_on
+  candidate: lateral_extension_lat_pos_vert_pos
+  same_scenario_seed_and_runin_required: true
+  exact_pre_handoff_hash_required: true
+
+opponents:
+  order: [expert, end_to_end, independent_ppo_vpp]
+  required_for_gate: [end_to_end, independent_ppo_vpp]
+  diagnostic_only: [expert]
+  report_separately: true
+  pooled_gate: prohibited
+
+contract:
+  backend: jsbsim
+  strict_backend: true
+  action_semantics: tactical_basis_v1
+  reference_controller: frozen_fixed_head_on
+  routing_enabled: false
+  target_dynamic_state: disadvantage
+  target_phases: [post_merge]
+  history_window_steps: 10
+  reset_at_handoff: false
+  snapshot_restore: false
+  future_state_injection: false
+  history_padding: false
+  checkpoint_fallback: false
+  candidate_basis_source: current_step_live_tactical_basis_only
+  candidate_reference_action: current_step_frozen_fixed_head_on_action
+  candidate_action_execution: after_first_qualified_handoff_only
+
+candidate:
+  p2_source_id: THESIS-DISADVANTAGE-TACTICAL-BASIS-POSTMERGE-ENVELOPE-P2-V1
+  p2_selected_variant: lateral_extension:lat+1:vert+1
+  method_id: lateral_extension_lat_pos_vert_pos
+  template: lateral_extension
+  lateral_sign: 1
+  vertical_sign: 1
+  program_steps: 40
+  high_level_dt_s: 0.2
+  temporal_profile: sin_squared_c1
+  max_action_delta: 0.35
+  max_action_slew: 0.10
+  max_basis_condition_number: 100.0
+  post_program_controller: frozen_fixed_head_on
+
+metrics:
+  response_window_steps: 40
+  primary_pressure:
+    name: mean_target_attack_score
+    direction: lower_is_better
+    candidate_minus_baseline_max: -0.05
+    baseline_min_mean_target_attack_score: 0.01
+  secondary_geometry:
+    mean_range_rate_direction: higher_is_better_target_opening
+    range_rate_mean_min_mps: 5.0
+    end_range_direction: higher_is_better
+    end_range_min_m: 50.0
+    end_specific_energy_direction: higher_is_better
+    end_specific_energy_min_m: 25.0
+  execution_and_safety:
+    require_finite_telemetry: true
+    require_zero_candidate_box_clipping: true
+    require_zero_candidate_slew_clipping: true
+    require_rank3_basis: true
+    require_no_backend_predictor_checkpoint_fallback: true
+    require_no_abnormal_reset: true
+    ego_crash_oob_count_delta_vs_baseline_max: 0
+  secondary_endpoint_only:
+    - terminal_reason
+    - ego_hp
+    - target_hp
+    - win_rate
+
+gates:
+  min_qualifying_pairs_per_required_opponent: 4
+  min_distinct_signatures_per_required_opponent: 4
+  require_both_mirror_signs: true
+  min_pressure_exposed_pairs_per_required_opponent: 3
+  required_opponents_for_positive_decision: 2
+  geometry_rule: primary_pressure_improves_and_any_one_secondary_geometry_improves
+  safety_stop: any_candidate_nonfinite_clipping_fallback_reset_or_checkpoint_failure_freezes_source
+  no_go_action: stop_temporal_reference_and_shared_skill_training_line
+  pass_action: design_single_skill_pilot_preregistration_only
+
+outputs:
+  root: E:/uav-vpp-guidance-disadvantage-capability-v1-results/tactical_basis_postmerge_lateral_runtime_probe_v1
+  paper_safe: false
+  overwrite_permitted: false
+  future_required_artifacts:
+    - episodes/fixed_head_on/<opponent>/<scenario>.json
+    - episodes/lateral_extension_lat_pos_vert_pos/<opponent>/<scenario>.json
+    - pairing_audit.json
+    - paired_geometry_deltas.csv
+    - runtime_probe_gate.json
+    - run_manifest.json
+    - runtime_probe_verification.json

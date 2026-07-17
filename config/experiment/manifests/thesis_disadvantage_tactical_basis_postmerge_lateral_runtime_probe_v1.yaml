@@ -1,0 +1,46 @@
+source_id: THESIS-DISADVANTAGE-TACTICAL-BASIS-POSTMERGE-LATERAL-RUNTIME-PROBE-V1-MANIFEST12
+status: design_frozen_execution_not_authorized
+parent_manifest_source_id: THESIS-DISADVANTAGE-TEMPORAL-REFERENCE-REACHABILITY-V1
+parent_manifest_path: config/experiment/manifests/thesis_temporal_reference_reachability_v1.yaml
+parent_manifest_sha256: a62256535dd4aa4e6918f13f22268cad22dd0ce20556e4a4d0cc08059d4f62b6
+protocol:
+  evaluation_only: true
+  training_permitted: false
+  tuning_permitted: false
+  methods: [fixed_head_on, lateral_extension_lat_pos_vert_pos]
+  opponents: [expert, end_to_end, independent_ppo_vpp]
+  episodes_per_method_opponent_scenario: 1
+  episodes_total_if_authorized: 72
+  paired_legal_resets: true
+  reset_at_handoff: false
+  future_state_or_outcome_routing: false
+  one_formal_runtime_matrix_run: true
+  paper_safe: false
+scenarios:
+  - name: thesis_temporal_reference_reachability_v1_trv1_long_escape_own_below_negative
+    scenario_seed: 275100
+  - name: thesis_temporal_reference_reachability_v1_trv1_long_escape_own_below_positive
+    scenario_seed: 275101
+  - name: thesis_temporal_reference_reachability_v1_trv1_long_escape_co_altitude_negative
+    scenario_seed: 275102
+  - name: thesis_temporal_reference_reachability_v1_trv1_long_escape_co_altitude_positive
+    scenario_seed: 275103
+  - name: thesis_temporal_reference_reachability_v1_trv1_long_escape_own_above_negative
+    scenario_seed: 275104
+  - name: thesis_temporal_reference_reachability_v1_trv1_long_escape_own_above_positive
+    scenario_seed: 275105
+  - name: thesis_temporal_reference_reachability_v1_trv1_rapid_closure_own_below_negative
+    scenario_seed: 275106
+  - name: thesis_temporal_reference_reachability_v1_trv1_rapid_closure_own_below_positive
+    scenario_seed: 275107
+  - name: thesis_temporal_reference_reachability_v1_trv1_rapid_closure_co_altitude_negative
+    scenario_seed: 275108
+  - name: thesis_temporal_reference_reachability_v1_trv1_rapid_closure_co_altitude_positive
+    scenario_seed: 275109
+  - name: thesis_temporal_reference_reachability_v1_trv1_rapid_closure_own_above_negative
+    scenario_seed: 275110
+  - name: thesis_temporal_reference_reachability_v1_trv1_rapid_closure_own_above_positive
+    scenario_seed: 275111
+integrity:
+  scenario_count: 12
+  parent_payload_reuse: exact_name_and_seed_only

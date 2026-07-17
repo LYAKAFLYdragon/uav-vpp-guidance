@@ -1,0 +1,27 @@
+includes:
+  - ./jsbsim_hrl_thesis_task_interface_discriminability_preflight_v1.yaml
+
+task_interface_discriminability_runtime_probe:
+  probe_id: ENGINEERING-TASK-INTERFACE-DISCRIMINABILITY-RUNTIME-PROBE-V1-NOT-A-PAPER-SOURCE-ID
+  execution_permitted: true
+  training_permitted: false
+  tuning_permitted: false
+  performance_comparison_permitted: false
+  one_execution_only: true
+  expected_records: 48
+  expected_records_per_opponent: 16
+  opponents: [expert, end_to_end, independent_ppo_vpp]
+  methods: [canonical_ppo, ppo_unbootstrapped_crossing]
+  contexts: [head_on, crossing_feasible]
+  required_static_receipt: reports/thesis_task_interface_discriminability_preflight_v1_receipt.json
+  output_root: E:/uav-vpp-guidance-disadvantage-capability-v1-results/task_interface_discriminability_runtime_probe_v1
+  runtime_gate:
+    primary_opponents: [expert, end_to_end]
+    min_context_pairs_per_primary_opponent: 3
+    observation_difference: only_is_crossing
+    required_effect: first_effective_mode_or_first_vpp_action_differs
+  stop_rule: >
+    This one-time engineering probe may only establish or reject interface
+    discriminability. It must not be used for performance claims and may not
+    be rerun with changed scenarios, policies, rewards, VPP, guidance, PID,
+    opponents, seeds, or thresholds.

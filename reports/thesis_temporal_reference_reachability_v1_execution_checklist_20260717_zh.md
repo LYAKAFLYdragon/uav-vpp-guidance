@@ -138,7 +138,7 @@
 - [ ] 未通过时，停止 temporal-reference/shared-skill training line；不得训练、调参或以新场景重跑掩盖缺口。
 - [ ] 仅在通过后，以新的独立 Source ID 重新设计新的 P2 offline envelope screen；不得追溯性地恢复本 Source 的 P2/P3。
 
-**Collector 执行台账（2026-07-17）：** `THESIS-DISADVANTAGE-TACTICAL-BASIS-CONTINUITY-COLLECTOR-V1` 的 36 条记录均在 `RawSIFirstPassConfig` 初始化时因错误字段名停止，未进入任何 JSBSim step；独立 verifier 只确认了空记录的结构与哈希一致，不能形成 phase、basis 或物理可达性结论。V1 已封存为 engineering-invalid evidence，不得重跑。唯一后继为 `THESIS-DISADVANTAGE-TACTICAL-BASIS-CONTINUITY-COLLECTOR-V2`，其仅将 raw-SI 字段改为 `minimum_closing_steps` / `minimum_opening_steps`，其余场景、资产、动作语义、门槛和禁止项保持不变。
+**Collector 执行台账（2026-07-17）：** `THESIS-DISADVANTAGE-TACTICAL-BASIS-CONTINUITY-COLLECTOR-V1` 的 36 条记录均在 `RawSIFirstPassConfig` 初始化时因错误字段名停止，未进入任何 JSBSim step；`V2` 已修复该字段，但在首次 JSBSim reset 时因 JSBSim-ML/PyTorch OpenMP 重复运行时中止，同样未产生任何物理 step。两个 Source 均封存为 engineering-invalid evidence；独立 verifier 对 V1 只确认了空记录结构与哈希一致，不能形成 phase、basis 或物理可达性结论。V3 的唯一新增前置是一个不占 Source ID 的三对手 runtime smoke，复用项目既有 `KMP_DUPLICATE_LIB_OK=TRUE` Windows 兼容设置。预测器在 10-frame history 形成前的 warm-up fallback 只可记录，不能触发 handoff；每个 40-step qualifying window 内仍必须零 fallback、零 padding。只有 smoke 通过，才允许 V3 重新冻结并采集；场景、资产、动作语义、门槛和禁止项保持不变。
 
 ---
 

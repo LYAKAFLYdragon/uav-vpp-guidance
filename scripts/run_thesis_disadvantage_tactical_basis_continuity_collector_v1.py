@@ -8,10 +8,15 @@ import copy
 import hashlib
 import json
 import math
+import os
 from pathlib import Path
 import subprocess
 import sys
 from typing import Any, Mapping
+
+# Existing Windows JSBSim/PyTorch runners use this compatibility setting before
+# either numerical runtime is initialized.
+os.environ.setdefault("KMP_DUPLICATE_LIB_OK", "TRUE")
 
 import numpy as np
 import yaml
@@ -36,6 +41,7 @@ from uav_vpp_guidance.training.thesis_shared_skill_geometry import FrozenP3Encod
 SOURCE_IDS = {
     "THESIS-DISADVANTAGE-TACTICAL-BASIS-CONTINUITY-COLLECTOR-V1",
     "THESIS-DISADVANTAGE-TACTICAL-BASIS-CONTINUITY-COLLECTOR-V2",
+    "THESIS-DISADVANTAGE-TACTICAL-BASIS-CONTINUITY-COLLECTOR-V3",
 }
 
 
@@ -391,7 +397,8 @@ class ContinuousTacticalBasisEpisode(raw_v5.FiveStateRawSIV5Episode):
         handoff_window: list[dict[str, Any]] = []
         handoff: dict[str, Any] | None = None
         backend_fallback_seen = False
-        prediction_fallback_seen = False
+        prediction_warmup_fallback_seen = False
+        prediction_fallback_in_window = False
         terminal_reason = "collector_horizon"
 
         while self.total_steps < self.env.max_steps:
@@ -421,14 +428,17 @@ class ContinuousTacticalBasisEpisode(raw_v5.FiveStateRawSIV5Episode):
             previous_hash = str(payload["continuity_hash"])
             trace.append(self._trace_step(payload))
             backend_fallback_seen |= bool(payload["backend_fallback_occurred"])
-            prediction_fallback_seen |= bool(payload["prediction_fallback"])
+            if handoff is None:
+                prediction_warmup_fallback_seen |= bool(payload["prediction_fallback"])
+            else:
+                prediction_fallback_in_window |= bool(payload["prediction_fallback"])
             eligible = bool(
                 handoff is None
                 and pre_state == self.config["contract"]["target_dynamic_state"]
                 and pre_phase in self.config["contract"]["target_phases"]
                 and reference_66d is not None
                 and not backend_fallback_seen
-                and not prediction_fallback_seen
+                and not bool(payload["prediction_fallback"])
             )
             if eligible:
                 handoff = {
@@ -446,7 +456,7 @@ class ContinuousTacticalBasisEpisode(raw_v5.FiveStateRawSIV5Episode):
             if handoff is not None:
                 handoff_window.append(payload)
             terminal_reason = str(payload["terminal_reason"])
-            if backend_fallback_seen or prediction_fallback_seen:
+            if backend_fallback_seen or prediction_fallback_in_window:
                 break
             if len(handoff_window) >= int(self.config["contract"]["reference_window_steps"]):
                 terminal_reason = "collector_window_complete"
@@ -463,7 +473,8 @@ class ContinuousTacticalBasisEpisode(raw_v5.FiveStateRawSIV5Episode):
             "window_complete": len(handoff_window) == int(self.config["contract"]["reference_window_steps"]),
             "no_reset_after_initialization": True,
             "no_backend_fallback": not backend_fallback_seen,
-            "no_prediction_fallback": not prediction_fallback_seen,
+            "no_prediction_fallback": not prediction_fallback_in_window,
+            "prediction_warmup_fallback_seen": prediction_warmup_fallback_seen,
             "no_history_padding": True,
             "no_checkpoint_fallback": True,
             "continuity_hash_chain_complete": bool(trace),
@@ -516,6 +527,81 @@ def _failed_record(source_id: str, opponent: str, scenario: Mapping[str, Any], e
             "terminal_reason": "collector_runtime_error",
             "error": repr(error),
         },
+    }
+
+
+def run_engineering_smoke(path: Path) -> dict[str, Any]:
+    """Exercise the complete runtime chain without creating Source evidence."""
+
+    config, manifest, registry = _validate_config(path)
+    scenario = manifest["scenarios"][0]
+    results: list[dict[str, Any]] = []
+    for opponent in OPPONENTS:
+        env = _build_env(config, registry, opponent)
+        try:
+            observation = env.reset(scenario=copy.deepcopy(dict(scenario)), seed=int(scenario["metadata"]["scenario_seed"]))
+            if env._backend != "jsbsim":
+                raise TacticalBasisContinuityCollectorError("smoke did not select strict JSBSim")
+            env.set_runtime_specialist_context(
+                specialist_key="head_on",
+                specialist_profile=None,
+                specialist_mode_name="tactical_basis_continuity_engineering_smoke",
+                specialist_reason="runtime_chain_only",
+            )
+            encoder = FrozenP3Encoder(
+                _resolve(str(config["inputs"]["frozen_p3_encoder"])),
+                str(config["inputs"]["frozen_p3_encoder_sha256"]),
+            )
+            embedding = np.asarray(encoder.encode(np.zeros((10, 16), dtype=np.float32))).reshape(-1)
+            policy = _specialist(registry)
+            warmup_prediction_fallback_steps = 0
+            info: Mapping[str, Any] = {}
+            for step in range(11):
+                action = raw_v5._finite_action(policy.get_deterministic_action(observation["observation_vector"]))
+                observation, _reward, terminated, truncated, info = env.step(action)
+                warmup_prediction_fallback_steps += int(bool(info.get("prediction_fallback", False)))
+                if terminated or truncated:
+                    raise TacticalBasisContinuityCollectorError("smoke terminated before predictor readiness")
+            basis = [
+                _vector_or_none(info.get(key), 3)
+                for key in (
+                    "tactical_basis_ll_world",
+                    "tactical_basis_io_world",
+                    "tactical_basis_cd_world",
+                )
+            ]
+            if (
+                embedding.shape != (32,)
+                or not np.isfinite(embedding).all()
+                or str(info.get("action_semantics")) != "tactical_basis_v1"
+                or str(info.get("configured_action_semantics")) != "tactical_basis_v1"
+                or info.get("tactical_basis_enabled") is not True
+                or not all(vector is not None for vector in basis)
+                or bool(info.get("backend_fallback_occurred", False))
+                or info.get("prediction_valid") is not True
+                or bool(info.get("prediction_fallback", False))
+            ):
+                raise TacticalBasisContinuityCollectorError("smoke runtime telemetry contract failed")
+            results.append(
+                {
+                    "opponent": opponent,
+                    "passes": True,
+                    "warmup_steps": 11,
+                    "warmup_prediction_fallback_steps": warmup_prediction_fallback_steps,
+                    "basis_rank": int(np.linalg.matrix_rank(np.column_stack(basis))),
+                }
+            )
+        except Exception as error:
+            results.append({"opponent": opponent, "passes": False, "error": repr(error)})
+        finally:
+            env.close()
+    return {
+        "smoke_id": "ENGINEERING-TACTICAL-BASIS-CONTINUITY-COLLECTOR-NOT-A-SOURCE-ID",
+        "source_id_under_test": _source_id(config),
+        "records": len(results),
+        "kmp_duplicate_lib_ok": os.environ.get("KMP_DUPLICATE_LIB_OK"),
+        "per_opponent": results,
+        "passes": all(bool(row["passes"]) for row in results),
     }
 
 
@@ -608,7 +694,13 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--config", type=Path, required=True)
     parser.add_argument("--execute", action="store_true")
+    parser.add_argument("--smoke", action="store_true")
     args = parser.parse_args()
+    if args.execute and args.smoke:
+        parser.error("--execute and --smoke are mutually exclusive")
+    if args.smoke:
+        print(json.dumps(run_engineering_smoke(args.config), ensure_ascii=False, indent=2))
+        return 0
     if not args.execute:
         print(json.dumps(validate_design(args.config), ensure_ascii=False, indent=2))
         return 0

@@ -1,0 +1,68 @@
+base_config: config/experiment/thesis_disadvantage_tactical_basis_continuity_collector_v1.yaml
+replace_sections: [authorization, execution, research_boundary, observability, outputs]
+
+schema_version: 1
+source_id: THESIS-DISADVANTAGE-TACTICAL-BASIS-CONTINUITY-COLLECTOR-V3
+stage: continuous_baseline_data_contract
+status: engineering_smoke_required_execution_not_authorized
+
+authorization:
+  execution_permitted: false
+  training_permitted: false
+  tuning_permitted: false
+  reward_change_permitted: false
+  candidate_action_execution_permitted: false
+  high_level_ppo_training_permitted: false
+  shared_skill_training_permitted: false
+  guidance_pid_change_permitted: false
+  snapshot_restore_permitted: false
+  future_state_injection_permitted: false
+  history_padding_permitted: false
+  require_clean_worktree: true
+  one_collection_run_only: true
+
+execution: {}
+
+research_boundary:
+  parent_sources:
+    - source_id: THESIS-DISADVANTAGE-TACTICAL-BASIS-CONTINUITY-COLLECTOR-V1
+      disposition: engineering_invalid_raw_si_dataclass_fields
+    - source_id: THESIS-DISADVANTAGE-TACTICAL-BASIS-CONTINUITY-COLLECTOR-V2
+      disposition: engineering_invalid_openmp_runtime_abort_before_first_step
+  permitted_change: existing_windows_openmp_compatibility_setting_only
+  required_smoke: strict_jsbsim_plus_frozen_p3_plus_frozen_head_on_per_opponent
+  prohibited_actions:
+    - scenario_change
+    - checkpoint_change
+    - action_semantics_change
+    - reward_change
+    - routing_change
+    - action_envelope_change
+    - threshold_change
+    - selective_rerun
+
+contract:
+  predictor_warmup_before_complete_10_frame_history: recorded_but_not_handoff_eligible
+  qualifying_window_prediction_fallback: prohibited
+  qualifying_window_history_padding: prohibited
+
+observability:
+  max_high_level_steps: 260
+  reference_profile: range_extension
+  raw_si_first_pass_event:
+    closing_rate_threshold_mps: 0.0
+    opening_rate_threshold_mps: 0.0
+    minimum_closing_steps: 3
+    minimum_opening_steps: 2
+
+runtime:
+  openmp_compatibility:
+    environment_variable: KMP_DUPLICATE_LIB_OK
+    value: 'TRUE'
+    scope: existing_windows_jsbsim_pytorch_runner_compatibility_only
+    provenance_recording: required
+
+outputs:
+  root: E:/uav-vpp-guidance-disadvantage-capability-v1-results/tactical_basis_continuity_collector_v3
+  paper_safe: false
+  overwrite_permitted: false

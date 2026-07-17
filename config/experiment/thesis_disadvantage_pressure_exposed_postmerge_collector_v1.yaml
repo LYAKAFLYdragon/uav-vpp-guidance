@@ -1,0 +1,91 @@
+base_config: config/experiment/thesis_disadvantage_tactical_basis_continuity_collector_v3.yaml
+replace_sections: [authorization, research_boundary, inputs, contract, gates, observability, outputs]
+
+schema_version: 1
+source_id: THESIS-DISADVANTAGE-PRESSURE-EXPOSED-POSTMERGE-COLLECTOR-V1
+stage: nonlearning_pressure_exposed_postmerge_collection
+status: preregistered_design_execution_not_authorized
+
+authorization:
+  execution_permitted: false
+  training_permitted: false
+  tuning_permitted: false
+  reward_change_permitted: false
+  candidate_action_execution_permitted: false
+  high_level_ppo_training_permitted: false
+  shared_skill_training_permitted: false
+  guidance_pid_change_permitted: false
+  snapshot_restore_permitted: false
+  future_state_injection_permitted: false
+  history_padding_permitted: false
+  require_clean_worktree: true
+  one_collection_run_only: true
+
+research_boundary:
+  question: establish_a_pressure_exposed_postmerge_cohort_before_any_method_comparison
+  parent_negative_evidence:
+    source_id: THESIS-DISADVANTAGE-TACTICAL-BASIS-POSTMERGE-LATERAL-RUNTIME-PROBE-V1
+    disposition: runtime_not_evaluable_no_target_pressure_endpoint
+  existing_taxonomy60_audit:
+    source_id: THESIS-DUALSKILL-TAXONOMY60-3OPP-V1
+    disposition: no_postmerge_pressure_windows_under_fixed_head_on
+  prohibited_actions:
+    - training
+    - reward_change
+    - routing_change
+    - specialist_change
+    - action_envelope_change
+    - reset_after_initialization
+    - future_state_injection
+    - outcome_based_scenario_selection
+    - rerun_after_gate_failure
+
+inputs:
+  scenario_manifest: config/experiment/manifests/thesis_disadvantage_pressure_exposed_postmerge_v1.yaml
+  scenario_manifest_sha256: bbfefe734bfac636ec9ccc6654c7432c5b1bf86c800bdc12ab8cab7a34735da6
+  scenario_manifest_source_id: THESIS-DISADVANTAGE-PRESSURE-EXPOSED-POSTMERGE-COLLECTOR-V1-MANIFEST16
+  runtime_registry: config/experiment/thesis_defext_rangeext_feasibility_pilot_v1_runtime_registry.yaml
+  runtime_registry_sha256: c87edfed4be69a8293a889c9caa55c520fdab7dd93c44c9c6e057be869f435c5
+  frozen_p3_encoder: E:/uav-vpp-guidance-thesis-five-state-v1-results/p3_temporal_encoder_phaseconditional_v2/checkpoints/best.pt
+  frozen_p3_encoder_sha256: 385663281a9c48c0416ea4d1a1bb8dc08ed64a0cfebb0f01083cbbb8bcfbdc59
+  frozen_head_on_specialist: E:/uav-vpp-guidance-thesis-five-state-v1-assets/canonical_head_on_specialist_best.pt
+  frozen_head_on_specialist_sha256: 0aeadd11cd8c7723c8963bcc5da21dd97c365e64f234d07b86c2b8f0d7ec5fb6
+
+contract:
+  backend: jsbsim
+  strict_backend: true
+  action_semantics: tactical_basis_v1
+  reference_controller: frozen_fixed_head_on
+  routing_enabled: false
+  reset_at_handoff: false
+  snapshot_restore: false
+  future_state_injection: false
+  history_padding: false
+  checkpoint_fallback: false
+  target_dynamic_state: disadvantage
+  target_phases: [post_merge, re_entry]
+  history_window_steps: 10
+  reference_window_steps: 40
+  high_level_dt_s: 0.2
+
+gates:
+  required_window_steps: 40
+  target_attack_score_min: 0.5
+  min_pressure_steps_per_window: 10
+  min_qualifying_episodes_per_opponent: 4
+  min_distinct_signatures_per_opponent: 4
+  required_opponents: [expert, end_to_end, independent_ppo_vpp]
+
+observability:
+  max_high_level_steps: 260
+  reference_profile: range_extension
+  raw_si_first_pass_event:
+    closing_rate_threshold_mps: 0.0
+    opening_rate_threshold_mps: 0.0
+    minimum_closing_steps: 3
+    minimum_opening_steps: 2
+
+outputs:
+  root: E:/uav-vpp-guidance-disadvantage-capability-v1-results/pressure_exposed_postmerge_collector_v1
+  paper_safe: false
+  overwrite_permitted: false

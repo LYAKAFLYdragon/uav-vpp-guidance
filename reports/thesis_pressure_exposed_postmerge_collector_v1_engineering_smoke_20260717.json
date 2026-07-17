@@ -1,0 +1,26 @@
+{
+  "smoke_id": "ENGINEERING-PRESSURE-EXPOSED-POSTMERGE-COLLECTOR-NOT-A-SOURCE-ID",
+  "source_id_under_test": "THESIS-DISADVANTAGE-PRESSURE-EXPOSED-POSTMERGE-COLLECTOR-V1",
+  "records": 3,
+  "passes": true,
+  "per_opponent": [
+    {
+      "opponent": "expert",
+      "passes": true,
+      "steps": 260,
+      "prediction_valid_steps": 251
+    },
+    {
+      "opponent": "end_to_end",
+      "passes": true,
+      "steps": 208,
+      "prediction_valid_steps": 199
+    },
+    {
+      "opponent": "independent_ppo_vpp",
+      "passes": true,
+      "steps": 260,
+      "prediction_valid_steps": 251
+    }
+  ]
+}

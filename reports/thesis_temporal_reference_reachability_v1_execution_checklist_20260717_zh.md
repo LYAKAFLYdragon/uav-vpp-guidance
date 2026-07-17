@@ -248,3 +248,18 @@ P5 的目的不是马上证明全面优势，而是检验新接口是否能支�
 4. [ ] P3：被 P2 no-go 阻止，未执行；不得绕过门槛。
 5. [ ] P4：执行唯一一次非学习正式矩阵，并由独立 verifier 判定。
 6. [ ] P5：仅在 P4 通过时起草单技能 pilot 预注册；未通过即停止训练线。
+
+---
+
+## 后继 Source：Post-Merge P2 Offline Envelope Screen V1
+
+**Source ID：** `THESIS-DISADVANTAGE-TACTICAL-BASIS-POSTMERGE-ENVELOPE-P2-V1`。本节是原 Source 被 `p2_input_contract_incompatible` 封存后的独立后继路线，**不**修改原 P2 no-go、P3/P4/P5 的状态，也不允许追溯性恢复原 Source。
+
+- [x] 输入：引用 V3 的 strict-JSBSim 连续同语义窗口；17 条合格记录（expert 5、end-to-end 5、independent PPO/VPP 7），每条含完整 40-step reference/basis sequence。
+- [x] 冻结设计：展开 P1 的 8 个 template/sign variants；不重采样、不改模板、动作包线、reward、策略、VPP、guidance 或 PID，且候选 action 不进入环境。
+- [x] 预注册门：`end_to_end` 和 `independent_ppo_vpp` 分开报告，每个至少 4 条、4 个 signature、双镜像；box/slew clipping 均为零，平均投影残差不超过 50 m，峰值位移至少 100 m，basis condition 不超过 100。expert 仅诊断，因为其 V3 cohort 只有 3 个 signature。
+- [x] 唯一一次离线执行：136/136 state-template rows 完成；所有 row 均为零 box/slew clipping，最大平均残差 `1.95e-14 m`，最小峰值位移 `273.20 m`，最大 basis condition `3.10`。
+- [x] Gate：8 个候选在两个 required opponents 都通过。冻结的选择规则选中 `lateral_extension:lat+1:vert+1`；独立 verifier 已重新编译并验证全部 136 行。
+- [x] 结果边界：仅确认 post-merge temporal reference 在当前 action envelope 中可以离线无失真编译；不确认运行时几何/胜率/安全改善，不启动训练。
+
+**后继路线的唯一下一步：** 仅允许新建一个独立 Source 来设计 selected-variant paired non-learning runtime probe；必须以固定 `lateral_extension:lat+1:vert+1` 对固定 head-on baseline，另行冻结 manifest、MDE、安全 stop rule、输出根和独立 verifier。详见 [P2 V1 结果与决策](thesis_disadvantage_tactical_basis_postmerge_envelope_p2_v1_result_20260717_zh.md)。

@@ -1,0 +1,31 @@
+{
+  "smoke_id": "ENGINEERING-TACTICAL-BASIS-CONTINUITY-COLLECTOR-NOT-A-SOURCE-ID",
+  "source_id_under_test": "THESIS-DISADVANTAGE-TACTICAL-BASIS-CONTINUITY-COLLECTOR-V3",
+  "implementation_git_sha": "84477500227cfd11dd5896356ded4e6ce6c4c50e",
+  "kmp_duplicate_lib_ok": "TRUE",
+  "records": 3,
+  "per_opponent": [
+    {
+      "opponent": "expert",
+      "passes": true,
+      "warmup_steps": 11,
+      "warmup_prediction_fallback_steps": 9,
+      "basis_rank": 3
+    },
+    {
+      "opponent": "end_to_end",
+      "passes": true,
+      "warmup_steps": 11,
+      "warmup_prediction_fallback_steps": 9,
+      "basis_rank": 3
+    },
+    {
+      "opponent": "independent_ppo_vpp",
+      "passes": true,
+      "warmup_steps": 11,
+      "warmup_prediction_fallback_steps": 9,
+      "basis_rank": 3
+    }
+  ],
+  "passes": true
+}

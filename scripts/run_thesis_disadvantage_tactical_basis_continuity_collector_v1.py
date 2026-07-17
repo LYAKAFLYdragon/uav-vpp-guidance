@@ -624,6 +624,20 @@ def _authorize_execution(config: Mapping[str, Any], expected_records: int) -> No
         expected_hash = str(item.get("sha256") or "")
         if not source.is_file() or _hash(source) != expected_hash:
             raise TacticalBasisContinuityCollectorError(f"authorized source file hash mismatch: {source}")
+    smoke_value = execution.get("required_smoke_gate")
+    if smoke_value is not None:
+        smoke_path = _resolve(str(smoke_value))
+        expected_smoke_hash = str(execution.get("required_smoke_gate_sha256") or "")
+        if not smoke_path.is_file() or _hash(smoke_path) != expected_smoke_hash:
+            raise TacticalBasisContinuityCollectorError("required engineering smoke artifact hash mismatch")
+        smoke = json.loads(smoke_path.read_text(encoding="utf-8"))
+        if (
+            smoke.get("smoke_id") != execution.get("required_smoke_id")
+            or smoke.get("source_id_under_test") != _source_id(config)
+            or smoke.get("passes") is not True
+            or int(smoke.get("records", 0)) != len(OPPONENTS)
+        ):
+            raise TacticalBasisContinuityCollectorError("required engineering smoke artifact did not pass")
 
 
 def run(path: Path) -> dict[str, Any]:

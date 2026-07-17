@@ -1,0 +1,171 @@
+schema_version: 1
+source_id: THESIS-DISADVANTAGE-TACTICAL-BASIS-CONTINUITY-COLLECTOR-V1
+stage: continuous_baseline_data_contract
+status: implementation_ready_execution_not_authorized
+
+authorization:
+  execution_permitted: false
+  training_permitted: false
+  tuning_permitted: false
+  reward_change_permitted: false
+  candidate_action_execution_permitted: false
+  high_level_ppo_training_permitted: false
+  shared_skill_training_permitted: false
+  guidance_pid_change_permitted: false
+  snapshot_restore_permitted: false
+  future_state_injection_permitted: false
+  history_padding_permitted: false
+  require_clean_worktree: true
+  one_collection_run_only: true
+
+research_boundary:
+  parent_source:
+    source_id: THESIS-DISADVANTAGE-TEMPORAL-REFERENCE-REACHABILITY-V1
+    disposition: p2_input_contract_incompatible
+    prohibited_actions:
+      - rerun_parent_p2
+      - reinterpret_cartesian_offset_as_tactical_basis
+      - replace_or_supplement_parent_historical_cohort
+  question: continuous_tactical_basis_baseline_contract_only
+  performance_comparison: prohibited
+  win_rate_analysis: prohibited
+  outcome_based_selection: prohibited
+
+inputs:
+  scenario_manifest: config/experiment/manifests/thesis_temporal_reference_reachability_v1.yaml
+  scenario_manifest_sha256: a62256535dd4aa4e6918f13f22268cad22dd0ce20556e4a4d0cc08059d4f62b6
+  scenario_manifest_source_id: THESIS-DISADVANTAGE-TEMPORAL-REFERENCE-REACHABILITY-V1
+  runtime_registry: config/experiment/thesis_defext_rangeext_feasibility_pilot_v1_runtime_registry.yaml
+  runtime_registry_sha256: c87edfed4be69a8293a889c9caa55c520fdab7dd93c44c9c6e057be869f435c5
+  frozen_p3_encoder: E:/uav-vpp-guidance-thesis-five-state-v1-results/p3_temporal_encoder_phaseconditional_v2/checkpoints/best.pt
+  frozen_p3_encoder_sha256: 385663281a9c48c0416ea4d1a1bb8dc08ed64a0cfebb0f01083cbbb8bcfbdc59
+  frozen_head_on_specialist: E:/uav-vpp-guidance-thesis-five-state-v1-assets/canonical_head_on_specialist_best.pt
+  frozen_head_on_specialist_sha256: 0aeadd11cd8c7723c8963bcc5da21dd97c365e64f234d07b86c2b8f0d7ec5fb6
+
+opponents:
+  order: [expert, end_to_end, independent_ppo_vpp]
+  report_separately: true
+  pooled_gate: prohibited
+
+contract:
+  backend: jsbsim
+  strict_backend: true
+  action_semantics: tactical_basis_v1
+  reference_controller: frozen_fixed_head_on
+  routing_enabled: false
+  reset_at_handoff: false
+  snapshot_restore: false
+  future_state_injection: false
+  history_padding: false
+  checkpoint_fallback: false
+  target_dynamic_state: disadvantage
+  target_phases: [post_merge, re_entry]
+  history_window_steps: 10
+  reference_window_steps: 40
+  high_level_dt_s: 0.2
+
+gates:
+  required_window_steps: 40
+  max_basis_condition_number: 100.0
+  min_qualifying_handoffs_per_opponent: 4
+  min_distinct_signatures_per_opponent: 4
+  opponents_required: 2
+
+observability:
+  max_high_level_steps: 260
+  reference_profile: range_extension
+  raw_si_first_pass_event:
+    consecutive_closing_steps: 3
+    consecutive_opening_steps: 2
+    closing_range_rate_max_mps: -5.0
+    opening_range_rate_min_mps: 5.0
+
+runtime:
+  simulator: JSBSim
+  strict_backend: true
+  legacy_project_root: E:/uav-vpp-guidance-thesis-five-state-v1-jsbsim-v1.1.6
+  aircraft_model: f16
+  high_level_dt_s: 0.2
+  trajectory_prediction:
+    enabled: true
+    predictor_type: lstm
+    checkpoint_path: E:/uav-vpp-guidance-thesis-five-state-v1-assets/frozen_trajectory_predictor_best_model.pt
+    strict_predictor_init: true
+    checkpoint_strict: true
+    freeze_predictor_during_rl: true
+    device: cpu
+    model:
+      type: lstm
+      input_dim: 16
+      hidden_dim: 128
+      num_layers: 2
+      dropout: 0.1
+      predict_variance: false
+    history:
+      history_len: 10
+      sample_rate_hz: 5
+      padding_mode: repeat_first
+      padding_scope: frozen_predictor_only_not_collector_history
+    prediction:
+      lookahead_time_s: 1.0
+      output_mode: relative_displacement
+      fallback_mode: constant_velocity
+    integration:
+      anchor_mode: predicted_target
+      add_prediction_to_observation: false
+      add_uncertainty_to_observation: false
+    normalization:
+      position_scale_m: 1000.0
+      velocity_scale_mps: 300.0
+      angle_mode: sin_cos
+      overload_scale: 9.0
+  virtual_point:
+    anchor_mode: predicted_target
+    action_dim: 3
+    d_long_range: [-1500.0, 1500.0]
+    d_lat_range: [-800.0, 800.0]
+    d_vert_range: [-500.0, 500.0]
+    smoothing_alpha: 0.3
+    dynamics_aware: true
+    max_heading_rate: 0.3
+    lookahead_steps: 5
+    offset_frame_by_task:
+      head_on: target_velocity
+    close_range_anchor_mode_by_task:
+      head_on: current_target
+    close_range_anchor_trigger_range_m_by_task:
+      head_on: 1000.0
+    close_range_anchor_alignment_angle_deg_max_by_task:
+      head_on: 10.0
+    close_range_anchor_release_on_post_merge_by_task:
+      head_on: true
+    longitudinal_scale_by_task:
+      head_on: 1.0
+    action_semantics: tactical_basis_v1
+    tactical_basis_longitudinal_frame: target_velocity
+    tactical_basis_lateral_frame: encounter_stable
+    tactical_basis_vertical_frame: world_neu
+    tactical_basis_lead_lag_extent_m: 1200.0
+    tactical_basis_lead_lag_extent_m_by_task:
+      head_on: 1200.0
+    tactical_basis_inside_outside_extent_m: 1600.0
+    tactical_basis_inside_outside_extent_m_by_task:
+      head_on: 1600.0
+    tactical_basis_climb_descent_extent_m: 600.0
+    tactical_basis_climb_descent_extent_m_by_task:
+      head_on: 600.0
+    tactical_basis_lateral_sign_mode: same_side
+    tactical_basis_encounter_stable_max_heading_delta_deg: 45.0
+
+fixed_contract:
+  attack_zone:
+    enabled: true
+    initial_hp: 100.0
+    damage_per_step: 0.5
+    close_range_max_km: 3.0
+    close_range_max_aoa_deg: 60.0
+
+outputs:
+  root: E:/uav-vpp-guidance-disadvantage-capability-v1-results/tactical_basis_continuity_collector_v1
+  paper_safe: false
+  overwrite_permitted: false

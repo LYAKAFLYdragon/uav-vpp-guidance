@@ -107,6 +107,37 @@
 
 **交付物：** `offline_envelope_matrix.csv`、`offline_envelope_summary.json`、逐状态审计索引、独立 verifier。
 
+### P2.3 已确认的研发事实：连续 baseline trajectory 数据契约是新接口的前置条件
+
+**当前判定（2026-07-17）：** 本 Source 在 `p2_input_contract_incompatible` 处封存。P2 的 `NO-GO` 说明历史 continuous-handoff cohort 不能为新接口提供合法输入，**不**说明 temporal-reference 编译器无效、物理不可达、训练不足、reward 不当、对手过强或 JSBSim 后端失效。
+
+新接口的可验证性由两个不可替代的部分共同组成：
+
+1. **新编译器：** P1 的 `tactical_basis_v1` compiler 在每个 handoff 后将时域参考编译为有界的 3-D VPP action sequence。
+2. **同一动作语义下的连续 baseline trajectory 数据契约：** 从合法 reset 起，以已冻结、实际启用 `tactical_basis_v1` 的 baseline 连续运行并记录；每个候选 handoff 必须保留可追溯的 basis、frozen reference action、history、prediction 和执行链 telemetry。历史 `cartesian_offset` 记录不得事后转换或重新解释为 tactical basis。
+
+**本 Source 的停止规则：**
+
+- [x] P2 的 12 条历史记录均审计为 `cartesian_offset`，未产生任何合法 `tactical_basis_v1` 输入；P3/P4/P5 因此不得在本 Source 继续。
+- [x] 不重跑 P2，不替换或补充 historical cohort，不重解释 `cartesian_offset`，也不改 reward、训练步数、routing、模板幅度或阈值来规避该 no-go。
+- [x] P2 no-go 报告、`failure.json` 和 `p2_contract_audit.json` 作为研发性负证据保留；它们不是论文级物理不可达结论。
+
+**唯一允许的后续路线：** 新建独立 Source `THESIS-DISADVANTAGE-TACTICAL-BASIS-CONTINUITY-COLLECTOR-V1`。其第一目标不是性能改善，而是建立上述连续数据契约；不得复活本 Source 的 P2/P3。
+
+新 collector 必须从合法 reset 起，以当前 `tactical_basis_v1` frozen fixed-head-on baseline 连续采集并保存：
+
+- [ ] active/configured action semantics，以及三个 tactical-basis world vectors、basis rank 与 condition。
+- [ ] frozen specialist reference action、prediction validity/fallback、VPP、guidance、AoA、`n_z` command/actual、saturation。
+- [ ] phase、dynamic taxonomy、handoff hash、observation/history continuity；不得出现 future injection、padding、非法 reset、backend fallback 或 checkpoint fallback。
+- [ ] 每条 qualifying handoff 均连续保存完整 40-step baseline reference/basis sequence，而非只保存单步快照。
+
+**新 collector 的 phase + contract gate：**
+
+- [ ] 全部记录使用 strict JSBSim，且 action、basis、history 和 telemetry 均有限、可独立读取、无 fallback/reset/padding。
+- [ ] 至少两个 opponent 各自至少有 4 条 qualifying handoff，覆盖至少 4 个 scenario signature 与双镜像；每条均满足完整 40-step continuity。
+- [ ] 未通过时，停止 temporal-reference/shared-skill training line；不得训练、调参或以新场景重跑掩盖缺口。
+- [ ] 仅在通过后，以新的独立 Source ID 重新设计新的 P2 offline envelope screen；不得追溯性地恢复本 Source 的 P2/P3。
+
 ---
 
 ## P3. 三对手工程 smoke（不判断性能）

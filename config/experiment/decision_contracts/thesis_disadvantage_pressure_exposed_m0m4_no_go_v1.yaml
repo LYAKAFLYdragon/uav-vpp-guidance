@@ -1,0 +1,42 @@
+contract_id: THESIS-DISADVANTAGE-PRESSURE-EXPOSED-M0M4-NO-GO-V1
+source_id: THESIS-DISADVANTAGE-PRESSURE-EXPOSED-M0M4-3OPP-V1
+scope: >
+  A bounded M0--M4 comparison on the frozen pressure-exposed disadvantage
+  cohort. It tests module contribution under shared pressure, not universal
+  dogfight superiority or a new low-level skill.
+
+frozen_matrix:
+  opponents: [expert, end_to_end, independent_ppo_vpp]
+  scenarios_per_opponent: 16
+  methods: [fixed_head_on, fixed_crossing, static_oracle_gate, canonical_ppo, ppo_unbootstrapped_crossing]
+  expected_records: 240
+  seed: 0
+  task: head_on
+  taxonomy_angle_order: [AA, ATA]
+
+methods:
+  fixed_head_on: M0, frozen head-on specialist without routing
+  fixed_crossing: M1, frozen crossing specialist without routing
+  static_oracle_gate: M2, static initial-task gate, not a dynamic taxonomy oracle
+  canonical_ppo: M3, frozen canonical PPO with deterministic recovery override
+  ppo_unbootstrapped_crossing: M4, same PPO with crossing bootstrap disabled
+
+required_receipts:
+  strict_jsbsim: true
+  no_backend_fallback: true
+  raw_physical_state: [own_pos_m, target_pos_m, range_m, aa_deg, ata_deg]
+  execution_telemetry: [vpp_action, tactical_basis_world_offset, guidance_telemetry, aoa_deg, nz_cmd, nz_actual, clipping]
+  prediction_warmup: first_9_steps_fallback_then_valid
+
+reporting_rules:
+  pool_opponents: false
+  primary_metrics: [terminal_mix, ego_crash_or_oob, target_attack_zone_fraction, ego_attack_zone_fraction]
+  mechanism_metrics: [dynamic_taxonomy_occupancy, post_merge_fraction, re_entry_fraction, VPP_action, guidance_and_nz_response]
+  boundary: >
+    M3--M4 remains a mixed learned-routing plus deterministic-recovery
+    interface comparison. The result cannot prove pure geometry recognition.
+
+stop_rule:
+  on_invalid_matrix: freeze_as_negative_engineering_evidence
+  prohibited: [training, tuning, reward_change, VPP_change, guidance_change, PID_change, scenario_replacement, seed_replacement, checkpoint_replacement, result_driven_rerun]
+  permitted_after_valid_result: [read_only_analysis, opponent_separated_reporting, paper_evidence_synthesis]

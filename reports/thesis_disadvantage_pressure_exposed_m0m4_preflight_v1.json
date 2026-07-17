@@ -1,0 +1,462 @@
+{
+  "source_id": "THESIS-DISADVANTAGE-PRESSURE-EXPOSED-M0M4-3OPP-V1",
+  "config_path": "E:\\uav-vpp-guidance-disadvantage-capability-v1\\config\\experiment\\jsbsim_hrl_thesis_disadvantage_pressure_exposed_m0m4_v1.yaml",
+  "config_sha256": "9ba84bba1613f95906067159c6272f7b4633d9214f964136327b959fc8dfe4af",
+  "manifest_path": "E:\\uav-vpp-guidance-disadvantage-capability-v1\\config\\experiment\\manifests\\thesis_disadvantage_pressure_exposed_postmerge_v1.yaml",
+  "manifest_sha256": "bbfefe734bfac636ec9ccc6654c7432c5b1bf86c800bdc12ab8cab7a34735da6",
+  "manifest_runner_payload_sha256": "296cb3a79c5239771dca8283a510eb0ca9c91a5706ca54b3d022204b8cd669fa",
+  "manifest_scenario_only_payload_sha256": "9c80977500700a43a279231f8b7556a67a682f002eff5fdfc2a4372f5450cf4b",
+  "decision_contract_path": "E:\\uav-vpp-guidance-disadvantage-capability-v1\\config\\experiment\\decision_contracts\\thesis_disadvantage_pressure_exposed_m0m4_no_go_v1.yaml",
+  "decision_contract_sha256": "e452f29b398dfe7b3260295d700738409ce6f90d35c99c6b8938129a7f887014",
+  "telemetry_prerequisite": {
+    "path": "E:\\uav-vpp-guidance-disadvantage-capability-v1-results\\pressure_exposed_telemetry_completion_preflight_v2\\telemetry_completion_gate.json",
+    "sha256": "927224ae71a6108c1221b6153e04d4c3e2baffccdc5d5944e3a350b935be7475",
+    "gate": {
+      "preflight_id": "ENGINEERING-PRESSURE-EXPOSED-TELEMETRY-COMPLETION-PREFLIGHT-V1-NOT-A-SOURCE-ID",
+      "source_config": "E:\\uav-vpp-guidance-disadvantage-capability-v1\\config\\experiment\\thesis_disadvantage_pressure_exposed_postmerge_collector_v1_authorized.yaml",
+      "source_config_sha256": "9419ee417c6084290a7ea0b37c1f7c7bb13bbe94d4fceaaac2ed9e7a5063210d",
+      "source_manifest_sha256": "bbfefe734bfac636ec9ccc6654c7432c5b1bf86c800bdc12ab8cab7a34735da6",
+      "records": 48,
+      "per_opponent": {
+        "expert": {
+          "records": 16,
+          "reset_receipts_passed": 16,
+          "physical_trace_passed": 16,
+          "signatures": [
+            "pressure_medium_tight__disadvantage__co_altitude",
+            "pressure_medium_tight__disadvantage__own_below",
+            "pressure_medium_wide__disadvantage__co_altitude",
+            "pressure_medium_wide__disadvantage__own_below",
+            "pressure_short_tight__disadvantage__co_altitude",
+            "pressure_short_tight__disadvantage__own_below",
+            "pressure_short_wide__disadvantage__co_altitude",
+            "pressure_short_wide__disadvantage__own_below"
+          ],
+          "mirrors": [
+            "negative",
+            "positive"
+          ]
+        },
+        "end_to_end": {
+          "records": 16,
+          "reset_receipts_passed": 16,
+          "physical_trace_passed": 16,
+          "signatures": [
+            "pressure_medium_tight__disadvantage__co_altitude",
+            "pressure_medium_tight__disadvantage__own_below",
+            "pressure_medium_wide__disadvantage__co_altitude",
+            "pressure_medium_wide__disadvantage__own_below",
+            "pressure_short_tight__disadvantage__co_altitude",
+            "pressure_short_tight__disadvantage__own_below",
+            "pressure_short_wide__disadvantage__co_altitude",
+            "pressure_short_wide__disadvantage__own_below"
+          ],
+          "mirrors": [
+            "negative",
+            "positive"
+          ]
+        },
+        "independent_ppo_vpp": {
+          "records": 16,
+          "reset_receipts_passed": 16,
+          "physical_trace_passed": 16,
+          "signatures": [
+            "pressure_medium_tight__disadvantage__co_altitude",
+            "pressure_medium_tight__disadvantage__own_below",
+            "pressure_medium_wide__disadvantage__co_altitude",
+            "pressure_medium_wide__disadvantage__own_below",
+            "pressure_short_tight__disadvantage__co_altitude",
+            "pressure_short_tight__disadvantage__own_below",
+            "pressure_short_wide__disadvantage__co_altitude",
+            "pressure_short_wide__disadvantage__own_below"
+          ],
+          "mirrors": [
+            "negative",
+            "positive"
+          ]
+        }
+      },
+      "passes": true,
+      "next_action": "compact_ablation_source_design_permitted",
+      "boundary": "non-learning physical-telemetry contract only; no method comparison or performance claim"
+    }
+  },
+  "config_cells": [
+    {
+      "opponent": "expert",
+      "method": "fixed_head_on",
+      "strict_backend": true,
+      "opponent_stage": "expert"
+    },
+    {
+      "opponent": "expert",
+      "method": "fixed_crossing",
+      "strict_backend": true,
+      "opponent_stage": "expert"
+    },
+    {
+      "opponent": "expert",
+      "method": "static_oracle_gate",
+      "strict_backend": true,
+      "opponent_stage": "expert"
+    },
+    {
+      "opponent": "expert",
+      "method": "canonical_ppo",
+      "strict_backend": true,
+      "opponent_stage": "expert"
+    },
+    {
+      "opponent": "expert",
+      "method": "ppo_unbootstrapped_crossing",
+      "strict_backend": true,
+      "opponent_stage": "expert"
+    },
+    {
+      "opponent": "end_to_end",
+      "method": "fixed_head_on",
+      "strict_backend": true,
+      "opponent_stage": "end_to_end"
+    },
+    {
+      "opponent": "end_to_end",
+      "method": "fixed_crossing",
+      "strict_backend": true,
+      "opponent_stage": "end_to_end"
+    },
+    {
+      "opponent": "end_to_end",
+      "method": "static_oracle_gate",
+      "strict_backend": true,
+      "opponent_stage": "end_to_end"
+    },
+    {
+      "opponent": "end_to_end",
+      "method": "canonical_ppo",
+      "strict_backend": true,
+      "opponent_stage": "end_to_end"
+    },
+    {
+      "opponent": "end_to_end",
+      "method": "ppo_unbootstrapped_crossing",
+      "strict_backend": true,
+      "opponent_stage": "end_to_end"
+    },
+    {
+      "opponent": "independent_ppo_vpp",
+      "method": "fixed_head_on",
+      "strict_backend": true,
+      "opponent_stage": "independent_ppo_vpp"
+    },
+    {
+      "opponent": "independent_ppo_vpp",
+      "method": "fixed_crossing",
+      "strict_backend": true,
+      "opponent_stage": "independent_ppo_vpp"
+    },
+    {
+      "opponent": "independent_ppo_vpp",
+      "method": "static_oracle_gate",
+      "strict_backend": true,
+      "opponent_stage": "independent_ppo_vpp"
+    },
+    {
+      "opponent": "independent_ppo_vpp",
+      "method": "canonical_ppo",
+      "strict_backend": true,
+      "opponent_stage": "independent_ppo_vpp"
+    },
+    {
+      "opponent": "independent_ppo_vpp",
+      "method": "ppo_unbootstrapped_crossing",
+      "strict_backend": true,
+      "opponent_stage": "independent_ppo_vpp"
+    }
+  ],
+  "checkpoint_checks": [
+    {
+      "method": "fixed_head_on",
+      "role": "policy_checkpoint",
+      "path": "E:\\uav-vpp-guidance-thesis-five-state-v1-assets\\canonical_head_on_specialist_best.pt",
+      "exists": true
+    },
+    {
+      "method": "fixed_head_on",
+      "role": "predictor_checkpoint",
+      "path": "E:\\uav-vpp-guidance-thesis-five-state-v1-assets\\frozen_trajectory_predictor_best_model.pt",
+      "exists": true
+    },
+    {
+      "method": "fixed_crossing",
+      "role": "policy_checkpoint",
+      "path": "E:\\uav-vpp-guidance-thesis-five-state-v1-assets\\canonical_crossing_specialist_last.pt",
+      "exists": true
+    },
+    {
+      "method": "fixed_crossing",
+      "role": "predictor_checkpoint",
+      "path": "E:\\uav-vpp-guidance-thesis-five-state-v1-assets\\frozen_trajectory_predictor_best_model.pt",
+      "exists": true
+    },
+    {
+      "method": "static_oracle_gate",
+      "role": "specialist_head_on_checkpoint",
+      "path": "E:\\uav-vpp-guidance-thesis-five-state-v1-assets\\canonical_head_on_specialist_best.pt",
+      "exists": true
+    },
+    {
+      "method": "static_oracle_gate",
+      "role": "specialist_head_on_config",
+      "path": "E:\\uav-vpp-guidance-disadvantage-capability-v1\\config\\experiment\\train_prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp_combat_finetune_mixed_opponent_aware_32k_task_type_headon_weighted.yaml",
+      "exists": true
+    },
+    {
+      "method": "static_oracle_gate",
+      "role": "specialist_crossing_feasible_checkpoint",
+      "path": "E:\\uav-vpp-guidance-thesis-five-state-v1-assets\\canonical_crossing_specialist_last.pt",
+      "exists": true
+    },
+    {
+      "method": "static_oracle_gate",
+      "role": "specialist_crossing_feasible_config",
+      "path": "E:\\uav-vpp-guidance-disadvantage-capability-v1\\config\\experiment\\train_prediction_vpp_ppo_crossing_v3.yaml",
+      "exists": true
+    },
+    {
+      "method": "canonical_ppo",
+      "role": "policy_checkpoint",
+      "path": "E:\\uav-vpp-guidance-thesis-five-state-v1-assets\\canonical_two_skill_commander_best.pt",
+      "exists": true
+    },
+    {
+      "method": "canonical_ppo",
+      "role": "predictor_checkpoint",
+      "path": "E:\\uav-vpp-guidance-thesis-five-state-v1-assets\\frozen_trajectory_predictor_best_model.pt",
+      "exists": true
+    },
+    {
+      "method": "ppo_unbootstrapped_crossing",
+      "role": "policy_checkpoint",
+      "path": "E:\\uav-vpp-guidance-thesis-five-state-v1-assets\\canonical_two_skill_commander_best.pt",
+      "exists": true
+    },
+    {
+      "method": "ppo_unbootstrapped_crossing",
+      "role": "predictor_checkpoint",
+      "path": "E:\\uav-vpp-guidance-thesis-five-state-v1-assets\\frozen_trajectory_predictor_best_model.pt",
+      "exists": true
+    },
+    {
+      "method": "fixed_head_on",
+      "role": "policy_checkpoint",
+      "path": "E:\\uav-vpp-guidance-thesis-five-state-v1-assets\\canonical_head_on_specialist_best.pt",
+      "exists": true
+    },
+    {
+      "method": "fixed_head_on",
+      "role": "predictor_checkpoint",
+      "path": "E:\\uav-vpp-guidance-thesis-five-state-v1-assets\\frozen_trajectory_predictor_best_model.pt",
+      "exists": true
+    },
+    {
+      "method": "fixed_crossing",
+      "role": "policy_checkpoint",
+      "path": "E:\\uav-vpp-guidance-thesis-five-state-v1-assets\\canonical_crossing_specialist_last.pt",
+      "exists": true
+    },
+    {
+      "method": "fixed_crossing",
+      "role": "predictor_checkpoint",
+      "path": "E:\\uav-vpp-guidance-thesis-five-state-v1-assets\\frozen_trajectory_predictor_best_model.pt",
+      "exists": true
+    },
+    {
+      "method": "static_oracle_gate",
+      "role": "specialist_head_on_checkpoint",
+      "path": "E:\\uav-vpp-guidance-thesis-five-state-v1-assets\\canonical_head_on_specialist_best.pt",
+      "exists": true
+    },
+    {
+      "method": "static_oracle_gate",
+      "role": "specialist_head_on_config",
+      "path": "E:\\uav-vpp-guidance-disadvantage-capability-v1\\config\\experiment\\train_prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp_combat_finetune_mixed_opponent_aware_32k_task_type_headon_weighted.yaml",
+      "exists": true
+    },
+    {
+      "method": "static_oracle_gate",
+      "role": "specialist_crossing_feasible_checkpoint",
+      "path": "E:\\uav-vpp-guidance-thesis-five-state-v1-assets\\canonical_crossing_specialist_last.pt",
+      "exists": true
+    },
+    {
+      "method": "static_oracle_gate",
+      "role": "specialist_crossing_feasible_config",
+      "path": "E:\\uav-vpp-guidance-disadvantage-capability-v1\\config\\experiment\\train_prediction_vpp_ppo_crossing_v3.yaml",
+      "exists": true
+    },
+    {
+      "method": "canonical_ppo",
+      "role": "policy_checkpoint",
+      "path": "E:\\uav-vpp-guidance-thesis-five-state-v1-assets\\canonical_two_skill_commander_best.pt",
+      "exists": true
+    },
+    {
+      "method": "canonical_ppo",
+      "role": "predictor_checkpoint",
+      "path": "E:\\uav-vpp-guidance-thesis-five-state-v1-assets\\frozen_trajectory_predictor_best_model.pt",
+      "exists": true
+    },
+    {
+      "method": "ppo_unbootstrapped_crossing",
+      "role": "policy_checkpoint",
+      "path": "E:\\uav-vpp-guidance-thesis-five-state-v1-assets\\canonical_two_skill_commander_best.pt",
+      "exists": true
+    },
+    {
+      "method": "ppo_unbootstrapped_crossing",
+      "role": "predictor_checkpoint",
+      "path": "E:\\uav-vpp-guidance-thesis-five-state-v1-assets\\frozen_trajectory_predictor_best_model.pt",
+      "exists": true
+    },
+    {
+      "method": "__opponent__",
+      "role": "opponent_end_to_end_checkpoint",
+      "path": "E:\\uav-vpp-guidance-thesis-five-state-v1-assets\\canonical_end_to_end_neural_opponent_best.pt",
+      "exists": true
+    },
+    {
+      "method": "fixed_head_on",
+      "role": "policy_checkpoint",
+      "path": "E:\\uav-vpp-guidance-thesis-five-state-v1-assets\\canonical_head_on_specialist_best.pt",
+      "exists": true
+    },
+    {
+      "method": "fixed_head_on",
+      "role": "predictor_checkpoint",
+      "path": "E:\\uav-vpp-guidance-thesis-five-state-v1-assets\\frozen_trajectory_predictor_best_model.pt",
+      "exists": true
+    },
+    {
+      "method": "fixed_crossing",
+      "role": "policy_checkpoint",
+      "path": "E:\\uav-vpp-guidance-thesis-five-state-v1-assets\\canonical_crossing_specialist_last.pt",
+      "exists": true
+    },
+    {
+      "method": "fixed_crossing",
+      "role": "predictor_checkpoint",
+      "path": "E:\\uav-vpp-guidance-thesis-five-state-v1-assets\\frozen_trajectory_predictor_best_model.pt",
+      "exists": true
+    },
+    {
+      "method": "static_oracle_gate",
+      "role": "specialist_head_on_checkpoint",
+      "path": "E:\\uav-vpp-guidance-thesis-five-state-v1-assets\\canonical_head_on_specialist_best.pt",
+      "exists": true
+    },
+    {
+      "method": "static_oracle_gate",
+      "role": "specialist_head_on_config",
+      "path": "E:\\uav-vpp-guidance-disadvantage-capability-v1\\config\\experiment\\train_prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_tactical_basis_headon_mvp_combat_finetune_mixed_opponent_aware_32k_task_type_headon_weighted.yaml",
+      "exists": true
+    },
+    {
+      "method": "static_oracle_gate",
+      "role": "specialist_crossing_feasible_checkpoint",
+      "path": "E:\\uav-vpp-guidance-thesis-five-state-v1-assets\\canonical_crossing_specialist_last.pt",
+      "exists": true
+    },
+    {
+      "method": "static_oracle_gate",
+      "role": "specialist_crossing_feasible_config",
+      "path": "E:\\uav-vpp-guidance-disadvantage-capability-v1\\config\\experiment\\train_prediction_vpp_ppo_crossing_v3.yaml",
+      "exists": true
+    },
+    {
+      "method": "canonical_ppo",
+      "role": "policy_checkpoint",
+      "path": "E:\\uav-vpp-guidance-thesis-five-state-v1-assets\\canonical_two_skill_commander_best.pt",
+      "exists": true
+    },
+    {
+      "method": "canonical_ppo",
+      "role": "predictor_checkpoint",
+      "path": "E:\\uav-vpp-guidance-thesis-five-state-v1-assets\\frozen_trajectory_predictor_best_model.pt",
+      "exists": true
+    },
+    {
+      "method": "ppo_unbootstrapped_crossing",
+      "role": "policy_checkpoint",
+      "path": "E:\\uav-vpp-guidance-thesis-five-state-v1-assets\\canonical_two_skill_commander_best.pt",
+      "exists": true
+    },
+    {
+      "method": "ppo_unbootstrapped_crossing",
+      "role": "predictor_checkpoint",
+      "path": "E:\\uav-vpp-guidance-thesis-five-state-v1-assets\\frozen_trajectory_predictor_best_model.pt",
+      "exists": true
+    },
+    {
+      "method": "__opponent__",
+      "role": "opponent_independent_ppo_vpp_checkpoint",
+      "path": "E:\\uav-vpp-guidance-thesis-five-state-v1-assets\\independent_ppo_vpp_opponent_v1_step_32768.pt",
+      "exists": true
+    }
+  ],
+  "assets": [
+    {
+      "id": "canonical_ppo_high_level_policy",
+      "path": "E:\\uav-vpp-guidance-thesis-five-state-v1-assets\\canonical_two_skill_commander_best.pt",
+      "exists": true,
+      "expected_sha256": "26280e0ccc40f9db51995ed5f90491cc0c91217337f291d7136cc28f5ed66694",
+      "actual_sha256": "26280e0ccc40f9db51995ed5f90491cc0c91217337f291d7136cc28f5ed66694"
+    },
+    {
+      "id": "head_on_vpp_specialist",
+      "path": "E:\\uav-vpp-guidance-thesis-five-state-v1-assets\\canonical_head_on_specialist_best.pt",
+      "exists": true,
+      "expected_sha256": "0aeadd11cd8c7723c8963bcc5da21dd97c365e64f234d07b86c2b8f0d7ec5fb6",
+      "actual_sha256": "0aeadd11cd8c7723c8963bcc5da21dd97c365e64f234d07b86c2b8f0d7ec5fb6"
+    },
+    {
+      "id": "crossing_vpp_specialist",
+      "path": "E:\\uav-vpp-guidance-thesis-five-state-v1-assets\\canonical_crossing_specialist_last.pt",
+      "exists": true,
+      "expected_sha256": "5eddc138bff55a5466da1129e840ef7dfb3677347a05276c3877746c8e89148b",
+      "actual_sha256": "5eddc138bff55a5466da1129e840ef7dfb3677347a05276c3877746c8e89148b"
+    },
+    {
+      "id": "trajectory_prediction_asset",
+      "path": "E:\\uav-vpp-guidance-thesis-five-state-v1-assets\\frozen_trajectory_predictor_best_model.pt",
+      "exists": true,
+      "expected_sha256": "96bc8e5e1aebd32ca6a528fb3149cfd58aeff276c18bca66388d650f00495931",
+      "actual_sha256": "96bc8e5e1aebd32ca6a528fb3149cfd58aeff276c18bca66388d650f00495931"
+    },
+    {
+      "id": "end_to_end_neural_opponent",
+      "path": "E:\\uav-vpp-guidance-thesis-five-state-v1-assets\\canonical_end_to_end_neural_opponent_best.pt",
+      "exists": true,
+      "expected_sha256": "d38828338d5e7e22167129b2e9972d52ecf5fc3fda5d52caff95a8374c35b8bc",
+      "actual_sha256": "d38828338d5e7e22167129b2e9972d52ecf5fc3fda5d52caff95a8374c35b8bc"
+    },
+    {
+      "id": "independent_ppo_vpp_opponent",
+      "path": "E:\\uav-vpp-guidance-thesis-five-state-v1-assets\\independent_ppo_vpp_opponent_v1_step_32768.pt",
+      "exists": true,
+      "expected_sha256": "43cd37fc86c0eb01d96a693f68d30894de7e768de01aed6dba41fa4761edfc60",
+      "actual_sha256": "43cd37fc86c0eb01d96a693f68d30894de7e768de01aed6dba41fa4761edfc60"
+    }
+  ],
+  "jsbsim_data": {
+    "path": "E:\\uav-vpp-guidance-can20260705\\envs\\JSBSim\\data",
+    "exists": true,
+    "sha256": "18fa1c4107fbcccb41ecdcf31e565ec5809fac16f45d1e1c006c6f691c42c10a"
+  },
+  "output_root": "E:\\uav-vpp-guidance-disadvantage-capability-v1-results\\pressure_exposed_m0m4_compact_ablation_v1",
+  "output_root_exists": false,
+  "free_bytes": 297707294720,
+  "minimum_free_bytes": 53687091200,
+  "errors": [],
+  "verdict": "pass",
+  "execution_authorized": true
+}

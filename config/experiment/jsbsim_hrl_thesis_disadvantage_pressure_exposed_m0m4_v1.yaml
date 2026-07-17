@@ -1,0 +1,69 @@
+includes:
+  - ./jsbsim_hrl_thesis_dualskill_taxonomy60_formal.yaml
+
+experiment:
+  name: jsbsim_hrl_thesis_disadvantage_pressure_exposed_m0m4_v1
+  description: >
+    One-time, evaluation-only M0--M4 ablation on the frozen 16-scenario
+    pressure-exposed disadvantage cohort. The existing policies, VPP,
+    prediction, guidance, PID, opponents, and scenarios remain unchanged.
+
+pressure_exposed_m0m4_compact_ablation:
+  source_id: THESIS-DISADVANTAGE-PRESSURE-EXPOSED-M0M4-3OPP-V1
+  evaluation_only: true
+  training_permitted: false
+  tuning_permitted: false
+  expected_episodes: 240
+  expected_episodes_per_opponent: 80
+  opponents: [expert, end_to_end, independent_ppo_vpp]
+  methods:
+    - fixed_head_on
+    - fixed_crossing
+    - static_oracle_gate
+    - canonical_ppo
+    - ppo_unbootstrapped_crossing
+  telemetry_prerequisite:
+    path: E:/uav-vpp-guidance-disadvantage-capability-v1-results/pressure_exposed_telemetry_completion_preflight_v2/telemetry_completion_gate.json
+    required_passes: true
+  jsbsim_legacy_root: E:/uav-vpp-guidance-can20260705
+  jsbsim_data_manifest_sha256: 18fa1c4107fbcccb41ecdcf31e565ec5809fac16f45d1e1c006c6f691c42c10a
+  stop_rule: >
+    Execute the frozen matrix once only. No training, tuning, reward, VPP,
+    guidance, PID, policy, opponent, scenario, seed, or checkpoint change is
+    permitted. Any incomplete, non-strict-JSBSim, or telemetry-invalid matrix is
+    negative engineering evidence and must not be selectively rerun.
+
+env:
+  strict_backend: true
+
+scenario_manifest:
+  path: ./manifests/thesis_disadvantage_pressure_exposed_postmerge_v1.yaml
+  source_id: THESIS-DISADVANTAGE-PRESSURE-EXPOSED-POSTMERGE-COLLECTOR-V1-MANIFEST16
+  # The generic comparison runner hashes the full manifest except this field;
+  # the manifest's own integrity hash intentionally covers scenarios only.
+  payload_sha256: 296cb3a79c5239771dca8283a510eb0ca9c91a5706ca54b3d022204b8cd669fa
+  task_key_field: task_registry_key
+  active_task_groups: [head_on]
+  expected_task_counts:
+    head_on: 16
+  task_labels:
+    head_on: pressure-exposed initial-disadvantage envelope
+  use_scenario_seed: true
+
+run_defaults:
+  backend: jsbsim
+  tasks: [head_on]
+  main_methods:
+    - fixed_head_on
+    - fixed_crossing
+    - static_oracle_gate
+    - canonical_ppo
+    - ppo_unbootstrapped_crossing
+  ablation_methods:
+    - fixed_head_on
+    - fixed_crossing
+    - static_oracle_gate
+    - canonical_ppo
+    - ppo_unbootstrapped_crossing
+  formal_small_seeds: [0]
+  n_episodes: 1

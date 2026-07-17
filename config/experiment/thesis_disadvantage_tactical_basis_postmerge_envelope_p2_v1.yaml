@@ -1,0 +1,93 @@
+schema_version: 1
+source_id: THESIS-DISADVANTAGE-TACTICAL-BASIS-POSTMERGE-ENVELOPE-P2-V1
+stage: postmerge_offline_envelope_screen
+status: implementation_ready_execution_not_authorized
+
+authorization:
+  execution_permitted: false
+  training_permitted: false
+  tuning_permitted: false
+  reward_change_permitted: false
+  candidate_action_execution_permitted: false
+  high_level_ppo_training_permitted: false
+  shared_skill_training_permitted: false
+  guidance_pid_change_permitted: false
+  action_envelope_expansion_permitted: false
+  snapshot_restore_permitted: false
+  future_state_injection_permitted: false
+  history_padding_permitted: false
+  require_clean_worktree: true
+  one_screen_run_only: true
+
+research_boundary:
+  parent_source:
+    source_id: THESIS-DISADVANTAGE-TACTICAL-BASIS-CONTINUITY-COLLECTOR-V3
+    disposition: phase_and_contract_gate_passed
+  question: postmerge_physical_envelope_of_frozen_temporal_reference_programs
+  runtime_execution: prohibited
+  performance_comparison: prohibited
+  win_rate_analysis: prohibited
+  prohibited_actions:
+    - trajectory_resampling
+    - scenario_replacement
+    - specialist_or_predictor_change
+    - reward_change
+    - routing_change
+    - action_envelope_expansion
+    - template_parameter_change
+    - outcome_based_selection
+
+inputs:
+  continuity_root: E:/uav-vpp-guidance-disadvantage-capability-v1-results/tactical_basis_continuity_collector_v3
+  continuity_gate: E:/uav-vpp-guidance-disadvantage-capability-v1-results/tactical_basis_continuity_collector_v3/continuity_gate.json
+  continuity_gate_sha256: 5b5e71455074f19a0d179ab86dc5e19a50c9c6f438b968166e60341994d147ba
+  continuity_verification: E:/uav-vpp-guidance-disadvantage-capability-v1-results/tactical_basis_continuity_collector_v3/continuity_verification.json
+  continuity_verification_sha256: bb968a90c1e067a7d455fe651046eaca3b8195dd569dd10c33212e2b2de14396
+  continuity_records_index: E:/uav-vpp-guidance-disadvantage-capability-v1-results/tactical_basis_continuity_collector_v3/records_index.json
+  continuity_records_index_sha256: 01ae3c96eeb39ac5818984c8d2b4f595c0879e656c6f3acee7b8a1293e2169ea
+  continuity_config: config/experiment/thesis_disadvantage_tactical_basis_continuity_collector_v3.yaml
+  continuity_config_sha256: 992b46608f1f028f61bd1250652d6c5dc3ad3df398d51f60cd35606730cd56b7
+  temporal_reference_design: config/experiment/thesis_disadvantage_temporal_reference_reachability_v1_design.yaml
+  temporal_reference_design_sha256: 7580651fdb9965c9036e4d2cb78133765b3cf8fbf4278fd8bccc6d4622e48f5c
+  temporal_reference_compiler: src/uav_vpp_guidance/evaluation/temporal_reference_compiler.py
+  temporal_reference_compiler_sha256: 82433db26dbd687940279898960c3fadba9e5e35ac7ddff7cf1746620a2876a1
+
+input_cohort:
+  qualifying_records_total: 17
+  qualifying_records_per_opponent:
+    expert: 5
+    end_to_end: 5
+    independent_ppo_vpp: 7
+
+contract:
+  backend_evidence: strict_jsbsim_from_v3_only
+  action_semantics: tactical_basis_v1
+  reference_controller: frozen_fixed_head_on
+  phase_scope: post_merge_only
+  candidate_actions_enter_env: false
+  horizon_steps: 40
+  high_level_dt_s: 0.2
+  duration_s: 8.0
+  temporal_profile: sin_squared_c1
+  max_action_delta: 0.35
+  max_action_slew: 0.10
+  max_basis_condition_number: 100.0
+  templates: inherited_exactly_from_temporal_reference_design
+
+gates:
+  required_window_steps: 40
+  required_opponents: [end_to_end, independent_ppo_vpp]
+  diagnostic_only_opponents: [expert]
+  min_states_per_required_opponent: 4
+  min_distinct_signatures_per_required_opponent: 4
+  max_action_box_limited_fraction: 0.0
+  max_slew_limited_fraction: 0.0
+  max_mean_projection_residual_m: 50.0
+  min_peak_actual_reference_delta_m: 100.0
+  max_basis_condition_number: 100.0
+  selection_rule: max_min_feasible_states_then_max_min_peak_delta_then_min_max_residual_then_variant_id
+
+outputs:
+  root: E:/uav-vpp-guidance-disadvantage-capability-v1-results/tactical_basis_postmerge_envelope_p2_v1
+  paper_safe: false
+  overwrite_permitted: false

@@ -1,0 +1,1757 @@
+{
+  "dev_evaluations": [
+    {
+      "by_opponent": {
+        "end_to_end_neural": {
+          "episodes": 12,
+          "intent_progress_fraction": 0.5446009389671361,
+          "phase_steps": {
+            "pre_merge": 852
+          },
+          "profile_episodes": {
+            "defensive_break": 3,
+            "energy_altitude_recovery": 2,
+            "lateral_displacement": 3,
+            "range_extension": 2,
+            "reentry_preparation": 2
+          },
+          "response_summary": {
+            "actual_aoa_deg": {
+              "count": 852,
+              "max_abs": 13.086802241382086,
+              "mean": 5.997019823640364
+            },
+            "actual_nz_g": {
+              "count": 852,
+              "max_abs": 8.380439307313539,
+              "mean": 4.150826880874011
+            },
+            "nz_cmd": {
+              "count": 852,
+              "max_abs": 4.126506997758852,
+              "mean": 3.0673756827368712
+            },
+            "vp_forward_bias_m": {
+              "count": 852,
+              "max_abs": 548.1896218216624,
+              "mean": 114.3326977159303
+            },
+            "vp_lateral_bias_m": {
+              "count": 852,
+              "max_abs": 406.81623815157286,
+              "mean": 54.1580846454594
+            }
+          },
+          "state_phase_steps": {
+            "disadvantage:pre_merge": 426,
+            "neutral:pre_merge": 426
+          },
+          "terminal_reasons": {
+            "timeout": 12
+          }
+        },
+        "expert_rule_based": {
+          "episodes": 12,
+          "intent_progress_fraction": 0.4835680751173709,
+          "phase_steps": {
+            "pre_merge": 852
+          },
+          "profile_episodes": {
+            "defensive_break": 3,
+            "energy_altitude_recovery": 2,
+            "lateral_displacement": 3,
+            "range_extension": 2,
+            "reentry_preparation": 2
+          },
+          "response_summary": {
+            "actual_aoa_deg": {
+              "count": 852,
+              "max_abs": 13.619493297749717,
+              "mean": 6.003090716669017
+            },
+            "actual_nz_g": {
+              "count": 852,
+              "max_abs": 8.265986866820617,
+              "mean": 4.167224002843252
+            },
+            "nz_cmd": {
+              "count": 852,
+              "max_abs": 3.913316512100619,
+              "mean": 3.0384876014622377
+            },
+            "vp_forward_bias_m": {
+              "count": 852,
+              "max_abs": 618.814432743785,
+              "mean": 140.60301594788274
+            },
+            "vp_lateral_bias_m": {
+              "count": 852,
+              "max_abs": 637.7522902221399,
+              "mean": 59.11903709760219
+            }
+          },
+          "state_phase_steps": {
+            "disadvantage:pre_merge": 426,
+            "neutral:pre_merge": 426
+          },
+          "terminal_reasons": {
+            "timeout": 12
+          }
+        },
+        "independent_ppo_vpp": {
+          "episodes": 12,
+          "intent_progress_fraction": 0.5211267605633803,
+          "phase_steps": {
+            "pre_merge": 852
+          },
+          "profile_episodes": {
+            "defensive_break": 3,
+            "energy_altitude_recovery": 2,
+            "lateral_displacement": 3,
+            "range_extension": 2,
+            "reentry_preparation": 2
+          },
+          "response_summary": {
+            "actual_aoa_deg": {
+              "count": 852,
+              "max_abs": 13.262129626246344,
+              "mean": 6.0101471587969755
+            },
+            "actual_nz_g": {
+              "count": 852,
+              "max_abs": 8.342775357023928,
+              "mean": 4.155528934971817
+            },
+            "nz_cmd": {
+              "count": 852,
+              "max_abs": 3.9083435471119268,
+              "mean": 3.036177977384044
+            },
+            "vp_forward_bias_m": {
+              "count": 852,
+              "max_abs": 480.56748359763685,
+              "mean": 124.8137846657408
+            },
+            "vp_lateral_bias_m": {
+              "count": 852,
+              "max_abs": 324.78131655251156,
+              "mean": 60.80057692315223
+            }
+          },
+          "state_phase_steps": {
+            "disadvantage:pre_merge": 426,
+            "neutral:pre_merge": 426
+          },
+          "terminal_reasons": {
+            "timeout": 12
+          }
+        }
+      },
+      "gate": {
+        "checks": {
+          "geometry_phase_coverage": false,
+          "intent_progress": false,
+          "profile_conditioning_coverage": true,
+          "safety": true
+        },
+        "geometry_phase_coverage": {
+          "disadvantage:post_merge": 0,
+          "disadvantage:pre_merge": 1278,
+          "disadvantage:re_entry": 0,
+          "neutral:post_merge": 0,
+          "neutral:pre_merge": 1278,
+          "neutral:re_entry": 0
+        },
+        "intent_progress_fraction": 0.5164319248826291,
+        "passed": false,
+        "profile_coverage": {
+          "defensive_break": 9,
+          "energy_altitude_recovery": 6,
+          "lateral_displacement": 9,
+          "range_extension": 6,
+          "reentry_preparation": 6
+        },
+        "safety_by_opponent": {
+          "end_to_end_neural": {
+            "delta": 0.0,
+            "passed": true,
+            "policy_crash_oob_rate": 0.0,
+            "zero_vpp_crash_oob_rate": 0.0
+          },
+          "expert_rule_based": {
+            "delta": 0.0,
+            "passed": true,
+            "policy_crash_oob_rate": 0.0,
+            "zero_vpp_crash_oob_rate": 0.0
+          },
+          "independent_ppo_vpp": {
+            "delta": 0.0,
+            "passed": true,
+            "policy_crash_oob_rate": 0.0,
+            "zero_vpp_crash_oob_rate": 0.0
+          }
+        },
+        "status": "not_ready_do_not_start_combat_finetune"
+      },
+      "skill": "defensive_extension",
+      "step": 25063,
+      "zero_vpp_terminal_reasons_by_opponent": {
+        "end_to_end_neural": {
+          "timeout": 12
+        },
+        "expert_rule_based": {
+          "timeout": 12
+        },
+        "independent_ppo_vpp": {
+          "timeout": 12
+        }
+      }
+    },
+    {
+      "by_opponent": {
+        "end_to_end_neural": {
+          "episodes": 12,
+          "intent_progress_fraction": 0.5504694835680751,
+          "phase_steps": {
+            "pre_merge": 852
+          },
+          "profile_episodes": {
+            "defensive_break": 3,
+            "energy_altitude_recovery": 2,
+            "lateral_displacement": 3,
+            "range_extension": 2,
+            "reentry_preparation": 2
+          },
+          "response_summary": {
+            "actual_aoa_deg": {
+              "count": 852,
+              "max_abs": 13.477392562773485,
+              "mean": 6.0337263377165815
+            },
+            "actual_nz_g": {
+              "count": 852,
+              "max_abs": 8.303455072353138,
+              "mean": 4.164444422038327
+            },
+            "nz_cmd": {
+              "count": 852,
+              "max_abs": 4.122529916878529,
+              "mean": 3.0856220168680126
+            },
+            "vp_forward_bias_m": {
+              "count": 852,
+              "max_abs": 644.9351222776779,
+              "mean": 58.960151543417155
+            },
+            "vp_lateral_bias_m": {
+              "count": 852,
+              "max_abs": 758.7608070599175,
+              "mean": 0.8829678089317544
+            }
+          },
+          "state_phase_steps": {
+            "disadvantage:pre_merge": 426,
+            "neutral:pre_merge": 426
+          },
+          "terminal_reasons": {
+            "timeout": 12
+          }
+        },
+        "expert_rule_based": {
+          "episodes": 12,
+          "intent_progress_fraction": 0.4706572769953052,
+          "phase_steps": {
+            "pre_merge": 852
+          },
+          "profile_episodes": {
+            "defensive_break": 3,
+            "energy_altitude_recovery": 2,
+            "lateral_displacement": 3,
+            "range_extension": 2,
+            "reentry_preparation": 2
+          },
+          "response_summary": {
+            "actual_aoa_deg": {
+              "count": 852,
+              "max_abs": 13.918452166839288,
+              "mean": 6.018110429254195
+            },
+            "actual_nz_g": {
+              "count": 852,
+              "max_abs": 8.210071344541198,
+              "mean": 4.1587760851769815
+            },
+            "nz_cmd": {
+              "count": 852,
+              "max_abs": 3.9511922514880053,
+              "mean": 3.0483548325717154
+            },
+            "vp_forward_bias_m": {
+              "count": 852,
+              "max_abs": 603.7015553878557,
+              "mean": 87.52036471996767
+            },
+            "vp_lateral_bias_m": {
+              "count": 852,
+              "max_abs": 459.3708111340851,
+              "mean": 30.043769833618953
+            }
+          },
+          "state_phase_steps": {
+            "disadvantage:pre_merge": 426,
+            "neutral:pre_merge": 426
+          },
+          "terminal_reasons": {
+            "timeout": 12
+          }
+        },
+        "independent_ppo_vpp": {
+          "episodes": 12,
+          "intent_progress_fraction": 0.5246478873239436,
+          "phase_steps": {
+            "pre_merge": 852
+          },
+          "profile_episodes": {
+            "defensive_break": 3,
+            "energy_altitude_recovery": 2,
+            "lateral_displacement": 3,
+            "range_extension": 2,
+            "reentry_preparation": 2
+          },
+          "response_summary": {
+            "actual_aoa_deg": {
+              "count": 852,
+              "max_abs": 13.854808177285113,
+              "mean": 6.025563483012664
+            },
+            "actual_nz_g": {
+              "count": 852,
+              "max_abs": 8.454451440752244,
+              "mean": 4.167944280972396
+            },
+            "nz_cmd": {
+              "count": 852,
+              "max_abs": 3.944861542040643,
+              "mean": 3.0462970792661648
+            },
+            "vp_forward_bias_m": {
+              "count": 852,
+              "max_abs": 575.9300304496496,
+              "mean": 74.4819006169002
+            },
+            "vp_lateral_bias_m": {
+              "count": 852,
+              "max_abs": 432.487701628076,
+              "mean": 30.080712331335125
+            }
+          },
+          "state_phase_steps": {
+            "disadvantage:pre_merge": 426,
+            "neutral:pre_merge": 426
+          },
+          "terminal_reasons": {
+            "timeout": 12
+          }
+        }
+      },
+      "gate": {
+        "checks": {
+          "geometry_phase_coverage": false,
+          "intent_progress": false,
+          "profile_conditioning_coverage": true,
+          "safety": true
+        },
+        "geometry_phase_coverage": {
+          "disadvantage:post_merge": 0,
+          "disadvantage:pre_merge": 1278,
+          "disadvantage:re_entry": 0,
+          "neutral:post_merge": 0,
+          "neutral:pre_merge": 1278,
+          "neutral:re_entry": 0
+        },
+        "intent_progress_fraction": 0.5152582159624414,
+        "passed": false,
+        "profile_coverage": {
+          "defensive_break": 9,
+          "energy_altitude_recovery": 6,
+          "lateral_displacement": 9,
+          "range_extension": 6,
+          "reentry_preparation": 6
+        },
+        "safety_by_opponent": {
+          "end_to_end_neural": {
+            "delta": 0.0,
+            "passed": true,
+            "policy_crash_oob_rate": 0.0,
+            "zero_vpp_crash_oob_rate": 0.0
+          },
+          "expert_rule_based": {
+            "delta": 0.0,
+            "passed": true,
+            "policy_crash_oob_rate": 0.0,
+            "zero_vpp_crash_oob_rate": 0.0
+          },
+          "independent_ppo_vpp": {
+            "delta": 0.0,
+            "passed": true,
+            "policy_crash_oob_rate": 0.0,
+            "zero_vpp_crash_oob_rate": 0.0
+          }
+        },
+        "status": "not_ready_do_not_start_combat_finetune"
+      },
+      "skill": "defensive_extension",
+      "step": 50055,
+      "zero_vpp_terminal_reasons_by_opponent": {
+        "end_to_end_neural": {
+          "timeout": 12
+        },
+        "expert_rule_based": {
+          "timeout": 12
+        },
+        "independent_ppo_vpp": {
+          "timeout": 12
+        }
+      }
+    },
+    {
+      "by_opponent": {
+        "end_to_end_neural": {
+          "episodes": 12,
+          "intent_progress_fraction": 0.5833333333333334,
+          "phase_steps": {
+            "pre_merge": 852
+          },
+          "profile_episodes": {
+            "defensive_break": 3,
+            "energy_altitude_recovery": 2,
+            "lateral_displacement": 3,
+            "range_extension": 2,
+            "reentry_preparation": 2
+          },
+          "response_summary": {
+            "actual_aoa_deg": {
+              "count": 852,
+              "max_abs": 13.944520544900843,
+              "mean": 5.904260873068834
+            },
+            "actual_nz_g": {
+              "count": 852,
+              "max_abs": 8.285872561455225,
+              "mean": 4.172357989747947
+            },
+            "nz_cmd": {
+              "count": 852,
+              "max_abs": 4.1496818245682325,
+              "mean": 3.061721814443798
+            },
+            "vp_forward_bias_m": {
+              "count": 852,
+              "max_abs": 968.3375349532475,
+              "mean": 121.32380172924117
+            },
+            "vp_lateral_bias_m": {
+              "count": 852,
+              "max_abs": 1052.0594885782002,
+              "mean": 68.80431116031298
+            }
+          },
+          "state_phase_steps": {
+            "disadvantage:pre_merge": 426,
+            "neutral:pre_merge": 426
+          },
+          "terminal_reasons": {
+            "timeout": 12
+          }
+        },
+        "expert_rule_based": {
+          "episodes": 12,
+          "intent_progress_fraction": 0.4671361502347418,
+          "phase_steps": {
+            "pre_merge": 852
+          },
+          "profile_episodes": {
+            "defensive_break": 3,
+            "energy_altitude_recovery": 2,
+            "lateral_displacement": 3,
+            "range_extension": 2,
+            "reentry_preparation": 2
+          },
+          "response_summary": {
+            "actual_aoa_deg": {
+              "count": 852,
+              "max_abs": 13.39041299362192,
+              "mean": 5.765652583441599
+            },
+            "actual_nz_g": {
+              "count": 852,
+              "max_abs": 8.656715540119338,
+              "mean": 4.062458794192603
+            },
+            "nz_cmd": {
+              "count": 852,
+              "max_abs": 3.959029888573734,
+              "mean": 2.9967785737694195
+            },
+            "vp_forward_bias_m": {
+              "count": 852,
+              "max_abs": 1131.2581946233922,
+              "mean": 221.09723757962809
+            },
+            "vp_lateral_bias_m": {
+              "count": 852,
+              "max_abs": 882.814430674348,
+              "mean": 105.22249785565108
+            }
+          },
+          "state_phase_steps": {
+            "disadvantage:pre_merge": 426,
+            "neutral:pre_merge": 426
+          },
+          "terminal_reasons": {
+            "timeout": 12
+          }
+        },
+        "independent_ppo_vpp": {
+          "episodes": 12,
+          "intent_progress_fraction": 0.5152582159624414,
+          "phase_steps": {
+            "pre_merge": 852
+          },
+          "profile_episodes": {
+            "defensive_break": 3,
+            "energy_altitude_recovery": 2,
+            "lateral_displacement": 3,
+            "range_extension": 2,
+            "reentry_preparation": 2
+          },
+          "response_summary": {
+            "actual_aoa_deg": {
+              "count": 852,
+              "max_abs": 13.554659260081786,
+              "mean": 5.709434508060264
+            },
+            "actual_nz_g": {
+              "count": 852,
+              "max_abs": 8.842300432188337,
+              "mean": 4.089638544841089
+            },
+            "nz_cmd": {
+              "count": 852,
+              "max_abs": 3.936760134889683,
+              "mean": 2.996759383867672
+            },
+            "vp_forward_bias_m": {
+              "count": 852,
+              "max_abs": 1132.899799184782,
+              "mean": 181.22265307953967
+            },
+            "vp_lateral_bias_m": {
+              "count": 852,
+              "max_abs": 867.349597489499,
+              "mean": 86.921687797294
+            }
+          },
+          "state_phase_steps": {
+            "disadvantage:pre_merge": 426,
+            "neutral:pre_merge": 426
+          },
+          "terminal_reasons": {
+            "timeout": 12
+          }
+        }
+      },
+      "gate": {
+        "checks": {
+          "geometry_phase_coverage": false,
+          "intent_progress": false,
+          "profile_conditioning_coverage": true,
+          "safety": true
+        },
+        "geometry_phase_coverage": {
+          "disadvantage:post_merge": 0,
+          "disadvantage:pre_merge": 1278,
+          "disadvantage:re_entry": 0,
+          "neutral:post_merge": 0,
+          "neutral:pre_merge": 1278,
+          "neutral:re_entry": 0
+        },
+        "intent_progress_fraction": 0.5219092331768388,
+        "passed": false,
+        "profile_coverage": {
+          "defensive_break": 9,
+          "energy_altitude_recovery": 6,
+          "lateral_displacement": 9,
+          "range_extension": 6,
+          "reentry_preparation": 6
+        },
+        "safety_by_opponent": {
+          "end_to_end_neural": {
+            "delta": 0.0,
+            "passed": true,
+            "policy_crash_oob_rate": 0.0,
+            "zero_vpp_crash_oob_rate": 0.0
+          },
+          "expert_rule_based": {
+            "delta": 0.0,
+            "passed": true,
+            "policy_crash_oob_rate": 0.0,
+            "zero_vpp_crash_oob_rate": 0.0
+          },
+          "independent_ppo_vpp": {
+            "delta": 0.0,
+            "passed": true,
+            "policy_crash_oob_rate": 0.0,
+            "zero_vpp_crash_oob_rate": 0.0
+          }
+        },
+        "status": "not_ready_do_not_start_combat_finetune"
+      },
+      "skill": "defensive_extension",
+      "step": 75047,
+      "zero_vpp_terminal_reasons_by_opponent": {
+        "end_to_end_neural": {
+          "timeout": 12
+        },
+        "expert_rule_based": {
+          "timeout": 12
+        },
+        "independent_ppo_vpp": {
+          "timeout": 12
+        }
+      }
+    },
+    {
+      "by_opponent": {
+        "end_to_end_neural": {
+          "episodes": 12,
+          "intent_progress_fraction": 0.5422535211267606,
+          "phase_steps": {
+            "pre_merge": 852
+          },
+          "profile_episodes": {
+            "defensive_break": 3,
+            "energy_altitude_recovery": 2,
+            "lateral_displacement": 3,
+            "range_extension": 2,
+            "reentry_preparation": 2
+          },
+          "response_summary": {
+            "actual_aoa_deg": {
+              "count": 852,
+              "max_abs": 13.479465700143459,
+              "mean": 5.885147973111448
+            },
+            "actual_nz_g": {
+              "count": 852,
+              "max_abs": 8.865380085731728,
+              "mean": 4.095754467406645
+            },
+            "nz_cmd": {
+              "count": 852,
+              "max_abs": 4.228251384838036,
+              "mean": 3.0599283374076975
+            },
+            "vp_forward_bias_m": {
+              "count": 852,
+              "max_abs": 1071.9837585467308,
+              "mean": 155.0478880380207
+            },
+            "vp_lateral_bias_m": {
+              "count": 852,
+              "max_abs": 1174.7132662869983,
+              "mean": 68.87438158610605
+            }
+          },
+          "state_phase_steps": {
+            "disadvantage:pre_merge": 426,
+            "neutral:pre_merge": 426
+          },
+          "terminal_reasons": {
+            "timeout": 12
+          }
+        },
+        "expert_rule_based": {
+          "episodes": 12,
+          "intent_progress_fraction": 0.4812206572769953,
+          "phase_steps": {
+            "pre_merge": 852
+          },
+          "profile_episodes": {
+            "defensive_break": 3,
+            "energy_altitude_recovery": 2,
+            "lateral_displacement": 3,
+            "range_extension": 2,
+            "reentry_preparation": 2
+          },
+          "response_summary": {
+            "actual_aoa_deg": {
+              "count": 852,
+              "max_abs": 13.12884302857192,
+              "mean": 5.87225965041796
+            },
+            "actual_nz_g": {
+              "count": 852,
+              "max_abs": 8.78298572560006,
+              "mean": 4.079861663691794
+            },
+            "nz_cmd": {
+              "count": 852,
+              "max_abs": 4.022219609494023,
+              "mean": 2.9817217537866845
+            },
+            "vp_forward_bias_m": {
+              "count": 852,
+              "max_abs": 1327.3561449883605,
+              "mean": 282.94648390749353
+            },
+            "vp_lateral_bias_m": {
+              "count": 852,
+              "max_abs": 1043.4828139996007,
+              "mean": 85.5781580594225
+            }
+          },
+          "state_phase_steps": {
+            "disadvantage:pre_merge": 426,
+            "neutral:pre_merge": 426
+          },
+          "terminal_reasons": {
+            "timeout": 12
+          }
+        },
+        "independent_ppo_vpp": {
+          "episodes": 12,
+          "intent_progress_fraction": 0.5316901408450704,
+          "phase_steps": {
+            "pre_merge": 852
+          },
+          "profile_episodes": {
+            "defensive_break": 3,
+            "energy_altitude_recovery": 2,
+            "lateral_displacement": 3,
+            "range_extension": 2,
+            "reentry_preparation": 2
+          },
+          "response_summary": {
+            "actual_aoa_deg": {
+              "count": 852,
+              "max_abs": 13.105303269448074,
+              "mean": 5.862266888349326
+            },
+            "actual_nz_g": {
+              "count": 852,
+              "max_abs": 8.670972267097776,
+              "mean": 4.105013833786654
+            },
+            "nz_cmd": {
+              "count": 852,
+              "max_abs": 3.9761007935384853,
+              "mean": 2.981114019830191
+            },
+            "vp_forward_bias_m": {
+              "count": 852,
+              "max_abs": 1283.8728248714451,
+              "mean": 243.56437154756995
+            },
+            "vp_lateral_bias_m": {
+              "count": 852,
+              "max_abs": 906.8336644215127,
+              "mean": 78.30940525766937
+            }
+          },
+          "state_phase_steps": {
+            "disadvantage:pre_merge": 426,
+            "neutral:pre_merge": 426
+          },
+          "terminal_reasons": {
+            "timeout": 12
+          }
+        }
+      },
+      "gate": {
+        "checks": {
+          "geometry_phase_coverage": false,
+          "intent_progress": false,
+          "profile_conditioning_coverage": true,
+          "safety": true
+        },
+        "geometry_phase_coverage": {
+          "disadvantage:post_merge": 0,
+          "disadvantage:pre_merge": 1278,
+          "disadvantage:re_entry": 0,
+          "neutral:post_merge": 0,
+          "neutral:pre_merge": 1278,
+          "neutral:re_entry": 0
+        },
+        "intent_progress_fraction": 0.5183881064162754,
+        "passed": false,
+        "profile_coverage": {
+          "defensive_break": 9,
+          "energy_altitude_recovery": 6,
+          "lateral_displacement": 9,
+          "range_extension": 6,
+          "reentry_preparation": 6
+        },
+        "safety_by_opponent": {
+          "end_to_end_neural": {
+            "delta": 0.0,
+            "passed": true,
+            "policy_crash_oob_rate": 0.0,
+            "zero_vpp_crash_oob_rate": 0.0
+          },
+          "expert_rule_based": {
+            "delta": 0.0,
+            "passed": true,
+            "policy_crash_oob_rate": 0.0,
+            "zero_vpp_crash_oob_rate": 0.0
+          },
+          "independent_ppo_vpp": {
+            "delta": 0.0,
+            "passed": true,
+            "policy_crash_oob_rate": 0.0,
+            "zero_vpp_crash_oob_rate": 0.0
+          }
+        },
+        "status": "not_ready_do_not_start_combat_finetune"
+      },
+      "skill": "defensive_extension",
+      "step": 100039,
+      "zero_vpp_terminal_reasons_by_opponent": {
+        "end_to_end_neural": {
+          "timeout": 12
+        },
+        "expert_rule_based": {
+          "timeout": 12
+        },
+        "independent_ppo_vpp": {
+          "timeout": 12
+        }
+      }
+    },
+    {
+      "by_opponent": {
+        "end_to_end_neural": {
+          "episodes": 12,
+          "intent_progress_fraction": 0.5833333333333334,
+          "phase_steps": {
+            "pre_merge": 852
+          },
+          "profile_episodes": {
+            "defensive_break": 3,
+            "energy_altitude_recovery": 2,
+            "lateral_displacement": 3,
+            "range_extension": 2,
+            "reentry_preparation": 2
+          },
+          "response_summary": {
+            "actual_aoa_deg": {
+              "count": 852,
+              "max_abs": 12.824814817888097,
+              "mean": 5.805232242762821
+            },
+            "actual_nz_g": {
+              "count": 852,
+              "max_abs": 9.030681709606004,
+              "mean": 4.124073957688492
+            },
+            "nz_cmd": {
+              "count": 852,
+              "max_abs": 4.2714077908494525,
+              "mean": 3.03773475060612
+            },
+            "vp_forward_bias_m": {
+              "count": 852,
+              "max_abs": 1112.6936579485682,
+              "mean": 88.4862190597092
+            },
+            "vp_lateral_bias_m": {
+              "count": 852,
+              "max_abs": 1444.8869164180828,
+              "mean": 40.82296128953114
+            }
+          },
+          "state_phase_steps": {
+            "disadvantage:pre_merge": 426,
+            "neutral:pre_merge": 426
+          },
+          "terminal_reasons": {
+            "timeout": 12
+          }
+        },
+        "expert_rule_based": {
+          "episodes": 12,
+          "intent_progress_fraction": 0.4765258215962441,
+          "phase_steps": {
+            "pre_merge": 852
+          },
+          "profile_episodes": {
+            "defensive_break": 3,
+            "energy_altitude_recovery": 2,
+            "lateral_displacement": 3,
+            "range_extension": 2,
+            "reentry_preparation": 2
+          },
+          "response_summary": {
+            "actual_aoa_deg": {
+              "count": 852,
+              "max_abs": 12.906279521979382,
+              "mean": 5.801843642259614
+            },
+            "actual_nz_g": {
+              "count": 852,
+              "max_abs": 8.29985579810211,
+              "mean": 4.071553685083975
+            },
+            "nz_cmd": {
+              "count": 852,
+              "max_abs": 4.0860159376717355,
+              "mean": 2.9801542849167073
+            },
+            "vp_forward_bias_m": {
+              "count": 852,
+              "max_abs": 1321.2524196992838,
+              "mean": 240.50209544445786
+            },
+            "vp_lateral_bias_m": {
+              "count": 852,
+              "max_abs": 1070.8461934354582,
+              "mean": 31.87716937036368
+            }
+          },
+          "state_phase_steps": {
+            "disadvantage:pre_merge": 426,
+            "neutral:pre_merge": 426
+          },
+          "terminal_reasons": {
+            "timeout": 12
+          }
+        },
+        "independent_ppo_vpp": {
+          "episodes": 12,
+          "intent_progress_fraction": 0.5176056338028169,
+          "phase_steps": {
+            "pre_merge": 852
+          },
+          "profile_episodes": {
+            "defensive_break": 3,
+            "energy_altitude_recovery": 2,
+            "lateral_displacement": 3,
+            "range_extension": 2,
+            "reentry_preparation": 2
+          },
+          "response_summary": {
+            "actual_aoa_deg": {
+              "count": 852,
+              "max_abs": 12.545533788020986,
+              "mean": 5.687095616325787
+            },
+            "actual_nz_g": {
+              "count": 852,
+              "max_abs": 8.379827605230435,
+              "mean": 4.074352551159312
+            },
+            "nz_cmd": {
+              "count": 852,
+              "max_abs": 4.0610327780172435,
+              "mean": 2.967912712920006
+            },
+            "vp_forward_bias_m": {
+              "count": 852,
+              "max_abs": 1268.3449048974771,
+              "mean": 192.8699425356523
+            },
+            "vp_lateral_bias_m": {
+              "count": 852,
+              "max_abs": 1025.8798514933826,
+              "mean": 29.338966156942178
+            }
+          },
+          "state_phase_steps": {
+            "disadvantage:pre_merge": 426,
+            "neutral:pre_merge": 426
+          },
+          "terminal_reasons": {
+            "timeout": 12
+          }
+        }
+      },
+      "gate": {
+        "checks": {
+          "geometry_phase_coverage": false,
+          "intent_progress": false,
+          "profile_conditioning_coverage": true,
+          "safety": true
+        },
+        "geometry_phase_coverage": {
+          "disadvantage:post_merge": 0,
+          "disadvantage:pre_merge": 1278,
+          "disadvantage:re_entry": 0,
+          "neutral:post_merge": 0,
+          "neutral:pre_merge": 1278,
+          "neutral:re_entry": 0
+        },
+        "intent_progress_fraction": 0.5258215962441315,
+        "passed": false,
+        "profile_coverage": {
+          "defensive_break": 9,
+          "energy_altitude_recovery": 6,
+          "lateral_displacement": 9,
+          "range_extension": 6,
+          "reentry_preparation": 6
+        },
+        "safety_by_opponent": {
+          "end_to_end_neural": {
+            "delta": 0.0,
+            "passed": true,
+            "policy_crash_oob_rate": 0.0,
+            "zero_vpp_crash_oob_rate": 0.0
+          },
+          "expert_rule_based": {
+            "delta": 0.0,
+            "passed": true,
+            "policy_crash_oob_rate": 0.0,
+            "zero_vpp_crash_oob_rate": 0.0
+          },
+          "independent_ppo_vpp": {
+            "delta": 0.0,
+            "passed": true,
+            "policy_crash_oob_rate": 0.0,
+            "zero_vpp_crash_oob_rate": 0.0
+          }
+        },
+        "status": "not_ready_do_not_start_combat_finetune"
+      },
+      "skill": "defensive_extension",
+      "step": 125031,
+      "zero_vpp_terminal_reasons_by_opponent": {
+        "end_to_end_neural": {
+          "timeout": 12
+        },
+        "expert_rule_based": {
+          "timeout": 12
+        },
+        "independent_ppo_vpp": {
+          "timeout": 12
+        }
+      }
+    },
+    {
+      "by_opponent": {
+        "end_to_end_neural": {
+          "episodes": 12,
+          "intent_progress_fraction": 0.57981220657277,
+          "phase_steps": {
+            "pre_merge": 852
+          },
+          "profile_episodes": {
+            "defensive_break": 3,
+            "energy_altitude_recovery": 2,
+            "lateral_displacement": 3,
+            "range_extension": 2,
+            "reentry_preparation": 2
+          },
+          "response_summary": {
+            "actual_aoa_deg": {
+              "count": 852,
+              "max_abs": 12.766253860148318,
+              "mean": 5.850976092667183
+            },
+            "actual_nz_g": {
+              "count": 852,
+              "max_abs": 8.83383520839858,
+              "mean": 4.130954575053418
+            },
+            "nz_cmd": {
+              "count": 852,
+              "max_abs": 4.298560851759819,
+              "mean": 3.056305795628891
+            },
+            "vp_forward_bias_m": {
+              "count": 852,
+              "max_abs": 1273.1078048431032,
+              "mean": 257.9638441996428
+            },
+            "vp_lateral_bias_m": {
+              "count": 852,
+              "max_abs": 1450.8586018927863,
+              "mean": -30.591366295476963
+            }
+          },
+          "state_phase_steps": {
+            "disadvantage:pre_merge": 426,
+            "neutral:pre_merge": 426
+          },
+          "terminal_reasons": {
+            "timeout": 12
+          }
+        },
+        "expert_rule_based": {
+          "episodes": 12,
+          "intent_progress_fraction": 0.4507042253521127,
+          "phase_steps": {
+            "pre_merge": 852
+          },
+          "profile_episodes": {
+            "defensive_break": 3,
+            "energy_altitude_recovery": 2,
+            "lateral_displacement": 3,
+            "range_extension": 2,
+            "reentry_preparation": 2
+          },
+          "response_summary": {
+            "actual_aoa_deg": {
+              "count": 852,
+              "max_abs": 13.18374437437294,
+              "mean": 5.705682039564103
+            },
+            "actual_nz_g": {
+              "count": 852,
+              "max_abs": 8.810468828209068,
+              "mean": 4.051682117541426
+            },
+            "nz_cmd": {
+              "count": 852,
+              "max_abs": 4.120666274445039,
+              "mean": 2.984581900020747
+            },
+            "vp_forward_bias_m": {
+              "count": 852,
+              "max_abs": 1356.721713557765,
+              "mean": 345.69268243722036
+            },
+            "vp_lateral_bias_m": {
+              "count": 852,
+              "max_abs": 1162.6320408007425,
+              "mean": 4.507595845546941
+            }
+          },
+          "state_phase_steps": {
+            "disadvantage:pre_merge": 426,
+            "neutral:pre_merge": 426
+          },
+          "terminal_reasons": {
+            "timeout": 12
+          }
+        },
+        "independent_ppo_vpp": {
+          "episodes": 12,
+          "intent_progress_fraction": 0.5129107981220657,
+          "phase_steps": {
+            "pre_merge": 852
+          },
+          "profile_episodes": {
+            "defensive_break": 3,
+            "energy_altitude_recovery": 2,
+            "lateral_displacement": 3,
+            "range_extension": 2,
+            "reentry_preparation": 2
+          },
+          "response_summary": {
+            "actual_aoa_deg": {
+              "count": 852,
+              "max_abs": 13.133791770623361,
+              "mean": 5.774761269575677
+            },
+            "actual_nz_g": {
+              "count": 852,
+              "max_abs": 8.59954898134244,
+              "mean": 4.094901812758488
+            },
+            "nz_cmd": {
+              "count": 852,
+              "max_abs": 4.111774020360797,
+              "mean": 2.9907026134473043
+            },
+            "vp_forward_bias_m": {
+              "count": 852,
+              "max_abs": 1374.4461337357525,
+              "mean": 303.01542807337114
+            },
+            "vp_lateral_bias_m": {
+              "count": 852,
+              "max_abs": 1105.0017601000445,
+              "mean": 6.22706825400263
+            }
+          },
+          "state_phase_steps": {
+            "disadvantage:pre_merge": 426,
+            "neutral:pre_merge": 426
+          },
+          "terminal_reasons": {
+            "timeout": 12
+          }
+        }
+      },
+      "gate": {
+        "checks": {
+          "geometry_phase_coverage": false,
+          "intent_progress": false,
+          "profile_conditioning_coverage": true,
+          "safety": true
+        },
+        "geometry_phase_coverage": {
+          "disadvantage:post_merge": 0,
+          "disadvantage:pre_merge": 1278,
+          "disadvantage:re_entry": 0,
+          "neutral:post_merge": 0,
+          "neutral:pre_merge": 1278,
+          "neutral:re_entry": 0
+        },
+        "intent_progress_fraction": 0.5144757433489828,
+        "passed": false,
+        "profile_coverage": {
+          "defensive_break": 9,
+          "energy_altitude_recovery": 6,
+          "lateral_displacement": 9,
+          "range_extension": 6,
+          "reentry_preparation": 6
+        },
+        "safety_by_opponent": {
+          "end_to_end_neural": {
+            "delta": 0.0,
+            "passed": true,
+            "policy_crash_oob_rate": 0.0,
+            "zero_vpp_crash_oob_rate": 0.0
+          },
+          "expert_rule_based": {
+            "delta": 0.0,
+            "passed": true,
+            "policy_crash_oob_rate": 0.0,
+            "zero_vpp_crash_oob_rate": 0.0
+          },
+          "independent_ppo_vpp": {
+            "delta": 0.0,
+            "passed": true,
+            "policy_crash_oob_rate": 0.0,
+            "zero_vpp_crash_oob_rate": 0.0
+          }
+        },
+        "status": "not_ready_do_not_start_combat_finetune"
+      },
+      "skill": "defensive_extension",
+      "step": 150023,
+      "zero_vpp_terminal_reasons_by_opponent": {
+        "end_to_end_neural": {
+          "timeout": 12
+        },
+        "expert_rule_based": {
+          "timeout": 12
+        },
+        "independent_ppo_vpp": {
+          "timeout": 12
+        }
+      }
+    },
+    {
+      "by_opponent": {
+        "end_to_end_neural": {
+          "episodes": 12,
+          "intent_progress_fraction": 0.5786384976525821,
+          "phase_steps": {
+            "pre_merge": 852
+          },
+          "profile_episodes": {
+            "defensive_break": 3,
+            "energy_altitude_recovery": 2,
+            "lateral_displacement": 3,
+            "range_extension": 2,
+            "reentry_preparation": 2
+          },
+          "response_summary": {
+            "actual_aoa_deg": {
+              "count": 852,
+              "max_abs": 12.358838082289314,
+              "mean": 5.824838695325425
+            },
+            "actual_nz_g": {
+              "count": 852,
+              "max_abs": 8.540553497249098,
+              "mean": 4.154956033388493
+            },
+            "nz_cmd": {
+              "count": 852,
+              "max_abs": 4.31305110853695,
+              "mean": 3.053944855198528
+            },
+            "vp_forward_bias_m": {
+              "count": 852,
+              "max_abs": 1263.7121093937942,
+              "mean": 226.79230231154514
+            },
+            "vp_lateral_bias_m": {
+              "count": 852,
+              "max_abs": 1507.5433826729175,
+              "mean": -63.45859318404635
+            }
+          },
+          "state_phase_steps": {
+            "disadvantage:pre_merge": 426,
+            "neutral:pre_merge": 426
+          },
+          "terminal_reasons": {
+            "timeout": 12
+          }
+        },
+        "expert_rule_based": {
+          "episodes": 12,
+          "intent_progress_fraction": 0.47417840375586856,
+          "phase_steps": {
+            "pre_merge": 852
+          },
+          "profile_episodes": {
+            "defensive_break": 3,
+            "energy_altitude_recovery": 2,
+            "lateral_displacement": 3,
+            "range_extension": 2,
+            "reentry_preparation": 2
+          },
+          "response_summary": {
+            "actual_aoa_deg": {
+              "count": 852,
+              "max_abs": 14.82673492814251,
+              "mean": 5.916540093930947
+            },
+            "actual_nz_g": {
+              "count": 852,
+              "max_abs": 8.43065733610971,
+              "mean": 4.088847451793875
+            },
+            "nz_cmd": {
+              "count": 852,
+              "max_abs": 4.105410367254848,
+              "mean": 2.9792273811872505
+            },
+            "vp_forward_bias_m": {
+              "count": 852,
+              "max_abs": 1318.5906810505835,
+              "mean": 366.67534979416786
+            },
+            "vp_lateral_bias_m": {
+              "count": 852,
+              "max_abs": 1273.8968245182878,
+              "mean": -57.026102338999294
+            }
+          },
+          "state_phase_steps": {
+            "disadvantage:pre_merge": 426,
+            "neutral:pre_merge": 426
+          },
+          "terminal_reasons": {
+            "timeout": 12
+          }
+        },
+        "independent_ppo_vpp": {
+          "episodes": 12,
+          "intent_progress_fraction": 0.5246478873239436,
+          "phase_steps": {
+            "pre_merge": 852
+          },
+          "profile_episodes": {
+            "defensive_break": 3,
+            "energy_altitude_recovery": 2,
+            "lateral_displacement": 3,
+            "range_extension": 2,
+            "reentry_preparation": 2
+          },
+          "response_summary": {
+            "actual_aoa_deg": {
+              "count": 852,
+              "max_abs": 12.791029089292309,
+              "mean": 5.85926107828708
+            },
+            "actual_nz_g": {
+              "count": 852,
+              "max_abs": 8.874752210509751,
+              "mean": 4.098979309672208
+            },
+            "nz_cmd": {
+              "count": 852,
+              "max_abs": 4.089598084549308,
+              "mean": 2.9924546908944962
+            },
+            "vp_forward_bias_m": {
+              "count": 852,
+              "max_abs": 1325.5908016407807,
+              "mean": 277.15315561948233
+            },
+            "vp_lateral_bias_m": {
+              "count": 852,
+              "max_abs": 1237.9901010113108,
+              "mean": -35.842765691632366
+            }
+          },
+          "state_phase_steps": {
+            "disadvantage:pre_merge": 426,
+            "neutral:pre_merge": 426
+          },
+          "terminal_reasons": {
+            "timeout": 12
+          }
+        }
+      },
+      "gate": {
+        "checks": {
+          "geometry_phase_coverage": false,
+          "intent_progress": false,
+          "profile_conditioning_coverage": true,
+          "safety": true
+        },
+        "geometry_phase_coverage": {
+          "disadvantage:post_merge": 0,
+          "disadvantage:pre_merge": 1278,
+          "disadvantage:re_entry": 0,
+          "neutral:post_merge": 0,
+          "neutral:pre_merge": 1278,
+          "neutral:re_entry": 0
+        },
+        "intent_progress_fraction": 0.5258215962441315,
+        "passed": false,
+        "profile_coverage": {
+          "defensive_break": 9,
+          "energy_altitude_recovery": 6,
+          "lateral_displacement": 9,
+          "range_extension": 6,
+          "reentry_preparation": 6
+        },
+        "safety_by_opponent": {
+          "end_to_end_neural": {
+            "delta": 0.0,
+            "passed": true,
+            "policy_crash_oob_rate": 0.0,
+            "zero_vpp_crash_oob_rate": 0.0
+          },
+          "expert_rule_based": {
+            "delta": 0.0,
+            "passed": true,
+            "policy_crash_oob_rate": 0.0,
+            "zero_vpp_crash_oob_rate": 0.0
+          },
+          "independent_ppo_vpp": {
+            "delta": 0.0,
+            "passed": true,
+            "policy_crash_oob_rate": 0.0,
+            "zero_vpp_crash_oob_rate": 0.0
+          }
+        },
+        "status": "not_ready_do_not_start_combat_finetune"
+      },
+      "skill": "defensive_extension",
+      "step": 175015,
+      "zero_vpp_terminal_reasons_by_opponent": {
+        "end_to_end_neural": {
+          "timeout": 12
+        },
+        "expert_rule_based": {
+          "timeout": 12
+        },
+        "independent_ppo_vpp": {
+          "timeout": 12
+        }
+      }
+    },
+    {
+      "by_opponent": {
+        "end_to_end_neural": {
+          "episodes": 12,
+          "intent_progress_fraction": 0.596244131455399,
+          "phase_steps": {
+            "pre_merge": 852
+          },
+          "profile_episodes": {
+            "defensive_break": 3,
+            "energy_altitude_recovery": 2,
+            "lateral_displacement": 3,
+            "range_extension": 2,
+            "reentry_preparation": 2
+          },
+          "response_summary": {
+            "actual_aoa_deg": {
+              "count": 852,
+              "max_abs": 12.458518206534084,
+              "mean": 5.752030708327074
+            },
+            "actual_nz_g": {
+              "count": 852,
+              "max_abs": 8.960273301078677,
+              "mean": 4.103622374628794
+            },
+            "nz_cmd": {
+              "count": 852,
+              "max_abs": 4.251409112649229,
+              "mean": 2.992663858126264
+            },
+            "vp_forward_bias_m": {
+              "count": 852,
+              "max_abs": 1334.135697064758,
+              "mean": 87.19585129700053
+            },
+            "vp_lateral_bias_m": {
+              "count": 852,
+              "max_abs": 1479.4370224664838,
+              "mean": 30.588548105014674
+            }
+          },
+          "state_phase_steps": {
+            "disadvantage:pre_merge": 426,
+            "neutral:pre_merge": 426
+          },
+          "terminal_reasons": {
+            "timeout": 12
+          }
+        },
+        "expert_rule_based": {
+          "episodes": 12,
+          "intent_progress_fraction": 0.4765258215962441,
+          "phase_steps": {
+            "pre_merge": 852
+          },
+          "profile_episodes": {
+            "defensive_break": 3,
+            "energy_altitude_recovery": 2,
+            "lateral_displacement": 3,
+            "range_extension": 2,
+            "reentry_preparation": 2
+          },
+          "response_summary": {
+            "actual_aoa_deg": {
+              "count": 852,
+              "max_abs": 13.889785032008987,
+              "mean": 5.767831223068928
+            },
+            "actual_nz_g": {
+              "count": 852,
+              "max_abs": 8.732597732185848,
+              "mean": 4.073603400057811
+            },
+            "nz_cmd": {
+              "count": 852,
+              "max_abs": 4.055417264075907,
+              "mean": 2.9381855116910183
+            },
+            "vp_forward_bias_m": {
+              "count": 852,
+              "max_abs": 1356.6194328790332,
+              "mean": 240.2194006512204
+            },
+            "vp_lateral_bias_m": {
+              "count": 852,
+              "max_abs": 1165.315888706583,
+              "mean": -34.21917789878626
+            }
+          },
+          "state_phase_steps": {
+            "disadvantage:pre_merge": 426,
+            "neutral:pre_merge": 426
+          },
+          "terminal_reasons": {
+            "timeout": 12
+          }
+        },
+        "independent_ppo_vpp": {
+          "episodes": 12,
+          "intent_progress_fraction": 0.5246478873239436,
+          "phase_steps": {
+            "pre_merge": 852
+          },
+          "profile_episodes": {
+            "defensive_break": 3,
+            "energy_altitude_recovery": 2,
+            "lateral_displacement": 3,
+            "range_extension": 2,
+            "reentry_preparation": 2
+          },
+          "response_summary": {
+            "actual_aoa_deg": {
+              "count": 852,
+              "max_abs": 12.789773489107997,
+              "mean": 5.637337543917462
+            },
+            "actual_nz_g": {
+              "count": 852,
+              "max_abs": 8.597520302514546,
+              "mean": 3.9958625305464306
+            },
+            "nz_cmd": {
+              "count": 852,
+              "max_abs": 4.03138118985615,
+              "mean": 2.932482020440864
+            },
+            "vp_forward_bias_m": {
+              "count": 852,
+              "max_abs": 1373.679975382832,
+              "mean": 174.50163050796266
+            },
+            "vp_lateral_bias_m": {
+              "count": 852,
+              "max_abs": 1105.1944620337797,
+              "mean": -15.110323831128175
+            }
+          },
+          "state_phase_steps": {
+            "disadvantage:pre_merge": 426,
+            "neutral:pre_merge": 426
+          },
+          "terminal_reasons": {
+            "timeout": 12
+          }
+        }
+      },
+      "gate": {
+        "checks": {
+          "geometry_phase_coverage": false,
+          "intent_progress": false,
+          "profile_conditioning_coverage": true,
+          "safety": true
+        },
+        "geometry_phase_coverage": {
+          "disadvantage:post_merge": 0,
+          "disadvantage:pre_merge": 1278,
+          "disadvantage:re_entry": 0,
+          "neutral:post_merge": 0,
+          "neutral:pre_merge": 1278,
+          "neutral:re_entry": 0
+        },
+        "intent_progress_fraction": 0.5324726134585289,
+        "passed": false,
+        "profile_coverage": {
+          "defensive_break": 9,
+          "energy_altitude_recovery": 6,
+          "lateral_displacement": 9,
+          "range_extension": 6,
+          "reentry_preparation": 6
+        },
+        "safety_by_opponent": {
+          "end_to_end_neural": {
+            "delta": 0.0,
+            "passed": true,
+            "policy_crash_oob_rate": 0.0,
+            "zero_vpp_crash_oob_rate": 0.0
+          },
+          "expert_rule_based": {
+            "delta": 0.0,
+            "passed": true,
+            "policy_crash_oob_rate": 0.0,
+            "zero_vpp_crash_oob_rate": 0.0
+          },
+          "independent_ppo_vpp": {
+            "delta": 0.0,
+            "passed": true,
+            "policy_crash_oob_rate": 0.0,
+            "zero_vpp_crash_oob_rate": 0.0
+          }
+        },
+        "status": "not_ready_do_not_start_combat_finetune"
+      },
+      "skill": "defensive_extension",
+      "step": 200000,
+      "zero_vpp_terminal_reasons_by_opponent": {
+        "end_to_end_neural": {
+          "timeout": 12
+        },
+        "expert_rule_based": {
+          "timeout": 12
+        },
+        "independent_ppo_vpp": {
+          "timeout": 12
+        }
+      }
+    }
+  ],
+  "selected_checkpoint": "E:\\uav-vpp-guidance-thesis-five-state-v1-results\\p4_shared_skills_geometry_v1_geo20260713_r1\\skills\\defensive_extension\\checkpoints\\best.pt",
+  "selected_gate": {
+    "checks": {
+      "geometry_phase_coverage": false,
+      "intent_progress": false,
+      "profile_conditioning_coverage": true,
+      "safety": true
+    },
+    "geometry_phase_coverage": {
+      "disadvantage:post_merge": 0,
+      "disadvantage:pre_merge": 1278,
+      "disadvantage:re_entry": 0,
+      "neutral:post_merge": 0,
+      "neutral:pre_merge": 1278,
+      "neutral:re_entry": 0
+    },
+    "intent_progress_fraction": 0.5324726134585289,
+    "passed": false,
+    "profile_coverage": {
+      "defensive_break": 9,
+      "energy_altitude_recovery": 6,
+      "lateral_displacement": 9,
+      "range_extension": 6,
+      "reentry_preparation": 6
+    },
+    "safety_by_opponent": {
+      "end_to_end_neural": {
+        "delta": 0.0,
+        "passed": true,
+        "policy_crash_oob_rate": 0.0,
+        "zero_vpp_crash_oob_rate": 0.0
+      },
+      "expert_rule_based": {
+        "delta": 0.0,
+        "passed": true,
+        "policy_crash_oob_rate": 0.0,
+        "zero_vpp_crash_oob_rate": 0.0
+      },
+      "independent_ppo_vpp": {
+        "delta": 0.0,
+        "passed": true,
+        "policy_crash_oob_rate": 0.0,
+        "zero_vpp_crash_oob_rate": 0.0
+      }
+    },
+    "status": "not_ready_do_not_start_combat_finetune"
+  },
+  "status": "geometry_pretrain_gate_failed_do_not_start_combat_finetune",
+  "train_aggregate": {
+    "episodes": 2817,
+    "intent_progress_fraction": 0.478335,
+    "phase_steps": {
+      "pre_merge": 200000
+    },
+    "profile_episodes": {
+      "defensive_break": 564,
+      "energy_altitude_recovery": 563,
+      "lateral_displacement": 564,
+      "range_extension": 563,
+      "reentry_preparation": 563
+    },
+    "response_summary": {
+      "actual_aoa_deg": {
+        "count": 200000,
+        "max_abs": 15.45708646106541,
+        "mean": 6.981162162871498
+      },
+      "actual_nz_g": {
+        "count": 200000,
+        "max_abs": 8.842629630136434,
+        "mean": 3.6703031674210123
+      },
+      "nz_cmd": {
+        "count": 200000,
+        "max_abs": 3.925124556851802,
+        "mean": 2.7520287812902056
+      },
+      "vp_forward_bias_m": {
+        "count": 200000,
+        "max_abs": 1800.994900404124,
+        "mean": 174.76340069561414
+      },
+      "vp_lateral_bias_m": {
+        "count": 200000,
+        "max_abs": 1736.2922993199143,
+        "mean": -6.761955190382094
+      }
+    },
+    "state_phase_steps": {
+      "disadvantage:pre_merge": 100110,
+      "neutral:pre_merge": 99890
+    },
+    "terminal_reasons": {
+      "timeout": 2817
+    }
+  },
+  "training_steps": 200000
+}

@@ -1,0 +1,130 @@
+{
+  "bundle_dir": "D:\\laiyu_ssh\\uav-vpp-guidance\\.kiro\\specs\\control-guidance-remediation\\evidence\\f16_mode_state_bundle_portable",
+  "source_dir": "D:\\laiyu_ssh\\uav-vpp-guidance\\.kiro\\specs\\control-guidance-remediation\\evidence\\f16_mode_state_bundle",
+  "files": {
+    "run_manifest.json": {
+      "path": "D:\\laiyu_ssh\\uav-vpp-guidance\\.kiro\\specs\\control-guidance-remediation\\evidence\\f16_mode_state_bundle_portable\\run_manifest.json",
+      "exists": true,
+      "size_bytes": 3725,
+      "sha256": "935d6f97bd3a44da86613c6d05d7ee62254434d2f94c040978c2e4765570559c",
+      "mtime": 1785075074.7006102
+    },
+    "artifact_contract.json": {
+      "path": "D:\\laiyu_ssh\\uav-vpp-guidance\\.kiro\\specs\\control-guidance-remediation\\evidence\\f16_mode_state_bundle_portable\\artifact_contract.json",
+      "exists": true,
+      "size_bytes": 271,
+      "sha256": "d6a28ac4b39f99127dc301829fdfd5d6546c504250086d047f2c46c998a99f7f",
+      "mtime": 1785075074.69961
+    },
+    "resolved_config.yaml": {
+      "path": "D:\\laiyu_ssh\\uav-vpp-guidance\\.kiro\\specs\\control-guidance-remediation\\evidence\\f16_mode_state_bundle_portable\\resolved_config.yaml_resolved_config.yaml",
+      "exists": true,
+      "size_bytes": 88,
+      "sha256": "0713f33b71a3e5f9bd2a7ec6a4363354dc9eb23f2c29b4fbb1e7e08d5f54bbbb",
+      "mtime": 1785075074.6906104
+    },
+    "f16_mode_state_evidence.json": {
+      "path": "D:\\laiyu_ssh\\uav-vpp-guidance\\.kiro\\specs\\control-guidance-remediation\\evidence\\f16_mode_state_bundle_portable\\f16_mode_state_evidence.json",
+      "exists": true,
+      "size_bytes": 10508,
+      "sha256": "30c5d6c208b52885be2e078b1157af912ce666588beb0e0cc4420c555d95bbdb",
+      "mtime": 1785075074.6976116
+    },
+    "f16_evidence_gate.json": {
+      "path": "D:\\laiyu_ssh\\uav-vpp-guidance\\.kiro\\specs\\control-guidance-remediation\\evidence\\f16_mode_state_bundle_portable\\f16_evidence_gate.json",
+      "exists": true,
+      "size_bytes": 1933,
+      "sha256": "f9487d1f59e4882722b7c075b062c2b7cab08f5a7df2ee2be913763e5fe0ef03",
+      "mtime": 1785075074.6976116
+    }
+  },
+  "manifest": {
+    "schema_version": "1.0.0",
+    "stage_name": "f16_mode_state_evidence",
+    "stage_version": "1.0.0",
+    "start_time": "2026-07-26T14:11:14.686610+00:00",
+    "end_time": "2026-07-26T14:11:14.699610+00:00",
+    "status": "completed",
+    "command_line": [
+      "E:\\anaconda3\\python.exe",
+      "scripts/run_f16_mode_state_evidence.py"
+    ],
+    "working_directory": "D:\\laiyu_ssh\\uav-vpp-guidance",
+    "output_dir": "D:\\laiyu_ssh\\uav-vpp-guidance\\.kiro\\specs\\control-guidance-remediation\\evidence\\f16_mode_state_bundle",
+    "config_path": "config/guidance.yaml",
+    "config_hash": "e3741990a1b5f8ac",
+    "git_info": {
+      "commit": "a39044b7728a254cb46705f0b45b3d872d281869",
+      "short_commit": "a39044b7728a",
+      "branch": "fix/control-guidance-f01-f02-authorized",
+      "dirty": true,
+      "description": "fix/control-guidance-f01-f02-authorized@a39044b7728a-dirty"
+    },
+    "python_version": "3.10.9 | packaged by Anaconda, Inc. | (main, Mar  1 2023, 18:18:15) [MSC v.1916 64 bit (AMD64)]",
+    "platform": "Windows-10-10.0.26100-SP0",
+    "inputs": {
+      "baseline_freeze": {
+        "path": "D:\\laiyu_ssh\\uav-vpp-guidance\\.kiro\\specs\\control-guidance-remediation\\baseline_freeze.json",
+        "exists": true,
+        "size_bytes": 4397,
+        "sha256": "f3b78cc712ff0ea1a1af90135dbf43533236c06b3d88ebf12322da54aba1146e",
+        "mtime": 1785054738.0672996
+      },
+      "guidance_config": {
+        "path": "D:\\laiyu_ssh\\uav-vpp-guidance\\config\\guidance.yaml",
+        "exists": true,
+        "size_bytes": 2715,
+        "sha256": "2f78d8c65f4379ace326b6f7792ba5d21575e27f38105b66030c5e8a3daa3306",
+        "mtime": 1783968478.430513
+      },
+      "state_machine_specification": {
+        "path": "D:\\laiyu_ssh\\uav-vpp-guidance\\.kiro\\specs\\control-guidance-remediation\\f16_mode_state_machine.md",
+        "exists": true,
+        "size_bytes": 2429,
+        "sha256": "d5ed1f2d7bafb382f8f9def6b4d6b6a7036171d77e7d7f732521609005a190b0",
+        "mtime": 1785075057.9323819
+      },
+      "runtime_gate_reference": {
+        "path": "D:\\laiyu_ssh\\uav-vpp-guidance\\src\\uav_vpp_guidance\\envs\\tracking_env.py",
+        "exists": true,
+        "size_bytes": 312867,
+        "sha256": "beeb2ac71e9a2f222ecdb11662c31b3a5c79c7316d94fa49d456b1f9e57fc354",
+        "mtime": 1785068860.7985501
+      }
+    },
+    "outputs": {
+      "resolved_config.yaml": {
+        "path": "D:\\laiyu_ssh\\uav-vpp-guidance\\.kiro\\specs\\control-guidance-remediation\\evidence\\f16_mode_state_bundle\\resolved_config.yaml",
+        "exists": true,
+        "size_bytes": 88,
+        "sha256": "0713f33b71a3e5f9bd2a7ec6a4363354dc9eb23f2c29b4fbb1e7e08d5f54bbbb",
+        "mtime": 1785075074.6906104
+      },
+      "f16_mode_state_evidence.json": {
+        "path": "D:\\laiyu_ssh\\uav-vpp-guidance\\.kiro\\specs\\control-guidance-remediation\\evidence\\f16_mode_state_bundle\\f16_mode_state_evidence.json",
+        "exists": true,
+        "size_bytes": 10508,
+        "sha256": "30c5d6c208b52885be2e078b1157af912ce666588beb0e0cc4420c555d95bbdb",
+        "mtime": 1785075074.6976116
+      },
+      "f16_evidence_gate.json": {
+        "path": "D:\\laiyu_ssh\\uav-vpp-guidance\\.kiro\\specs\\control-guidance-remediation\\evidence\\f16_mode_state_bundle\\f16_evidence_gate.json",
+        "exists": true,
+        "size_bytes": 1933,
+        "sha256": "f9487d1f59e4882722b7c075b062c2b7cab08f5a7df2ee2be913763e5fe0ef03",
+        "mtime": 1785075074.6976116
+      }
+    },
+    "artifacts_present": {
+      "resolved_config.yaml": true,
+      "f16_mode_state_evidence.json": true,
+      "f16_evidence_gate.json": true,
+      "run_manifest.json": true
+    },
+    "config_overrides": [],
+    "paper_safe": true,
+    "invalid_for_paper_reasons": [],
+    "notes": [],
+    "extra": {}
+  }
+}

@@ -1,0 +1,89 @@
+{
+  "schema_version": "1.0.0",
+  "stage_name": "f18_transfer_preflight",
+  "stage_version": "1.0.0",
+  "start_time": "2026-07-26T14:19:03.886962+00:00",
+  "end_time": "2026-07-26T14:19:03.939961+00:00",
+  "status": "completed",
+  "command_line": [
+    "E:\\anaconda3\\python.exe",
+    "scripts/run_f18_transfer_preflight.py"
+  ],
+  "working_directory": "D:\\laiyu_ssh\\uav-vpp-guidance",
+  "output_dir": "D:\\laiyu_ssh\\uav-vpp-guidance\\.kiro\\specs\\control-guidance-remediation\\evidence\\f18_transfer_preflight_bundle",
+  "config_path": "config/experiment/jsbsim_hrl_comparison.yaml",
+  "config_hash": "f504deaaf38ae75c",
+  "git_info": {
+    "commit": "a39044b7728a254cb46705f0b45b3d872d281869",
+    "short_commit": "a39044b7728a",
+    "branch": "fix/control-guidance-f01-f02-authorized",
+    "dirty": true,
+    "description": "fix/control-guidance-f01-f02-authorized@a39044b7728a-dirty"
+  },
+  "python_version": "3.10.9 | packaged by Anaconda, Inc. | (main, Mar  1 2023, 18:18:15) [MSC v.1916 64 bit (AMD64)]",
+  "platform": "Windows-10-10.0.26100-SP0",
+  "inputs": {
+    "baseline_freeze": {
+      "path": "D:\\laiyu_ssh\\uav-vpp-guidance\\.kiro\\specs\\control-guidance-remediation\\baseline_freeze.json",
+      "exists": true,
+      "size_bytes": 4397,
+      "sha256": "f3b78cc712ff0ea1a1af90135dbf43533236c06b3d88ebf12322da54aba1146e",
+      "mtime": 1785054738.0672996
+    },
+    "matrix_config": {
+      "path": "D:\\laiyu_ssh\\uav-vpp-guidance\\config\\experiment\\jsbsim_hrl_comparison.yaml",
+      "exists": true,
+      "size_bytes": 7460,
+      "sha256": "204b51724f67c0400bbe1cecca188933176470ab0f9e13271b8340a7c260491b",
+      "mtime": 1783968478.3465123
+    },
+    "comparison_runner": {
+      "path": "D:\\laiyu_ssh\\uav-vpp-guidance\\scripts\\run_jsbsim_hrl_comparison.py",
+      "exists": true,
+      "size_bytes": 277103,
+      "sha256": "60fb499ee5dca91cd82c43c7260bb481a59ce4fb2d7a91d649f578b7d532e8c8",
+      "mtime": 1783968478.5233347
+    },
+    "specification": {
+      "path": "D:\\laiyu_ssh\\uav-vpp-guidance\\.kiro\\specs\\control-guidance-remediation\\f18_transfer_experiment.md",
+      "exists": true,
+      "size_bytes": 936,
+      "sha256": "46150f6d21dd09cf6cf6d22c04951459138cac3527b4137ac6c130453625b64a",
+      "mtime": 1785075527.2086337
+    }
+  },
+  "outputs": {
+    "resolved_config.yaml": {
+      "path": "D:\\laiyu_ssh\\uav-vpp-guidance\\.kiro\\specs\\control-guidance-remediation\\evidence\\f18_transfer_preflight_bundle\\resolved_config.yaml",
+      "exists": true,
+      "size_bytes": 97,
+      "sha256": "fd709c68e9d4738f89cf47e7f5f736b649e7e6c442a351b7fd67e4bd82552f09",
+      "mtime": 1785075543.9219613
+    },
+    "f18_transfer_preflight.json": {
+      "path": "D:\\laiyu_ssh\\uav-vpp-guidance\\.kiro\\specs\\control-guidance-remediation\\evidence\\f18_transfer_preflight_bundle\\f18_transfer_preflight.json",
+      "exists": true,
+      "size_bytes": 3887,
+      "sha256": "19e913cea134b0d1d854cd7a61257db1810086951899615e108c34f20db59037",
+      "mtime": 1785075543.9379616
+    },
+    "f18_evidence_gate.json": {
+      "path": "D:\\laiyu_ssh\\uav-vpp-guidance\\.kiro\\specs\\control-guidance-remediation\\evidence\\f18_transfer_preflight_bundle\\f18_evidence_gate.json",
+      "exists": true,
+      "size_bytes": 1383,
+      "sha256": "1d2b188205ad2ce13efd453a1fd5667af523b3e5c77211de73a9cdd18389c2c1",
+      "mtime": 1785075543.9379616
+    }
+  },
+  "artifacts_present": {
+    "resolved_config.yaml": true,
+    "f18_transfer_preflight.json": true,
+    "f18_evidence_gate.json": true,
+    "run_manifest.json": true
+  },
+  "config_overrides": [],
+  "paper_safe": true,
+  "invalid_for_paper_reasons": [],
+  "notes": [],
+  "extra": {}
+}

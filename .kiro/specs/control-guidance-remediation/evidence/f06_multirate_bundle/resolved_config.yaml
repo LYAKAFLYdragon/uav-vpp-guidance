@@ -1,0 +1,16 @@
+analysis_only: true
+candidate_name: f06_10hz_high_level_20hz_guidance_100hz_low_level
+baseline_schedule:
+  high_level_period_s: 0.2
+  guidance_period_s: 0.2
+  low_level_period_s: 0.2
+  resampling: zero_order_hold
+  filter_alpha: 0.3
+candidate_schedule:
+  high_level_period_s: 0.1
+  guidance_period_s: 0.05
+  low_level_period_s: 0.01
+  resampling: zero_order_hold
+  filter_alpha: 0.08530878077130555
+input_guidance_config: config/guidance.yaml
+config_overrides: []

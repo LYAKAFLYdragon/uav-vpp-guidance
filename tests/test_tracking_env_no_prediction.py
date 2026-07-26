@@ -6184,3 +6184,14 @@ class TestObservationSchema:
         assert state["cd_post"] == pytest.approx(0.0)
 
         env.close()
+
+
+def test_vpp_action_dimension_mismatch_fails_before_interpretation(base_config):
+    """F07: a VPP policy action must match the configured canonical 3D contract."""
+    env = CloseRangeTrackingEnv(base_config)
+    try:
+        env.reset(seed=0)
+        with pytest.raises(ValueError, match="VPP action dimension 5"):
+            env.step(np.zeros(5, dtype=np.float64))
+    finally:
+        env.close()

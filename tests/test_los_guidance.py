@@ -502,3 +502,80 @@ class TestStableAngleDiff:
         d = _stable_angle_diff(a, b)
         # Expected: wrap to -(2π - 2eps) which maps to ~2eps
         assert abs(d) == pytest.approx(2 * eps, abs=1e-9)
+
+
+class TestRemediatedF01F02Guidance:
+    """Targeted regression tests for the explicitly opt-in authorized law."""
+
+    @staticmethod
+    def _guidance():
+        return LOSRateGuidance(
+            {
+                "params": {"remediation_mode": "f01_f02_remediated"},
+                "limits": {
+                    "nz_min": -2.0,
+                    "nz_max": 7.0,
+                    "roll_rate_min": -1.5,
+                    "roll_rate_max": 1.5,
+                },
+            }
+        )
+
+    @staticmethod
+    def _own(*, roll_rate=0.0):
+        return {
+            "position_m": np.array([0.0, 0.0, 5000.0]),
+            "velocity_vector_mps": np.array([200.0, 0.0, 0.0]),
+            "roll_rad": 0.1,
+            "p_rps": roll_rate,
+        }
+
+    def test_remediated_f01_zero_los_rate_is_range_invariant_at_fixed_angle(self):
+        guidance = self._guidance()
+        target = {"velocity_vector_mps": np.array([200.0, 0.0, 0.0])}
+        near = guidance.compute_command(
+            self._own(), target, {"position_m": np.array([1000.0, 0.0, 5100.0])}
+        )
+        far = guidance.compute_command(
+            self._own(), target, {"position_m": np.array([2500.0, 0.0, 5250.0])}
+        )
+        assert near["nz_cmd"] == pytest.approx(far["nz_cmd"])
+        assert near["nz_cmd"] > 1.0
+
+    def test_remediated_f01_mirrored_vertical_geometry_reverses_normal_load(self):
+        guidance = self._guidance()
+        target = {"velocity_vector_mps": np.array([100.0, 0.0, 0.0])}
+        above = guidance.compute_command(
+            self._own(), target, {"position_m": np.array([1000.0, 0.0, 5100.0])}
+        )
+        below = guidance.compute_command(
+            self._own(), target, {"position_m": np.array([1000.0, 0.0, 4900.0])}
+        )
+        assert above["nz_cmd"] > 1.0
+        assert below["nz_cmd"] < 1.0
+
+    def test_remediated_f02_rate_feedback_reverses_and_preserves_f04_limit(self):
+        guidance = self._guidance()
+        virtual_point = {"position_m": np.array([1000.0, 1000.0, 5000.0])}
+        target = {"velocity_vector_mps": np.array([200.0, 0.0, 0.0])}
+        positive_rate = guidance.compute_command(self._own(roll_rate=0.4), target, virtual_point)
+        negative_rate = guidance.compute_command(self._own(roll_rate=-0.4), target, virtual_point)
+        assert positive_rate["roll_rate_cmd"] < negative_rate["roll_rate_cmd"]
+        assert all(
+            -1.5 <= command["roll_rate_cmd"] <= 1.5
+            for command in (positive_rate, negative_rate)
+        )
+
+    def test_remediated_f02_requires_explicit_roll_rate_telemetry(self):
+        guidance = self._guidance()
+        own = self._own()
+        own.pop("p_rps")
+        target = {"velocity_vector_mps": np.array([200.0, 0.0, 0.0])}
+        with pytest.raises(ValueError, match="explicit finite body roll-rate"):
+            guidance.compute_command(
+                own, target, {"position_m": np.array([1000.0, 0.0, 5000.0])}
+            )
+
+    def test_legacy_remains_default(self):
+        guidance = LOSRateGuidance(config={})
+        assert guidance.remediation_mode == "legacy"

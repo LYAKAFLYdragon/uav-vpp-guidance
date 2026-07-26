@@ -29,6 +29,7 @@ from uav_vpp_guidance.utils.seed import set_seed
 from uav_vpp_guidance.envs.tracking_env import CloseRangeTrackingEnv
 from uav_vpp_guidance.agents.ppo_agent import PPOAgent
 from uav_vpp_guidance.common.provenance import record_config_override_if_changed
+from uav_vpp_guidance.utils.vpp_action_contract import validate_vpp_checkpoint_metadata
 from uav_vpp_guidance.trajectory_prediction._telemetry import PredictorHealthAccumulator
 from uav_vpp_guidance.trajectory_prediction.config_validator import validate_full_config
 
@@ -205,6 +206,8 @@ def load_warm_start_checkpoint(
     checkpoint = torch.load(str(path), map_location=agent.device)
     ckpt_obs_dim = int(checkpoint.get("obs_dim", agent.obs_dim))
     ckpt_action_dim = int(checkpoint.get("action_dim", agent.action_dim))
+    if "virtual_point" in getattr(agent, "config", {}):
+        validate_vpp_checkpoint_metadata(checkpoint, expected_dim=agent.action_dim)
 
     if strict_dims and ckpt_action_dim != agent.action_dim:
         raise ValueError(

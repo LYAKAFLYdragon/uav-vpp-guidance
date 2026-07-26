@@ -1,0 +1,28 @@
+{
+  "schema_version": "1.0.0",
+  "finding_id": "F01",
+  "candidate": "vertical_los_rate_pn_with_bounded_geometric_bias",
+  "status": "approved",
+  "runtime_disposition": "implement_opt_in_mode_only",
+  "decision": "approved_by_user_runtime_authorization",
+  "timestamp_utc": "2026-07-26T00:00:00+00:00",
+  "protected_path_allowlist": ["src/uav_vpp_guidance/guidance/los_rate_guidance.py", "src/uav_vpp_guidance/envs/simple_point_mass_env.py"],
+  "evidence_hashes": {"law_specification_sha256": "815d3fe9f7c77fe09b0def337f2ea8f80bd07f7ea7173de147089522bc155cd5", "offline_trace_sha256": "a205cfa8642341a71ae1a01b02b33194ab350c1dc7582f1ff0c7b5c845984fac", "baseline_freeze_sha256": "f3b78cc712ff0ea1a1af90135dbf43533236c06b3d88ebf12322da54aba1146e"},
+  "acceptance_thresholds": {"explicit_los_rate_term": true, "zero_rate_has_zero_los_rate_contribution": true, "mirrored_geometry_reverses_sign": true, "geometric_term_does_not_grow_with_range_at_fixed_angle": true, "singular_range_safe": true, "f04_nz_limits_unchanged": [-2.0, 7.0], "physical_semantics_reviewer_acceptance": true, "closed_loop_safety_no_regression": true, "frozen_reference_matrix_candidate_comparison": true},
+  "results": {"pure_geometry_invariants_pass": true, "offline_trace_within_f04_limits": true, "physical_semantics_reviewer_acceptance": false, "closed_loop_safety_no_regression": "not_established", "frozen_reference_matrix_candidate_comparison": "not_executable: declared baseline matrix is unexecuted and main policy checkpoints are absent", "protected_runtime_or_config_changed": false},
+  "physical_semantics_review": {"accepted": false, "reason": "The candidate is mathematically specified but has not received an explicit engineering review of coordinate/sign convention, navigation constant, and migration behavior."},
+  "safety_invariant_review": {"accepted": false, "reason": "Pure clipping and kinematic traces cannot establish closed-loop safety or non-regression across the frozen scenario/seed/backend matrix."},
+  "blockers": ["Explicit physical-semantics review is pending.", "Closed-loop candidate-vs-baseline safety evaluation is unavailable because required reference checkpoints are absent.", "No strict-JSBSim scenario evidence exists for this candidate."],
+  "required_next_evidence": ["Independent review accepting the stated NEU/sign/unit convention and migration plan.", "Paired frozen-matrix candidate/baseline evaluation with identical seeds, horizon, metrics, backend provenance, and available policy/gain artifacts.", "Safety review demonstrating no F04 or closed-loop safety regression; strict JSBSim evidence where required by the approved evaluation plan."],
+  "authorization": {
+    "source": "user_explicit_runtime_guidance_authorization",
+    "scope": "F01/F02 opt-in LOSRateGuidance mode only; legacy remains the default",
+    "approved_at_utc": "2026-07-26T00:00:00+00:00"
+  },
+  "implementation_evidence": {
+    "runtime_mode": "guidance.params.remediation_mode=f01_f02_remediated",
+    "runtime_module": "src/uav_vpp_guidance/guidance/los_rate_guidance.py",
+    "validation": ["deterministic runtime smoke passed", "py_compile passed", "focused pytest collection timed out without results"]
+  },
+  "baseline_retained": true
+}

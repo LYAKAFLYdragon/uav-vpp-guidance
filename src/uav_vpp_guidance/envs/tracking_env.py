@@ -56,6 +56,10 @@ from ..flight_control.pid_controllers import (
     RobustPIDController,
 )
 from ..utils.action_schema import ActionSchema, validate_action
+from ..utils.vpp_action_contract import (
+    resolve_vpp_action_dimension,
+    validate_vpp_action,
+)
 from ..trajectory_prediction import (
     TrajectoryPredictorAdapter,
     create_predictor_from_config,
@@ -4375,6 +4379,15 @@ class CloseRangeTrackingEnv:
             direct_track_mode_effective = False
             virtual_point_source = "command_override"
         elif self._use_virtual_point and self.virtual_point_generator is not None:
+            action_for_vpp = validate_vpp_action(
+                action_for_vpp,
+                expected_dim=resolve_vpp_action_dimension(
+                    self.config.get("virtual_point", {})
+                ),
+                legacy_compatibility_mode=self.config.get("virtual_point", {}).get(
+                    "legacy_compatibility_mode"
+                ),
+            )
             if (
                 pre_recovery_vp_result is not None
                 and not post_merge_offensive_anchor_blend_release_recovery_active

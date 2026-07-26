@@ -1,0 +1,123 @@
+{
+  "bundle_dir": "D:\\laiyu_ssh\\uav-vpp-guidance\\.kiro\\specs\\control-guidance-remediation\\evidence\\f05_vpp_semantics_bundle_portable",
+  "source_dir": "D:\\laiyu_ssh\\uav-vpp-guidance\\.kiro\\specs\\control-guidance-remediation\\evidence\\f05_vpp_semantics_bundle",
+  "files": {
+    "run_manifest.json": {
+      "path": "D:\\laiyu_ssh\\uav-vpp-guidance\\.kiro\\specs\\control-guidance-remediation\\evidence\\f05_vpp_semantics_bundle_portable\\run_manifest.json",
+      "exists": true,
+      "size_bytes": 3446,
+      "sha256": "b10e7d1d2c9c68ea5f9a8e80b78af050bef9a080652c69d928cd92e9a2992e40",
+      "mtime": 1785065560.3972557
+    },
+    "artifact_contract.json": {
+      "path": "D:\\laiyu_ssh\\uav-vpp-guidance\\.kiro\\specs\\control-guidance-remediation\\evidence\\f05_vpp_semantics_bundle_portable\\artifact_contract.json",
+      "exists": true,
+      "size_bytes": 274,
+      "sha256": "432002c8a761b6c64a6f6233a7b53256b7837b529a75ddb6d854bcaf49900a78",
+      "mtime": 1785065560.3962562
+    },
+    "resolved_config.yaml": {
+      "path": "D:\\laiyu_ssh\\uav-vpp-guidance\\.kiro\\specs\\control-guidance-remediation\\evidence\\f05_vpp_semantics_bundle_portable\\resolved_config.yaml_resolved_config.yaml",
+      "exists": true,
+      "size_bytes": 43,
+      "sha256": "963eb4b37c09379573fc3161a177892b3ded09974f8a16ff49f022a0bc3ccc5e",
+      "mtime": 1785065560.3912568
+    },
+    "f05_vpp_semantics_evidence.json": {
+      "path": "D:\\laiyu_ssh\\uav-vpp-guidance\\.kiro\\specs\\control-guidance-remediation\\evidence\\f05_vpp_semantics_bundle_portable\\f05_vpp_semantics_evidence.json",
+      "exists": true,
+      "size_bytes": 10036,
+      "sha256": "3c67b4a21d866345e9c676cf8b45ba621d411da3f92e500102bc5f7f1d3ef271",
+      "mtime": 1785065560.3932562
+    },
+    "f05_evidence_gate.json": {
+      "path": "D:\\laiyu_ssh\\uav-vpp-guidance\\.kiro\\specs\\control-guidance-remediation\\evidence\\f05_vpp_semantics_bundle_portable\\f05_evidence_gate.json",
+      "exists": true,
+      "size_bytes": 1040,
+      "sha256": "89106d599bce7fee8f64176833a802b78bfe050d9742bb2fe9de597e013aeb5d",
+      "mtime": 1785065560.3942556
+    }
+  },
+  "manifest": {
+    "schema_version": "1.0.0",
+    "stage_name": "f05_vpp_semantics_evidence",
+    "stage_version": "1.0.0",
+    "start_time": "2026-07-26T11:32:40.372255+00:00",
+    "end_time": "2026-07-26T11:32:40.395256+00:00",
+    "status": "completed",
+    "command_line": [
+      "E:\\anaconda3\\python.exe",
+      "scripts/run_f05_vpp_semantics_evidence.py"
+    ],
+    "working_directory": "D:\\laiyu_ssh\\uav-vpp-guidance",
+    "output_dir": "D:\\laiyu_ssh\\uav-vpp-guidance\\.kiro\\specs\\control-guidance-remediation\\evidence\\f05_vpp_semantics_bundle",
+    "config_path": "config/guidance.yaml",
+    "config_hash": "c43dcb3f70528d25",
+    "git_info": {
+      "commit": "a39044b7728a254cb46705f0b45b3d872d281869",
+      "short_commit": "a39044b7728a",
+      "branch": "fix/control-guidance-f01-f02-authorized",
+      "dirty": true,
+      "description": "fix/control-guidance-f01-f02-authorized@a39044b7728a-dirty"
+    },
+    "python_version": "3.10.9 | packaged by Anaconda, Inc. | (main, Mar  1 2023, 18:18:15) [MSC v.1916 64 bit (AMD64)]",
+    "platform": "Windows-10-10.0.26100-SP0",
+    "inputs": {
+      "baseline_freeze": {
+        "path": "D:\\laiyu_ssh\\uav-vpp-guidance\\.kiro\\specs\\control-guidance-remediation\\baseline_freeze.json",
+        "exists": true,
+        "size_bytes": 4397,
+        "sha256": "f3b78cc712ff0ea1a1af90135dbf43533236c06b3d88ebf12322da54aba1146e",
+        "mtime": 1785054738.0672996
+      },
+      "guidance_config": {
+        "path": "D:\\laiyu_ssh\\uav-vpp-guidance\\config\\guidance.yaml",
+        "exists": true,
+        "size_bytes": 2715,
+        "sha256": "2f78d8c65f4379ace326b6f7792ba5d21575e27f38105b66030c5e8a3daa3306",
+        "mtime": 1783968478.430513
+      },
+      "experiment_specification": {
+        "path": "D:\\laiyu_ssh\\uav-vpp-guidance\\.kiro\\specs\\control-guidance-remediation\\f05_vpp_semantics_experiment.md",
+        "exists": true,
+        "size_bytes": 1258,
+        "sha256": "a37d0e1aef3c1c1e459bb45ed8ddf1ebeb6be2947d17935d46b2abaed38e84b3",
+        "mtime": 1785065544.6761837
+      }
+    },
+    "outputs": {
+      "resolved_config.yaml": {
+        "path": "D:\\laiyu_ssh\\uav-vpp-guidance\\.kiro\\specs\\control-guidance-remediation\\evidence\\f05_vpp_semantics_bundle\\resolved_config.yaml",
+        "exists": true,
+        "size_bytes": 43,
+        "sha256": "963eb4b37c09379573fc3161a177892b3ded09974f8a16ff49f022a0bc3ccc5e",
+        "mtime": 1785065560.3912568
+      },
+      "f05_vpp_semantics_evidence.json": {
+        "path": "D:\\laiyu_ssh\\uav-vpp-guidance\\.kiro\\specs\\control-guidance-remediation\\evidence\\f05_vpp_semantics_bundle\\f05_vpp_semantics_evidence.json",
+        "exists": true,
+        "size_bytes": 10036,
+        "sha256": "3c67b4a21d866345e9c676cf8b45ba621d411da3f92e500102bc5f7f1d3ef271",
+        "mtime": 1785065560.3932562
+      },
+      "f05_evidence_gate.json": {
+        "path": "D:\\laiyu_ssh\\uav-vpp-guidance\\.kiro\\specs\\control-guidance-remediation\\evidence\\f05_vpp_semantics_bundle\\f05_evidence_gate.json",
+        "exists": true,
+        "size_bytes": 1040,
+        "sha256": "89106d599bce7fee8f64176833a802b78bfe050d9742bb2fe9de597e013aeb5d",
+        "mtime": 1785065560.3942556
+      }
+    },
+    "artifacts_present": {
+      "resolved_config.yaml": true,
+      "f05_vpp_semantics_evidence.json": true,
+      "f05_evidence_gate.json": true,
+      "run_manifest.json": true
+    },
+    "config_overrides": [],
+    "paper_safe": true,
+    "invalid_for_paper_reasons": [],
+    "notes": [],
+    "extra": {}
+  }
+}

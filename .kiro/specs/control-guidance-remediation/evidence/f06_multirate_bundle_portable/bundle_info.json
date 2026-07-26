@@ -1,0 +1,123 @@
+{
+  "bundle_dir": "D:\\laiyu_ssh\\uav-vpp-guidance\\.kiro\\specs\\control-guidance-remediation\\evidence\\f06_multirate_bundle_portable",
+  "source_dir": "D:\\laiyu_ssh\\uav-vpp-guidance\\.kiro\\specs\\control-guidance-remediation\\evidence\\f06_multirate_bundle",
+  "files": {
+    "run_manifest.json": {
+      "path": "D:\\laiyu_ssh\\uav-vpp-guidance\\.kiro\\specs\\control-guidance-remediation\\evidence\\f06_multirate_bundle_portable\\run_manifest.json",
+      "exists": true,
+      "size_bytes": 3416,
+      "sha256": "f207b1aa98fb7c9e1affafb3c760292938435b26268530456b4136d2fa8dad3d",
+      "mtime": 1785060157.9753768
+    },
+    "artifact_contract.json": {
+      "path": "D:\\laiyu_ssh\\uav-vpp-guidance\\.kiro\\specs\\control-guidance-remediation\\evidence\\f06_multirate_bundle_portable\\artifact_contract.json",
+      "exists": true,
+      "size_bytes": 272,
+      "sha256": "b9277e299ae66de7a75e355640afa718e93975e8c04262a933be239e89431cd5",
+      "mtime": 1785060157.9743743
+    },
+    "resolved_config.yaml": {
+      "path": "D:\\laiyu_ssh\\uav-vpp-guidance\\.kiro\\specs\\control-guidance-remediation\\evidence\\f06_multirate_bundle_portable\\resolved_config.yaml_resolved_config.yaml",
+      "exists": true,
+      "size_bytes": 480,
+      "sha256": "cc03b53cbec620fd43b2a6672db5b48e0496624e37e5b7703f49aa208f7e3c1a",
+      "mtime": 1785060157.9513736
+    },
+    "f06_delay_phase_evidence.json": {
+      "path": "D:\\laiyu_ssh\\uav-vpp-guidance\\.kiro\\specs\\control-guidance-remediation\\evidence\\f06_multirate_bundle_portable\\f06_delay_phase_evidence.json",
+      "exists": true,
+      "size_bytes": 46574,
+      "sha256": "fb4bbe18ca271de91c0434c14b6b38d55a061d093675cd5b723818a3695c29a9",
+      "mtime": 1785060157.9713738
+    },
+    "f06_evidence_gate.json": {
+      "path": "D:\\laiyu_ssh\\uav-vpp-guidance\\.kiro\\specs\\control-guidance-remediation\\evidence\\f06_multirate_bundle_portable\\f06_evidence_gate.json",
+      "exists": true,
+      "size_bytes": 2076,
+      "sha256": "b5cc5abaa026fc98284840f894538e6f5004038a298183690350eeff914eea3e",
+      "mtime": 1785060157.9723735
+    }
+  },
+  "manifest": {
+    "schema_version": "1.0.0",
+    "stage_name": "f06_multirate_evidence",
+    "stage_version": "1.0.0",
+    "start_time": "2026-07-26T10:02:37.948373+00:00",
+    "end_time": "2026-07-26T10:02:37.973374+00:00",
+    "status": "completed",
+    "command_line": [
+      "E:\\anaconda3\\python.exe",
+      "scripts/run_f06_multirate_evidence.py"
+    ],
+    "working_directory": "D:\\laiyu_ssh\\uav-vpp-guidance",
+    "output_dir": "D:\\laiyu_ssh\\uav-vpp-guidance\\.kiro\\specs\\control-guidance-remediation\\evidence\\f06_multirate_bundle",
+    "config_path": "config/guidance.yaml",
+    "config_hash": "60c4bde6f54f9972",
+    "git_info": {
+      "commit": "a39044b7728a254cb46705f0b45b3d872d281869",
+      "short_commit": "a39044b7728a",
+      "branch": "fix/control-guidance-f01-f02-authorized",
+      "dirty": true,
+      "description": "fix/control-guidance-f01-f02-authorized@a39044b7728a-dirty"
+    },
+    "python_version": "3.10.9 | packaged by Anaconda, Inc. | (main, Mar  1 2023, 18:18:15) [MSC v.1916 64 bit (AMD64)]",
+    "platform": "Windows-10-10.0.26100-SP0",
+    "inputs": {
+      "baseline_freeze": {
+        "path": "D:\\laiyu_ssh\\uav-vpp-guidance\\.kiro\\specs\\control-guidance-remediation\\baseline_freeze.json",
+        "exists": true,
+        "size_bytes": 4397,
+        "sha256": "f3b78cc712ff0ea1a1af90135dbf43533236c06b3d88ebf12322da54aba1146e",
+        "mtime": 1785054738.0672996
+      },
+      "guidance_config": {
+        "path": "D:\\laiyu_ssh\\uav-vpp-guidance\\config\\guidance.yaml",
+        "exists": true,
+        "size_bytes": 2715,
+        "sha256": "2f78d8c65f4379ace326b6f7792ba5d21575e27f38105b66030c5e8a3daa3306",
+        "mtime": 1783968478.430513
+      },
+      "architecture_specification": {
+        "path": "D:\\laiyu_ssh\\uav-vpp-guidance\\.kiro\\specs\\control-guidance-remediation\\f06_multirate_architecture.md",
+        "exists": true,
+        "size_bytes": 5396,
+        "sha256": "9aed07b606d56e725027de82baf38981c0fea93e249ee6487b2916915cfad4d0",
+        "mtime": 1785060122.555079
+      }
+    },
+    "outputs": {
+      "resolved_config.yaml": {
+        "path": "D:\\laiyu_ssh\\uav-vpp-guidance\\.kiro\\specs\\control-guidance-remediation\\evidence\\f06_multirate_bundle\\resolved_config.yaml",
+        "exists": true,
+        "size_bytes": 480,
+        "sha256": "cc03b53cbec620fd43b2a6672db5b48e0496624e37e5b7703f49aa208f7e3c1a",
+        "mtime": 1785060157.9513736
+      },
+      "f06_delay_phase_evidence.json": {
+        "path": "D:\\laiyu_ssh\\uav-vpp-guidance\\.kiro\\specs\\control-guidance-remediation\\evidence\\f06_multirate_bundle\\f06_delay_phase_evidence.json",
+        "exists": true,
+        "size_bytes": 46574,
+        "sha256": "fb4bbe18ca271de91c0434c14b6b38d55a061d093675cd5b723818a3695c29a9",
+        "mtime": 1785060157.9713738
+      },
+      "f06_evidence_gate.json": {
+        "path": "D:\\laiyu_ssh\\uav-vpp-guidance\\.kiro\\specs\\control-guidance-remediation\\evidence\\f06_multirate_bundle\\f06_evidence_gate.json",
+        "exists": true,
+        "size_bytes": 2076,
+        "sha256": "b5cc5abaa026fc98284840f894538e6f5004038a298183690350eeff914eea3e",
+        "mtime": 1785060157.9723735
+      }
+    },
+    "artifacts_present": {
+      "resolved_config.yaml": true,
+      "f06_delay_phase_evidence.json": true,
+      "f06_evidence_gate.json": true,
+      "run_manifest.json": true
+    },
+    "config_overrides": [],
+    "paper_safe": true,
+    "invalid_for_paper_reasons": [],
+    "notes": [],
+    "extra": {}
+  }
+}

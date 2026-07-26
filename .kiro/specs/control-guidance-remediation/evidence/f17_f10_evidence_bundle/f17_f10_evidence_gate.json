@@ -1,0 +1,38 @@
+{
+  "schema_version": "1.0.0",
+  "finding_ids": [
+    "F17",
+    "F10"
+  ],
+  "status": "needs_more_evidence",
+  "runtime_disposition": "preserve_frozen_dwell_hysteresis_and_controller_defaults",
+  "decision": "no_runtime_authorization",
+  "timestamp_utc": "2026-07-26T00:00:00+00:00",
+  "protected_path_allowlist": [],
+  "evidence_hashes": {
+    "experiment_specification_sha256": "3e67b6c5f1b2f67426d5041c3da86a6814cea06d8a5bc7786e1031446492c189",
+    "offline_evidence_sha256": "d7fff0ed36115a7e41255f20aac36f2b8509fc18eba9861224bf7f885e487506"
+  },
+  "results": {
+    "f17_delay_travel_chatter_and_missed_opportunities_measured_offline": true,
+    "f10_qbar_altitude_aoa_and_command_source_sweep_measured_offline": true,
+    "frozen_arbitration_order_documented": true,
+    "f04_limits_preserved": true,
+    "scheduled_candidate_named_not_selected": true,
+    "frozen_matrix_evidence": "unavailable",
+    "strict_jsbsim_evidence": "not_available",
+    "protected_runtime_or_config_changed": false
+  },
+  "blockers": [
+    "The declared frozen matrix has not executed and required main-method checkpoints are unavailable.",
+    "Offline models cannot establish closed-loop task, stability, safety, or controller authority outcomes.",
+    "No paired strict-JSBSim baseline/candidate evidence exists, and fallback is not admissible evidence."
+  ],
+  "required_next_evidence": [
+    "Run baseline and one candidate at a time on the frozen scenario/seed/checkpoint matrix.",
+    "Record F17 per-episode switch timing, travelled range, chatter, missed opportunities, task and safety outcomes.",
+    "Record F10 qbar/AoA/altitude/command-source telemetry, saturation attribution, safety and stability outcomes under strict JSBSim.",
+    "Approve a candidate and dedicated protected allowlist before any default mutation."
+  ],
+  "baseline_retained": true
+}

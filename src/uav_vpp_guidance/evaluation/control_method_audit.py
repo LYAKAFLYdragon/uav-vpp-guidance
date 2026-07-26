@@ -332,15 +332,22 @@ def load_source_facts(paths: Optional[Mapping[str, Any]] = None) -> SourceFacts:
     try:
         from uav_vpp_guidance.virtual_point.generator import VirtualPointGenerator
         generated = VirtualPointGenerator(dict(vp))
-        default = VirtualPointGenerator({})
-        vpp_default = int(default.action_dim)
+        try:
+            VirtualPointGenerator({})
+            missing_dimension_rejected = False
+        except ValueError:
+            missing_dimension_rejected = True
+        vpp_default = None
         vpp_config = {
             "action_dim": int(generated.action_dim), "d_long_range": list(generated.d_long_range),
             "d_lat_range": list(generated.d_lat_range), "d_vert_range": list(generated.d_vert_range),
             "smoothing_alpha": float(generated.smoothing_alpha),
         }
         checks["F05_quantified"] = vpp_config["d_lat_range"] == [-800.0, 800.0]
-        checks["F07_wrong_relation"] = vpp_config["action_dim"] != vpp_default
+        checks["F07_wrong_relation"] = not missing_dimension_rejected
+        checks["F07_canonical_contract"] = (
+            vpp_config["action_dim"] == 3 and missing_dimension_rejected
+        )
     except Exception as exc:
         errors["virtual_point"] = f"{type(exc).__name__}: {exc}"
         vpp_config = dict(vp)

@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.0.0",
+  "finding_ids": [
+    "F08",
+    "F09"
+  ],
+  "status": "needs_more_evidence",
+  "runtime_disposition": "preserve_cem_and_bilevel_training_behavior",
+  "decision": "no_runtime_authorization",
+  "timestamp_utc": "2026-07-26T00:00:00+00:00",
+  "protected_path_allowlist": [],
+  "evidence_hashes": {
+    "specification_sha256": "63647d42147bf7dda10cb8119edc4ac4c92931e16b6b493627e0b9efe2d4170a",
+    "offline_evidence_sha256": "84b6b71fef7ceb0f2d736dd21d1b76baead9b1a70af8d0263b1e04a179a4f5b2"
+  },
+  "results": {
+    "seed_controlled_fixed_budget_surrogate_comparison": true,
+    "population_elite_covariance_early_stop_variants_enumerated": true,
+    "f09_truthful_label_documented": true,
+    "f09_training_behavior_changed": false,
+    "actual_policy_or_jsbsim_evidence": "not_available",
+    "protected_runtime_or_config_changed": false
+  },
+  "blockers": [
+    "Existing CEM results are zero-iteration dry runs.",
+    "Frozen policy checkpoints and matrix evaluations are unavailable.",
+    "Surrogate coverage/convergence cannot establish task, safety, compute, or strict-JSBSim benefit."
+  ],
+  "required_next_evidence": [
+    "Evaluate baseline and one CEM variant at a time with identical rollout budget, seeds, scenarios, policies, backend provenance, and wall-clock measurement.",
+    "Report best/median/worst, coverage, convergence, safety and strict-JSBSim out-of-sample results.",
+    "Use a separately approved spec before changing bilevel updates, snapshots, or rollback behavior."
+  ],
+  "baseline_retained": true
+}

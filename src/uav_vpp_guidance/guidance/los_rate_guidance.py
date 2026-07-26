@@ -96,6 +96,52 @@ class LOSRateGuidance:
             params.get("use_distance_aware_speed", False)
         )
 
+        # The audited law is preserved as the default.  The remediated mode is
+        # deliberately opt-in because its explicit LOS-rate and body-roll-rate
+        # inputs require compatible telemetry and separately tuned parameters.
+        self.remediation_mode = str(
+            params.get("remediation_mode", "legacy")
+        ).lower()
+        if self.remediation_mode not in {"legacy", "f01_f02_remediated"}:
+            raise ValueError(
+                "params.remediation_mode must be 'legacy' or "
+                "'f01_f02_remediated', got "
+                f"{self.remediation_mode!r}"
+            )
+        self.f01_geometric_gain_nz = float(
+            params.get("f01_geometric_gain_nz", 0.5)
+        )
+        self.f01_navigation_constant = float(
+            params.get("f01_navigation_constant", 1.5)
+        )
+        self.f01_max_closing_speed_mps = float(
+            params.get("f01_max_closing_speed_mps", 300.0)
+        )
+        self.f01_max_abs_los_rate_radps = float(
+            params.get("f01_max_abs_los_rate_radps", 0.1)
+        )
+        self.f02_heading_gain_per_s = float(
+            params.get("f02_heading_gain_per_s", 1.0)
+        )
+        self.f02_max_turn_rate_radps = float(
+            params.get("f02_max_turn_rate_radps", 0.35)
+        )
+        self.f02_bank_gain_per_s = float(
+            params.get("f02_bank_gain_per_s", 2.0)
+        )
+        self.f02_roll_rate_damping_gain = float(
+            params.get("f02_roll_rate_damping_gain", 0.8)
+        )
+        self.f02_min_airspeed_mps = float(
+            params.get("f02_min_airspeed_mps", 80.0)
+        )
+        self.f02_max_airspeed_mps = float(
+            params.get("f02_max_airspeed_mps", 350.0)
+        )
+        self.f02_max_bank_rad = float(
+            params.get("f02_max_bank_rad", np.deg2rad(45.0))
+        )
+
         # Limits (prefer top-level limits block, fall back to defaults)
         limits = config.get("limits", {})
         self.nz_min = float(limits.get("nz_min", -2.0))
@@ -155,9 +201,14 @@ class LOSRateGuidance:
             dict: Command dictionary with keys 'nz_cmd', 'roll_rate_cmd',
                 'throttle_cmd'. All values are finite and clipped to limits.
         """
-        # Log once that target_state is unused (helps during debugging)
-        if target_state is not None and not self._warned_target_state_unused:
-            logger.debug("target_state is provided but unused by LOSRateGuidance")
+        # The frozen legacy path does not use target state. The remediated path
+        # uses it as documented VPP-velocity fallback for LOS-rate calculation.
+        if (
+            self.remediation_mode == "legacy"
+            and target_state is not None
+            and not self._warned_target_state_unused
+        ):
+            logger.debug("target_state is provided but unused by legacy LOSRateGuidance")
             self._warned_target_state_unused = True
 
         # Resolve gains
@@ -167,9 +218,19 @@ class LOSRateGuidance:
         self._validate_state(own_state, "own_state")
         self._validate_state(virtual_point, "virtual_point")
 
-        own_pos = _extract_position(own_state)
-        vp_pos = _extract_position(virtual_point)
-        own_vel = _extract_velocity(own_state)
+        legacy_own_pos = _extract_position(own_state)
+        legacy_vp_pos = _extract_position(virtual_point)
+        legacy_own_vel = _extract_velocity(own_state)
+        if self.remediation_mode == "f01_f02_remediated":
+            own_pos = _extract_position_neu(own_state)
+            vp_pos = _extract_position_neu(virtual_point)
+            own_vel = _extract_velocity_neu(own_state)
+        else:
+            own_pos, vp_pos, own_vel = (
+                legacy_own_pos,
+                legacy_vp_pos,
+                legacy_own_vel,
+            )
 
         # ------------------------------------------------------------------
         # Relative geometry with safe epsilon
@@ -185,14 +246,25 @@ class LOSRateGuidance:
         # LOS heading in horizontal plane
         los_heading = self._compute_los_heading(rel_pos, own_heading)
 
-        # 1. Heading error -> roll_rate_cmd
-        heading_error = _stable_angle_diff(los_heading, own_heading)
-        current_roll = float(own_state.get("roll_rad", 0.0))
-        roll_rate_cmd = k_roll * heading_error - k_damp * current_roll
+        if self.remediation_mode == "f01_f02_remediated":
+            relative_velocity = self._resolve_relative_velocity(
+                own_state, target_state, virtual_point
+            )
+            nz_cmd = self._compute_remediated_nz_cmd(
+                rel_pos, relative_velocity, distance
+            )
+            roll_rate_cmd = self._compute_remediated_roll_rate_cmd(
+                own_state, los_heading, own_heading, own_speed
+            )
+        else:
+            # 1. Heading error -> roll_rate_cmd
+            heading_error = _stable_angle_diff(los_heading, own_heading)
+            current_roll = float(own_state.get("roll_rad", 0.0))
+            roll_rate_cmd = k_roll * heading_error - k_damp * current_roll
 
-        # 2. Elevation -> nz_cmd (using arctan2 for stability)
-        los_elevation = self._compute_stable_elevation(rel_pos, d_safe)
-        nz_cmd = self._compute_nz_cmd(los_elevation, distance, k_los, k_pos)
+            # 2. Elevation -> nz_cmd (using arctan2 for stability)
+            los_elevation = self._compute_stable_elevation(rel_pos, d_safe)
+            nz_cmd = self._compute_nz_cmd(los_elevation, distance, k_los, k_pos)
 
         # 3. Speed / throttle
         target_speed = self._extract_target_speed(target_state)
@@ -337,6 +409,95 @@ class LOSRateGuidance:
         proportional_term = k_pos * (distance / self.distance_scale_m)
         return self.base_nz + k_los * los_elevation + proportional_term
 
+    def _resolve_relative_velocity(
+        self,
+        own_state: Dict[str, Any],
+        target_state: Optional[Dict[str, Any]],
+        virtual_point: Dict[str, Any],
+    ) -> np.ndarray:
+        """Resolve VPP relative velocity in NEU, with documented target fallback."""
+        own_velocity = _extract_velocity_neu(own_state)
+        try:
+            virtual_velocity = _extract_velocity_neu(virtual_point)
+        except ValueError:
+            if target_state is None:
+                raise ValueError(
+                    "Remediated F01 guidance requires virtual-point or target "
+                    "velocity telemetry to compute LOS rate"
+                )
+            virtual_velocity = _extract_velocity_neu(target_state)
+        return virtual_velocity - own_velocity
+
+    def _compute_remediated_nz_cmd(
+        self,
+        rel_pos: np.ndarray,
+        rel_vel: np.ndarray,
+        distance: float,
+    ) -> float:
+        """Compute the F01 bounded vertical-LOS-rate PN candidate in NEU."""
+        horizontal_range = float(np.hypot(rel_pos[0], rel_pos[1]))
+        if distance < self.capture_radius_m or horizontal_range <= self.epsilon:
+            return self.base_nz
+
+        elevation = float(np.arctan2(rel_pos[2], horizontal_range))
+        horizontal_rate = float(np.dot(rel_pos[:2], rel_vel[:2]) / horizontal_range)
+        lambda_dot = float(
+            (horizontal_range * rel_vel[2] - rel_pos[2] * horizontal_rate)
+            / (distance * distance)
+        )
+        range_rate = float(np.dot(rel_pos, rel_vel) / distance)
+        closing_speed = float(
+            np.clip(-range_rate, 0.0, self.f01_max_closing_speed_mps)
+        )
+        geometric_term = self.f01_geometric_gain_nz * float(np.sin(elevation))
+        los_rate_term = (
+            self.f01_navigation_constant
+            * closing_speed
+            * float(
+                np.clip(
+                    lambda_dot,
+                    -self.f01_max_abs_los_rate_radps,
+                    self.f01_max_abs_los_rate_radps,
+                )
+            )
+            / 9.80665
+        )
+        return self.base_nz + geometric_term + los_rate_term
+
+    def _compute_remediated_roll_rate_cmd(
+        self,
+        own_state: Dict[str, Any],
+        los_heading: float,
+        own_heading: float,
+        own_speed: float,
+    ) -> float:
+        """Compute F02 outer heading/bank and inner roll-rate feedback command."""
+        roll_rate = _extract_roll_rate_radps(own_state)
+        roll = _extract_roll_rad(own_state)
+        heading_error = _stable_angle_diff(los_heading, own_heading)
+        heading_rate = float(
+            np.clip(
+                self.f02_heading_gain_per_s * heading_error,
+                -self.f02_max_turn_rate_radps,
+                self.f02_max_turn_rate_radps,
+            )
+        )
+        airspeed = float(
+            np.clip(
+                own_speed, self.f02_min_airspeed_mps, self.f02_max_airspeed_mps
+            )
+        )
+        bank_cmd = float(
+            np.clip(
+                np.arctan(airspeed * heading_rate / 9.80665),
+                -self.f02_max_bank_rad,
+                self.f02_max_bank_rad,
+            )
+        )
+        return self.f02_bank_gain_per_s * (bank_cmd - roll) - (
+            self.f02_roll_rate_damping_gain * roll_rate
+        )
+
     def _compute_throttle_cmd(
         self,
         own_speed: float,
@@ -447,12 +608,33 @@ def _extract_position(state: Dict[str, Any]) -> np.ndarray:
     )
 
 
-def _extract_velocity(state: Dict[str, Any]) -> np.ndarray:
-    """Extract 3-D velocity vector from state dict.
+def _extract_position_neu(state: Dict[str, Any]) -> np.ndarray:
+    """Extract a NEU position vector for the explicit F01/F02 remediation mode."""
+    for key in ("position_neu", "position_m", "position"):
+        position = state.get(key)
+        if position is not None:
+            arr = np.asarray(position, dtype=np.float64)
+            if arr.shape != (3,):
+                raise ValueError(
+                    f"Position must be a 3-element vector, got shape {arr.shape}"
+                )
+            return arr
+    position_ned = state.get("position_ned")
+    if position_ned is not None:
+        arr = np.asarray(position_ned, dtype=np.float64)
+        if arr.shape != (3,):
+            raise ValueError(
+                f"Position must be a 3-element vector, got shape {arr.shape}"
+            )
+        return np.array([arr[0], arr[1], -arr[2]], dtype=np.float64)
+    raise ValueError(
+        "State missing position field (expected one of: "
+        "position_neu, position_m, position_ned, position)"
+    )
 
-    Tries keys in order: velocity_ned, velocity_vector_mps, velocity.
-    Raises ValueError if missing or wrong shape.
-    """
+
+def _extract_velocity(state: Dict[str, Any]) -> np.ndarray:
+    """Extract legacy 3-D velocity semantics without changing the frozen path."""
     for key in ("velocity_ned", "velocity_vector_mps", "velocity"):
         vel = state.get(key)
         if vel is not None:
@@ -465,6 +647,62 @@ def _extract_velocity(state: Dict[str, Any]) -> np.ndarray:
     raise ValueError(
         "State missing velocity field (expected one of: "
         "velocity_ned, velocity_vector_mps, velocity)"
+    )
+
+
+def _extract_velocity_neu(state: Dict[str, Any]) -> np.ndarray:
+    """Extract a NEU velocity vector for the explicit F01/F02 remediation mode."""
+    for key in ("velocity_vector_mps", "velocity"):
+        vel = state.get(key)
+        if vel is not None:
+            arr = np.asarray(vel, dtype=np.float64)
+            if arr.shape != (3,):
+                raise ValueError(
+                    f"Velocity must be a 3-element vector, got shape {arr.shape}"
+                )
+            return arr
+    vel_ned = state.get("velocity_ned")
+    if vel_ned is not None:
+        arr = np.asarray(vel_ned, dtype=np.float64)
+        if arr.shape != (3,):
+            raise ValueError(
+                f"Velocity must be a 3-element vector, got shape {arr.shape}"
+            )
+        return np.array([arr[0], arr[1], -arr[2]], dtype=np.float64)
+    raise ValueError(
+        "State missing velocity field (expected one of: "
+        "velocity_vector_mps, velocity_ned, velocity)"
+    )
+
+
+def _extract_roll_rad(state: Dict[str, Any]) -> float:
+    """Return a finite roll attitude, accepting the documented state aliases."""
+    roll = state.get("roll_rad")
+    if roll is None:
+        attitude = state.get("attitude_rpy")
+        if attitude is not None:
+            attitude = np.asarray(attitude, dtype=np.float64)
+            if attitude.shape == (3,):
+                roll = attitude[0]
+    if roll is None or not np.isfinite(float(roll)):
+        raise ValueError("Remediated F02 guidance requires a finite roll_rad or attitude_rpy[0]")
+    return float(roll)
+
+
+def _extract_roll_rate_radps(state: Dict[str, Any]) -> float:
+    """Return explicit body roll rate; never substitute roll attitude or command."""
+    for key in ("p_rps", "roll_rate_radps"):
+        value = state.get(key)
+        if value is not None and np.isfinite(float(value)):
+            return float(value)
+    body_rates = state.get("body_rates_rps")
+    if body_rates is not None:
+        rates = np.asarray(body_rates, dtype=np.float64)
+        if rates.shape == (3,) and np.isfinite(rates[0]):
+            return float(rates[0])
+    raise ValueError(
+        "Remediated F02 guidance requires an explicit finite body roll-rate "
+        "field: p_rps, roll_rate_radps, or body_rates_rps[0]"
     )
 
 

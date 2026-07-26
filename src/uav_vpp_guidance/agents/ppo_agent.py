@@ -279,6 +279,7 @@ class PPOAgent:
             "config": self.config,
             "obs_dim": self.obs_dim,
             "action_dim": self.action_dim,
+            "action_contract_schema": "vpp-action-contract-1" if self.action_dim == 3 else None,
             "total_updates": self.total_updates,
             "total_timesteps": self.total_timesteps,
         }
@@ -297,6 +298,17 @@ class PPOAgent:
         if not os.path.exists(path):
             raise FileNotFoundError(f"Checkpoint not found: {path}")
         checkpoint = torch.load(path, map_location=self.device)
+        checkpoint_action_dim = checkpoint.get("action_dim")
+        is_vpp_policy = isinstance(self.config, dict) and "virtual_point" in self.config
+        if checkpoint_action_dim is None and is_vpp_policy:
+            raise ValueError(
+                "VPP checkpoint metadata missing action_dim; policy action semantics cannot be validated."
+            )
+        if checkpoint_action_dim is not None and int(checkpoint_action_dim) != self.action_dim:
+            raise ValueError(
+                "Checkpoint action-dim mismatch: "
+                f"checkpoint={checkpoint_action_dim}, agent={self.action_dim}."
+            )
         self.network.load_state_dict(checkpoint["network_state_dict"], strict=False)
         optimizer_loaded = False
         try:

@@ -1,0 +1,67 @@
+{
+  "schema_version": "1.0.0",
+  "finding_id": "F02",
+  "candidate": "coordinated_turn_bank_outer_roll_rate_inner",
+  "status": "approved",
+  "runtime_disposition": "implement_opt_in_mode_only",
+  "decision": "approved_by_user_runtime_authorization",
+  "timestamp_utc": "2026-07-26T00:00:00+00:00",
+  "protected_path_allowlist": ["src/uav_vpp_guidance/guidance/los_rate_guidance.py", "src/uav_vpp_guidance/envs/simple_point_mass_env.py"],
+  "evidence_hashes": {
+    "specification_sha256": "be34cffa99dafe10c64b004eccc8402b0ce66b8e9cb59d40cf8f330a7bbadadc",
+    "offline_trace_sha256": "8f3128381020630f23a77acad7fa804f53595f75d66608a056bb34cf15d890a9",
+    "baseline_freeze_sha256": "f3b78cc712ff0ea1a1af90135dbf43533236c06b3d88ebf12322da54aba1146e"
+  },
+  "acceptance_thresholds": {
+    "explicit_roll_rate_feedback": true,
+    "step_and_opposite_step_preserve_command_sign": true,
+    "bank_release_and_reset_semantics": true,
+    "speed_aware_coordinated_turn_bank_demand": true,
+    "damping_reduces_declared_rate_decay_proxy": true,
+    "f04_roll_rate_limits_unchanged_radps": [-1.5, 1.5],
+    "physical_semantics_reviewer_acceptance": true,
+    "closed_loop_tracking_safety_oscillation_effort_no_regression": true,
+    "frozen_reference_matrix_candidate_comparison": true,
+    "strict_jsbsim_candidate_comparison_when_available": true
+  },
+  "results": {
+    "offline_deterministic_trace_checks_pass": true,
+    "pytest_validation": "not_established: two targeted pytest attempts timed out during collection without test output",
+    "explicit_roll_rate_feedback": true,
+    "f04_roll_rate_limits_retained": true,
+    "physical_semantics_reviewer_acceptance": false,
+    "closed_loop_tracking_safety_oscillation_effort_no_regression": "not_established",
+    "frozen_reference_matrix_candidate_comparison": "not_executable: declared baseline matrix is unexecuted and required reference checkpoints are absent",
+    "strict_jsbsim_candidate_comparison": "not_executable: package is available but frozen evaluation artifacts are absent",
+    "protected_runtime_or_config_changed": true
+  },
+  "physical_semantics_review": {
+    "accepted": false,
+    "reason": "The candidate documents sources, signs, units, ownership, and saturation but has not received an explicit engineering review of the body-rate source/frame, coordinated-turn bounds, gain values, and migration behavior."
+  },
+  "safety_stability_review": {
+    "accepted": false,
+    "reason": "Offline clipping and a declared first-order rate-decay proxy cannot establish closed-loop aircraft safety, stability, tracking, oscillation, or control-effort non-regression."
+  },
+  "blockers": [
+    "Explicit engineering review of roll-rate telemetry source, body/NEU sign transform, freshness, airspeed validity, gains, and migration plan is pending.",
+    "Closed-loop candidate-versus-baseline evaluation on the frozen matrix is unavailable because all three main-policy checkpoints are absent and the matrix was not executed at freeze time.",
+    "No strict JSBSim candidate/baseline evidence exists; JSBSim package availability alone is insufficient."
+  ],
+  "required_next_evidence": [
+    "Independent review accepting the stated signal-source/frame/sign/unit contract and low-level responsibility boundary.",
+    "Paired frozen-matrix baseline/candidate evaluation with identical scenarios, seeds, horizon, policy/gain artifacts, tracking/safety/oscillation/control-effort metrics, resolved config, and backend provenance.",
+    "Strict JSBSim revalidation with no fallback and a safety/stability review proving no F04 or closed-loop regression."
+  ],
+  "authorization": {
+    "source": "user_explicit_runtime_guidance_authorization",
+    "scope": "F01/F02 opt-in LOSRateGuidance mode only; legacy remains the default",
+    "approved_at_utc": "2026-07-26T00:00:00+00:00"
+  },
+  "implementation_evidence": {
+    "runtime_mode": "guidance.params.remediation_mode=f01_f02_remediated",
+    "runtime_module": "src/uav_vpp_guidance/guidance/los_rate_guidance.py",
+    "validation": ["deterministic runtime smoke passed", "py_compile passed", "focused pytest collection timed out without results"]
+  },
+  "baseline_retained": true
+}

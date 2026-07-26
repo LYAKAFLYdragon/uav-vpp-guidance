@@ -1,0 +1,36 @@
+{
+  "schema_version": "1.0.0",
+  "finding_id": "F16",
+  "candidate": "explicit_releaseable_mode_state_machine",
+  "status": "needs_more_evidence",
+  "runtime_disposition": "preserve_current_runtime_latch_pending_approved_gate",
+  "decision": "no_runtime_authorization",
+  "timestamp_utc": "2026-07-26T00:00:00+00:00",
+  "protected_path_allowlist": [],
+  "evidence_hashes": {
+    "state_machine_specification_sha256": "d5ed1f2d7bafb382f8f9def6b4d6b6a7036171d77e7d7f732521609005a190b0",
+    "offline_state_machine_evidence_sha256": "30c5d6c208b52885be2e078b1157af912ce666588beb0e0cc4420c555d95bbdb"
+  },
+  "results": {
+    "transition_table_tests_defined": true,
+    "permanent_releaseable_and_state_machine_candidates_compared": true,
+    "canonical_missing_aspect_threshold_deg": 25.0,
+    "explicit_config_precedence": true,
+    "transition_telemetry_specified": true,
+    "frozen_matrix_evidence": "unavailable",
+    "strict_jsbsim_evidence": "not_available",
+    "protected_runtime_or_config_changed": false
+  },
+  "blockers": [
+    "The frozen scenario matrix is unexecuted and its required main-policy checkpoints are absent.",
+    "No paired baseline/candidate scenario evidence establishes chatter, safety, tracking, or episode-behavior benefit.",
+    "No strict-JSBSim evaluation verifies the candidate under the declared backend contract.",
+    "Runtime migration requires an approved dedicated allowlist and compatibility review for existing permanent-latch tests."
+  ],
+  "required_next_evidence": [
+    "Paired frozen-matrix evaluations of permanent latch, releaseable latch, and state-machine candidates with identical seeds/artifacts.",
+    "Per-episode transition/chatter/safety/tracking telemetry under strict JSBSim with no fallback.",
+    "Review approving one state model and an explicit protected-path allowlist before runtime implementation."
+  ],
+  "baseline_retained": true
+}

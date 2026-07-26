@@ -1,0 +1,12 @@
+{
+  "schema_version": "1.0.0",
+  "required_files": [
+    "run_manifest.json",
+    "artifact_contract.json",
+    "resolved_config.yaml",
+    "f03_f11_dynamics_evidence.json",
+    "f03_f11_evidence_gate.json"
+  ],
+  "required_directories": [],
+  "optional_files": []
+}

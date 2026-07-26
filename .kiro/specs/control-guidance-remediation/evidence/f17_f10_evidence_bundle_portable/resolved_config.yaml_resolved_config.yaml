@@ -1,0 +1,4 @@
+analysis_only: true
+input_guidance_config: config/guidance.yaml
+input_experiment_matrix: config/experiment/jsbsim_hrl_comparison.yaml
+config_overrides: []

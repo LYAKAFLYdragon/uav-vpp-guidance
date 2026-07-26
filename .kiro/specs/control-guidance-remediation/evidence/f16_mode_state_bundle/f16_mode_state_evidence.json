@@ -1,0 +1,292 @@
+{
+  "schema_version": "1.0.0",
+  "finding_id": "F16",
+  "analysis_scope": "pure deterministic candidate model; protected runtime/configuration paths unchanged",
+  "frozen_runtime_observation": {
+    "latch_policy": "sets latch on entry and clears only during reset",
+    "missing_aspect_threshold_code_fallback_deg": 15.0,
+    "audited_explicit_aspect_threshold_deg": 25.0
+  },
+  "candidate_comparison": {
+    "canonical_defaults": {
+      "enabled": true,
+      "aspect_threshold_deg": 25.0,
+      "range_threshold_m": 3000.0,
+      "closing_speed_threshold_mps": 50.0,
+      "crossing_aspect_threshold_deg": null,
+      "release_aspect_threshold_deg": 30.0,
+      "release_range_threshold_m": 3300.0000000000005,
+      "release_closing_speed_threshold_mps": 40.0,
+      "min_active_dwell_steps": 2,
+      "max_active_steps": null
+    },
+    "resolved_parameters": {
+      "enabled": true,
+      "aspect_threshold_deg": 25.0,
+      "range_threshold_m": 3000.0,
+      "closing_speed_threshold_mps": 50.0,
+      "crossing_aspect_threshold_deg": null,
+      "release_aspect_threshold_deg": 30.0,
+      "release_range_threshold_m": 3300.0000000000005,
+      "release_closing_speed_threshold_mps": 40.0,
+      "min_active_dwell_steps": 2,
+      "max_active_steps": null
+    },
+    "candidate_traces": {
+      "legacy_permanent_latch": {
+        "non_trigger": [
+          {
+            "previous_state": "vpp",
+            "state": "vpp",
+            "transition": "remain_vpp",
+            "reason": "entry_guard_not_met",
+            "mode_switch_effective": false,
+            "virtual_point_source": "vpp_policy",
+            "effective_guidance_mode": "los_rate",
+            "active_steps": 0
+          }
+        ],
+        "entry_hold_release_reentry": [
+          {
+            "previous_state": "vpp",
+            "state": "direct_track_pn",
+            "transition": "enter",
+            "reason": "entry_low_aspect",
+            "mode_switch_effective": true,
+            "virtual_point_source": "direct_track",
+            "effective_guidance_mode": "proportional_navigation",
+            "active_steps": 1
+          },
+          {
+            "previous_state": "direct_track_pn",
+            "state": "direct_track_pn",
+            "transition": "hold",
+            "reason": "latched_until_reset",
+            "mode_switch_effective": true,
+            "virtual_point_source": "direct_track",
+            "effective_guidance_mode": "proportional_navigation",
+            "active_steps": 2
+          },
+          {
+            "previous_state": "direct_track_pn",
+            "state": "direct_track_pn",
+            "transition": "enter",
+            "reason": "range_above_entry_threshold",
+            "mode_switch_effective": true,
+            "virtual_point_source": "direct_track",
+            "effective_guidance_mode": "proportional_navigation",
+            "active_steps": 3
+          },
+          {
+            "previous_state": "direct_track_pn",
+            "state": "direct_track_pn",
+            "transition": "enter",
+            "reason": "entry_low_aspect",
+            "mode_switch_effective": true,
+            "virtual_point_source": "direct_track",
+            "effective_guidance_mode": "proportional_navigation",
+            "active_steps": 4
+          }
+        ],
+        "crossing": [
+          {
+            "previous_state": "vpp",
+            "state": "vpp",
+            "transition": "remain_vpp",
+            "reason": "entry_guard_not_met",
+            "mode_switch_effective": false,
+            "virtual_point_source": "vpp_policy",
+            "effective_guidance_mode": "los_rate",
+            "active_steps": 0
+          }
+        ],
+        "invalid": [
+          {
+            "previous_state": "vpp",
+            "state": "failsafe",
+            "transition": "failsafe",
+            "reason": "invalid_geometry",
+            "mode_switch_effective": false,
+            "virtual_point_source": "vpp_policy",
+            "effective_guidance_mode": "los_rate",
+            "active_steps": 0
+          }
+        ]
+      },
+      "releaseable_latch": {
+        "non_trigger": [
+          {
+            "previous_state": "vpp",
+            "state": "vpp",
+            "transition": "remain_vpp",
+            "reason": "entry_guard_not_met",
+            "mode_switch_effective": false,
+            "virtual_point_source": "vpp_policy",
+            "effective_guidance_mode": "los_rate",
+            "active_steps": 0
+          }
+        ],
+        "entry_hold_release_reentry": [
+          {
+            "previous_state": "vpp",
+            "state": "direct_track_pn",
+            "transition": "enter",
+            "reason": "entry_low_aspect",
+            "mode_switch_effective": true,
+            "virtual_point_source": "direct_track",
+            "effective_guidance_mode": "proportional_navigation",
+            "active_steps": 1
+          },
+          {
+            "previous_state": "direct_track_pn",
+            "state": "direct_track_pn",
+            "transition": "hold",
+            "reason": "hold_low_aspect_hysteresis",
+            "mode_switch_effective": true,
+            "virtual_point_source": "direct_track",
+            "effective_guidance_mode": "proportional_navigation",
+            "active_steps": 2
+          },
+          {
+            "previous_state": "direct_track_pn",
+            "state": "vpp",
+            "transition": "release",
+            "reason": "release_guard_met",
+            "mode_switch_effective": false,
+            "virtual_point_source": "vpp_policy",
+            "effective_guidance_mode": "los_rate",
+            "active_steps": 0
+          },
+          {
+            "previous_state": "vpp",
+            "state": "direct_track_pn",
+            "transition": "enter",
+            "reason": "entry_low_aspect",
+            "mode_switch_effective": true,
+            "virtual_point_source": "direct_track",
+            "effective_guidance_mode": "proportional_navigation",
+            "active_steps": 1
+          }
+        ],
+        "crossing": [
+          {
+            "previous_state": "vpp",
+            "state": "vpp",
+            "transition": "remain_vpp",
+            "reason": "entry_guard_not_met",
+            "mode_switch_effective": false,
+            "virtual_point_source": "vpp_policy",
+            "effective_guidance_mode": "los_rate",
+            "active_steps": 0
+          }
+        ],
+        "invalid": [
+          {
+            "previous_state": "vpp",
+            "state": "failsafe",
+            "transition": "failsafe",
+            "reason": "invalid_geometry",
+            "mode_switch_effective": false,
+            "virtual_point_source": "vpp_policy",
+            "effective_guidance_mode": "los_rate",
+            "active_steps": 0
+          }
+        ]
+      },
+      "explicit_state_machine": {
+        "non_trigger": [
+          {
+            "previous_state": "vpp",
+            "state": "vpp",
+            "transition": "remain_vpp",
+            "reason": "entry_guard_not_met",
+            "mode_switch_effective": false,
+            "virtual_point_source": "vpp_policy",
+            "effective_guidance_mode": "los_rate",
+            "active_steps": 0
+          }
+        ],
+        "entry_hold_release_reentry": [
+          {
+            "previous_state": "vpp",
+            "state": "direct_track_pn",
+            "transition": "enter",
+            "reason": "entry_low_aspect",
+            "mode_switch_effective": true,
+            "virtual_point_source": "direct_track",
+            "effective_guidance_mode": "proportional_navigation",
+            "active_steps": 1
+          },
+          {
+            "previous_state": "direct_track_pn",
+            "state": "direct_track_pn",
+            "transition": "hold_dwell",
+            "reason": "minimum_active_dwell",
+            "mode_switch_effective": true,
+            "virtual_point_source": "direct_track",
+            "effective_guidance_mode": "proportional_navigation",
+            "active_steps": 2
+          },
+          {
+            "previous_state": "direct_track_pn",
+            "state": "vpp",
+            "transition": "release",
+            "reason": "release_guard_met",
+            "mode_switch_effective": false,
+            "virtual_point_source": "vpp_policy",
+            "effective_guidance_mode": "los_rate",
+            "active_steps": 0
+          },
+          {
+            "previous_state": "vpp",
+            "state": "direct_track_pn",
+            "transition": "enter",
+            "reason": "entry_low_aspect",
+            "mode_switch_effective": true,
+            "virtual_point_source": "direct_track",
+            "effective_guidance_mode": "proportional_navigation",
+            "active_steps": 1
+          }
+        ],
+        "crossing": [
+          {
+            "previous_state": "vpp",
+            "state": "vpp",
+            "transition": "remain_vpp",
+            "reason": "entry_guard_not_met",
+            "mode_switch_effective": false,
+            "virtual_point_source": "vpp_policy",
+            "effective_guidance_mode": "los_rate",
+            "active_steps": 0
+          }
+        ],
+        "invalid": [
+          {
+            "previous_state": "vpp",
+            "state": "failsafe",
+            "transition": "failsafe",
+            "reason": "invalid_geometry",
+            "mode_switch_effective": false,
+            "virtual_point_source": "vpp_policy",
+            "effective_guidance_mode": "los_rate",
+            "active_steps": 0
+          }
+        ]
+      }
+    },
+    "comparison": {
+      "legacy_release_worthy_state": "remains direct_track_pn until reset",
+      "releaseable_release_worthy_state": "returns to vpp immediately after hold guard clears",
+      "state_machine_release_worthy_state": "holds for configured dwell then returns to vpp when release guard clears",
+      "runtime_selection": "none; offline evidence only"
+    },
+    "scope": "pure deterministic transition model; does not import or modify tracking_env, runtime defaults, or configuration"
+  },
+  "backend_provenance": {
+    "requested": null,
+    "final": null,
+    "fallback_occurred": false,
+    "status": "not_applicable_offline_analytic_only"
+  },
+  "config_overrides": []
+}

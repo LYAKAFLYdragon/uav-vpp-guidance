@@ -1,0 +1,24 @@
+{
+  "schema_version": "1.0.0",
+  "freeze_id": "control-guidance-remediation-phase0-20260726",
+  "frozen_at_utc": "2026-07-26T08:31:38.692812+00:00",
+  "source_revision": {"git_commit": "a39044b7728a254cb46705f0b45b3d872d281869", "git_branch": "research/control-method-rationality-audit", "working_tree_clean": false, "preexisting_changes": [".kiro/specs/control-method-rationality-audit/tasks.md", ".kiro/specs/control-guidance-remediation/"]},
+  "audit_validation": {"mode": "read_only_analytic", "canonical_command": "python scripts/audit_control_method_rationality.py --guidance-config config/guidance.yaml --out-md reports/control_method_rationality_audit_findings_20260725_zh.md --out-json reports/control_method_rationality_audit_findings_20260725.json", "original_report_revision": "f2b5de15410e79f27ddcc6992a5fcf3a986649bc", "report_hashes": {"reports/control_method_rationality_audit_findings_20260725.json": "cf9196198eb17961de8fa11febbfd7b7245fb9fde93dc483c31594ad5d738134", "reports/control_method_rationality_audit_findings_20260725_zh.md": "d5ee49d7981ba20f7518c2775324766f7a24747a94b64839173ed4955837b2c4"}},
+  "config_hashes": {"config/guidance.yaml": "2f78d8c65f4379ace326b6f7792ba5d21575e27f38105b66030c5e8a3daa3306", "config/gain_space.yaml": "88a85fdca118966d204d3c551dd1189eb982f7e00e6521ceff85bd2ed1093c35", "config/checkpoint_registry.yaml": "df3d56bb51228eaf9c3f93bd8b8381f6d0f0c204f38d8483dbd15de6846a057c", "config/experiment/jsbsim_hrl_comparison.yaml": "204b51724f67c0400bbe1cecca188933176470ab0f9e13271b8340a7c260491b"},
+  "protected_path_manifest": {"path": ".kiro/specs/control-method-rationality-audit/preservation_baseline.sha256.json", "sha256": "005998f5343a6e0ae99c95dfb9a36d51a5da032ad725d4e3ad2354ae33b2bb99", "entry_count": 244, "config_entry_count": 214, "runtime_entry_count": 30, "matches_current_workspace": true, "approved_implementation_gates": []},
+  "baseline_scenario_matrix": {"source": "config/experiment/jsbsim_hrl_comparison.yaml", "tasks": ["head_on", "crossing_feasible", "break_turn", "sustained_turn"], "main_methods": ["prediction_vpp", "no_prediction_vpp", "end_to_end_rl"], "smoke_seeds": [0], "formal_seeds": [0, 1, 2], "episodes_per_seed": 1, "status": "declared_not_executed_by_audit"},
+  "checkpoint_identifiers": [
+    {"id": "prediction_vpp", "path": "outputs/experiments/vpp_ppo_lstm_frozen/checkpoints/best.pt", "available": false, "sha256": null},
+    {"id": "no_prediction_vpp", "path": "outputs/experiments/no_prediction_vpp_ppo_jsbsim_compare/checkpoints/last.pt", "available": false, "sha256": null},
+    {"id": "end_to_end_rl", "path": "outputs/experiments/end_to_end_ppo/checkpoints/best.pt", "available": false, "sha256": null},
+    {"id": "trajectory_predictor", "path": "outputs/trajectory_prediction/best_model.pt", "available": true, "sha256": "a7c00fd2e4fca3f77ce6d6a40223ed49b336af219d7f9bd2c85f938448d74491"}
+  ],
+  "gain_identifiers": [
+    {"id": "audited_guidance_defaults", "source": "config/guidance.yaml", "values": {"k_los": 1.0, "k_pos": 0.5, "k_damp": 0.2, "k_roll": 1.0, "k_speed": 0.2, "alpha_filter": 0.3}},
+    {"id": "gain_only_cem_dry_run", "path": "outputs/gain_only_cem/cem_results.json", "available": true, "sha256": "361eef3a130d0d3547772a85ead5a42659c73e8679934ac8dbd4e65b36b8d631", "usable_as_evaluation_evidence": false, "reason": "dry_run=true; n_iterations=0; best_score=null"},
+    {"id": "p0b_bilevel", "path": "outputs/experiments/p0b_bilevel_s0/bilevel_results.json", "available": false, "sha256": null}
+  ],
+  "backend_provenance": {"audit_backend_requested": null, "audit_final_active_backend": null, "backend_fallback_occurred": false, "backend_fallback_reason": null, "status": "not_applicable_analytic_only", "declared_matrix_backend": "jsbsim", "declared_matrix_executed": false, "jsbsim_package_available": true, "jsbsim_version": "1.3.1", "strict_jsbsim_evidence_available": false},
+  "unavailable_evidence": ["The rationality audit performed no scenario/backend run and therefore has no active backend or fallback event.", "Three main-method checkpoints and the P0-B bilevel gain artifact are absent in this workspace.", "The available CEM gain result is a zero-iteration dry run and is not performance evidence.", "No strict JSBSim transfer evidence was produced by the analytic audit."],
+  "requirements": ["2.13", "3.1", "3.2", "3.7", "3.8", "3.9"]
+}

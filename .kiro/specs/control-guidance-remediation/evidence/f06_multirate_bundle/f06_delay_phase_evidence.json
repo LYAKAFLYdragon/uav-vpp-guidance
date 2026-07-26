@@ -1,0 +1,1593 @@
+{
+  "schema_version": "1.0.0",
+  "finding_id": "F06",
+  "analysis_scope": "offline deterministic scheduler + command-filter model; no runtime control/configuration modified",
+  "frozen_baseline": {
+    "high_level_period_s": 0.2,
+    "guidance_period_s": 0.2,
+    "low_level_period_s": 0.2,
+    "command_order": [
+      "high_level/VPP",
+      "guidance",
+      "clip",
+      "command_filter",
+      "communication_delay",
+      "backend_step"
+    ],
+    "filter_alpha": 0.3,
+    "filter_time_constant_s": 0.5607346504114258,
+    "filter_time_constant_interpretation": "component only; not total end-to-end latency",
+    "communication_delay": "unmeasured/disabled-or-config-dependent; excluded from measured scheduler/filter sweep"
+  },
+  "candidate": {
+    "name": "f06_10hz_high_level_20hz_guidance_100hz_low_level",
+    "schedule": {
+      "high_level_period_s": 0.1,
+      "guidance_period_s": 0.05,
+      "low_level_period_s": 0.01,
+      "resampling": "zero_order_hold",
+      "filter_alpha": 0.08530878077130555
+    },
+    "not_runtime_selected": true
+  },
+  "exact_one_second_traces": {
+    "baseline": {
+      "high_level_timestamps_s": [
+        0.0,
+        0.2,
+        0.4,
+        0.6000000000000001,
+        0.8
+      ],
+      "guidance_timestamps_s": [
+        0.0,
+        0.2,
+        0.4,
+        0.6000000000000001,
+        0.8
+      ],
+      "filter_timestamps_s": [
+        0.0,
+        0.2,
+        0.4,
+        0.6000000000000001,
+        0.8
+      ],
+      "low_level_timestamps_s": [
+        0.0,
+        0.2,
+        0.4,
+        0.6000000000000001,
+        0.8
+      ],
+      "applied_commands": [
+        {
+          "timestamp_s": 0.0,
+          "command": 0.0
+        },
+        {
+          "timestamp_s": 0.2,
+          "command": 0.0
+        },
+        {
+          "timestamp_s": 0.4,
+          "command": 0.3
+        },
+        {
+          "timestamp_s": 0.6000000000000001,
+          "command": 0.51
+        },
+        {
+          "timestamp_s": 0.8,
+          "command": 0.657
+        }
+      ],
+      "telemetry": [
+        {
+          "timestamp_s": 0.0,
+          "action_timestamp_s": 0.0,
+          "guidance_timestamp_s": 0.0,
+          "action_age_s": 0.0,
+          "guidance_age_s": 0.0,
+          "filtered_command": 0.0
+        },
+        {
+          "timestamp_s": 0.2,
+          "action_timestamp_s": 0.2,
+          "guidance_timestamp_s": 0.2,
+          "action_age_s": 0.0,
+          "guidance_age_s": 0.0,
+          "filtered_command": 0.0
+        },
+        {
+          "timestamp_s": 0.4,
+          "action_timestamp_s": 0.4,
+          "guidance_timestamp_s": 0.4,
+          "action_age_s": 0.0,
+          "guidance_age_s": 0.0,
+          "filtered_command": 0.3
+        },
+        {
+          "timestamp_s": 0.6000000000000001,
+          "action_timestamp_s": 0.6000000000000001,
+          "guidance_timestamp_s": 0.6000000000000001,
+          "action_age_s": 0.0,
+          "guidance_age_s": 0.0,
+          "filtered_command": 0.51
+        },
+        {
+          "timestamp_s": 0.8,
+          "action_timestamp_s": 0.8,
+          "guidance_timestamp_s": 0.8,
+          "action_age_s": 0.0,
+          "guidance_age_s": 0.0,
+          "filtered_command": 0.657
+        }
+      ]
+    },
+    "candidate": {
+      "high_level_timestamps_s": [
+        0.0,
+        0.1,
+        0.2,
+        0.3,
+        0.4,
+        0.5,
+        0.6,
+        0.7000000000000001,
+        0.8,
+        0.9
+      ],
+      "guidance_timestamps_s": [
+        0.0,
+        0.05,
+        0.1,
+        0.15,
+        0.2,
+        0.25,
+        0.3,
+        0.35000000000000003,
+        0.4,
+        0.45,
+        0.5,
+        0.55,
+        0.6,
+        0.65,
+        0.7000000000000001,
+        0.75,
+        0.8,
+        0.85,
+        0.9,
+        0.9500000000000001
+      ],
+      "filter_timestamps_s": [
+        0.0,
+        0.05,
+        0.1,
+        0.15,
+        0.2,
+        0.25,
+        0.3,
+        0.35000000000000003,
+        0.4,
+        0.45,
+        0.5,
+        0.55,
+        0.6,
+        0.65,
+        0.7000000000000001,
+        0.75,
+        0.8,
+        0.85,
+        0.9,
+        0.9500000000000001
+      ],
+      "low_level_timestamps_s": [
+        0.0,
+        0.01,
+        0.02,
+        0.03,
+        0.04,
+        0.05,
+        0.06,
+        0.07,
+        0.08,
+        0.09,
+        0.1,
+        0.11,
+        0.12,
+        0.13,
+        0.14,
+        0.15,
+        0.16,
+        0.17,
+        0.18,
+        0.19,
+        0.2,
+        0.21,
+        0.22,
+        0.23,
+        0.24,
+        0.25,
+        0.26,
+        0.27,
+        0.28,
+        0.29,
+        0.3,
+        0.31,
+        0.32,
+        0.33,
+        0.34,
+        0.35000000000000003,
+        0.36,
+        0.37,
+        0.38,
+        0.39,
+        0.4,
+        0.41000000000000003,
+        0.42,
+        0.43,
+        0.44,
+        0.45,
+        0.46,
+        0.47000000000000003,
+        0.48,
+        0.49,
+        0.5,
+        0.51,
+        0.52,
+        0.53,
+        0.54,
+        0.55,
+        0.56,
+        0.5700000000000001,
+        0.58,
+        0.59,
+        0.6,
+        0.61,
+        0.62,
+        0.63,
+        0.64,
+        0.65,
+        0.66,
+        0.67,
+        0.68,
+        0.6900000000000001,
+        0.7000000000000001,
+        0.71,
+        0.72,
+        0.73,
+        0.74,
+        0.75,
+        0.76,
+        0.77,
+        0.78,
+        0.79,
+        0.8,
+        0.81,
+        0.8200000000000001,
+        0.8300000000000001,
+        0.84,
+        0.85,
+        0.86,
+        0.87,
+        0.88,
+        0.89,
+        0.9,
+        0.91,
+        0.92,
+        0.93,
+        0.9400000000000001,
+        0.9500000000000001,
+        0.96,
+        0.97,
+        0.98,
+        0.99
+      ],
+      "applied_commands": [
+        {
+          "timestamp_s": 0.0,
+          "command": 0.0
+        },
+        {
+          "timestamp_s": 0.01,
+          "command": 0.0
+        },
+        {
+          "timestamp_s": 0.02,
+          "command": 0.0
+        },
+        {
+          "timestamp_s": 0.03,
+          "command": 0.0
+        },
+        {
+          "timestamp_s": 0.04,
+          "command": 0.0
+        },
+        {
+          "timestamp_s": 0.05,
+          "command": 0.0
+        },
+        {
+          "timestamp_s": 0.06,
+          "command": 0.0
+        },
+        {
+          "timestamp_s": 0.07,
+          "command": 0.0
+        },
+        {
+          "timestamp_s": 0.08,
+          "command": 0.0
+        },
+        {
+          "timestamp_s": 0.09,
+          "command": 0.0
+        },
+        {
+          "timestamp_s": 0.1,
+          "command": 0.0
+        },
+        {
+          "timestamp_s": 0.11,
+          "command": 0.0
+        },
+        {
+          "timestamp_s": 0.12,
+          "command": 0.0
+        },
+        {
+          "timestamp_s": 0.13,
+          "command": 0.0
+        },
+        {
+          "timestamp_s": 0.14,
+          "command": 0.0
+        },
+        {
+          "timestamp_s": 0.15,
+          "command": 0.0
+        },
+        {
+          "timestamp_s": 0.16,
+          "command": 0.0
+        },
+        {
+          "timestamp_s": 0.17,
+          "command": 0.0
+        },
+        {
+          "timestamp_s": 0.18,
+          "command": 0.0
+        },
+        {
+          "timestamp_s": 0.19,
+          "command": 0.0
+        },
+        {
+          "timestamp_s": 0.2,
+          "command": 0.0
+        },
+        {
+          "timestamp_s": 0.21,
+          "command": 0.0
+        },
+        {
+          "timestamp_s": 0.22,
+          "command": 0.0
+        },
+        {
+          "timestamp_s": 0.23,
+          "command": 0.0
+        },
+        {
+          "timestamp_s": 0.24,
+          "command": 0.0
+        },
+        {
+          "timestamp_s": 0.25,
+          "command": 0.0
+        },
+        {
+          "timestamp_s": 0.26,
+          "command": 0.0
+        },
+        {
+          "timestamp_s": 0.27,
+          "command": 0.0
+        },
+        {
+          "timestamp_s": 0.28,
+          "command": 0.0
+        },
+        {
+          "timestamp_s": 0.29,
+          "command": 0.0
+        },
+        {
+          "timestamp_s": 0.3,
+          "command": 0.0
+        },
+        {
+          "timestamp_s": 0.31,
+          "command": 0.0
+        },
+        {
+          "timestamp_s": 0.32,
+          "command": 0.0
+        },
+        {
+          "timestamp_s": 0.33,
+          "command": 0.0
+        },
+        {
+          "timestamp_s": 0.34,
+          "command": 0.0
+        },
+        {
+          "timestamp_s": 0.35000000000000003,
+          "command": 0.0
+        },
+        {
+          "timestamp_s": 0.36,
+          "command": 0.0
+        },
+        {
+          "timestamp_s": 0.37,
+          "command": 0.0
+        },
+        {
+          "timestamp_s": 0.38,
+          "command": 0.0
+        },
+        {
+          "timestamp_s": 0.39,
+          "command": 0.0
+        },
+        {
+          "timestamp_s": 0.4,
+          "command": 0.08530878077130555
+        },
+        {
+          "timestamp_s": 0.41000000000000003,
+          "command": 0.08530878077130555
+        },
+        {
+          "timestamp_s": 0.42,
+          "command": 0.08530878077130555
+        },
+        {
+          "timestamp_s": 0.43,
+          "command": 0.08530878077130555
+        },
+        {
+          "timestamp_s": 0.44,
+          "command": 0.08530878077130555
+        },
+        {
+          "timestamp_s": 0.45,
+          "command": 0.16333997346592444
+        },
+        {
+          "timestamp_s": 0.46,
+          "command": 0.16333997346592444
+        },
+        {
+          "timestamp_s": 0.47000000000000003,
+          "command": 0.16333997346592444
+        },
+        {
+          "timestamp_s": 0.48,
+          "command": 0.16333997346592444
+        },
+        {
+          "timestamp_s": 0.49,
+          "command": 0.16333997346592444
+        },
+        {
+          "timestamp_s": 0.5,
+          "command": 0.23471442024963457
+        },
+        {
+          "timestamp_s": 0.51,
+          "command": 0.23471442024963457
+        },
+        {
+          "timestamp_s": 0.52,
+          "command": 0.23471442024963457
+        },
+        {
+          "timestamp_s": 0.53,
+          "command": 0.23471442024963457
+        },
+        {
+          "timestamp_s": 0.54,
+          "command": 0.23471442024963457
+        },
+        {
+          "timestamp_s": 0.55,
+          "command": 0.29999999999999993
+        },
+        {
+          "timestamp_s": 0.56,
+          "command": 0.29999999999999993
+        },
+        {
+          "timestamp_s": 0.5700000000000001,
+          "command": 0.29999999999999993
+        },
+        {
+          "timestamp_s": 0.58,
+          "command": 0.29999999999999993
+        },
+        {
+          "timestamp_s": 0.59,
+          "command": 0.29999999999999993
+        },
+        {
+          "timestamp_s": 0.6,
+          "command": 0.35971614653991385
+        },
+        {
+          "timestamp_s": 0.61,
+          "command": 0.35971614653991385
+        },
+        {
+          "timestamp_s": 0.62,
+          "command": 0.35971614653991385
+        },
+        {
+          "timestamp_s": 0.63,
+          "command": 0.35971614653991385
+        },
+        {
+          "timestamp_s": 0.64,
+          "command": 0.35971614653991385
+        },
+        {
+          "timestamp_s": 0.65,
+          "command": 0.4143379814261471
+        },
+        {
+          "timestamp_s": 0.66,
+          "command": 0.4143379814261471
+        },
+        {
+          "timestamp_s": 0.67,
+          "command": 0.4143379814261471
+        },
+        {
+          "timestamp_s": 0.68,
+          "command": 0.4143379814261471
+        },
+        {
+          "timestamp_s": 0.6900000000000001,
+          "command": 0.4143379814261471
+        },
+        {
+          "timestamp_s": 0.7000000000000001,
+          "command": 0.46430009417474416
+        },
+        {
+          "timestamp_s": 0.71,
+          "command": 0.46430009417474416
+        },
+        {
+          "timestamp_s": 0.72,
+          "command": 0.46430009417474416
+        },
+        {
+          "timestamp_s": 0.73,
+          "command": 0.46430009417474416
+        },
+        {
+          "timestamp_s": 0.74,
+          "command": 0.46430009417474416
+        },
+        {
+          "timestamp_s": 0.75,
+          "command": 0.51
+        },
+        {
+          "timestamp_s": 0.76,
+          "command": 0.51
+        },
+        {
+          "timestamp_s": 0.77,
+          "command": 0.51
+        },
+        {
+          "timestamp_s": 0.78,
+          "command": 0.51
+        },
+        {
+          "timestamp_s": 0.79,
+          "command": 0.51
+        },
+        {
+          "timestamp_s": 0.8,
+          "command": 0.5518013025779398
+        },
+        {
+          "timestamp_s": 0.81,
+          "command": 0.5518013025779398
+        },
+        {
+          "timestamp_s": 0.8200000000000001,
+          "command": 0.5518013025779398
+        },
+        {
+          "timestamp_s": 0.8300000000000001,
+          "command": 0.5518013025779398
+        },
+        {
+          "timestamp_s": 0.84,
+          "command": 0.5518013025779398
+        },
+        {
+          "timestamp_s": 0.85,
+          "command": 0.5900365869983031
+        },
+        {
+          "timestamp_s": 0.86,
+          "command": 0.5900365869983031
+        },
+        {
+          "timestamp_s": 0.87,
+          "command": 0.5900365869983031
+        },
+        {
+          "timestamp_s": 0.88,
+          "command": 0.5900365869983031
+        },
+        {
+          "timestamp_s": 0.89,
+          "command": 0.5900365869983031
+        },
+        {
+          "timestamp_s": 0.9,
+          "command": 0.625010065922321
+        },
+        {
+          "timestamp_s": 0.91,
+          "command": 0.625010065922321
+        },
+        {
+          "timestamp_s": 0.92,
+          "command": 0.625010065922321
+        },
+        {
+          "timestamp_s": 0.93,
+          "command": 0.625010065922321
+        },
+        {
+          "timestamp_s": 0.9400000000000001,
+          "command": 0.625010065922321
+        },
+        {
+          "timestamp_s": 0.9500000000000001,
+          "command": 0.657
+        },
+        {
+          "timestamp_s": 0.96,
+          "command": 0.657
+        },
+        {
+          "timestamp_s": 0.97,
+          "command": 0.657
+        },
+        {
+          "timestamp_s": 0.98,
+          "command": 0.657
+        },
+        {
+          "timestamp_s": 0.99,
+          "command": 0.657
+        }
+      ],
+      "telemetry": [
+        {
+          "timestamp_s": 0.0,
+          "action_timestamp_s": 0.0,
+          "guidance_timestamp_s": 0.0,
+          "action_age_s": 0.0,
+          "guidance_age_s": 0.0,
+          "filtered_command": 0.0
+        },
+        {
+          "timestamp_s": 0.01,
+          "action_timestamp_s": 0.0,
+          "guidance_timestamp_s": 0.0,
+          "action_age_s": 0.01,
+          "guidance_age_s": 0.01,
+          "filtered_command": 0.0
+        },
+        {
+          "timestamp_s": 0.02,
+          "action_timestamp_s": 0.0,
+          "guidance_timestamp_s": 0.0,
+          "action_age_s": 0.02,
+          "guidance_age_s": 0.02,
+          "filtered_command": 0.0
+        },
+        {
+          "timestamp_s": 0.03,
+          "action_timestamp_s": 0.0,
+          "guidance_timestamp_s": 0.0,
+          "action_age_s": 0.03,
+          "guidance_age_s": 0.03,
+          "filtered_command": 0.0
+        },
+        {
+          "timestamp_s": 0.04,
+          "action_timestamp_s": 0.0,
+          "guidance_timestamp_s": 0.0,
+          "action_age_s": 0.04,
+          "guidance_age_s": 0.04,
+          "filtered_command": 0.0
+        },
+        {
+          "timestamp_s": 0.05,
+          "action_timestamp_s": 0.0,
+          "guidance_timestamp_s": 0.05,
+          "action_age_s": 0.05,
+          "guidance_age_s": 0.0,
+          "filtered_command": 0.0
+        },
+        {
+          "timestamp_s": 0.06,
+          "action_timestamp_s": 0.0,
+          "guidance_timestamp_s": 0.05,
+          "action_age_s": 0.06,
+          "guidance_age_s": 0.009999999999999995,
+          "filtered_command": 0.0
+        },
+        {
+          "timestamp_s": 0.07,
+          "action_timestamp_s": 0.0,
+          "guidance_timestamp_s": 0.05,
+          "action_age_s": 0.07,
+          "guidance_age_s": 0.020000000000000004,
+          "filtered_command": 0.0
+        },
+        {
+          "timestamp_s": 0.08,
+          "action_timestamp_s": 0.0,
+          "guidance_timestamp_s": 0.05,
+          "action_age_s": 0.08,
+          "guidance_age_s": 0.03,
+          "filtered_command": 0.0
+        },
+        {
+          "timestamp_s": 0.09,
+          "action_timestamp_s": 0.0,
+          "guidance_timestamp_s": 0.05,
+          "action_age_s": 0.09,
+          "guidance_age_s": 0.039999999999999994,
+          "filtered_command": 0.0
+        },
+        {
+          "timestamp_s": 0.1,
+          "action_timestamp_s": 0.1,
+          "guidance_timestamp_s": 0.1,
+          "action_age_s": 0.0,
+          "guidance_age_s": 0.0,
+          "filtered_command": 0.0
+        },
+        {
+          "timestamp_s": 0.11,
+          "action_timestamp_s": 0.1,
+          "guidance_timestamp_s": 0.1,
+          "action_age_s": 0.009999999999999995,
+          "guidance_age_s": 0.009999999999999995,
+          "filtered_command": 0.0
+        },
+        {
+          "timestamp_s": 0.12,
+          "action_timestamp_s": 0.1,
+          "guidance_timestamp_s": 0.1,
+          "action_age_s": 0.01999999999999999,
+          "guidance_age_s": 0.01999999999999999,
+          "filtered_command": 0.0
+        },
+        {
+          "timestamp_s": 0.13,
+          "action_timestamp_s": 0.1,
+          "guidance_timestamp_s": 0.1,
+          "action_age_s": 0.03,
+          "guidance_age_s": 0.03,
+          "filtered_command": 0.0
+        },
+        {
+          "timestamp_s": 0.14,
+          "action_timestamp_s": 0.1,
+          "guidance_timestamp_s": 0.1,
+          "action_age_s": 0.04000000000000001,
+          "guidance_age_s": 0.04000000000000001,
+          "filtered_command": 0.0
+        },
+        {
+          "timestamp_s": 0.15,
+          "action_timestamp_s": 0.1,
+          "guidance_timestamp_s": 0.15,
+          "action_age_s": 0.04999999999999999,
+          "guidance_age_s": 0.0,
+          "filtered_command": 0.0
+        },
+        {
+          "timestamp_s": 0.16,
+          "action_timestamp_s": 0.1,
+          "guidance_timestamp_s": 0.15,
+          "action_age_s": 0.06,
+          "guidance_age_s": 0.010000000000000009,
+          "filtered_command": 0.0
+        },
+        {
+          "timestamp_s": 0.17,
+          "action_timestamp_s": 0.1,
+          "guidance_timestamp_s": 0.15,
+          "action_age_s": 0.07,
+          "guidance_age_s": 0.020000000000000018,
+          "filtered_command": 0.0
+        },
+        {
+          "timestamp_s": 0.18,
+          "action_timestamp_s": 0.1,
+          "guidance_timestamp_s": 0.15,
+          "action_age_s": 0.07999999999999999,
+          "guidance_age_s": 0.03,
+          "filtered_command": 0.0
+        },
+        {
+          "timestamp_s": 0.19,
+          "action_timestamp_s": 0.1,
+          "guidance_timestamp_s": 0.15,
+          "action_age_s": 0.09,
+          "guidance_age_s": 0.04000000000000001,
+          "filtered_command": 0.0
+        },
+        {
+          "timestamp_s": 0.2,
+          "action_timestamp_s": 0.2,
+          "guidance_timestamp_s": 0.2,
+          "action_age_s": 0.0,
+          "guidance_age_s": 0.0,
+          "filtered_command": 0.0
+        },
+        {
+          "timestamp_s": 0.21,
+          "action_timestamp_s": 0.2,
+          "guidance_timestamp_s": 0.2,
+          "action_age_s": 0.009999999999999981,
+          "guidance_age_s": 0.009999999999999981,
+          "filtered_command": 0.0
+        },
+        {
+          "timestamp_s": 0.22,
+          "action_timestamp_s": 0.2,
+          "guidance_timestamp_s": 0.2,
+          "action_age_s": 0.01999999999999999,
+          "guidance_age_s": 0.01999999999999999,
+          "filtered_command": 0.0
+        },
+        {
+          "timestamp_s": 0.23,
+          "action_timestamp_s": 0.2,
+          "guidance_timestamp_s": 0.2,
+          "action_age_s": 0.03,
+          "guidance_age_s": 0.03,
+          "filtered_command": 0.0
+        },
+        {
+          "timestamp_s": 0.24,
+          "action_timestamp_s": 0.2,
+          "guidance_timestamp_s": 0.2,
+          "action_age_s": 0.03999999999999998,
+          "guidance_age_s": 0.03999999999999998,
+          "filtered_command": 0.0
+        },
+        {
+          "timestamp_s": 0.25,
+          "action_timestamp_s": 0.2,
+          "guidance_timestamp_s": 0.25,
+          "action_age_s": 0.04999999999999999,
+          "guidance_age_s": 0.0,
+          "filtered_command": 0.0
+        },
+        {
+          "timestamp_s": 0.26,
+          "action_timestamp_s": 0.2,
+          "guidance_timestamp_s": 0.25,
+          "action_age_s": 0.06,
+          "guidance_age_s": 0.010000000000000009,
+          "filtered_command": 0.0
+        },
+        {
+          "timestamp_s": 0.27,
+          "action_timestamp_s": 0.2,
+          "guidance_timestamp_s": 0.25,
+          "action_age_s": 0.07,
+          "guidance_age_s": 0.020000000000000018,
+          "filtered_command": 0.0
+        },
+        {
+          "timestamp_s": 0.28,
+          "action_timestamp_s": 0.2,
+          "guidance_timestamp_s": 0.25,
+          "action_age_s": 0.08000000000000002,
+          "guidance_age_s": 0.030000000000000027,
+          "filtered_command": 0.0
+        },
+        {
+          "timestamp_s": 0.29,
+          "action_timestamp_s": 0.2,
+          "guidance_timestamp_s": 0.25,
+          "action_age_s": 0.08999999999999997,
+          "guidance_age_s": 0.03999999999999998,
+          "filtered_command": 0.0
+        },
+        {
+          "timestamp_s": 0.3,
+          "action_timestamp_s": 0.3,
+          "guidance_timestamp_s": 0.3,
+          "action_age_s": 0.0,
+          "guidance_age_s": 0.0,
+          "filtered_command": 0.0
+        },
+        {
+          "timestamp_s": 0.31,
+          "action_timestamp_s": 0.3,
+          "guidance_timestamp_s": 0.3,
+          "action_age_s": 0.010000000000000009,
+          "guidance_age_s": 0.010000000000000009,
+          "filtered_command": 0.0
+        },
+        {
+          "timestamp_s": 0.32,
+          "action_timestamp_s": 0.3,
+          "guidance_timestamp_s": 0.3,
+          "action_age_s": 0.020000000000000018,
+          "guidance_age_s": 0.020000000000000018,
+          "filtered_command": 0.0
+        },
+        {
+          "timestamp_s": 0.33,
+          "action_timestamp_s": 0.3,
+          "guidance_timestamp_s": 0.3,
+          "action_age_s": 0.030000000000000027,
+          "guidance_age_s": 0.030000000000000027,
+          "filtered_command": 0.0
+        },
+        {
+          "timestamp_s": 0.34,
+          "action_timestamp_s": 0.3,
+          "guidance_timestamp_s": 0.3,
+          "action_age_s": 0.040000000000000036,
+          "guidance_age_s": 0.040000000000000036,
+          "filtered_command": 0.0
+        },
+        {
+          "timestamp_s": 0.35000000000000003,
+          "action_timestamp_s": 0.3,
+          "guidance_timestamp_s": 0.35000000000000003,
+          "action_age_s": 0.050000000000000044,
+          "guidance_age_s": 0.0,
+          "filtered_command": 0.0
+        },
+        {
+          "timestamp_s": 0.36,
+          "action_timestamp_s": 0.3,
+          "guidance_timestamp_s": 0.35000000000000003,
+          "action_age_s": 0.06,
+          "guidance_age_s": 0.009999999999999953,
+          "filtered_command": 0.0
+        },
+        {
+          "timestamp_s": 0.37,
+          "action_timestamp_s": 0.3,
+          "guidance_timestamp_s": 0.35000000000000003,
+          "action_age_s": 0.07,
+          "guidance_age_s": 0.019999999999999962,
+          "filtered_command": 0.0
+        },
+        {
+          "timestamp_s": 0.38,
+          "action_timestamp_s": 0.3,
+          "guidance_timestamp_s": 0.35000000000000003,
+          "action_age_s": 0.08000000000000002,
+          "guidance_age_s": 0.02999999999999997,
+          "filtered_command": 0.0
+        },
+        {
+          "timestamp_s": 0.39,
+          "action_timestamp_s": 0.3,
+          "guidance_timestamp_s": 0.35000000000000003,
+          "action_age_s": 0.09000000000000002,
+          "guidance_age_s": 0.03999999999999998,
+          "filtered_command": 0.0
+        },
+        {
+          "timestamp_s": 0.4,
+          "action_timestamp_s": 0.4,
+          "guidance_timestamp_s": 0.4,
+          "action_age_s": 0.0,
+          "guidance_age_s": 0.0,
+          "filtered_command": 0.08530878077130555
+        },
+        {
+          "timestamp_s": 0.41000000000000003,
+          "action_timestamp_s": 0.4,
+          "guidance_timestamp_s": 0.4,
+          "action_age_s": 0.010000000000000009,
+          "guidance_age_s": 0.010000000000000009,
+          "filtered_command": 0.08530878077130555
+        },
+        {
+          "timestamp_s": 0.42,
+          "action_timestamp_s": 0.4,
+          "guidance_timestamp_s": 0.4,
+          "action_age_s": 0.019999999999999962,
+          "guidance_age_s": 0.019999999999999962,
+          "filtered_command": 0.08530878077130555
+        },
+        {
+          "timestamp_s": 0.43,
+          "action_timestamp_s": 0.4,
+          "guidance_timestamp_s": 0.4,
+          "action_age_s": 0.02999999999999997,
+          "guidance_age_s": 0.02999999999999997,
+          "filtered_command": 0.08530878077130555
+        },
+        {
+          "timestamp_s": 0.44,
+          "action_timestamp_s": 0.4,
+          "guidance_timestamp_s": 0.4,
+          "action_age_s": 0.03999999999999998,
+          "guidance_age_s": 0.03999999999999998,
+          "filtered_command": 0.08530878077130555
+        },
+        {
+          "timestamp_s": 0.45,
+          "action_timestamp_s": 0.4,
+          "guidance_timestamp_s": 0.45,
+          "action_age_s": 0.04999999999999999,
+          "guidance_age_s": 0.0,
+          "filtered_command": 0.16333997346592444
+        },
+        {
+          "timestamp_s": 0.46,
+          "action_timestamp_s": 0.4,
+          "guidance_timestamp_s": 0.45,
+          "action_age_s": 0.06,
+          "guidance_age_s": 0.010000000000000009,
+          "filtered_command": 0.16333997346592444
+        },
+        {
+          "timestamp_s": 0.47000000000000003,
+          "action_timestamp_s": 0.4,
+          "guidance_timestamp_s": 0.45,
+          "action_age_s": 0.07,
+          "guidance_age_s": 0.020000000000000018,
+          "filtered_command": 0.16333997346592444
+        },
+        {
+          "timestamp_s": 0.48,
+          "action_timestamp_s": 0.4,
+          "guidance_timestamp_s": 0.45,
+          "action_age_s": 0.07999999999999996,
+          "guidance_age_s": 0.02999999999999997,
+          "filtered_command": 0.16333997346592444
+        },
+        {
+          "timestamp_s": 0.49,
+          "action_timestamp_s": 0.4,
+          "guidance_timestamp_s": 0.45,
+          "action_age_s": 0.08999999999999997,
+          "guidance_age_s": 0.03999999999999998,
+          "filtered_command": 0.16333997346592444
+        },
+        {
+          "timestamp_s": 0.5,
+          "action_timestamp_s": 0.5,
+          "guidance_timestamp_s": 0.5,
+          "action_age_s": 0.0,
+          "guidance_age_s": 0.0,
+          "filtered_command": 0.23471442024963457
+        },
+        {
+          "timestamp_s": 0.51,
+          "action_timestamp_s": 0.5,
+          "guidance_timestamp_s": 0.5,
+          "action_age_s": 0.010000000000000009,
+          "guidance_age_s": 0.010000000000000009,
+          "filtered_command": 0.23471442024963457
+        },
+        {
+          "timestamp_s": 0.52,
+          "action_timestamp_s": 0.5,
+          "guidance_timestamp_s": 0.5,
+          "action_age_s": 0.020000000000000018,
+          "guidance_age_s": 0.020000000000000018,
+          "filtered_command": 0.23471442024963457
+        },
+        {
+          "timestamp_s": 0.53,
+          "action_timestamp_s": 0.5,
+          "guidance_timestamp_s": 0.5,
+          "action_age_s": 0.030000000000000027,
+          "guidance_age_s": 0.030000000000000027,
+          "filtered_command": 0.23471442024963457
+        },
+        {
+          "timestamp_s": 0.54,
+          "action_timestamp_s": 0.5,
+          "guidance_timestamp_s": 0.5,
+          "action_age_s": 0.040000000000000036,
+          "guidance_age_s": 0.040000000000000036,
+          "filtered_command": 0.23471442024963457
+        },
+        {
+          "timestamp_s": 0.55,
+          "action_timestamp_s": 0.5,
+          "guidance_timestamp_s": 0.55,
+          "action_age_s": 0.050000000000000044,
+          "guidance_age_s": 0.0,
+          "filtered_command": 0.29999999999999993
+        },
+        {
+          "timestamp_s": 0.56,
+          "action_timestamp_s": 0.5,
+          "guidance_timestamp_s": 0.55,
+          "action_age_s": 0.06000000000000005,
+          "guidance_age_s": 0.010000000000000009,
+          "filtered_command": 0.29999999999999993
+        },
+        {
+          "timestamp_s": 0.5700000000000001,
+          "action_timestamp_s": 0.5,
+          "guidance_timestamp_s": 0.55,
+          "action_age_s": 0.07000000000000006,
+          "guidance_age_s": 0.020000000000000018,
+          "filtered_command": 0.29999999999999993
+        },
+        {
+          "timestamp_s": 0.58,
+          "action_timestamp_s": 0.5,
+          "guidance_timestamp_s": 0.55,
+          "action_age_s": 0.07999999999999996,
+          "guidance_age_s": 0.029999999999999916,
+          "filtered_command": 0.29999999999999993
+        },
+        {
+          "timestamp_s": 0.59,
+          "action_timestamp_s": 0.5,
+          "guidance_timestamp_s": 0.55,
+          "action_age_s": 0.08999999999999997,
+          "guidance_age_s": 0.039999999999999925,
+          "filtered_command": 0.29999999999999993
+        },
+        {
+          "timestamp_s": 0.6,
+          "action_timestamp_s": 0.6,
+          "guidance_timestamp_s": 0.6,
+          "action_age_s": 0.0,
+          "guidance_age_s": 0.0,
+          "filtered_command": 0.35971614653991385
+        },
+        {
+          "timestamp_s": 0.61,
+          "action_timestamp_s": 0.6,
+          "guidance_timestamp_s": 0.6,
+          "action_age_s": 0.010000000000000009,
+          "guidance_age_s": 0.010000000000000009,
+          "filtered_command": 0.35971614653991385
+        },
+        {
+          "timestamp_s": 0.62,
+          "action_timestamp_s": 0.6,
+          "guidance_timestamp_s": 0.6,
+          "action_age_s": 0.020000000000000018,
+          "guidance_age_s": 0.020000000000000018,
+          "filtered_command": 0.35971614653991385
+        },
+        {
+          "timestamp_s": 0.63,
+          "action_timestamp_s": 0.6,
+          "guidance_timestamp_s": 0.6,
+          "action_age_s": 0.030000000000000027,
+          "guidance_age_s": 0.030000000000000027,
+          "filtered_command": 0.35971614653991385
+        },
+        {
+          "timestamp_s": 0.64,
+          "action_timestamp_s": 0.6,
+          "guidance_timestamp_s": 0.6,
+          "action_age_s": 0.040000000000000036,
+          "guidance_age_s": 0.040000000000000036,
+          "filtered_command": 0.35971614653991385
+        },
+        {
+          "timestamp_s": 0.65,
+          "action_timestamp_s": 0.6,
+          "guidance_timestamp_s": 0.65,
+          "action_age_s": 0.050000000000000044,
+          "guidance_age_s": 0.0,
+          "filtered_command": 0.4143379814261471
+        },
+        {
+          "timestamp_s": 0.66,
+          "action_timestamp_s": 0.6,
+          "guidance_timestamp_s": 0.65,
+          "action_age_s": 0.06000000000000005,
+          "guidance_age_s": 0.010000000000000009,
+          "filtered_command": 0.4143379814261471
+        },
+        {
+          "timestamp_s": 0.67,
+          "action_timestamp_s": 0.6,
+          "guidance_timestamp_s": 0.65,
+          "action_age_s": 0.07000000000000006,
+          "guidance_age_s": 0.020000000000000018,
+          "filtered_command": 0.4143379814261471
+        },
+        {
+          "timestamp_s": 0.68,
+          "action_timestamp_s": 0.6,
+          "guidance_timestamp_s": 0.65,
+          "action_age_s": 0.08000000000000007,
+          "guidance_age_s": 0.030000000000000027,
+          "filtered_command": 0.4143379814261471
+        },
+        {
+          "timestamp_s": 0.6900000000000001,
+          "action_timestamp_s": 0.6,
+          "guidance_timestamp_s": 0.65,
+          "action_age_s": 0.09000000000000008,
+          "guidance_age_s": 0.040000000000000036,
+          "filtered_command": 0.4143379814261471
+        },
+        {
+          "timestamp_s": 0.7000000000000001,
+          "action_timestamp_s": 0.7000000000000001,
+          "guidance_timestamp_s": 0.7000000000000001,
+          "action_age_s": 0.0,
+          "guidance_age_s": 0.0,
+          "filtered_command": 0.46430009417474416
+        },
+        {
+          "timestamp_s": 0.71,
+          "action_timestamp_s": 0.7000000000000001,
+          "guidance_timestamp_s": 0.7000000000000001,
+          "action_age_s": 0.009999999999999898,
+          "guidance_age_s": 0.009999999999999898,
+          "filtered_command": 0.46430009417474416
+        },
+        {
+          "timestamp_s": 0.72,
+          "action_timestamp_s": 0.7000000000000001,
+          "guidance_timestamp_s": 0.7000000000000001,
+          "action_age_s": 0.019999999999999907,
+          "guidance_age_s": 0.019999999999999907,
+          "filtered_command": 0.46430009417474416
+        },
+        {
+          "timestamp_s": 0.73,
+          "action_timestamp_s": 0.7000000000000001,
+          "guidance_timestamp_s": 0.7000000000000001,
+          "action_age_s": 0.029999999999999916,
+          "guidance_age_s": 0.029999999999999916,
+          "filtered_command": 0.46430009417474416
+        },
+        {
+          "timestamp_s": 0.74,
+          "action_timestamp_s": 0.7000000000000001,
+          "guidance_timestamp_s": 0.7000000000000001,
+          "action_age_s": 0.039999999999999925,
+          "guidance_age_s": 0.039999999999999925,
+          "filtered_command": 0.46430009417474416
+        },
+        {
+          "timestamp_s": 0.75,
+          "action_timestamp_s": 0.7000000000000001,
+          "guidance_timestamp_s": 0.75,
+          "action_age_s": 0.04999999999999993,
+          "guidance_age_s": 0.0,
+          "filtered_command": 0.51
+        },
+        {
+          "timestamp_s": 0.76,
+          "action_timestamp_s": 0.7000000000000001,
+          "guidance_timestamp_s": 0.75,
+          "action_age_s": 0.05999999999999994,
+          "guidance_age_s": 0.010000000000000009,
+          "filtered_command": 0.51
+        },
+        {
+          "timestamp_s": 0.77,
+          "action_timestamp_s": 0.7000000000000001,
+          "guidance_timestamp_s": 0.75,
+          "action_age_s": 0.06999999999999995,
+          "guidance_age_s": 0.020000000000000018,
+          "filtered_command": 0.51
+        },
+        {
+          "timestamp_s": 0.78,
+          "action_timestamp_s": 0.7000000000000001,
+          "guidance_timestamp_s": 0.75,
+          "action_age_s": 0.07999999999999996,
+          "guidance_age_s": 0.030000000000000027,
+          "filtered_command": 0.51
+        },
+        {
+          "timestamp_s": 0.79,
+          "action_timestamp_s": 0.7000000000000001,
+          "guidance_timestamp_s": 0.75,
+          "action_age_s": 0.08999999999999997,
+          "guidance_age_s": 0.040000000000000036,
+          "filtered_command": 0.51
+        },
+        {
+          "timestamp_s": 0.8,
+          "action_timestamp_s": 0.8,
+          "guidance_timestamp_s": 0.8,
+          "action_age_s": 0.0,
+          "guidance_age_s": 0.0,
+          "filtered_command": 0.5518013025779398
+        },
+        {
+          "timestamp_s": 0.81,
+          "action_timestamp_s": 0.8,
+          "guidance_timestamp_s": 0.8,
+          "action_age_s": 0.010000000000000009,
+          "guidance_age_s": 0.010000000000000009,
+          "filtered_command": 0.5518013025779398
+        },
+        {
+          "timestamp_s": 0.8200000000000001,
+          "action_timestamp_s": 0.8,
+          "guidance_timestamp_s": 0.8,
+          "action_age_s": 0.020000000000000018,
+          "guidance_age_s": 0.020000000000000018,
+          "filtered_command": 0.5518013025779398
+        },
+        {
+          "timestamp_s": 0.8300000000000001,
+          "action_timestamp_s": 0.8,
+          "guidance_timestamp_s": 0.8,
+          "action_age_s": 0.030000000000000027,
+          "guidance_age_s": 0.030000000000000027,
+          "filtered_command": 0.5518013025779398
+        },
+        {
+          "timestamp_s": 0.84,
+          "action_timestamp_s": 0.8,
+          "guidance_timestamp_s": 0.8,
+          "action_age_s": 0.039999999999999925,
+          "guidance_age_s": 0.039999999999999925,
+          "filtered_command": 0.5518013025779398
+        },
+        {
+          "timestamp_s": 0.85,
+          "action_timestamp_s": 0.8,
+          "guidance_timestamp_s": 0.85,
+          "action_age_s": 0.04999999999999993,
+          "guidance_age_s": 0.0,
+          "filtered_command": 0.5900365869983031
+        },
+        {
+          "timestamp_s": 0.86,
+          "action_timestamp_s": 0.8,
+          "guidance_timestamp_s": 0.85,
+          "action_age_s": 0.05999999999999994,
+          "guidance_age_s": 0.010000000000000009,
+          "filtered_command": 0.5900365869983031
+        },
+        {
+          "timestamp_s": 0.87,
+          "action_timestamp_s": 0.8,
+          "guidance_timestamp_s": 0.85,
+          "action_age_s": 0.06999999999999995,
+          "guidance_age_s": 0.020000000000000018,
+          "filtered_command": 0.5900365869983031
+        },
+        {
+          "timestamp_s": 0.88,
+          "action_timestamp_s": 0.8,
+          "guidance_timestamp_s": 0.85,
+          "action_age_s": 0.07999999999999996,
+          "guidance_age_s": 0.030000000000000027,
+          "filtered_command": 0.5900365869983031
+        },
+        {
+          "timestamp_s": 0.89,
+          "action_timestamp_s": 0.8,
+          "guidance_timestamp_s": 0.85,
+          "action_age_s": 0.08999999999999997,
+          "guidance_age_s": 0.040000000000000036,
+          "filtered_command": 0.5900365869983031
+        },
+        {
+          "timestamp_s": 0.9,
+          "action_timestamp_s": 0.9,
+          "guidance_timestamp_s": 0.9,
+          "action_age_s": 0.0,
+          "guidance_age_s": 0.0,
+          "filtered_command": 0.625010065922321
+        },
+        {
+          "timestamp_s": 0.91,
+          "action_timestamp_s": 0.9,
+          "guidance_timestamp_s": 0.9,
+          "action_age_s": 0.010000000000000009,
+          "guidance_age_s": 0.010000000000000009,
+          "filtered_command": 0.625010065922321
+        },
+        {
+          "timestamp_s": 0.92,
+          "action_timestamp_s": 0.9,
+          "guidance_timestamp_s": 0.9,
+          "action_age_s": 0.020000000000000018,
+          "guidance_age_s": 0.020000000000000018,
+          "filtered_command": 0.625010065922321
+        },
+        {
+          "timestamp_s": 0.93,
+          "action_timestamp_s": 0.9,
+          "guidance_timestamp_s": 0.9,
+          "action_age_s": 0.030000000000000027,
+          "guidance_age_s": 0.030000000000000027,
+          "filtered_command": 0.625010065922321
+        },
+        {
+          "timestamp_s": 0.9400000000000001,
+          "action_timestamp_s": 0.9,
+          "guidance_timestamp_s": 0.9,
+          "action_age_s": 0.040000000000000036,
+          "guidance_age_s": 0.040000000000000036,
+          "filtered_command": 0.625010065922321
+        },
+        {
+          "timestamp_s": 0.9500000000000001,
+          "action_timestamp_s": 0.9,
+          "guidance_timestamp_s": 0.9500000000000001,
+          "action_age_s": 0.050000000000000044,
+          "guidance_age_s": 0.0,
+          "filtered_command": 0.657
+        },
+        {
+          "timestamp_s": 0.96,
+          "action_timestamp_s": 0.9,
+          "guidance_timestamp_s": 0.9500000000000001,
+          "action_age_s": 0.05999999999999994,
+          "guidance_age_s": 0.009999999999999898,
+          "filtered_command": 0.657
+        },
+        {
+          "timestamp_s": 0.97,
+          "action_timestamp_s": 0.9,
+          "guidance_timestamp_s": 0.9500000000000001,
+          "action_age_s": 0.06999999999999995,
+          "guidance_age_s": 0.019999999999999907,
+          "filtered_command": 0.657
+        },
+        {
+          "timestamp_s": 0.98,
+          "action_timestamp_s": 0.9,
+          "guidance_timestamp_s": 0.9500000000000001,
+          "action_age_s": 0.07999999999999996,
+          "guidance_age_s": 0.029999999999999916,
+          "filtered_command": 0.657
+        },
+        {
+          "timestamp_s": 0.99,
+          "action_timestamp_s": 0.9,
+          "guidance_timestamp_s": 0.9500000000000001,
+          "action_age_s": 0.08999999999999997,
+          "guidance_age_s": 0.039999999999999925,
+          "filtered_command": 0.657
+        }
+      ]
+    }
+  },
+  "delay_phase_spectrum": {
+    "baseline": [
+      {
+        "frequency_hz": 0.1,
+        "amplitude_ratio": 0.9437910104414615,
+        "phase_lag_rad": 0.2796364279495949,
+        "apparent_delay_s": 0.4450551977673867,
+        "filter_time_constant_s": 0.5607346504114258,
+        "scope": "offline scheduler hold plus command filter; excludes actuator, backend, sensor, and communication-delay effects"
+      },
+      {
+        "frequency_hz": 0.25,
+        "amplitude_ratio": 0.7534909167069184,
+        "phase_lag_rad": 0.5743590876958666,
+        "apparent_delay_s": 0.3656483516661943,
+        "filter_time_constant_s": 0.5607346504114258,
+        "scope": "offline scheduler hold plus command filter; excludes actuator, backend, sensor, and communication-delay effects"
+      },
+      {
+        "frequency_hz": 0.5,
+        "amplitude_ratio": 0.5018320986484867,
+        "phase_lag_rad": 0.7590908581349044,
+        "apparent_delay_s": 0.2416261246560774,
+        "filter_time_constant_s": 0.5607346504114258,
+        "scope": "offline scheduler hold plus command filter; excludes actuator, backend, sensor, and communication-delay effects"
+      },
+      {
+        "frequency_hz": 1.0,
+        "amplitude_ratio": 0.29174705961302655,
+        "phase_lag_rad": 0.7042011350145341,
+        "apparent_delay_s": 0.11207709156848628,
+        "filter_time_constant_s": 0.5607346504114258,
+        "scope": "offline scheduler hold plus command filter; excludes actuator, backend, sensor, and communication-delay effects"
+      },
+      {
+        "frequency_hz": 2.0,
+        "amplitude_ratio": 0.185247884172258,
+        "phase_lag_rad": 0.2568832098738443,
+        "apparent_delay_s": 0.020442116324367546,
+        "filter_time_constant_s": 0.5607346504114258,
+        "scope": "offline scheduler hold plus command filter; excludes actuator, backend, sensor, and communication-delay effects"
+      }
+    ],
+    "candidate": [
+      {
+        "frequency_hz": 0.1,
+        "amplitude_ratio": 0.9430592522558536,
+        "phase_lag_rad": 0.35153989843728267,
+        "apparent_delay_s": 0.559493125303164,
+        "filter_time_constant_s": 0.5607346504114259,
+        "scope": "offline scheduler hold plus command filter; excludes actuator, backend, sensor, and communication-delay effects"
+      },
+      {
+        "frequency_hz": 0.25,
+        "amplitude_ratio": 0.7498448258272999,
+        "phase_lag_rad": 0.7541050070065503,
+        "apparent_delay_s": 0.4800781579017634,
+        "filter_time_constant_s": 0.5607346504114259,
+        "scope": "offline scheduler hold plus command filter; excludes actuator, backend, sensor, and communication-delay effects"
+      },
+      {
+        "frequency_hz": 0.5,
+        "amplitude_ratio": 0.492168352126526,
+        "phase_lag_rad": 1.118490751330978,
+        "apparent_delay_s": 0.35602666375378617,
+        "filter_time_constant_s": 0.5607346504114259,
+        "scope": "offline scheduler hold plus command filter; excludes actuator, backend, sensor, and communication-delay effects"
+      },
+      {
+        "frequency_hz": 1.0,
+        "amplitude_ratio": 0.26972967261318403,
+        "phase_lag_rad": 1.4222385983164283,
+        "apparent_delay_s": 0.22635630317814814,
+        "filter_time_constant_s": 0.5607346504114259,
+        "scope": "offline scheduler hold plus command filter; excludes actuator, backend, sensor, and communication-delay effects"
+      },
+      {
+        "frequency_hz": 2.0,
+        "amplitude_ratio": 0.1337186635507107,
+        "phase_lag_rad": 1.685847920646805,
+        "apparent_delay_s": 0.13415551493606617,
+        "filter_time_constant_s": 0.5607346504114259,
+        "scope": "offline scheduler hold plus command filter; excludes actuator, backend, sensor, and communication-delay effects"
+      }
+    ],
+    "excluded_frequencies_hz": []
+  },
+  "unmeasured_budget_components": [
+    "policy inference and observation acquisition",
+    "communication delay when enabled",
+    "backend/actuator dynamics",
+    "sensor/telemetry transport"
+  ],
+  "backend_provenance": {
+    "requested": null,
+    "final": null,
+    "fallback_occurred": false,
+    "status": "not_applicable_offline_analytic_only"
+  },
+  "config_overrides": []
+}

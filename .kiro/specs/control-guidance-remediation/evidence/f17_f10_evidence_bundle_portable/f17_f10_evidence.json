@@ -1,0 +1,1880 @@
+{
+  "schema_version": "1.0.0",
+  "analysis_scope": "offline deterministic F17/F10 models only; protected runtime and configuration paths unchanged",
+  "results": {
+    "schema_version": "1.0.0",
+    "finding_ids": [
+      "F17",
+      "F10"
+    ],
+    "f17": {
+      "baseline": {
+        "steady_closing": {
+          "100.0": {
+            "parameters": {
+              "range_threshold_m": 3000.0,
+              "hysteresis_m": 500.0,
+              "min_dwell_steps": 3,
+              "dt_s": 0.2
+            },
+            "closing_speed_mps": 100.0,
+            "trace": [
+              {
+                "range_m": 3100.0,
+                "desired_law": "pn",
+                "active_law": "pn",
+                "pending_law": null,
+                "pending_steps": 1,
+                "changed": false,
+                "step": 0
+              },
+              {
+                "range_m": 2950.0,
+                "desired_law": "pn",
+                "active_law": "pn",
+                "pending_law": null,
+                "pending_steps": 2,
+                "changed": false,
+                "step": 1
+              },
+              {
+                "range_m": 2700.0,
+                "desired_law": "los",
+                "active_law": "pn",
+                "pending_law": "los",
+                "pending_steps": 1,
+                "changed": false,
+                "step": 2
+              },
+              {
+                "range_m": 2450.0,
+                "desired_law": "los",
+                "active_law": "pn",
+                "pending_law": "los",
+                "pending_steps": 2,
+                "changed": false,
+                "step": 3
+              },
+              {
+                "range_m": 2300.0,
+                "desired_law": "los",
+                "active_law": "los",
+                "pending_law": null,
+                "pending_steps": 0,
+                "changed": true,
+                "step": 4
+              },
+              {
+                "range_m": 2150.0,
+                "desired_law": "los",
+                "active_law": "los",
+                "pending_law": null,
+                "pending_steps": 1,
+                "changed": false,
+                "step": 5
+              }
+            ],
+            "switch_delay_steps": 2,
+            "switch_delay_s": 0.4,
+            "range_travelled_during_delay_m": 40.0,
+            "chatter_count": 0,
+            "missed_switch_opportunities": 2
+          },
+          "300.0": {
+            "parameters": {
+              "range_threshold_m": 3000.0,
+              "hysteresis_m": 500.0,
+              "min_dwell_steps": 3,
+              "dt_s": 0.2
+            },
+            "closing_speed_mps": 300.0,
+            "trace": [
+              {
+                "range_m": 3100.0,
+                "desired_law": "pn",
+                "active_law": "pn",
+                "pending_law": null,
+                "pending_steps": 1,
+                "changed": false,
+                "step": 0
+              },
+              {
+                "range_m": 2950.0,
+                "desired_law": "pn",
+                "active_law": "pn",
+                "pending_law": null,
+                "pending_steps": 2,
+                "changed": false,
+                "step": 1
+              },
+              {
+                "range_m": 2700.0,
+                "desired_law": "los",
+                "active_law": "pn",
+                "pending_law": "los",
+                "pending_steps": 1,
+                "changed": false,
+                "step": 2
+              },
+              {
+                "range_m": 2450.0,
+                "desired_law": "los",
+                "active_law": "pn",
+                "pending_law": "los",
+                "pending_steps": 2,
+                "changed": false,
+                "step": 3
+              },
+              {
+                "range_m": 2300.0,
+                "desired_law": "los",
+                "active_law": "los",
+                "pending_law": null,
+                "pending_steps": 0,
+                "changed": true,
+                "step": 4
+              },
+              {
+                "range_m": 2150.0,
+                "desired_law": "los",
+                "active_law": "los",
+                "pending_law": null,
+                "pending_steps": 1,
+                "changed": false,
+                "step": 5
+              }
+            ],
+            "switch_delay_steps": 2,
+            "switch_delay_s": 0.4,
+            "range_travelled_during_delay_m": 120.0,
+            "chatter_count": 0,
+            "missed_switch_opportunities": 2
+          }
+        },
+        "threshold_jitter": {
+          "100.0": {
+            "parameters": {
+              "range_threshold_m": 3000.0,
+              "hysteresis_m": 500.0,
+              "min_dwell_steps": 3,
+              "dt_s": 0.2
+            },
+            "closing_speed_mps": 100.0,
+            "trace": [
+              {
+                "range_m": 3100.0,
+                "desired_law": "pn",
+                "active_law": "pn",
+                "pending_law": null,
+                "pending_steps": 1,
+                "changed": false,
+                "step": 0
+              },
+              {
+                "range_m": 2470.0,
+                "desired_law": "los",
+                "active_law": "pn",
+                "pending_law": "los",
+                "pending_steps": 1,
+                "changed": false,
+                "step": 1
+              },
+              {
+                "range_m": 2530.0,
+                "desired_law": "los",
+                "active_law": "pn",
+                "pending_law": "los",
+                "pending_steps": 2,
+                "changed": false,
+                "step": 2
+              },
+              {
+                "range_m": 2460.0,
+                "desired_law": "los",
+                "active_law": "los",
+                "pending_law": null,
+                "pending_steps": 0,
+                "changed": true,
+                "step": 3
+              },
+              {
+                "range_m": 2540.0,
+                "desired_law": "los",
+                "active_law": "los",
+                "pending_law": null,
+                "pending_steps": 1,
+                "changed": false,
+                "step": 4
+              },
+              {
+                "range_m": 2450.0,
+                "desired_law": "los",
+                "active_law": "los",
+                "pending_law": null,
+                "pending_steps": 2,
+                "changed": false,
+                "step": 5
+              },
+              {
+                "range_m": 2440.0,
+                "desired_law": "los",
+                "active_law": "los",
+                "pending_law": null,
+                "pending_steps": 3,
+                "changed": false,
+                "step": 6
+              },
+              {
+                "range_m": 2430.0,
+                "desired_law": "los",
+                "active_law": "los",
+                "pending_law": null,
+                "pending_steps": 4,
+                "changed": false,
+                "step": 7
+              }
+            ],
+            "switch_delay_steps": 2,
+            "switch_delay_s": 0.4,
+            "range_travelled_during_delay_m": 40.0,
+            "chatter_count": 0,
+            "missed_switch_opportunities": 2
+          },
+          "300.0": {
+            "parameters": {
+              "range_threshold_m": 3000.0,
+              "hysteresis_m": 500.0,
+              "min_dwell_steps": 3,
+              "dt_s": 0.2
+            },
+            "closing_speed_mps": 300.0,
+            "trace": [
+              {
+                "range_m": 3100.0,
+                "desired_law": "pn",
+                "active_law": "pn",
+                "pending_law": null,
+                "pending_steps": 1,
+                "changed": false,
+                "step": 0
+              },
+              {
+                "range_m": 2470.0,
+                "desired_law": "los",
+                "active_law": "pn",
+                "pending_law": "los",
+                "pending_steps": 1,
+                "changed": false,
+                "step": 1
+              },
+              {
+                "range_m": 2530.0,
+                "desired_law": "los",
+                "active_law": "pn",
+                "pending_law": "los",
+                "pending_steps": 2,
+                "changed": false,
+                "step": 2
+              },
+              {
+                "range_m": 2460.0,
+                "desired_law": "los",
+                "active_law": "los",
+                "pending_law": null,
+                "pending_steps": 0,
+                "changed": true,
+                "step": 3
+              },
+              {
+                "range_m": 2540.0,
+                "desired_law": "los",
+                "active_law": "los",
+                "pending_law": null,
+                "pending_steps": 1,
+                "changed": false,
+                "step": 4
+              },
+              {
+                "range_m": 2450.0,
+                "desired_law": "los",
+                "active_law": "los",
+                "pending_law": null,
+                "pending_steps": 2,
+                "changed": false,
+                "step": 5
+              },
+              {
+                "range_m": 2440.0,
+                "desired_law": "los",
+                "active_law": "los",
+                "pending_law": null,
+                "pending_steps": 3,
+                "changed": false,
+                "step": 6
+              },
+              {
+                "range_m": 2430.0,
+                "desired_law": "los",
+                "active_law": "los",
+                "pending_law": null,
+                "pending_steps": 4,
+                "changed": false,
+                "step": 7
+              }
+            ],
+            "switch_delay_steps": 2,
+            "switch_delay_s": 0.4,
+            "range_travelled_during_delay_m": 120.0,
+            "chatter_count": 0,
+            "missed_switch_opportunities": 2
+          }
+        },
+        "opening_after_entry": {
+          "100.0": {
+            "parameters": {
+              "range_threshold_m": 3000.0,
+              "hysteresis_m": 500.0,
+              "min_dwell_steps": 3,
+              "dt_s": 0.2
+            },
+            "closing_speed_mps": 100.0,
+            "trace": [
+              {
+                "range_m": 2400.0,
+                "desired_law": "los",
+                "active_law": "pn",
+                "pending_law": "los",
+                "pending_steps": 1,
+                "changed": false,
+                "step": 0
+              },
+              {
+                "range_m": 2400.0,
+                "desired_law": "los",
+                "active_law": "pn",
+                "pending_law": "los",
+                "pending_steps": 2,
+                "changed": false,
+                "step": 1
+              },
+              {
+                "range_m": 2400.0,
+                "desired_law": "los",
+                "active_law": "los",
+                "pending_law": null,
+                "pending_steps": 0,
+                "changed": true,
+                "step": 2
+              },
+              {
+                "range_m": 3300.0,
+                "desired_law": "pn",
+                "active_law": "los",
+                "pending_law": "pn",
+                "pending_steps": 1,
+                "changed": false,
+                "step": 3
+              },
+              {
+                "range_m": 3300.0,
+                "desired_law": "pn",
+                "active_law": "los",
+                "pending_law": "pn",
+                "pending_steps": 2,
+                "changed": false,
+                "step": 4
+              },
+              {
+                "range_m": 3300.0,
+                "desired_law": "pn",
+                "active_law": "pn",
+                "pending_law": null,
+                "pending_steps": 0,
+                "changed": true,
+                "step": 5
+              }
+            ],
+            "switch_delay_steps": 2,
+            "switch_delay_s": 0.4,
+            "range_travelled_during_delay_m": 40.0,
+            "chatter_count": 1,
+            "missed_switch_opportunities": 4
+          },
+          "300.0": {
+            "parameters": {
+              "range_threshold_m": 3000.0,
+              "hysteresis_m": 500.0,
+              "min_dwell_steps": 3,
+              "dt_s": 0.2
+            },
+            "closing_speed_mps": 300.0,
+            "trace": [
+              {
+                "range_m": 2400.0,
+                "desired_law": "los",
+                "active_law": "pn",
+                "pending_law": "los",
+                "pending_steps": 1,
+                "changed": false,
+                "step": 0
+              },
+              {
+                "range_m": 2400.0,
+                "desired_law": "los",
+                "active_law": "pn",
+                "pending_law": "los",
+                "pending_steps": 2,
+                "changed": false,
+                "step": 1
+              },
+              {
+                "range_m": 2400.0,
+                "desired_law": "los",
+                "active_law": "los",
+                "pending_law": null,
+                "pending_steps": 0,
+                "changed": true,
+                "step": 2
+              },
+              {
+                "range_m": 3300.0,
+                "desired_law": "pn",
+                "active_law": "los",
+                "pending_law": "pn",
+                "pending_steps": 1,
+                "changed": false,
+                "step": 3
+              },
+              {
+                "range_m": 3300.0,
+                "desired_law": "pn",
+                "active_law": "los",
+                "pending_law": "pn",
+                "pending_steps": 2,
+                "changed": false,
+                "step": 4
+              },
+              {
+                "range_m": 3300.0,
+                "desired_law": "pn",
+                "active_law": "pn",
+                "pending_law": null,
+                "pending_steps": 0,
+                "changed": true,
+                "step": 5
+              }
+            ],
+            "switch_delay_steps": 2,
+            "switch_delay_s": 0.4,
+            "range_travelled_during_delay_m": 120.0,
+            "chatter_count": 1,
+            "missed_switch_opportunities": 4
+          }
+        }
+      },
+      "candidates": {
+        "reduced_dwell_1_step": {
+          "steady_closing": {
+            "100.0": {
+              "parameters": {
+                "range_threshold_m": 3000.0,
+                "hysteresis_m": 500.0,
+                "min_dwell_steps": 1,
+                "dt_s": 0.2
+              },
+              "closing_speed_mps": 100.0,
+              "trace": [
+                {
+                  "range_m": 3100.0,
+                  "desired_law": "pn",
+                  "active_law": "pn",
+                  "pending_law": null,
+                  "pending_steps": 1,
+                  "changed": false,
+                  "step": 0
+                },
+                {
+                  "range_m": 2950.0,
+                  "desired_law": "pn",
+                  "active_law": "pn",
+                  "pending_law": null,
+                  "pending_steps": 2,
+                  "changed": false,
+                  "step": 1
+                },
+                {
+                  "range_m": 2700.0,
+                  "desired_law": "los",
+                  "active_law": "los",
+                  "pending_law": null,
+                  "pending_steps": 0,
+                  "changed": true,
+                  "step": 2
+                },
+                {
+                  "range_m": 2450.0,
+                  "desired_law": "los",
+                  "active_law": "los",
+                  "pending_law": null,
+                  "pending_steps": 1,
+                  "changed": false,
+                  "step": 3
+                },
+                {
+                  "range_m": 2300.0,
+                  "desired_law": "los",
+                  "active_law": "los",
+                  "pending_law": null,
+                  "pending_steps": 2,
+                  "changed": false,
+                  "step": 4
+                },
+                {
+                  "range_m": 2150.0,
+                  "desired_law": "los",
+                  "active_law": "los",
+                  "pending_law": null,
+                  "pending_steps": 3,
+                  "changed": false,
+                  "step": 5
+                }
+              ],
+              "switch_delay_steps": 0,
+              "switch_delay_s": 0.0,
+              "range_travelled_during_delay_m": 0.0,
+              "chatter_count": 0,
+              "missed_switch_opportunities": 0
+            },
+            "300.0": {
+              "parameters": {
+                "range_threshold_m": 3000.0,
+                "hysteresis_m": 500.0,
+                "min_dwell_steps": 1,
+                "dt_s": 0.2
+              },
+              "closing_speed_mps": 300.0,
+              "trace": [
+                {
+                  "range_m": 3100.0,
+                  "desired_law": "pn",
+                  "active_law": "pn",
+                  "pending_law": null,
+                  "pending_steps": 1,
+                  "changed": false,
+                  "step": 0
+                },
+                {
+                  "range_m": 2950.0,
+                  "desired_law": "pn",
+                  "active_law": "pn",
+                  "pending_law": null,
+                  "pending_steps": 2,
+                  "changed": false,
+                  "step": 1
+                },
+                {
+                  "range_m": 2700.0,
+                  "desired_law": "los",
+                  "active_law": "los",
+                  "pending_law": null,
+                  "pending_steps": 0,
+                  "changed": true,
+                  "step": 2
+                },
+                {
+                  "range_m": 2450.0,
+                  "desired_law": "los",
+                  "active_law": "los",
+                  "pending_law": null,
+                  "pending_steps": 1,
+                  "changed": false,
+                  "step": 3
+                },
+                {
+                  "range_m": 2300.0,
+                  "desired_law": "los",
+                  "active_law": "los",
+                  "pending_law": null,
+                  "pending_steps": 2,
+                  "changed": false,
+                  "step": 4
+                },
+                {
+                  "range_m": 2150.0,
+                  "desired_law": "los",
+                  "active_law": "los",
+                  "pending_law": null,
+                  "pending_steps": 3,
+                  "changed": false,
+                  "step": 5
+                }
+              ],
+              "switch_delay_steps": 0,
+              "switch_delay_s": 0.0,
+              "range_travelled_during_delay_m": 0.0,
+              "chatter_count": 0,
+              "missed_switch_opportunities": 0
+            }
+          },
+          "threshold_jitter": {
+            "100.0": {
+              "parameters": {
+                "range_threshold_m": 3000.0,
+                "hysteresis_m": 500.0,
+                "min_dwell_steps": 1,
+                "dt_s": 0.2
+              },
+              "closing_speed_mps": 100.0,
+              "trace": [
+                {
+                  "range_m": 3100.0,
+                  "desired_law": "pn",
+                  "active_law": "pn",
+                  "pending_law": null,
+                  "pending_steps": 1,
+                  "changed": false,
+                  "step": 0
+                },
+                {
+                  "range_m": 2470.0,
+                  "desired_law": "los",
+                  "active_law": "los",
+                  "pending_law": null,
+                  "pending_steps": 0,
+                  "changed": true,
+                  "step": 1
+                },
+                {
+                  "range_m": 2530.0,
+                  "desired_law": "los",
+                  "active_law": "los",
+                  "pending_law": null,
+                  "pending_steps": 1,
+                  "changed": false,
+                  "step": 2
+                },
+                {
+                  "range_m": 2460.0,
+                  "desired_law": "los",
+                  "active_law": "los",
+                  "pending_law": null,
+                  "pending_steps": 2,
+                  "changed": false,
+                  "step": 3
+                },
+                {
+                  "range_m": 2540.0,
+                  "desired_law": "los",
+                  "active_law": "los",
+                  "pending_law": null,
+                  "pending_steps": 3,
+                  "changed": false,
+                  "step": 4
+                },
+                {
+                  "range_m": 2450.0,
+                  "desired_law": "los",
+                  "active_law": "los",
+                  "pending_law": null,
+                  "pending_steps": 4,
+                  "changed": false,
+                  "step": 5
+                },
+                {
+                  "range_m": 2440.0,
+                  "desired_law": "los",
+                  "active_law": "los",
+                  "pending_law": null,
+                  "pending_steps": 5,
+                  "changed": false,
+                  "step": 6
+                },
+                {
+                  "range_m": 2430.0,
+                  "desired_law": "los",
+                  "active_law": "los",
+                  "pending_law": null,
+                  "pending_steps": 6,
+                  "changed": false,
+                  "step": 7
+                }
+              ],
+              "switch_delay_steps": 0,
+              "switch_delay_s": 0.0,
+              "range_travelled_during_delay_m": 0.0,
+              "chatter_count": 0,
+              "missed_switch_opportunities": 0
+            },
+            "300.0": {
+              "parameters": {
+                "range_threshold_m": 3000.0,
+                "hysteresis_m": 500.0,
+                "min_dwell_steps": 1,
+                "dt_s": 0.2
+              },
+              "closing_speed_mps": 300.0,
+              "trace": [
+                {
+                  "range_m": 3100.0,
+                  "desired_law": "pn",
+                  "active_law": "pn",
+                  "pending_law": null,
+                  "pending_steps": 1,
+                  "changed": false,
+                  "step": 0
+                },
+                {
+                  "range_m": 2470.0,
+                  "desired_law": "los",
+                  "active_law": "los",
+                  "pending_law": null,
+                  "pending_steps": 0,
+                  "changed": true,
+                  "step": 1
+                },
+                {
+                  "range_m": 2530.0,
+                  "desired_law": "los",
+                  "active_law": "los",
+                  "pending_law": null,
+                  "pending_steps": 1,
+                  "changed": false,
+                  "step": 2
+                },
+                {
+                  "range_m": 2460.0,
+                  "desired_law": "los",
+                  "active_law": "los",
+                  "pending_law": null,
+                  "pending_steps": 2,
+                  "changed": false,
+                  "step": 3
+                },
+                {
+                  "range_m": 2540.0,
+                  "desired_law": "los",
+                  "active_law": "los",
+                  "pending_law": null,
+                  "pending_steps": 3,
+                  "changed": false,
+                  "step": 4
+                },
+                {
+                  "range_m": 2450.0,
+                  "desired_law": "los",
+                  "active_law": "los",
+                  "pending_law": null,
+                  "pending_steps": 4,
+                  "changed": false,
+                  "step": 5
+                },
+                {
+                  "range_m": 2440.0,
+                  "desired_law": "los",
+                  "active_law": "los",
+                  "pending_law": null,
+                  "pending_steps": 5,
+                  "changed": false,
+                  "step": 6
+                },
+                {
+                  "range_m": 2430.0,
+                  "desired_law": "los",
+                  "active_law": "los",
+                  "pending_law": null,
+                  "pending_steps": 6,
+                  "changed": false,
+                  "step": 7
+                }
+              ],
+              "switch_delay_steps": 0,
+              "switch_delay_s": 0.0,
+              "range_travelled_during_delay_m": 0.0,
+              "chatter_count": 0,
+              "missed_switch_opportunities": 0
+            }
+          },
+          "opening_after_entry": {
+            "100.0": {
+              "parameters": {
+                "range_threshold_m": 3000.0,
+                "hysteresis_m": 500.0,
+                "min_dwell_steps": 1,
+                "dt_s": 0.2
+              },
+              "closing_speed_mps": 100.0,
+              "trace": [
+                {
+                  "range_m": 2400.0,
+                  "desired_law": "los",
+                  "active_law": "los",
+                  "pending_law": null,
+                  "pending_steps": 0,
+                  "changed": true,
+                  "step": 0
+                },
+                {
+                  "range_m": 2400.0,
+                  "desired_law": "los",
+                  "active_law": "los",
+                  "pending_law": null,
+                  "pending_steps": 1,
+                  "changed": false,
+                  "step": 1
+                },
+                {
+                  "range_m": 2400.0,
+                  "desired_law": "los",
+                  "active_law": "los",
+                  "pending_law": null,
+                  "pending_steps": 2,
+                  "changed": false,
+                  "step": 2
+                },
+                {
+                  "range_m": 3300.0,
+                  "desired_law": "pn",
+                  "active_law": "pn",
+                  "pending_law": null,
+                  "pending_steps": 0,
+                  "changed": true,
+                  "step": 3
+                },
+                {
+                  "range_m": 3300.0,
+                  "desired_law": "pn",
+                  "active_law": "pn",
+                  "pending_law": null,
+                  "pending_steps": 1,
+                  "changed": false,
+                  "step": 4
+                },
+                {
+                  "range_m": 3300.0,
+                  "desired_law": "pn",
+                  "active_law": "pn",
+                  "pending_law": null,
+                  "pending_steps": 2,
+                  "changed": false,
+                  "step": 5
+                }
+              ],
+              "switch_delay_steps": 0,
+              "switch_delay_s": 0.0,
+              "range_travelled_during_delay_m": 0.0,
+              "chatter_count": 1,
+              "missed_switch_opportunities": 0
+            },
+            "300.0": {
+              "parameters": {
+                "range_threshold_m": 3000.0,
+                "hysteresis_m": 500.0,
+                "min_dwell_steps": 1,
+                "dt_s": 0.2
+              },
+              "closing_speed_mps": 300.0,
+              "trace": [
+                {
+                  "range_m": 2400.0,
+                  "desired_law": "los",
+                  "active_law": "los",
+                  "pending_law": null,
+                  "pending_steps": 0,
+                  "changed": true,
+                  "step": 0
+                },
+                {
+                  "range_m": 2400.0,
+                  "desired_law": "los",
+                  "active_law": "los",
+                  "pending_law": null,
+                  "pending_steps": 1,
+                  "changed": false,
+                  "step": 1
+                },
+                {
+                  "range_m": 2400.0,
+                  "desired_law": "los",
+                  "active_law": "los",
+                  "pending_law": null,
+                  "pending_steps": 2,
+                  "changed": false,
+                  "step": 2
+                },
+                {
+                  "range_m": 3300.0,
+                  "desired_law": "pn",
+                  "active_law": "pn",
+                  "pending_law": null,
+                  "pending_steps": 0,
+                  "changed": true,
+                  "step": 3
+                },
+                {
+                  "range_m": 3300.0,
+                  "desired_law": "pn",
+                  "active_law": "pn",
+                  "pending_law": null,
+                  "pending_steps": 1,
+                  "changed": false,
+                  "step": 4
+                },
+                {
+                  "range_m": 3300.0,
+                  "desired_law": "pn",
+                  "active_law": "pn",
+                  "pending_law": null,
+                  "pending_steps": 2,
+                  "changed": false,
+                  "step": 5
+                }
+              ],
+              "switch_delay_steps": 0,
+              "switch_delay_s": 0.0,
+              "range_travelled_during_delay_m": 0.0,
+              "chatter_count": 1,
+              "missed_switch_opportunities": 0
+            }
+          }
+        },
+        "wider_hysteresis_750m": {
+          "steady_closing": {
+            "100.0": {
+              "parameters": {
+                "range_threshold_m": 3000.0,
+                "hysteresis_m": 750.0,
+                "min_dwell_steps": 3,
+                "dt_s": 0.2
+              },
+              "closing_speed_mps": 100.0,
+              "trace": [
+                {
+                  "range_m": 3100.0,
+                  "desired_law": "pn",
+                  "active_law": "pn",
+                  "pending_law": null,
+                  "pending_steps": 1,
+                  "changed": false,
+                  "step": 0
+                },
+                {
+                  "range_m": 2950.0,
+                  "desired_law": "pn",
+                  "active_law": "pn",
+                  "pending_law": null,
+                  "pending_steps": 2,
+                  "changed": false,
+                  "step": 1
+                },
+                {
+                  "range_m": 2700.0,
+                  "desired_law": "pn",
+                  "active_law": "pn",
+                  "pending_law": null,
+                  "pending_steps": 3,
+                  "changed": false,
+                  "step": 2
+                },
+                {
+                  "range_m": 2450.0,
+                  "desired_law": "los",
+                  "active_law": "pn",
+                  "pending_law": "los",
+                  "pending_steps": 1,
+                  "changed": false,
+                  "step": 3
+                },
+                {
+                  "range_m": 2300.0,
+                  "desired_law": "los",
+                  "active_law": "pn",
+                  "pending_law": "los",
+                  "pending_steps": 2,
+                  "changed": false,
+                  "step": 4
+                },
+                {
+                  "range_m": 2150.0,
+                  "desired_law": "los",
+                  "active_law": "los",
+                  "pending_law": null,
+                  "pending_steps": 0,
+                  "changed": true,
+                  "step": 5
+                }
+              ],
+              "switch_delay_steps": 2,
+              "switch_delay_s": 0.4,
+              "range_travelled_during_delay_m": 40.0,
+              "chatter_count": 0,
+              "missed_switch_opportunities": 2
+            },
+            "300.0": {
+              "parameters": {
+                "range_threshold_m": 3000.0,
+                "hysteresis_m": 750.0,
+                "min_dwell_steps": 3,
+                "dt_s": 0.2
+              },
+              "closing_speed_mps": 300.0,
+              "trace": [
+                {
+                  "range_m": 3100.0,
+                  "desired_law": "pn",
+                  "active_law": "pn",
+                  "pending_law": null,
+                  "pending_steps": 1,
+                  "changed": false,
+                  "step": 0
+                },
+                {
+                  "range_m": 2950.0,
+                  "desired_law": "pn",
+                  "active_law": "pn",
+                  "pending_law": null,
+                  "pending_steps": 2,
+                  "changed": false,
+                  "step": 1
+                },
+                {
+                  "range_m": 2700.0,
+                  "desired_law": "pn",
+                  "active_law": "pn",
+                  "pending_law": null,
+                  "pending_steps": 3,
+                  "changed": false,
+                  "step": 2
+                },
+                {
+                  "range_m": 2450.0,
+                  "desired_law": "los",
+                  "active_law": "pn",
+                  "pending_law": "los",
+                  "pending_steps": 1,
+                  "changed": false,
+                  "step": 3
+                },
+                {
+                  "range_m": 2300.0,
+                  "desired_law": "los",
+                  "active_law": "pn",
+                  "pending_law": "los",
+                  "pending_steps": 2,
+                  "changed": false,
+                  "step": 4
+                },
+                {
+                  "range_m": 2150.0,
+                  "desired_law": "los",
+                  "active_law": "los",
+                  "pending_law": null,
+                  "pending_steps": 0,
+                  "changed": true,
+                  "step": 5
+                }
+              ],
+              "switch_delay_steps": 2,
+              "switch_delay_s": 0.4,
+              "range_travelled_during_delay_m": 120.0,
+              "chatter_count": 0,
+              "missed_switch_opportunities": 2
+            }
+          },
+          "threshold_jitter": {
+            "100.0": {
+              "parameters": {
+                "range_threshold_m": 3000.0,
+                "hysteresis_m": 750.0,
+                "min_dwell_steps": 3,
+                "dt_s": 0.2
+              },
+              "closing_speed_mps": 100.0,
+              "trace": [
+                {
+                  "range_m": 3100.0,
+                  "desired_law": "pn",
+                  "active_law": "pn",
+                  "pending_law": null,
+                  "pending_steps": 1,
+                  "changed": false,
+                  "step": 0
+                },
+                {
+                  "range_m": 2470.0,
+                  "desired_law": "los",
+                  "active_law": "pn",
+                  "pending_law": "los",
+                  "pending_steps": 1,
+                  "changed": false,
+                  "step": 1
+                },
+                {
+                  "range_m": 2530.0,
+                  "desired_law": "los",
+                  "active_law": "pn",
+                  "pending_law": "los",
+                  "pending_steps": 2,
+                  "changed": false,
+                  "step": 2
+                },
+                {
+                  "range_m": 2460.0,
+                  "desired_law": "los",
+                  "active_law": "los",
+                  "pending_law": null,
+                  "pending_steps": 0,
+                  "changed": true,
+                  "step": 3
+                },
+                {
+                  "range_m": 2540.0,
+                  "desired_law": "los",
+                  "active_law": "los",
+                  "pending_law": null,
+                  "pending_steps": 1,
+                  "changed": false,
+                  "step": 4
+                },
+                {
+                  "range_m": 2450.0,
+                  "desired_law": "los",
+                  "active_law": "los",
+                  "pending_law": null,
+                  "pending_steps": 2,
+                  "changed": false,
+                  "step": 5
+                },
+                {
+                  "range_m": 2440.0,
+                  "desired_law": "los",
+                  "active_law": "los",
+                  "pending_law": null,
+                  "pending_steps": 3,
+                  "changed": false,
+                  "step": 6
+                },
+                {
+                  "range_m": 2430.0,
+                  "desired_law": "los",
+                  "active_law": "los",
+                  "pending_law": null,
+                  "pending_steps": 4,
+                  "changed": false,
+                  "step": 7
+                }
+              ],
+              "switch_delay_steps": 2,
+              "switch_delay_s": 0.4,
+              "range_travelled_during_delay_m": 40.0,
+              "chatter_count": 0,
+              "missed_switch_opportunities": 2
+            },
+            "300.0": {
+              "parameters": {
+                "range_threshold_m": 3000.0,
+                "hysteresis_m": 750.0,
+                "min_dwell_steps": 3,
+                "dt_s": 0.2
+              },
+              "closing_speed_mps": 300.0,
+              "trace": [
+                {
+                  "range_m": 3100.0,
+                  "desired_law": "pn",
+                  "active_law": "pn",
+                  "pending_law": null,
+                  "pending_steps": 1,
+                  "changed": false,
+                  "step": 0
+                },
+                {
+                  "range_m": 2470.0,
+                  "desired_law": "los",
+                  "active_law": "pn",
+                  "pending_law": "los",
+                  "pending_steps": 1,
+                  "changed": false,
+                  "step": 1
+                },
+                {
+                  "range_m": 2530.0,
+                  "desired_law": "los",
+                  "active_law": "pn",
+                  "pending_law": "los",
+                  "pending_steps": 2,
+                  "changed": false,
+                  "step": 2
+                },
+                {
+                  "range_m": 2460.0,
+                  "desired_law": "los",
+                  "active_law": "los",
+                  "pending_law": null,
+                  "pending_steps": 0,
+                  "changed": true,
+                  "step": 3
+                },
+                {
+                  "range_m": 2540.0,
+                  "desired_law": "los",
+                  "active_law": "los",
+                  "pending_law": null,
+                  "pending_steps": 1,
+                  "changed": false,
+                  "step": 4
+                },
+                {
+                  "range_m": 2450.0,
+                  "desired_law": "los",
+                  "active_law": "los",
+                  "pending_law": null,
+                  "pending_steps": 2,
+                  "changed": false,
+                  "step": 5
+                },
+                {
+                  "range_m": 2440.0,
+                  "desired_law": "los",
+                  "active_law": "los",
+                  "pending_law": null,
+                  "pending_steps": 3,
+                  "changed": false,
+                  "step": 6
+                },
+                {
+                  "range_m": 2430.0,
+                  "desired_law": "los",
+                  "active_law": "los",
+                  "pending_law": null,
+                  "pending_steps": 4,
+                  "changed": false,
+                  "step": 7
+                }
+              ],
+              "switch_delay_steps": 2,
+              "switch_delay_s": 0.4,
+              "range_travelled_during_delay_m": 120.0,
+              "chatter_count": 0,
+              "missed_switch_opportunities": 2
+            }
+          },
+          "opening_after_entry": {
+            "100.0": {
+              "parameters": {
+                "range_threshold_m": 3000.0,
+                "hysteresis_m": 750.0,
+                "min_dwell_steps": 3,
+                "dt_s": 0.2
+              },
+              "closing_speed_mps": 100.0,
+              "trace": [
+                {
+                  "range_m": 2400.0,
+                  "desired_law": "los",
+                  "active_law": "pn",
+                  "pending_law": "los",
+                  "pending_steps": 1,
+                  "changed": false,
+                  "step": 0
+                },
+                {
+                  "range_m": 2400.0,
+                  "desired_law": "los",
+                  "active_law": "pn",
+                  "pending_law": "los",
+                  "pending_steps": 2,
+                  "changed": false,
+                  "step": 1
+                },
+                {
+                  "range_m": 2400.0,
+                  "desired_law": "los",
+                  "active_law": "los",
+                  "pending_law": null,
+                  "pending_steps": 0,
+                  "changed": true,
+                  "step": 2
+                },
+                {
+                  "range_m": 3300.0,
+                  "desired_law": "los",
+                  "active_law": "los",
+                  "pending_law": null,
+                  "pending_steps": 1,
+                  "changed": false,
+                  "step": 3
+                },
+                {
+                  "range_m": 3300.0,
+                  "desired_law": "los",
+                  "active_law": "los",
+                  "pending_law": null,
+                  "pending_steps": 2,
+                  "changed": false,
+                  "step": 4
+                },
+                {
+                  "range_m": 3300.0,
+                  "desired_law": "los",
+                  "active_law": "los",
+                  "pending_law": null,
+                  "pending_steps": 3,
+                  "changed": false,
+                  "step": 5
+                }
+              ],
+              "switch_delay_steps": 2,
+              "switch_delay_s": 0.4,
+              "range_travelled_during_delay_m": 40.0,
+              "chatter_count": 0,
+              "missed_switch_opportunities": 2
+            },
+            "300.0": {
+              "parameters": {
+                "range_threshold_m": 3000.0,
+                "hysteresis_m": 750.0,
+                "min_dwell_steps": 3,
+                "dt_s": 0.2
+              },
+              "closing_speed_mps": 300.0,
+              "trace": [
+                {
+                  "range_m": 2400.0,
+                  "desired_law": "los",
+                  "active_law": "pn",
+                  "pending_law": "los",
+                  "pending_steps": 1,
+                  "changed": false,
+                  "step": 0
+                },
+                {
+                  "range_m": 2400.0,
+                  "desired_law": "los",
+                  "active_law": "pn",
+                  "pending_law": "los",
+                  "pending_steps": 2,
+                  "changed": false,
+                  "step": 1
+                },
+                {
+                  "range_m": 2400.0,
+                  "desired_law": "los",
+                  "active_law": "los",
+                  "pending_law": null,
+                  "pending_steps": 0,
+                  "changed": true,
+                  "step": 2
+                },
+                {
+                  "range_m": 3300.0,
+                  "desired_law": "los",
+                  "active_law": "los",
+                  "pending_law": null,
+                  "pending_steps": 1,
+                  "changed": false,
+                  "step": 3
+                },
+                {
+                  "range_m": 3300.0,
+                  "desired_law": "los",
+                  "active_law": "los",
+                  "pending_law": null,
+                  "pending_steps": 2,
+                  "changed": false,
+                  "step": 4
+                },
+                {
+                  "range_m": 3300.0,
+                  "desired_law": "los",
+                  "active_law": "los",
+                  "pending_law": null,
+                  "pending_steps": 3,
+                  "changed": false,
+                  "step": 5
+                }
+              ],
+              "switch_delay_steps": 2,
+              "switch_delay_s": 0.4,
+              "range_travelled_during_delay_m": 120.0,
+              "chatter_count": 0,
+              "missed_switch_opportunities": 2
+            }
+          }
+        }
+      },
+      "scope": "offline hybrid range-switch model only; no runtime dwell or hysteresis changed"
+    },
+    "f10": {
+      "baseline_fixed_mapping": {
+        "nominal": {
+          "input": {
+            "nz_guidance": 4.0,
+            "roll_rate_guidance": 0.4,
+            "altitude_m": 5000.0,
+            "speed_mps": 250.0,
+            "roll_rad": 0.0,
+            "alpha_rad": 0.05
+          },
+          "order": [
+            "guidance",
+            "stall_limit",
+            "bank_recovery",
+            "altitude_hold",
+            "final_clip"
+          ],
+          "nz_cmd": 4.0,
+          "roll_rate_cmd": 0.4,
+          "nz_upper_limit": 7.0,
+          "bank_delta": 0.0,
+          "altitude_delta": 0.0,
+          "flags": {
+            "guidance": true,
+            "stall_limited": false,
+            "bank_recovery": false,
+            "altitude_hold": false
+          },
+          "gain_scheduling": {
+            "qbar_pa": 38281.25,
+            "qbar_scale": 1.0,
+            "nz_proportional_scale": 1.1,
+            "roll_proportional_scale": 1.1,
+            "altitude_schedule_active": false,
+            "aoa_schedule_active": false
+          }
+        },
+        "low_qbar_low_speed": {
+          "input": {
+            "nz_guidance": 7.0,
+            "roll_rate_guidance": 1.0,
+            "altitude_m": 5000.0,
+            "speed_mps": 140.0,
+            "roll_rad": 0.0,
+            "alpha_rad": 0.05
+          },
+          "order": [
+            "guidance",
+            "stall_limit",
+            "bank_recovery",
+            "altitude_hold",
+            "final_clip"
+          ],
+          "nz_cmd": 1.0,
+          "roll_rate_cmd": 1.0,
+          "nz_upper_limit": 1.0,
+          "bank_delta": 0.0,
+          "altitude_delta": 0.0,
+          "flags": {
+            "guidance": true,
+            "stall_limited": true,
+            "bank_recovery": false,
+            "altitude_hold": false
+          },
+          "gain_scheduling": {
+            "qbar_pa": 12005.0,
+            "qbar_scale": 2.0,
+            "nz_proportional_scale": 2.2,
+            "roll_proportional_scale": 2.2,
+            "altitude_schedule_active": false,
+            "aoa_schedule_active": false
+          }
+        },
+        "high_qbar": {
+          "input": {
+            "nz_guidance": 5.0,
+            "roll_rate_guidance": 1.0,
+            "altitude_m": 5000.0,
+            "speed_mps": 350.0,
+            "roll_rad": 0.0,
+            "alpha_rad": 0.05
+          },
+          "order": [
+            "guidance",
+            "stall_limit",
+            "bank_recovery",
+            "altitude_hold",
+            "final_clip"
+          ],
+          "nz_cmd": 5.0,
+          "roll_rate_cmd": 1.0,
+          "nz_upper_limit": 7.0,
+          "bank_delta": 0.0,
+          "altitude_delta": 0.0,
+          "flags": {
+            "guidance": true,
+            "stall_limited": false,
+            "bank_recovery": false,
+            "altitude_hold": false
+          },
+          "gain_scheduling": {
+            "qbar_pa": 75031.25,
+            "qbar_scale": 0.5102040816326531,
+            "nz_proportional_scale": 0.5102040816326531,
+            "roll_proportional_scale": 0.5102040816326531,
+            "altitude_schedule_active": false,
+            "aoa_schedule_active": false
+          }
+        },
+        "high_altitude": {
+          "input": {
+            "nz_guidance": 5.0,
+            "roll_rate_guidance": 1.0,
+            "altitude_m": 14000.0,
+            "speed_mps": 250.0,
+            "roll_rad": 0.0,
+            "alpha_rad": 0.05
+          },
+          "order": [
+            "guidance",
+            "stall_limit",
+            "bank_recovery",
+            "altitude_hold",
+            "final_clip"
+          ],
+          "nz_cmd": -2.0,
+          "roll_rate_cmd": 1.0,
+          "nz_upper_limit": 7.0,
+          "bank_delta": 0.0,
+          "altitude_delta": -18.0,
+          "flags": {
+            "guidance": true,
+            "stall_limited": false,
+            "bank_recovery": false,
+            "altitude_hold": true
+          },
+          "gain_scheduling": {
+            "qbar_pa": 38281.25,
+            "qbar_scale": 1.0,
+            "nz_proportional_scale": 0.7333333333333334,
+            "roll_proportional_scale": 0.44000000000000006,
+            "altitude_schedule_active": true,
+            "aoa_schedule_active": false
+          }
+        },
+        "high_aoa": {
+          "input": {
+            "nz_guidance": 5.0,
+            "roll_rate_guidance": 1.0,
+            "altitude_m": 5000.0,
+            "speed_mps": 250.0,
+            "roll_rad": 0.0,
+            "alpha_rad": 0.4
+          },
+          "order": [
+            "guidance",
+            "stall_limit",
+            "bank_recovery",
+            "altitude_hold",
+            "final_clip"
+          ],
+          "nz_cmd": 5.0,
+          "roll_rate_cmd": 1.0,
+          "nz_upper_limit": 7.0,
+          "bank_delta": 0.0,
+          "altitude_delta": 0.0,
+          "flags": {
+            "guidance": true,
+            "stall_limited": false,
+            "bank_recovery": false,
+            "altitude_hold": false
+          },
+          "gain_scheduling": {
+            "qbar_pa": 38281.25,
+            "qbar_scale": 1.0,
+            "nz_proportional_scale": 1.54,
+            "roll_proportional_scale": 1.54,
+            "altitude_schedule_active": false,
+            "aoa_schedule_active": true
+          }
+        },
+        "bank_and_altitude": {
+          "input": {
+            "nz_guidance": 7.0,
+            "roll_rate_guidance": 1.0,
+            "altitude_m": 800.0,
+            "speed_mps": 140.0,
+            "roll_rad": 1.4835298641951802,
+            "alpha_rad": 0.05
+          },
+          "order": [
+            "guidance",
+            "stall_limit",
+            "bank_recovery",
+            "altitude_hold",
+            "final_clip"
+          ],
+          "nz_cmd": 1.0,
+          "roll_rate_cmd": -1.5,
+          "nz_upper_limit": 1.0,
+          "bank_delta": 1.0,
+          "altitude_delta": 8.4,
+          "flags": {
+            "guidance": true,
+            "stall_limited": true,
+            "bank_recovery": true,
+            "altitude_hold": true
+          },
+          "gain_scheduling": {
+            "qbar_pa": 12005.0,
+            "qbar_scale": 2.0,
+            "nz_proportional_scale": 2.2,
+            "roll_proportional_scale": 2.2,
+            "altitude_schedule_active": false,
+            "aoa_schedule_active": false
+          }
+        }
+      },
+      "scheduled_candidate": {
+        "nominal": {
+          "input": {
+            "nz_guidance": 4.0,
+            "roll_rate_guidance": 0.4,
+            "altitude_m": 5000.0,
+            "speed_mps": 250.0,
+            "roll_rad": 0.0,
+            "alpha_rad": 0.05
+          },
+          "order": [
+            "guidance",
+            "stall_limit",
+            "bank_recovery",
+            "altitude_hold",
+            "final_clip"
+          ],
+          "nz_cmd": 4.0,
+          "roll_rate_cmd": 0.4,
+          "nz_upper_limit": 7.0,
+          "bank_delta": 0.0,
+          "altitude_delta": 0.0,
+          "flags": {
+            "guidance": true,
+            "stall_limited": false,
+            "bank_recovery": false,
+            "altitude_hold": false
+          },
+          "gain_scheduling": {
+            "qbar_pa": 38281.25,
+            "qbar_scale": 1.0,
+            "nz_proportional_scale": 1.1,
+            "roll_proportional_scale": 1.1,
+            "altitude_schedule_active": false,
+            "aoa_schedule_active": false
+          },
+          "candidate_name": "qbar_altitude_aoa_gain_scheduled_controller",
+          "runtime_selected": false
+        },
+        "low_qbar_low_speed": {
+          "input": {
+            "nz_guidance": 7.0,
+            "roll_rate_guidance": 1.0,
+            "altitude_m": 5000.0,
+            "speed_mps": 140.0,
+            "roll_rad": 0.0,
+            "alpha_rad": 0.05
+          },
+          "order": [
+            "guidance",
+            "stall_limit",
+            "bank_recovery",
+            "altitude_hold",
+            "final_clip"
+          ],
+          "nz_cmd": 1.0,
+          "roll_rate_cmd": 1.0,
+          "nz_upper_limit": 1.0,
+          "bank_delta": 0.0,
+          "altitude_delta": 0.0,
+          "flags": {
+            "guidance": true,
+            "stall_limited": true,
+            "bank_recovery": false,
+            "altitude_hold": false
+          },
+          "gain_scheduling": {
+            "qbar_pa": 12005.0,
+            "qbar_scale": 2.0,
+            "nz_proportional_scale": 2.2,
+            "roll_proportional_scale": 2.2,
+            "altitude_schedule_active": false,
+            "aoa_schedule_active": false
+          },
+          "candidate_name": "qbar_altitude_aoa_gain_scheduled_controller",
+          "runtime_selected": false
+        },
+        "high_qbar": {
+          "input": {
+            "nz_guidance": 5.0,
+            "roll_rate_guidance": 1.0,
+            "altitude_m": 5000.0,
+            "speed_mps": 350.0,
+            "roll_rad": 0.0,
+            "alpha_rad": 0.05
+          },
+          "order": [
+            "guidance",
+            "stall_limit",
+            "bank_recovery",
+            "altitude_hold",
+            "final_clip"
+          ],
+          "nz_cmd": 5.0,
+          "roll_rate_cmd": 1.0,
+          "nz_upper_limit": 7.0,
+          "bank_delta": 0.0,
+          "altitude_delta": 0.0,
+          "flags": {
+            "guidance": true,
+            "stall_limited": false,
+            "bank_recovery": false,
+            "altitude_hold": false
+          },
+          "gain_scheduling": {
+            "qbar_pa": 75031.25,
+            "qbar_scale": 0.5102040816326531,
+            "nz_proportional_scale": 0.5102040816326531,
+            "roll_proportional_scale": 0.5102040816326531,
+            "altitude_schedule_active": false,
+            "aoa_schedule_active": false
+          },
+          "candidate_name": "qbar_altitude_aoa_gain_scheduled_controller",
+          "runtime_selected": false
+        },
+        "high_altitude": {
+          "input": {
+            "nz_guidance": 5.0,
+            "roll_rate_guidance": 1.0,
+            "altitude_m": 14000.0,
+            "speed_mps": 250.0,
+            "roll_rad": 0.0,
+            "alpha_rad": 0.05
+          },
+          "order": [
+            "guidance",
+            "stall_limit",
+            "bank_recovery",
+            "altitude_hold",
+            "final_clip"
+          ],
+          "nz_cmd": -2.0,
+          "roll_rate_cmd": 1.0,
+          "nz_upper_limit": 7.0,
+          "bank_delta": 0.0,
+          "altitude_delta": -18.0,
+          "flags": {
+            "guidance": true,
+            "stall_limited": false,
+            "bank_recovery": false,
+            "altitude_hold": true
+          },
+          "gain_scheduling": {
+            "qbar_pa": 38281.25,
+            "qbar_scale": 1.0,
+            "nz_proportional_scale": 0.7333333333333334,
+            "roll_proportional_scale": 0.44000000000000006,
+            "altitude_schedule_active": true,
+            "aoa_schedule_active": false
+          },
+          "candidate_name": "qbar_altitude_aoa_gain_scheduled_controller",
+          "runtime_selected": false
+        },
+        "high_aoa": {
+          "input": {
+            "nz_guidance": 5.0,
+            "roll_rate_guidance": 1.0,
+            "altitude_m": 5000.0,
+            "speed_mps": 250.0,
+            "roll_rad": 0.0,
+            "alpha_rad": 0.4
+          },
+          "order": [
+            "guidance",
+            "stall_limit",
+            "bank_recovery",
+            "altitude_hold",
+            "final_clip"
+          ],
+          "nz_cmd": 5.0,
+          "roll_rate_cmd": 1.0,
+          "nz_upper_limit": 7.0,
+          "bank_delta": 0.0,
+          "altitude_delta": 0.0,
+          "flags": {
+            "guidance": true,
+            "stall_limited": false,
+            "bank_recovery": false,
+            "altitude_hold": false
+          },
+          "gain_scheduling": {
+            "qbar_pa": 38281.25,
+            "qbar_scale": 1.0,
+            "nz_proportional_scale": 1.54,
+            "roll_proportional_scale": 1.54,
+            "altitude_schedule_active": false,
+            "aoa_schedule_active": true
+          },
+          "candidate_name": "qbar_altitude_aoa_gain_scheduled_controller",
+          "runtime_selected": false
+        },
+        "bank_and_altitude": {
+          "input": {
+            "nz_guidance": 7.0,
+            "roll_rate_guidance": 1.0,
+            "altitude_m": 800.0,
+            "speed_mps": 140.0,
+            "roll_rad": 1.4835298641951802,
+            "alpha_rad": 0.05
+          },
+          "order": [
+            "guidance",
+            "stall_limit",
+            "bank_recovery",
+            "altitude_hold",
+            "final_clip"
+          ],
+          "nz_cmd": 1.0,
+          "roll_rate_cmd": -1.5,
+          "nz_upper_limit": 1.0,
+          "bank_delta": 1.0,
+          "altitude_delta": 8.4,
+          "flags": {
+            "guidance": true,
+            "stall_limited": true,
+            "bank_recovery": true,
+            "altitude_hold": true
+          },
+          "gain_scheduling": {
+            "qbar_pa": 12005.0,
+            "qbar_scale": 2.0,
+            "nz_proportional_scale": 2.2,
+            "roll_proportional_scale": 2.2,
+            "altitude_schedule_active": false,
+            "aoa_schedule_active": false
+          },
+          "candidate_name": "qbar_altitude_aoa_gain_scheduled_controller",
+          "runtime_selected": false
+        }
+      },
+      "f04_limits": {
+        "nz": [
+          -2.0,
+          7.0
+        ],
+        "roll_rate_radps": [
+          -1.5,
+          1.5
+        ],
+        "throttle": [
+          0.4,
+          0.9
+        ]
+      },
+      "scope": "offline arbitration and gain-scaling model; no controller default or command source changed"
+    }
+  },
+  "backend_provenance": {
+    "requested": null,
+    "final": null,
+    "fallback_occurred": false,
+    "status": "not_applicable_offline_analytic_only"
+  },
+  "config_overrides": []
+}

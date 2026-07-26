@@ -10,6 +10,10 @@ import torch
 
 from uav_vpp_guidance.agents.ppo_agent import PPOAgent
 from uav_vpp_guidance.training.train_prediction_vpp_ppo import load_experiment_config
+from uav_vpp_guidance.utils.vpp_action_contract import (
+    resolve_vpp_action_dimension,
+    validate_vpp_checkpoint_metadata,
+)
 
 
 class FrozenSpecialistPolicy:
@@ -22,7 +26,15 @@ class FrozenSpecialistPolicy:
         self.config = load_experiment_config(self.config_path)
         checkpoint = torch.load(self.checkpoint_path, map_location=device)
         self.obs_dim = int(checkpoint.get("obs_dim", 0))
-        self.action_dim = int(checkpoint.get("action_dim", 3))
+        if "virtual_point" in self.config:
+            expected_action_dim = resolve_vpp_action_dimension(
+                self.config["virtual_point"]
+            )
+            self.action_dim = validate_vpp_checkpoint_metadata(
+                checkpoint, expected_dim=expected_action_dim
+            )
+        else:
+            self.action_dim = int(checkpoint.get("action_dim", 3))
         if self.obs_dim <= 0:
             raise ValueError(
                 f"Frozen specialist checkpoint missing valid obs_dim: {checkpoint_path}"

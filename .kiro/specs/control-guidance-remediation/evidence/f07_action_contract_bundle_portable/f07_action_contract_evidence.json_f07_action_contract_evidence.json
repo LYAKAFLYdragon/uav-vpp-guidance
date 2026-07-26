@@ -1,0 +1,39 @@
+{
+  "schema_version": "1.0.0",
+  "finding_id": "F07",
+  "construction_matrix": {
+    "canonical_dimension": 3,
+    "schema_version": "vpp-action-contract-1",
+    "cases": {
+      "compatible_3d": {
+        "accepted": true,
+        "contract": {
+          "dimension": 3,
+          "schema_version": "vpp-action-contract-1",
+          "boundaries": {
+            "config": 3,
+            "generator": 3,
+            "action_space": 3,
+            "checkpoint": 3
+          },
+          "legacy_compatibility": false
+        }
+      },
+      "missing_config": {
+        "accepted": false,
+        "error": "F07 canonical VPP action dimension is required; missing config. Silent fallback is prohibited."
+      },
+      "generator_mismatch": {
+        "accepted": false,
+        "error": "F07 VPP action dimension mismatch: canonical=3, observed={'generator': 5}; compatibility mode was not requested."
+      },
+      "stale_checkpoint": {
+        "accepted": false,
+        "error": "F07 VPP action dimension mismatch: canonical=3, observed={'checkpoint': 5}; compatibility mode was not requested."
+      }
+    },
+    "legacy_policy": "reject dimensions other than canonical 3 until a separately versioned compatibility adapter is approved"
+  },
+  "frozen_runtime_counterexample": "VirtualPointGenerator({}) selects 5 while frozen config declares 3",
+  "config_overrides": []
+}

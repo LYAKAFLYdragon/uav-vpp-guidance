@@ -1,0 +1,7 @@
+# F05 VPP semantics comparison — offline evidence
+
+The frozen mapping has 3 normalized policy components and maps lateral action `a∈[-1,1]` directly to `800a` metres. It is monotone, symmetric, clipped, and independent of range, but its tactical angle is range-dependent: +800 m is `atan2(800,2500)=17.74°` at 2500 m and `45°` at 800 m.
+
+This evidence compares that fixed-metre baseline with (1) the same normalized fraction representation, which has no behavior change, and (2) a distance-scaled lateral offset `clip(r_eff*tan(30°*a), ±800 m)`, using `r_eff=max(range,50 m)` for finite near-range behavior. The candidate is monotone and symmetric, preserves an explicit ±800 m safety bound, and prevents a singular near-zero calculation. Clipping necessarily makes its angular meaning nonconstant after the bound is reached.
+
+No candidate is adopted. The frozen scenario/seed matrix has not run, required policy checkpoints are absent, and changing the action-to-offset map would reinterpret existing policy outputs. Thus tactical, safety, tracking, effort, policy-stability, and migration requirements are unproven. The F05 gate is `needs_more_evidence`, retains `cartesian_offset` fixed-metre semantics, and has no protected-path allowlist.

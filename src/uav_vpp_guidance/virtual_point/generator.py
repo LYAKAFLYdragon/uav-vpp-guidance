@@ -10,6 +10,10 @@ relative to the target aircraft.
 
 import numpy as np
 
+from uav_vpp_guidance.utils.vpp_action_contract import (
+    resolve_vpp_action_dimension,
+    validate_vpp_action,
+)
 from .coordinate_transform import (
     VALID_OFFSET_FRAMES,
     offset_to_world,
@@ -60,7 +64,8 @@ class VirtualPointGenerator:
         """
         self.config = config
         self.task_name = str(task_name) if task_name not in (None, "") else None
-        self.action_dim = config.get("action_dim", 5)
+        self.legacy_compatibility_mode = config.get("legacy_compatibility_mode")
+        self.action_dim = resolve_vpp_action_dimension(config)
         self.d_long_range = config.get("d_long_range", [-1500.0, 1500.0])
         self.d_lat_range = config.get("d_lat_range", [-800.0, 800.0])
         self.d_vert_range = config.get("d_vert_range", [-500.0, 500.0])
@@ -801,7 +806,11 @@ class VirtualPointGenerator:
             dict or tuple: 默认返回 virtual_point dict；
                 若 return_info=True，返回 (virtual_point, info)。
         """
-        action = np.asarray(action, dtype=np.float64)
+        action = validate_vpp_action(
+            action,
+            expected_dim=self.action_dim,
+            legacy_compatibility_mode=self.legacy_compatibility_mode,
+        )
         current_target_pos = self._get_target_position(target_state)
         nan_vec = np.full(3, np.nan, dtype=np.float64)
         tactical_basis_info = {

@@ -1,0 +1,32 @@
+{
+  "schema_version": "1.0.0",
+  "finding_id": "F18",
+  "status": "needs_more_evidence",
+  "runtime_disposition": "no_transfer_claim_or_candidate_promotion",
+  "decision": "no_runtime_authorization",
+  "timestamp_utc": "2026-07-26T00:00:00+00:00",
+  "protected_path_allowlist": [],
+  "evidence_hashes": {
+    "specification_sha256": "46150f6d21dd09cf6cf6d22c04951459138cac3527b4137ac6c130453625b64a",
+    "preflight_sha256": "19e913cea134b0d1d854cd7a61257db1810086951899615e108c34f20db59037"
+  },
+  "results": {
+    "common_matrix_locked": true,
+    "simple_and_strict_jsbsim_provenance_contract_defined": true,
+    "required_checkpoint_inputs_available": false,
+    "paired_runs_executed": false,
+    "strict_jsbsim_evidence": "not_available",
+    "protected_runtime_or_config_changed": false
+  },
+  "blockers": [
+    "All three declared main-method policy checkpoints are absent.",
+    "No paired simple/strict-JSBSim results or per-seed deltas exist.",
+    "No run records final jsbsim backend with fallback_occurred=false."
+  ],
+  "required_next_evidence": [
+    "Restore/hash required policy and gain artifacts.",
+    "Execute paired simple and strict-JSBSim runs for every task/seed/method with identical contracts.",
+    "Reject any fallback run as JSBSim evidence and bundle each result through the pipeline."
+  ],
+  "baseline_retained": true
+}

@@ -1,0 +1,119 @@
+{
+  "schema_version": "1.0.0",
+  "finding_id": "F18",
+  "analysis_scope": "static preflight only; no environment, checkpoint, backend, or policy execution",
+  "results": {
+    "matrix": {
+      "tasks": [
+        "head_on",
+        "crossing_feasible",
+        "break_turn",
+        "sustained_turn"
+      ],
+      "seeds": [
+        0,
+        1,
+        2
+      ],
+      "episodes_per_seed": 1,
+      "methods": [
+        "prediction_vpp",
+        "no_prediction_vpp",
+        "end_to_end_rl"
+      ],
+      "decision_frequency_hz": 5,
+      "action_contract": "method checkpoint action metadata and evaluation action space must match",
+      "metrics_required": [
+        "success",
+        "safety/termination category",
+        "return",
+        "actuator/energy/command traces",
+        "backend/fallback provenance"
+      ]
+    },
+    "backend_pairs": [
+      {
+        "requested": "simple",
+        "strict_backend": false,
+        "accept_as_jsbsim_evidence": false,
+        "fallback_allowed": false
+      },
+      {
+        "requested": "jsbsim",
+        "strict_backend": true,
+        "accept_as_jsbsim_evidence": true,
+        "fallback_allowed": false
+      }
+    ],
+    "input_checks": [
+      {
+        "method": "prediction_vpp",
+        "role": "policy_checkpoint",
+        "path": "D:\\laiyu_ssh\\uav-vpp-guidance\\outputs\\experiments\\vpp_ppo_lstm_frozen\\checkpoints\\best.pt",
+        "exists": false
+      },
+      {
+        "method": "prediction_vpp",
+        "role": "config_path",
+        "path": "D:\\laiyu_ssh\\uav-vpp-guidance\\config\\experiment\\train_vpp_ppo_lstm_frozen.yaml",
+        "exists": true
+      },
+      {
+        "method": "no_prediction_vpp",
+        "role": "policy_checkpoint",
+        "path": "D:\\laiyu_ssh\\uav-vpp-guidance\\outputs\\experiments\\no_prediction_vpp_ppo_jsbsim_compare\\checkpoints\\last.pt",
+        "exists": false
+      },
+      {
+        "method": "no_prediction_vpp",
+        "role": "config_path",
+        "path": "D:\\laiyu_ssh\\uav-vpp-guidance\\config\\experiment\\train_no_prediction_vpp_ppo_jsbsim_compare.yaml",
+        "exists": true
+      },
+      {
+        "method": "end_to_end_rl",
+        "role": "policy_checkpoint",
+        "path": "D:\\laiyu_ssh\\uav-vpp-guidance\\outputs\\experiments\\end_to_end_ppo\\checkpoints\\best.pt",
+        "exists": false
+      },
+      {
+        "method": "end_to_end_rl",
+        "role": "config_path",
+        "path": "D:\\laiyu_ssh\\uav-vpp-guidance\\config\\experiment\\train_end_to_end_ppo.yaml",
+        "exists": true
+      }
+    ],
+    "missing_required_inputs": [
+      {
+        "method": "prediction_vpp",
+        "role": "policy_checkpoint",
+        "path": "D:\\laiyu_ssh\\uav-vpp-guidance\\outputs\\experiments\\vpp_ppo_lstm_frozen\\checkpoints\\best.pt",
+        "exists": false
+      },
+      {
+        "method": "no_prediction_vpp",
+        "role": "policy_checkpoint",
+        "path": "D:\\laiyu_ssh\\uav-vpp-guidance\\outputs\\experiments\\no_prediction_vpp_ppo_jsbsim_compare\\checkpoints\\last.pt",
+        "exists": false
+      },
+      {
+        "method": "end_to_end_rl",
+        "role": "policy_checkpoint",
+        "path": "D:\\laiyu_ssh\\uav-vpp-guidance\\outputs\\experiments\\end_to_end_ppo\\checkpoints\\best.pt",
+        "exists": false
+      }
+    ],
+    "acceptance_rules": {
+      "strict_jsbsim": "final backend must be jsbsim and fallback_occurred must be false",
+      "simple": "final backend must be simple",
+      "pairing": "same task, seed, method, checkpoint/gain hash, control frequency, action contract, and metrics"
+    }
+  },
+  "backend_provenance": {
+    "requested": null,
+    "final": null,
+    "fallback_occurred": false,
+    "status": "not_applicable_preflight_only"
+  },
+  "config_overrides": []
+}

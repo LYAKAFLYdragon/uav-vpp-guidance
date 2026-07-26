@@ -1,0 +1,41 @@
+{
+  "schema_version": "1.0.0",
+  "finding_id": "F06",
+  "candidate": "f06_10hz_high_level_20hz_guidance_100hz_low_level",
+  "status": "needs_more_evidence",
+  "runtime_disposition": "preserve_legacy_single_rate",
+  "decision": "no_runtime_authorization",
+  "timestamp_utc": "2026-07-26T00:00:00+00:00",
+  "protected_path_allowlist": [],
+  "evidence_hashes": {
+    "architecture_specification_sha256": "9aed07b606d56e725027de82baf38981c0fea93e249ee6487b2916915cfad4d0",
+    "offline_delay_phase_evidence_sha256": "fb4bbe18ca271de91c0434c14b6b38d55a061d093675cd5b723818a3695c29a9"
+  },
+  "acceptance_thresholds": {
+    "legacy_trace_equivalence": true,
+    "integer_schedule_or_explicit_resampler": true,
+    "no_safety_or_stability_regression": true,
+    "latency_target_s": 0.2,
+    "strict_backend_closed_loop_evidence": true
+  },
+  "results": {
+    "offline_scheduler_invariants_pass": true,
+    "legacy_single_rate_trace_reproduced": true,
+    "filter_time_constant_component_s": 0.5607346504114258,
+    "candidate_latency_target_satisfied": "not_established_closed_loop",
+    "candidate_stability_safety_satisfied": "not_established_closed_loop",
+    "strict_jsbsim_evidence": "not_available_from_analytic_only_stage",
+    "protected_runtime_or_config_changed": false
+  },
+  "blockers": [
+    "The declared frozen scenario matrix is unexecuted and required main-policy checkpoints are absent.",
+    "Offline scheduler/filter delay excludes actuator/backend/sensor/communication components required for a total latency budget.",
+    "No paired strict-JSBSim stability or safety evaluation exists for the candidate cadence."
+  ],
+  "required_next_evidence": [
+    "Task-6 per-stage actuator/filter/communication delay and phase measurements.",
+    "Paired baseline/candidate frozen-matrix evaluations with identical seeds, horizon, artifacts, backend provenance, and safety metrics.",
+    "Explicit review accepting latency/stability/safety targets before an F06 protected-path allowlist is issued."
+  ],
+  "baseline_retained": true
+}

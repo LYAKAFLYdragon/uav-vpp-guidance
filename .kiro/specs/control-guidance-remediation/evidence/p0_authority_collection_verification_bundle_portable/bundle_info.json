@@ -1,0 +1,105 @@
+{
+  "bundle_dir": ".kiro\\specs\\control-guidance-remediation\\evidence\\p0_authority_collection_verification_bundle_portable",
+  "source_dir": ".kiro\\specs\\control-guidance-remediation\\evidence\\p0_authority_collection_verification_bundle",
+  "files": {
+    "run_manifest.json": {
+      "path": ".kiro\\specs\\control-guidance-remediation\\evidence\\p0_authority_collection_verification_bundle_portable\\run_manifest.json",
+      "exists": true,
+      "size_bytes": 2324,
+      "sha256": "3701bce27576f96bd7a70656116d86132d3348796ed7dd61dd65e7612032103e",
+      "mtime": 1785142775.5583231
+    },
+    "artifact_contract.json": {
+      "path": ".kiro\\specs\\control-guidance-remediation\\evidence\\p0_authority_collection_verification_bundle_portable\\artifact_contract.json",
+      "exists": true,
+      "size_bytes": 227,
+      "sha256": "60e11c2fd3eb6e020a68c38964f26bef9d3b05ac2128114e36fc8c7d862300c9",
+      "mtime": 1785142750.621243
+    },
+    "resolved_config.yaml": {
+      "path": ".kiro\\specs\\control-guidance-remediation\\evidence\\p0_authority_collection_verification_bundle_portable\\resolved_config.yaml",
+      "exists": true,
+      "size_bytes": 198,
+      "sha256": "fec8029f69abd972f9c3ef7d8cff0d713c1fe73267805f4dc6a987781bd06d9b",
+      "mtime": 1785142750.0969822
+    },
+    "authority_collection_verification.json": {
+      "path": ".kiro\\specs\\control-guidance-remediation\\evidence\\p0_authority_collection_verification_bundle_portable\\authority_collection_verification.json",
+      "exists": true,
+      "size_bytes": 3123,
+      "sha256": "a1bd4984d90176b561453873366485322b8f2087c61a05dc23c3b3812301e8e7",
+      "mtime": 1785142749.1061444
+    },
+    "stage_summary": {
+      "path": ".kiro\\specs\\control-guidance-remediation\\evidence\\p0_authority_collection_verification_bundle_portable\\control_guidance_remediation_p0_authority_collection_verification_v1_zh.md",
+      "exists": true,
+      "size_bytes": 1204,
+      "sha256": "fe527d02713f637b40ff91dd89fa80cb6cf714e333f4666f532175624cb823b1",
+      "mtime": 1785142752.8758464
+    }
+  },
+  "manifest": {
+    "schema_version": "1.0.0",
+    "stage_name": "p0_authority_asset_collection_verification",
+    "stage_version": "1.0.0",
+    "start_time": "2026-07-27T00:00:00+00:00",
+    "end_time": "2026-07-27T00:00:00+00:00",
+    "status": "completed",
+    "command_line": [
+      "read-only parse of supplied collection JSON",
+      "raw-byte SHA-256 of supplied collection documents",
+      "no checkpoint copy or simulation"
+    ],
+    "working_directory": "E:\\uav-vpp-guidance-control-guidance-remediation-v1",
+    "output_dir": ".kiro/specs/control-guidance-remediation/evidence/p0_authority_collection_verification_bundle",
+    "config_path": null,
+    "config_hash": "fec8029f69abd972f9c3ef7d8cff0d713c1fe73267805f4dc6a987781bd06d9b",
+    "git_info": {
+      "commit": "e008972",
+      "branch": "codex/control-guidance-remediation-v1",
+      "dirty": false
+    },
+    "python_version": "3.9.13 (main, Aug 25 2022, 23:51:50) [MSC v.1916 64 bit (AMD64)]",
+    "platform": "Windows-10-10.0.22631-SP0",
+    "inputs": {
+      "collection_documents": {
+        "root": "E:\\uav-vpp-guidance-asset-collection-20260727",
+        "asset_receipt_sha256": "30d873e9b5fc5f1c8e128fe2cd74fa8d79c86e98f40a9af1beb11f4ab2591bcb",
+        "model_payload_contract_sha256": "754cafca6bfbb04e281b038b768f65f247447b2bd3f19a0aa07e70a6822d5059"
+      }
+    },
+    "outputs": {
+      "authority_collection_verification.json": {
+        "path": "E:\\uav-vpp-guidance-control-guidance-remediation-v1\\.kiro\\specs\\control-guidance-remediation\\evidence\\p0_authority_collection_verification_bundle\\authority_collection_verification.json",
+        "size_bytes": 3123,
+        "sha256": "a1bd4984d90176b561453873366485322b8f2087c61a05dc23c3b3812301e8e7"
+      },
+      "stage_summary": {
+        "path": "E:\\uav-vpp-guidance-control-guidance-remediation-v1\\reports\\control_guidance_remediation_p0_authority_collection_verification_v1_zh.md",
+        "size_bytes": 1204,
+        "sha256": "fe527d02713f637b40ff91dd89fa80cb6cf714e333f4666f532175624cb823b1"
+      }
+    },
+    "artifacts_present": {
+      "run_manifest.json": true,
+      "artifact_contract.json": true,
+      "resolved_config.yaml": true,
+      "authority_collection_verification.json": true
+    },
+    "config_overrides": [],
+    "paper_safe": false,
+    "invalid_for_paper_reasons": [
+      "required prediction-VPP asset is missing",
+      "predictor SHA mismatches the frozen asset",
+      "policy candidate training provenance is incomplete",
+      "no strict-JSBSim episode was executed"
+    ],
+    "notes": [],
+    "extra": {
+      "gate_status": "physical_unavailable",
+      "assets_copied": false,
+      "asset_manifest_created": false,
+      "strict_jsbsim_smoke_executed": false
+    }
+  }
+}

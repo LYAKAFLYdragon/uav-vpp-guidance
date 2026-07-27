@@ -51,13 +51,17 @@ class ArtifactBundle:
                 shutil.copy2(src, dst)
                 bundle_files[filename] = file_info(dst)
 
-        # Copy declared outputs
+        # Copy declared outputs. Reuse an already-copied identical artifact so
+        # repeated bundle creation remains idempotent and core files are not duplicated.
         if self.manifest:
             for name, info in self.manifest.outputs.items():
                 src = Path(info["path"])
                 if src.exists():
                     dst = self.bundle_dir / src.name
-                    # Avoid name collisions by prefixing with output key
+                    if dst.is_file() and file_info(dst)["sha256"] == file_info(src)["sha256"]:
+                        bundle_files[name] = file_info(dst)
+                        continue
+                    # Avoid distinct non-identical name collisions by prefixing with output key.
                     if dst.exists():
                         dst = self.bundle_dir / f"{name}_{src.name}"
                     shutil.copy2(src, dst)

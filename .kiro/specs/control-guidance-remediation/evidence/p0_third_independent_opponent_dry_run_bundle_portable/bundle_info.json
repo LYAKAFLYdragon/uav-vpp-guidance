@@ -10,14 +10,14 @@
       "mtime": 1785136929.0839267
     },
     "artifact_contract.json": {
-      "path": ".kiro\\specs\\control-guidance-remediation\\evidence\\p0_third_independent_opponent_dry_run_bundle_portable\\artifact_contract.json_artifact_contract.json",
+      "path": ".kiro\\specs\\control-guidance-remediation\\evidence\\p0_third_independent_opponent_dry_run_bundle_portable\\artifact_contract.json",
       "exists": true,
       "size_bytes": 278,
       "sha256": "69fb625b87874c813451df91cc43bb3ba0beed3e4bbb0689fa8fa3db333c7f39",
       "mtime": 1785136928.8924797
     },
     "resolved_config.yaml": {
-      "path": ".kiro\\specs\\control-guidance-remediation\\evidence\\p0_third_independent_opponent_dry_run_bundle_portable\\resolved_config.yaml_resolved_config.yaml",
+      "path": ".kiro\\specs\\control-guidance-remediation\\evidence\\p0_third_independent_opponent_dry_run_bundle_portable\\resolved_config.yaml",
       "exists": true,
       "size_bytes": 7748,
       "sha256": "b5079b1b07caf86cadf6e1882d60150ea49f8190108a0e99e51e644bd4fe0756",

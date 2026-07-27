@@ -171,3 +171,22 @@ class TestArtifactBundle:
 
         (bundle.bundle_dir / "manifests" / "resolved.yaml").write_text("tampered\n")
         assert len(bundle.verify()["mismatches"]) == 1
+
+
+    def test_core_output_is_not_duplicated_when_declared_in_manifest(self, tmp_path):
+        source = tmp_path / "source"
+        source.mkdir()
+        resolved = source / "resolved_config.yaml"
+        resolved.write_text("value: 1\n")
+        manifest = RunManifest(stage_name="test", output_dir=str(source))
+        manifest.record_output_file("resolved_config.yaml", resolved)
+        manifest.mark_completed()
+        manifest.save(source)
+        ArtifactContract(required_files=["resolved_config.yaml"]).save(source)
+
+        bundle = ArtifactBundle(source_dir=source, bundle_dir=tmp_path / "bundle")
+        bundle.create()
+        bundle.create()
+        assert (bundle.bundle_dir / "resolved_config.yaml").exists()
+        assert not (bundle.bundle_dir / "resolved_config.yaml_resolved_config.yaml").exists()
+        assert bundle.verify()["valid"] is True

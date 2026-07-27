@@ -152,3 +152,22 @@ class TestArtifactBundle:
         verification = bundle.verify()
         assert verification["valid"] is False
         assert len(verification["mismatches"]) == 1
+
+
+    def test_create_and_verify_includes_declared_directory(self, tmp_path):
+        source = tmp_path / "source"
+        manifests = source / "manifests"
+        manifests.mkdir(parents=True)
+        (manifests / "resolved.yaml").write_text("value: 1\n")
+        manifest = RunManifest(stage_name="test", output_dir=str(source))
+        manifest.mark_completed()
+        manifest.save(source)
+        ArtifactContract(required_directories=["manifests"]).save(source)
+
+        bundle = ArtifactBundle(source_dir=source, bundle_dir=tmp_path / "bundle", extra_files=["manifests"])
+        bundle.create()
+        assert (bundle.bundle_dir / "manifests" / "resolved.yaml").exists()
+        assert bundle.verify()["valid"] is True
+
+        (bundle.bundle_dir / "manifests" / "resolved.yaml").write_text("tampered\n")
+        assert len(bundle.verify()["mismatches"]) == 1

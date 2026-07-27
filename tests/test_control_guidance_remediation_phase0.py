@@ -79,6 +79,7 @@ def test_protected_paths_match_frozen_manifest_before_approval():
         "src/uav_vpp_guidance/agents/ppo_agent.py",
         "src/uav_vpp_guidance/training/train_prediction_vpp_ppo.py",
         "src/uav_vpp_guidance/hierarchy/specialist_policy.py",
+        "config/experiment/jsbsim_hrl_comparison.yaml",
     }
 
 

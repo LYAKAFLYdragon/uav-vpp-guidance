@@ -63,13 +63,21 @@ class ArtifactBundle:
                     shutil.copy2(src, dst)
                     bundle_files[name] = file_info(dst)
 
-        # Copy extra requested files
+        # Copy extra requested files or directory trees declared by a contract.
         for rel in self.extra_files:
             src = self.source_dir / rel
-            if src.exists():
+            if src.is_file():
                 dst = self.bundle_dir / src.name
                 shutil.copy2(src, dst)
                 bundle_files[rel] = file_info(dst)
+            elif src.is_dir():
+                dst = self.bundle_dir / rel
+                shutil.copytree(src, dst, dirs_exist_ok=True)
+                for copied_file in sorted(path for path in dst.rglob("*") if path.is_file()):
+                    relative_path = copied_file.relative_to(self.bundle_dir).as_posix()
+                    info = file_info(copied_file)
+                    info["relative_path"] = relative_path
+                    bundle_files[relative_path] = info
 
         bundle_info = {
             "bundle_dir": str(self.bundle_dir),
@@ -96,7 +104,8 @@ class ArtifactBundle:
         mismatches = []
         missing = []
         for name, expected in bundle_info.get("files", {}).items():
-            path = self.bundle_dir / Path(expected["path"]).name
+            relative_path = expected.get("relative_path")
+            path = self.bundle_dir / relative_path if relative_path else self.bundle_dir / Path(expected["path"]).name
             if not path.exists():
                 missing.append(name)
                 continue

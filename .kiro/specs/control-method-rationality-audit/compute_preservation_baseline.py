@@ -44,7 +44,9 @@ def collect_files(base: Path) -> list[Path]:
 
 
 def main():
-    repo_root = Path(__file__).resolve().parent.parent
+    # This file lives under .kiro/specs/<spec>; the repository root is three
+    # parents above the spec directory.
+    repo_root = Path(__file__).resolve().parents[3]
 
     # Directories to hash recursively
     directories = [

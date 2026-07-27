@@ -9,6 +9,7 @@ venv/
 
 # Workspace-local test dependencies (installed with pip --target).
 .kiro/python-deps/
+.hypothesis/
 
 outputs/
 experiments/*/checkpoints/

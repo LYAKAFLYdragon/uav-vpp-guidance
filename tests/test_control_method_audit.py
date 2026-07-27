@@ -431,27 +431,27 @@ class TestAuditSourceFacts:
         assert facts.observation_base_dim == len(observation)
         assert facts.observation_feature_names == feature_names
 
-    def test_config_and_constructor_defaults_expose_both_mismatches(self):
-        """The audit records the real mode-switch and VPP config/default mismatches."""
+    def test_config_and_constructor_defaults_expose_contract_and_mode_facts(self):
+        """The audit records the mode fact and strict VPP contract."""
         from uav_vpp_guidance.guidance.hybrid_guidance import HybridGuidance
         from uav_vpp_guidance.virtual_point.generator import VirtualPointGenerator
 
         config = _read_yaml("config/guidance.yaml")
         guidance = config["guidance"]
         configured_vpp = VirtualPointGenerator(config["virtual_point"])
-        default_vpp = VirtualPointGenerator({})
+        with pytest.raises(ValueError, match="action_dim is required"):
+            VirtualPointGenerator({})
         hybrid = HybridGuidance(guidance)
 
         assert guidance["mode_switch"]["aspect_threshold_deg"] == 25.0
         assert configured_vpp.action_dim == 3
-        assert default_vpp.action_dim == 5
-        assert configured_vpp.action_dim != default_vpp.action_dim
+        assert configured_vpp.action_dim == 3
 
         facts = _load_real_source_facts()
         assert facts.mode_switch_config["aspect_threshold_deg"] == 25.0
         assert facts.mode_switch_code_default == 15.0
         assert facts.vpp_config["action_dim"] == configured_vpp.action_dim
-        assert facts.vpp_generator_default_action_dim == default_vpp.action_dim
+        assert facts.vpp_generator_default_action_dim is None
         assert facts.hybrid_params["hysteresis_m"] == hybrid.hysteresis_m == 500.0
         assert facts.hybrid_params["min_dwell_steps"] == hybrid.min_dwell_steps == 3
 

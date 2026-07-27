@@ -28,7 +28,7 @@
                       },
     "protected_path_manifest":  {
                                     "path":  ".kiro/specs/control-method-rationality-audit/preservation_baseline.sha256.json",
-                                    "sha256":  "31df4591b7f6974923e1600a6ebfcc1ec2d64aeeec41249ccc5b2581e2394aef",
+                                    "sha256":  "4f427f8658325277685f20ad379728b361a33c345d9e37b6c9e65bb1582e9368",
                                     "entry_count":  224,
                                     "config_entry_count":  194,
                                     "runtime_entry_count":  30,

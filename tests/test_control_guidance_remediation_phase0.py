@@ -8,6 +8,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SPEC_DIR = REPO_ROOT / ".kiro/specs/control-guidance-remediation"
 BASELINE_PATH = SPEC_DIR / "baseline_freeze.json"
+ACTIVE_BASELINE_PATH = SPEC_DIR / "baseline_freeze_superseding_20260727.json"
 LEDGER_PATH = SPEC_DIR / "remediation_ledger.json"
 ALLOWED_STATUSES = {
     "implemented_and_verified", "experiment_rejects_change", "needs_more_evidence",
@@ -42,7 +43,7 @@ def test_protected_paths_match_frozen_manifest_before_approval():
 
     Validates: Requirements 3.1, 3.2, 3.7, 3.8, 3.9
     """
-    freeze = json.loads(BASELINE_PATH.read_text(encoding="utf-8"))
+    freeze = json.loads(ACTIVE_BASELINE_PATH.read_text(encoding="utf-8"))
     protected = freeze["protected_path_manifest"]
     assert protected["approved_implementation_gates"] == []
     manifest_path = REPO_ROOT / protected["path"]
@@ -98,11 +99,25 @@ def test_remediation_ledger_is_complete_and_routes_no_change_items():
     assert not any(entries[item]["implementation_queue"] for item in ("F04", "F09", "F15"))
 
 
+def test_historical_freeze_is_preserved_and_active_freeze_reconciles_raw_hash():
+    """The original declaration stays traceable while active preservation uses bytes."""
+    historical = json.loads(BASELINE_PATH.read_text(encoding="utf-8"))
+    active = json.loads(ACTIVE_BASELINE_PATH.read_text(encoding="utf-8"))
+    assert historical["freeze_id"] == "control-guidance-remediation-phase0-20260726"
+    assert historical["protected_path_manifest"]["sha256"] == (
+        "4f427f8658325277685f20ad379728b361a33c345d9e37b6c9e65bb1582e9368"
+    )
+    assert active["supersedes"]["freeze_id"] == historical["freeze_id"]
+    assert _sha256(REPO_ROOT / active["protected_path_manifest"]["path"]) == (
+        active["protected_path_manifest"]["sha256"]
+    )
+
+
 def test_baseline_freeze_records_required_provenance_and_unavailable_evidence():
-    """The freeze is self-contained and does not imply unavailable run evidence."""
-    freeze = json.loads(BASELINE_PATH.read_text(encoding="utf-8"))
-    assert len(freeze["source_revision"]["git_commit"]) == 40
-    assert len(freeze["audit_validation"]["report_hashes"]) == 2
+    """The active freeze is self-contained and does not imply unavailable runs."""
+    freeze = json.loads(ACTIVE_BASELINE_PATH.read_text(encoding="utf-8"))
+    assert len(freeze["canonical_manifest_revision"]["git_commit"]) == 40
+    assert freeze["supersedes"]["freeze_id"] == "control-guidance-remediation-phase0-20260726"
     assert len(freeze["config_hashes"]) >= 4
     manifest_path = REPO_ROOT / freeze["protected_path_manifest"]["path"]
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))

@@ -46,6 +46,7 @@
 
 - [x] 导入并核对现有 F01-F18 审计报告、remediation_ledger.json 和 preservation baseline。
 - [x] 对当前分支重新计算受保护路径 SHA-256；发现 preservation baseline 自哈希与冻结记录不一致，已作为证据接口错误冻结，未改写 baseline。
+- [x] 以 Git/raw-byte 取证保留旧 freeze，并建立 superseding preservation freeze；该收口不改变资产或物理闭环门状态。
 - [x] 建立 run_manifest.json、artifact_contract.json 和 portable bundle 模板。
 - [x] 固定场景矩阵、对手、随机种子、运行步数、终端分类和统计分母。
 - [x] 核对三个主 checkpoint 及预测器 checkpoint；四项均缺失，已标记 physical_unavailable，未采用未登记外部模型。

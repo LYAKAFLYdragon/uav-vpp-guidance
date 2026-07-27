@@ -1,0 +1,36 @@
+{
+  "schema_version": "1.0.0",
+  "stage_name": "new_source_retraining_preflight",
+  "source_id": "UAV-VPP-GUIDANCE-RETRAIN-NON-EQUIVALENT-20260727-R01",
+  "preflight_id": "warm-start-free",
+  "status": "blocked_missing_new_trajectory_corpus",
+  "executed_command": "PYTHONPATH=src python scripts/prepare_non_equivalent_retraining.py --preflight-id warm-start-free",
+  "output_root": "outputs/control_guidance_retraining/UAV-VPP-GUIDANCE-RETRAIN-NON-EQUIVALENT-20260727-R01",
+  "environment": {
+    "torch": "2.8.0+cpu",
+    "cuda_available": false,
+    "jsbsim": "1.2.3",
+    "scikit_learn_available": true
+  },
+  "data_gate": {
+    "trajectory_csv_count": 0,
+    "data_manifest_available": false,
+    "training_started": false,
+    "reason": "No new immutable trajectory CSV corpus exists under the isolated input directory."
+  },
+  "prepared_configs": {
+    "trajectory_predictor_lstm_s0": "9e23967c6a6aaeeb",
+    "prediction_vpp_lstm_s0": "5632b10ec3a21f99",
+    "no_prediction_vpp_s0": "09e453ca05d726a7",
+    "end_to_end_s0": "59c1043e742af724"
+  },
+  "isolation_checks": {
+    "historical_asset_equivalence": false,
+    "historical_asset_replacement_permitted": false,
+    "prediction_vpp_warm_start_enabled": false,
+    "prediction_vpp_warm_start_checkpoint": null,
+    "new_checkpoint_files_created": 0,
+    "historical_checkpoint_registry_modified": false
+  },
+  "next_gate": "Supply a separately reviewed trajectory CSV corpus and manifest, re-run preflight with a new attempt ID, then perform the four full isolated training lanes and per-asset registration."
+}

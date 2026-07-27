@@ -1,0 +1,10 @@
+{
+  "schema_version": "1.0.0",
+  "required_files": [
+    "resolved_config.yaml",
+    "p0_evidence_freeze.json",
+    "run_manifest.json"
+  ],
+  "required_directories": [],
+  "optional_files": ["artifact_contract.json"]
+}

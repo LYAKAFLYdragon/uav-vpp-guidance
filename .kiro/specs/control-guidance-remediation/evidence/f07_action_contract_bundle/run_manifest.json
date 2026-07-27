@@ -1,0 +1,82 @@
+{
+  "schema_version": "1.0.0",
+  "stage_name": "f07_action_contract_evidence",
+  "stage_version": "1.0.0",
+  "start_time": "2026-07-26T13:50:51.119006+00:00",
+  "end_time": "2026-07-26T13:50:51.142007+00:00",
+  "status": "completed",
+  "command_line": [
+    "E:\\anaconda3\\python.exe",
+    "scripts/run_f07_action_contract_evidence.py"
+  ],
+  "working_directory": "D:\\laiyu_ssh\\uav-vpp-guidance",
+  "output_dir": "D:\\laiyu_ssh\\uav-vpp-guidance\\.kiro\\specs\\control-guidance-remediation\\evidence\\f07_action_contract_bundle",
+  "config_path": "config/guidance.yaml",
+  "config_hash": "c43dcb3f70528d25",
+  "git_info": {
+    "commit": "a39044b7728a254cb46705f0b45b3d872d281869",
+    "short_commit": "a39044b7728a",
+    "branch": "fix/control-guidance-f01-f02-authorized",
+    "dirty": true,
+    "description": "fix/control-guidance-f01-f02-authorized@a39044b7728a-dirty"
+  },
+  "python_version": "3.10.9 | packaged by Anaconda, Inc. | (main, Mar  1 2023, 18:18:15) [MSC v.1916 64 bit (AMD64)]",
+  "platform": "Windows-10-10.0.26100-SP0",
+  "inputs": {
+    "baseline_freeze": {
+      "path": "D:\\laiyu_ssh\\uav-vpp-guidance\\.kiro\\specs\\control-guidance-remediation\\baseline_freeze.json",
+      "exists": true,
+      "size_bytes": 4397,
+      "sha256": "f3b78cc712ff0ea1a1af90135dbf43533236c06b3d88ebf12322da54aba1146e",
+      "mtime": 1785054738.0672996
+    },
+    "guidance_config": {
+      "path": "D:\\laiyu_ssh\\uav-vpp-guidance\\config\\guidance.yaml",
+      "exists": true,
+      "size_bytes": 2715,
+      "sha256": "2f78d8c65f4379ace326b6f7792ba5d21575e27f38105b66030c5e8a3daa3306",
+      "mtime": 1783968478.430513
+    },
+    "contract_specification": {
+      "path": "D:\\laiyu_ssh\\uav-vpp-guidance\\.kiro\\specs\\control-guidance-remediation\\f07_action_contract.md",
+      "exists": true,
+      "size_bytes": 1500,
+      "sha256": "f8d9af341df71a01f219e8a299e1b7820da98e4cfb7b902b5a75b37cb3911044",
+      "mtime": 1785068989.6212528
+    }
+  },
+  "outputs": {
+    "resolved_config.yaml": {
+      "path": "D:\\laiyu_ssh\\uav-vpp-guidance\\.kiro\\specs\\control-guidance-remediation\\evidence\\f07_action_contract_bundle\\resolved_config.yaml",
+      "exists": true,
+      "size_bytes": 43,
+      "sha256": "963eb4b37c09379573fc3161a177892b3ded09974f8a16ff49f022a0bc3ccc5e",
+      "mtime": 1785073851.140007
+    },
+    "f07_action_contract_evidence.json": {
+      "path": "D:\\laiyu_ssh\\uav-vpp-guidance\\.kiro\\specs\\control-guidance-remediation\\evidence\\f07_action_contract_bundle\\f07_action_contract_evidence.json",
+      "exists": true,
+      "size_bytes": 1413,
+      "sha256": "e66e1469df10fd168282c7621ae54bc9b1273e61f372a372f6006026b0ffbb9d",
+      "mtime": 1785073851.141008
+    },
+    "f07_evidence_gate.json": {
+      "path": "D:\\laiyu_ssh\\uav-vpp-guidance\\.kiro\\specs\\control-guidance-remediation\\evidence\\f07_action_contract_bundle\\f07_evidence_gate.json",
+      "exists": true,
+      "size_bytes": 1119,
+      "sha256": "9fc8d2c4a03c24832aad9a37e1029c1d0f497f5ad792e9f14161052aa09bf112",
+      "mtime": 1785073851.141008
+    }
+  },
+  "artifacts_present": {
+    "resolved_config.yaml": true,
+    "f07_action_contract_evidence.json": true,
+    "f07_evidence_gate.json": true,
+    "run_manifest.json": true
+  },
+  "config_overrides": [],
+  "paper_safe": true,
+  "invalid_for_paper_reasons": [],
+  "notes": [],
+  "extra": {}
+}

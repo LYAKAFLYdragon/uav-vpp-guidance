@@ -1,0 +1,45 @@
+{
+  "schema_version": "1.0.0",
+  "finding_id": "F02",
+  "evidence_type": "offline_two_loop_candidate_vs_frozen_baseline_trace",
+  "executed_at_utc": "2026-07-26T00:00:00+00:00",
+  "execution": {
+    "command": "python -c <deterministic OfflineF02TwoLoopController trace; command recorded in task execution report>",
+    "backend": "not_applicable_pure_control_trace",
+    "config_overrides": [],
+    "candidate_runtime_status": "offline_only"
+  },
+  "frozen_baseline": {
+    "source_revision": "a39044b7728a254cb46705f0b45b3d872d281869",
+    "implementation": "src/uav_vpp_guidance/guidance/los_rate_guidance.py::LOSRateGuidance.compute_command",
+    "formula": "roll_rate_cmd = clip(k_roll * heading_error_rad - k_damp * roll_rad, -1.5, 1.5)",
+    "gains": {"k_roll_per_s": 1.0, "k_damp_per_s": 0.2},
+    "explicit_roll_rate_feedback": false
+  },
+  "candidate": {
+    "name": "coordinated_turn_bank_outer_roll_rate_inner",
+    "formula": "heading_error -> clip(K_psi*heading_error, +/-0.35 rad/s) -> clip(atan(V_used*heading_rate/g0), +/-45 deg) -> clip(K_phi*(bank_cmd-roll)-K_p*roll_rate, +/-1.5 rad/s)",
+    "parameters": {"K_psi_per_s": 1.0, "K_phi_per_s": 2.0, "K_p": 0.8, "airspeed_mps": [80.0, 350.0], "bank_rad": [-0.7853981633974483, 0.7853981633974483], "f04_roll_rate_radps": [-1.5, 1.5]},
+    "anti_windup": "not applicable: proposed evidence candidate has no integrator; future integral implementation requires final-limiter anti-windup"
+  },
+  "rate_isolation": {
+    "heading_error_rad": 0.2,
+    "roll_rad": 0.1,
+    "airspeed_mps": 250.0,
+    "positive_rate": {"roll_rate_radps": 0.4, "baseline_roll_rate_cmd_radps": 0.18, "candidate_damping_contribution_radps": -0.32000000000000006, "candidate_roll_rate_cmd_radps": 1.0507963267948965},
+    "negative_rate": {"roll_rate_radps": -0.4, "baseline_roll_rate_cmd_radps": 0.18, "candidate_damping_contribution_radps": 0.32000000000000006, "candidate_roll_rate_cmd_radps": 1.5},
+    "result": "baseline is rate-invariant while candidate damping reverses sign; candidate output remains F04-clipped"
+  },
+  "deterministic_cases": {
+    "step": {"right_heading_error_rad": 0.3, "right_roll_rate_cmd_radps": 1.5, "left_heading_error_rad": -0.3, "left_roll_rate_cmd_radps": -1.5, "result": "command sign follows heading demand"},
+    "bank_release": {"heading_error_rad": 0.0, "roll_rad": 0.0, "roll_rate_radps": 0.0, "roll_rate_cmd_radps": 0.0, "result": "zero demand/reset-safe hold"},
+    "speed_sweep": {"heading_error_rad": 0.02, "roll_rad": 0.0, "roll_rate_radps": 0.0, "samples": [{"airspeed_mps": 100.0, "bank_cmd_rad": 0.20117729370024555}, {"airspeed_mps": 200.0, "bank_cmd_rad": 0.38734099777031545}, {"airspeed_mps": 300.0, "bank_cmd_rad": 0.5492207546551282}], "result": "valid-airspace bank demand grows monotonically with same-sign coordinated-turn demand before bank limit"},
+    "rate_decay_proxy": {"plant": "p[k+1]=0.8*p[k]+0.2*p_cmd[k] under zero heading/bank", "initial_roll_rate_radps": 0.8, "baseline_trace_radps": [0.8, 0.64, 0.512, 0.4096, 0.32768, 0.262144], "candidate_trace_radps": [0.8, 0.512, 0.32768, 0.2097152, 0.134217728, 0.08589934592], "result": "candidate rate-feedback trace decays faster than angle-only frozen command under the declared offline proxy"},
+    "saturation": {"positive_case": {"raw_roll_rate_cmd_radps": -3.6292036732051036, "roll_rate_cmd_radps": -1.5}, "negative_case": {"raw_roll_rate_cmd_radps": 3.6292036732051036, "roll_rate_cmd_radps": 1.5}, "result": "both directions retain F04 +/-1.5 rad/s saturation"}
+  },
+  "offline_metrics": {"tracking": "not a closed-loop aircraft metric; candidate bank-error and heading-demand signs pass", "safety": {"max_abs_roll_rate_cmd_radps": 1.5, "f04_roll_rate_violation_count": 0}, "oscillation": {"rate_decay_proxy_candidate_abs_final": 0.08589934592, "rate_decay_proxy_baseline_abs_final": 0.262144, "proxy_improvement": true}, "control_effort": {"step_command_abs_radps": 1.5, "saturation_cases": 2, "interpretation": "offline command samples only; not aircraft effort evidence"}},
+  "frozen_matrix_comparison": {"scenario_matrix_source": "config/experiment/jsbsim_hrl_comparison.yaml", "scenarios": ["head_on", "crossing_feasible", "break_turn", "sustained_turn"], "seeds": [0, 1, 2], "horizon": "frozen baseline declaration", "policy_artifacts": {"prediction_vpp": "absent", "no_prediction_vpp": "absent", "end_to_end_rl": "absent"}, "result": "not_executable: declared baseline matrix is unexecuted and all three required main-policy checkpoints are absent"},
+  "jsbsim_comparison": {"package_available": true, "version": "1.3.1", "strict_jsbsim_executed": false, "result": "not_executable: JSBSim package availability does not replace the absent frozen policy artifacts and unexecuted baseline matrix"},
+  "results": {"baseline_angle_not_rate_damping_demonstrated": true, "candidate_explicit_roll_rate_damping": true, "deterministic_step_opposite_step_bank_release_speed_sweep_saturation_pass": true, "f04_roll_rate_limits_retained": true, "reset_semantics_pass": true, "full_reference_scenario_matrix_executed": false, "strict_jsbsim_executed": false},
+  "limitations": ["The candidate is an offline kinematic/control proxy, not a closed-loop aircraft evaluation.", "The frozen Phase-0 matrix is declared but unexecuted and its three main-policy checkpoints are unavailable.", "No reviewer has accepted the body-rate source, sign/frame convention, gains, compatibility strategy, or closed-loop safety/stability evidence."]
+}

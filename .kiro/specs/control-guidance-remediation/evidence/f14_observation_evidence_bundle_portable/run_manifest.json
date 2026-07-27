@@ -1,0 +1,96 @@
+{
+  "schema_version": "1.0.0",
+  "stage_name": "f14_observation_evidence",
+  "stage_version": "1.0.0",
+  "start_time": "2026-07-26T14:17:54.076368+00:00",
+  "end_time": "2026-07-26T14:17:54.103373+00:00",
+  "status": "completed",
+  "command_line": [
+    "E:\\anaconda3\\python.exe",
+    "scripts/run_f14_observation_evidence.py"
+  ],
+  "working_directory": "D:\\laiyu_ssh\\uav-vpp-guidance",
+  "output_dir": "D:\\laiyu_ssh\\uav-vpp-guidance\\.kiro\\specs\\control-guidance-remediation\\evidence\\f14_observation_evidence_bundle",
+  "config_path": "config/experiment/train_prediction_vpp_ppo_jsbsim_compare.yaml",
+  "config_hash": "c78b131c963832d3",
+  "git_info": {
+    "commit": "a39044b7728a254cb46705f0b45b3d872d281869",
+    "short_commit": "a39044b7728a",
+    "branch": "fix/control-guidance-f01-f02-authorized",
+    "dirty": true,
+    "description": "fix/control-guidance-f01-f02-authorized@a39044b7728a-dirty"
+  },
+  "python_version": "3.10.9 | packaged by Anaconda, Inc. | (main, Mar  1 2023, 18:18:15) [MSC v.1916 64 bit (AMD64)]",
+  "platform": "Windows-10-10.0.26100-SP0",
+  "inputs": {
+    "baseline_freeze": {
+      "path": "D:\\laiyu_ssh\\uav-vpp-guidance\\.kiro\\specs\\control-guidance-remediation\\baseline_freeze.json",
+      "exists": true,
+      "size_bytes": 4397,
+      "sha256": "f3b78cc712ff0ea1a1af90135dbf43533236c06b3d88ebf12322da54aba1146e",
+      "mtime": 1785054738.0672996
+    },
+    "observation_runtime_reference": {
+      "path": "D:\\laiyu_ssh\\uav-vpp-guidance\\src\\uav_vpp_guidance\\envs\\observation.py",
+      "exists": true,
+      "size_bytes": 10397,
+      "sha256": "102f98ce85442880b32f102ef98f6e8bc5699b6d9b965acd13a12e2fd3a9984c",
+      "mtime": 1783968478.564247
+    },
+    "tracking_runtime_reference": {
+      "path": "D:\\laiyu_ssh\\uav-vpp-guidance\\src\\uav_vpp_guidance\\envs\\tracking_env.py",
+      "exists": true,
+      "size_bytes": 312867,
+      "sha256": "beeb2ac71e9a2f222ecdb11662c31b3a5c79c7316d94fa49d456b1f9e57fc354",
+      "mtime": 1785068860.7985501
+    },
+    "training_config": {
+      "path": "D:\\laiyu_ssh\\uav-vpp-guidance\\config\\experiment\\train_prediction_vpp_ppo_jsbsim_compare.yaml",
+      "exists": true,
+      "size_bytes": 5545,
+      "sha256": "b9647a9d41c31ea368ef9181fc6e1a3491478b51412dc7a537d7108a1ef42df6",
+      "mtime": 1783968478.408512
+    },
+    "specification": {
+      "path": "D:\\laiyu_ssh\\uav-vpp-guidance\\.kiro\\specs\\control-guidance-remediation\\f14_observation_experiment.md",
+      "exists": true,
+      "size_bytes": 1096,
+      "sha256": "f2a5f2aad26f9fc8ed49cbe35f2c7faf45b22214605cdb60ade6c4f2e86572b3",
+      "mtime": 1785075455.6350665
+    }
+  },
+  "outputs": {
+    "resolved_config.yaml": {
+      "path": "D:\\laiyu_ssh\\uav-vpp-guidance\\.kiro\\specs\\control-guidance-remediation\\evidence\\f14_observation_evidence_bundle\\resolved_config.yaml",
+      "exists": true,
+      "size_bytes": 121,
+      "sha256": "e8a8d595aa8d9e2731d57d039bae9e8dc6eca60453296d3fd9d362a20e6c4874",
+      "mtime": 1785075474.1003766
+    },
+    "f14_observation_evidence.json": {
+      "path": "D:\\laiyu_ssh\\uav-vpp-guidance\\.kiro\\specs\\control-guidance-remediation\\evidence\\f14_observation_evidence_bundle\\f14_observation_evidence.json",
+      "exists": true,
+      "size_bytes": 4549,
+      "sha256": "bf8e994471c3c6c73211c2381340daf985f4be924bf1ffb71a5d6503dee8d281",
+      "mtime": 1785075474.101376
+    },
+    "f14_evidence_gate.json": {
+      "path": "D:\\laiyu_ssh\\uav-vpp-guidance\\.kiro\\specs\\control-guidance-remediation\\evidence\\f14_observation_evidence_bundle\\f14_evidence_gate.json",
+      "exists": true,
+      "size_bytes": 1545,
+      "sha256": "b8881c8cd6a70a3881cebd3b43229f7fbf3d962cc6d6a1d301a2291c280c4709",
+      "mtime": 1785075474.102374
+    }
+  },
+  "artifacts_present": {
+    "resolved_config.yaml": true,
+    "f14_observation_evidence.json": true,
+    "f14_evidence_gate.json": true,
+    "run_manifest.json": true
+  },
+  "config_overrides": [],
+  "paper_safe": true,
+  "invalid_for_paper_reasons": [],
+  "notes": [],
+  "extra": {}
+}

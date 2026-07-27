@@ -1,0 +1,103 @@
+{
+  "schema_version": "1.0.0",
+  "stage_name": "f08_f09_evidence",
+  "stage_version": "1.0.0",
+  "start_time": "2026-07-26T14:15:23.050440+00:00",
+  "end_time": "2026-07-26T14:15:23.088441+00:00",
+  "status": "completed",
+  "command_line": [
+    "E:\\anaconda3\\python.exe",
+    "scripts/run_f08_f09_evidence.py"
+  ],
+  "working_directory": "D:\\laiyu_ssh\\uav-vpp-guidance",
+  "output_dir": "D:\\laiyu_ssh\\uav-vpp-guidance\\.kiro\\specs\\control-guidance-remediation\\evidence\\f08_f09_evidence_bundle",
+  "config_path": "config/experiment/gain_only_cem.yaml",
+  "config_hash": "24dd1aca08eb3895",
+  "git_info": {
+    "commit": "a39044b7728a254cb46705f0b45b3d872d281869",
+    "short_commit": "a39044b7728a",
+    "branch": "fix/control-guidance-f01-f02-authorized",
+    "dirty": true,
+    "description": "fix/control-guidance-f01-f02-authorized@a39044b7728a-dirty"
+  },
+  "python_version": "3.10.9 | packaged by Anaconda, Inc. | (main, Mar  1 2023, 18:18:15) [MSC v.1916 64 bit (AMD64)]",
+  "platform": "Windows-10-10.0.26100-SP0",
+  "inputs": {
+    "baseline_freeze": {
+      "path": "D:\\laiyu_ssh\\uav-vpp-guidance\\.kiro\\specs\\control-guidance-remediation\\baseline_freeze.json",
+      "exists": true,
+      "size_bytes": 4397,
+      "sha256": "f3b78cc712ff0ea1a1af90135dbf43533236c06b3d88ebf12322da54aba1146e",
+      "mtime": 1785054738.0672996
+    },
+    "gain_only_cem_config": {
+      "path": "D:\\laiyu_ssh\\uav-vpp-guidance\\config\\experiment\\gain_only_cem.yaml",
+      "exists": true,
+      "size_bytes": 634,
+      "sha256": "8204767fcddae99dea44c55a510012b5aaa73107dfe6202d74615b7a3543ad4e",
+      "mtime": 1781018901.6948707
+    },
+    "cem_runtime_reference": {
+      "path": "D:\\laiyu_ssh\\uav-vpp-guidance\\src\\uav_vpp_guidance\\gain_optimizer\\cem.py",
+      "exists": true,
+      "size_bytes": 4422,
+      "sha256": "574a6b2417ce7732f0caf8f34a19c9ff674669c23c80171d542f4e88b0bd2ab9",
+      "mtime": 1783968478.587246
+    },
+    "regret_runtime_reference": {
+      "path": "D:\\laiyu_ssh\\uav-vpp-guidance\\src\\uav_vpp_guidance\\gain_optimizer\\regret.py",
+      "exists": true,
+      "size_bytes": 4194,
+      "sha256": "96b921ba8a80c95a48c554c1d2c026932c83547d32104296af4c79faf81639f6",
+      "mtime": 1781018901.8113928
+    },
+    "specification": {
+      "path": "D:\\laiyu_ssh\\uav-vpp-guidance\\.kiro\\specs\\control-guidance-remediation\\f08_f09_experiment.md",
+      "exists": true,
+      "size_bytes": 1463,
+      "sha256": "63647d42147bf7dda10cb8119edc4ac4c92931e16b6b493627e0b9efe2d4170a",
+      "mtime": 1785075292.0515864
+    },
+    "dry_run_result": {
+      "path": "D:\\laiyu_ssh\\uav-vpp-guidance\\outputs\\gain_only_cem\\cem_results.json",
+      "exists": true,
+      "size_bytes": 315,
+      "sha256": "361eef3a130d0d3547772a85ead5a42659c73e8679934ac8dbd4e65b36b8d631",
+      "mtime": 1781376145.18814
+    }
+  },
+  "outputs": {
+    "resolved_config.yaml": {
+      "path": "D:\\laiyu_ssh\\uav-vpp-guidance\\.kiro\\specs\\control-guidance-remediation\\evidence\\f08_f09_evidence_bundle\\resolved_config.yaml",
+      "exists": true,
+      "size_bytes": 105,
+      "sha256": "9956f3285b4c93862119de5b130ef16c0494f0553b249124f50774646e1eaf5c",
+      "mtime": 1785075323.0714407
+    },
+    "f08_f09_evidence.json": {
+      "path": "D:\\laiyu_ssh\\uav-vpp-guidance\\.kiro\\specs\\control-guidance-remediation\\evidence\\f08_f09_evidence_bundle\\f08_f09_evidence.json",
+      "exists": true,
+      "size_bytes": 41547,
+      "sha256": "84b6b71fef7ceb0f2d736dd21d1b76baead9b1a70af8d0263b1e04a179a4f5b2",
+      "mtime": 1785075323.0854397
+    },
+    "f08_f09_evidence_gate.json": {
+      "path": "D:\\laiyu_ssh\\uav-vpp-guidance\\.kiro\\specs\\control-guidance-remediation\\evidence\\f08_f09_evidence_bundle\\f08_f09_evidence_gate.json",
+      "exists": true,
+      "size_bytes": 1597,
+      "sha256": "f197c0da20d91e24add08bb7085ad219ae68f0af6e21d0a092135577f3e81b13",
+      "mtime": 1785075323.0864422
+    }
+  },
+  "artifacts_present": {
+    "resolved_config.yaml": true,
+    "f08_f09_evidence.json": true,
+    "f08_f09_evidence_gate.json": true,
+    "run_manifest.json": true
+  },
+  "config_overrides": [],
+  "paper_safe": true,
+  "invalid_for_paper_reasons": [],
+  "notes": [],
+  "extra": {}
+}

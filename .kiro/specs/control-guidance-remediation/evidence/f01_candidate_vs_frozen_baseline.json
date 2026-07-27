@@ -1,0 +1,19 @@
+{
+  "schema_version": "1.0.0",
+  "finding_id": "F01",
+  "evidence_type": "offline_candidate_vs_frozen_baseline_trace",
+  "executed_at_utc": "2026-07-26T00:00:00+00:00",
+  "execution": {"command": "python - (deterministic pure geometry trace; command recorded in task execution report)", "backend": "not_applicable_pure_geometry", "config_overrides": []},
+  "frozen_baseline": {"source_revision": "a39044b7728a254cb46705f0b45b3d872d281869", "implementation": "src/uav_vpp_guidance/guidance/los_rate_guidance.py::_compute_nz_cmd", "formula": "n_raw = 1.0 + 1.0 * elevation_rad + 0.5 * distance_m / 2000.0", "los_rate_contribution_nz": 0.0},
+  "candidate": {"name": "vertical_los_rate_pn_with_bounded_geometric_bias", "runtime_status": "offline_only", "formula": "n_raw = 1.0 + 0.5*sin(lambda) + 1.5*V_c*clip(lambda_dot,-0.1,0.1)/9.80665", "limits": {"range_m": [800.0, 2500.0], "closing_speed_mps": [0.0, 300.0], "abs_elevation_deg": 30.0, "abs_los_rate_radps": 0.1, "f04_nz_limits": [-2.0, 7.0], "capture_radius_m": 50.0}},
+  "baseline_formula_matches_audited_f01": true,
+  "range_sweep": [
+    {"distance_m": 800.0, "elevation_rad": 0.34906585039886584, "lambda_dot_radps": 0.0, "baseline_geometric_contribution_nz": 0.2, "baseline_raw_nz": 1.549065850398866, "candidate_geometric_contribution_nz": 0.17101007166283433, "candidate_los_rate_contribution_nz": 0.0, "candidate_raw_nz": 1.1710100716628342, "candidate_nz_cmd": 1.1710100716628342},
+    {"distance_m": 1500.0, "elevation_rad": 0.3490658503988659, "lambda_dot_radps": 6.467517879274155e-18, "baseline_geometric_contribution_nz": 0.37500000000000006, "baseline_raw_nz": 1.724065850398866, "candidate_geometric_contribution_nz": 0.17101007166283436, "candidate_los_rate_contribution_nz": 1.9785098517661446e-16, "candidate_raw_nz": 1.1710100716628347, "candidate_nz_cmd": 1.1710100716628347},
+    {"distance_m": 2500.0, "elevation_rad": 0.3490658503988659, "lambda_dot_radps": 4.6566128730773934e-18, "baseline_geometric_contribution_nz": 0.625, "baseline_raw_nz": 1.974065850398866, "candidate_geometric_contribution_nz": 0.17101007166283436, "candidate_los_rate_contribution_nz": 1.424527093271625e-16, "candidate_raw_nz": 1.1710100716628347, "candidate_nz_cmd": 1.1710100716628347}
+  ],
+  "mirror_trace": {"above": {"lambda_dot_radps": 0.02564102564102564, "geometric_contribution_nz": 0.09805806756909201, "los_rate_contribution_nz": 0.7691646254883716, "nz_cmd": 1.8672226930574638}, "below": {"lambda_dot_radps": -0.02564102564102564, "geometric_contribution_nz": -0.09805806756909201, "los_rate_contribution_nz": -0.7691646254883716, "nz_cmd": 0.13277730694253642}},
+  "singular_trace": {"relative_position_neu_m": [1e-09, 0.0, 1e-09], "capture_hold": true, "raw_nz": 1.0, "nz_cmd": 1.0},
+  "results": {"baseline_range_growth_demonstrated": true, "candidate_geometric_range_invariant": true, "candidate_has_explicit_los_rate": true, "candidate_trace_within_f04_limits": true, "full_reference_scenario_matrix_executed": false, "strict_jsbsim_executed": false},
+  "limitations": ["This trace is a kinematic pure-geometry comparison, not a closed-loop aircraft evaluation.", "The frozen Phase-0 matrix is declared but unexecuted and its three main-policy checkpoints are unavailable.", "No reviewer has accepted the candidate physical semantics, tuning, or compatibility/migration plan."]
+}

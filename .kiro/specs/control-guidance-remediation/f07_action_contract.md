@@ -1,0 +1,7 @@
+# F07 canonical VPP action-dimension contract
+
+The canonical VPP contract is 3 dimensions: normalized `[dx, dy, dz]`. Its one required source must agree at configuration, generator, environment action space, policy metadata, checkpoint metadata, loader, and evaluation boundaries. A missing value is an error; it never selects a fallback. A mismatch is an error before action interpretation or policy loading.
+
+The frozen defect is explicit: `VirtualPointGenerator({})` currently selects 5 although the frozen guidance config declares 3. Existing general action-schema support for 4D and 6D controller modes is not a permission to reinterpret a VPP checkpoint as those modes. A 5D legacy checkpoint is rejected unless a separately approved, versioned compatibility adapter documents every component and its mapping; no checkpoint is rewritten in place.
+
+The implemented contract validates the generator constructor and action interpretation, the environment VPP boundary, standard PPO checkpoint load/save metadata, VPP warm starts, and frozen VPP specialist checkpoint loads. Missing or stale checkpoint dimensions fail before policy interpretation. Historical five-element inputs require `legacy_compatibility_mode: vpp_5d_legacy`; the generator configuration remains canonical 3D, and this explicit compatibility mode is recorded in artifact/config provenance rather than inferred. The implementation gate is `approved` for its isolated allowlist; no action-semantic migration is authorized.

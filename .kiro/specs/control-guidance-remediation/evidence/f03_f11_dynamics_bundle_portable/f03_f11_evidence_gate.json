@@ -1,0 +1,30 @@
+{
+  "schema_version": "1.0.0",
+  "finding_ids": [
+    "F03",
+    "F11"
+  ],
+  "status": "needs_more_evidence",
+  "runtime_disposition": "preserve_frozen_defaults",
+  "decision": "no_runtime_authorization",
+  "timestamp_utc": "2026-07-26T00:00:00+00:00",
+  "protected_path_allowlist": [],
+  "evidence_hashes": {
+    "experiment_specification_sha256": "dee300c100306438d4aaa163166d1742f5943f8788a4551f8e43678d878149a7",
+    "offline_dynamics_evidence_sha256": "ccb1d865fa7c631226623dd1656dbc1f6caead78de6ff7d9d3d3afceff8b49ea"
+  },
+  "results": {
+    "enabled_filter_and_mapping_stages_enumerated": true,
+    "per_stage_delay_phase_peak_saturation_slew_recorded": true,
+    "four_single_change_candidates_evaluated_offline": true,
+    "f04_limits_preserved": true,
+    "strict_jsbsim_evidence": "not_available",
+    "candidate_selection": "blocked"
+  },
+  "blockers": [
+    "Offline model excludes JSBSim plant and actual actuator response.",
+    "Frozen scenario matrix is unexecuted and main policy checkpoints are absent.",
+    "No paired strict-JSBSim safety, command-rate, stability, or tracking evidence exists."
+  ],
+  "baseline_retained": true
+}

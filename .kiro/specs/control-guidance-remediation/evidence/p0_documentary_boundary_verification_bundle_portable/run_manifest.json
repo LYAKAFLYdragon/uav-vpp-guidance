@@ -1,0 +1,24 @@
+{
+  "schema_version": "1.0.0",
+  "stage_name": "p0_documentary_asset_boundary_verification",
+  "stage_version": "1.0.0",
+  "start_time": "2026-07-27T00:00:00+00:00",
+  "end_time": "2026-07-27T00:00:00+00:00",
+  "status": "completed",
+  "command_line": ["read-only raw-byte hash and line-context verification of user-specified thesis and repository documents", "no checkpoint copy or simulation"],
+  "working_directory": "E:\\uav-vpp-guidance-control-guidance-remediation-v1",
+  "output_dir": ".kiro/specs/control-guidance-remediation/evidence/p0_documentary_boundary_verification_bundle",
+  "config_path": null,
+  "config_hash": "ed2218629f2c8259493bd8d964f80e3a471506fe4e37b69c0c8c433239441856",
+  "git_info": {"commit": "2373f04", "branch": "codex/control-guidance-remediation-v1", "dirty": false},
+  "inputs": {"document_hashes": {"chapter6": "b4f92c8ab006c16384c4b089e5522d9d02ca87b9a721d881b1cd7e80172fc353", "experiment_plan": "f664761486238d4a5128094c0fe41d871648bf81d24e2c98a6bf0f5d381ecdaa", "opponent_card": "8d85de19dce189189ab88d897e4b4f01fc4f2ac3ced379660f3f241223e2c30c", "artifact_index": "3461c74765dd078da0395a745a9480c8cb91e31be99a44940001577e800f6df8"}},
+  "outputs": {
+    "documentary_boundary_verification.json": {"path": "E:\\uav-vpp-guidance-control-guidance-remediation-v1\\.kiro\\specs\\control-guidance-remediation\\evidence\\p0_documentary_boundary_verification_bundle\\documentary_boundary_verification.json", "size_bytes": 2648, "sha256": "ef9482e1d7d6252a30b5471cbb9b03b1affcba2b1bdfa1f37de8ac8656550f37"},
+    "stage_summary": {"path": "E:\\uav-vpp-guidance-control-guidance-remediation-v1\\reports\\control_guidance_remediation_p0_documentary_boundary_v1_zh.md", "size_bytes": 1175, "sha256": "191ccb9d4b5d3086e7b4a43691d811f75d1276b9a73c80ebbbf3c889cd4dc321"}
+  },
+  "artifacts_present": {"run_manifest.json": true, "artifact_contract.json": true, "resolved_config.yaml": true, "documentary_boundary_verification.json": true},
+  "config_overrides": [],
+  "paper_safe": false,
+  "invalid_for_paper_reasons": ["documentation cannot substitute missing registered assets", "required predictor SHA and prediction-VPP checkpoint remain unavailable", "no strict-JSBSim episode was executed"],
+  "extra": {"gate_status": "physical_unavailable", "assets_copied": false, "asset_manifest_created": false, "strict_jsbsim_smoke_executed": false}
+}

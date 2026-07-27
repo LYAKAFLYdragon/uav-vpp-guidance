@@ -51,6 +51,7 @@
 - [x] 固定场景矩阵、对手、随机种子、运行步数、终端分类和统计分母。
 - [x] 对 E 盘 32 个 UAV worktree/archive 根目录中的 3,726 个 loose checkpoint、25 个 ZIP/TAR/TGZ/TAR.GZ 容器、11 个本地 Git 历史与 LFS 元数据做只读 SHA-256 盘点；未找到 `prediction_vpp` 登记路径或预测器冻结 SHA，且 policy freeze 对前三项未给 SHA，未采用外部候选。
 - [x] 核验用户提供的 authority-collection receipt：源 `outputs` 实为 CAN assets Junction，且无 Git/训练 run manifest；predictor 严格结构加载虽通过但 SHA 不匹配，登记 VPP 缺失，两个 policy 仍为来源不完整候选。
+- [x] 核验论文、实验计划、对手能力卡和 CAN 权威索引的原始字节与引用边界：它们证明方法记录或候选 identity，不能替代缺失 checkpoint bytes、精确 predictor SHA 或独立训练 provenance；未据此创建资产契约。
 - [x] 补齐 checkpoint-free 的 `scripted_evasive_vpp` 第三独立对手；已完成 3D VPP 契约、动态注册和 dry-run artifact/bundle 核验，未改变观测 schema、控制、奖励或安全限幅。
 - [ ] 运行工程 smoke：阻塞。关键登记 checkpoint 仍缺失/不匹配；未运行 strict-JSBSim episode、simple backend 替代或任何物理闭环。
 

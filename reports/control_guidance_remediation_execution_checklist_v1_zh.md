@@ -49,7 +49,7 @@
 - [x] 以 Git/raw-byte 取证保留旧 freeze，并建立 superseding preservation freeze；该收口不改变资产或物理闭环门状态。
 - [x] 建立 run_manifest.json、artifact_contract.json 和 portable bundle 模板。
 - [x] 固定场景矩阵、对手、随机种子、运行步数、终端分类和统计分母。
-- [x] 对 E 盘 32 个 UAV worktree/archive 根目录中的 3,726 个 checkpoint 做只读 SHA-256 盘点；未找到 `prediction_vpp` 登记路径或预测器冻结 SHA，且 policy freeze 对前三项未给 SHA，未采用外部候选。
+- [x] 对 E 盘 32 个 UAV worktree/archive 根目录中的 3,726 个 loose checkpoint、25 个 ZIP/TAR/TGZ/TAR.GZ 容器、11 个本地 Git 历史与 LFS 元数据做只读 SHA-256 盘点；未找到 `prediction_vpp` 登记路径或预测器冻结 SHA，且 policy freeze 对前三项未给 SHA，未采用外部候选。
 - [x] 补齐 checkpoint-free 的 `scripted_evasive_vpp` 第三独立对手；已完成 3D VPP 契约、动态注册和 dry-run artifact/bundle 核验，未改变观测 schema、控制、奖励或安全限幅。
 - [ ] 运行工程 smoke：阻塞。关键登记 checkpoint 仍缺失/不匹配；未运行 strict-JSBSim episode、simple backend 替代或任何物理闭环。
 

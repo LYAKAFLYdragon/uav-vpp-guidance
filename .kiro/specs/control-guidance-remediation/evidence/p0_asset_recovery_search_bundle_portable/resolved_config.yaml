@@ -1,0 +1,5 @@
+stage: p0_registered_asset_recovery_search
+source_id: THESIS-CONTROL-GUIDANCE-REMEDIATION-V1
+mode: read_only_local_asset_inventory
+config_overrides: []
+physical_execution: false

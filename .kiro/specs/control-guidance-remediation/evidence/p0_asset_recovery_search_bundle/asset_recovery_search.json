@@ -1,0 +1,25 @@
+{
+  "schema_version": "1.0.0",
+  "stage_name": "p0_registered_asset_recovery_search",
+  "source_id": "THESIS-CONTROL-GUIDANCE-REMEDIATION-V1",
+  "status": "physical_unavailable",
+  "classification": "registered physical-evaluation assets remain unavailable; this is not a controller-performance or safety result",
+  "scan_scope": {
+    "loose_checkpoint_scan": {"uav_worktree_or_archive_roots": 32, "hashed_files": 3726, "result": "no registered prediction_vpp path; no predictor SHA match"},
+    "archive_scan": {"zip_tar_tgz_tar_gz_containers": 25, "registered_members_found": 2, "remaining_7z_rar_and_other_containers": 0},
+    "git_history_scan": {"local_git_repositories": 11, "registered_paths_found": 0, "git_lfs_registered_paths_found": 0}
+  },
+  "required_assets": [
+    {"id": "prediction_vpp", "path": "outputs/experiments/vpp_ppo_lstm_frozen/checkpoints/best.pt", "frozen_sha256": null, "status": "not_found"},
+    {"id": "no_prediction_vpp", "path": "outputs/experiments/no_prediction_vpp_ppo_jsbsim_compare/checkpoints/last.pt", "frozen_sha256": null, "status": "external_candidate_not_adopted", "candidate_sha256": "82cc54df1b9445f1c61739e87759d49edbb29250640d382968d33e69168ef2cb", "checkpoint_contract": {"obs_dim": 16, "action_dim": 3}},
+    {"id": "end_to_end_rl", "path": "outputs/experiments/end_to_end_ppo/checkpoints/best.pt", "frozen_sha256": null, "status": "external_candidate_not_adopted", "candidate_sha256": "d38828338d5e7e22167129b2e9972d52ecf5fc3fda5d52caff95a8374c35b8bc", "checkpoint_contract": {"obs_dim": 16, "action_dim": 3}},
+    {"id": "trajectory_predictor", "path": "outputs/trajectory_prediction/best_model.pt", "frozen_sha256": "a7c00fd2e4fca3f77ce6d6a40223ed49b336af219d7f9bd2c85f938448d74491", "status": "not_found_exact_sha", "loose_candidate_sha256": "96bc8e5e1aebd32ca6a528fb3149cfd58aeff276c18bca66388d650f00495931", "archive_candidate_sha256": "c4bf3d8d58a02e2c1da9208d6e1a8c385e6a1d9cfb6eab52a12544114a9f8629", "strict_load_contract": {"predictor_type": "lstm", "input_dim": 16, "hidden_dim": 128, "num_layers": 2, "dropout": 0.1, "predict_variance": false, "strict_predictor_init": true, "checkpoint_strict": true}}
+  ],
+  "archive_candidates": [
+    {"archive": "E:\\uav-vpp-guidance\\.codex_tmp_remote\\uav_vpp_guidance_cloud_sync_20260630.tar.gz", "member": "outputs/trajectory_prediction/best_model.pt", "sha256": "c4bf3d8d58a02e2c1da9208d6e1a8c385e6a1d9cfb6eab52a12544114a9f8629"},
+    {"archive": "E:\\uav-vpp-guidance\\outputs\\diagnostics\\reboot_runtime_delta_20260630.tar.gz", "member": "outputs/trajectory_prediction/best_model.pt", "sha256": "c4bf3d8d58a02e2c1da9208d6e1a8c385e6a1d9cfb6eab52a12544114a9f8629"}
+  ],
+  "disposition": {"assets_copied": false, "superseding_asset_manifest_created": false, "reason": "prediction_vpp and exact predictor are absent; policy candidates without frozen SHA cannot be represented as matching the original freeze"},
+  "strict_jsbsim_smoke": {"executed": false, "reason": "required registered assets unavailable; no substitute backend, candidate checkpoint, dry-run, or old telemetry may be treated as physical evidence"},
+  "next_gate": "Obtain registered prediction_vpp and predictor bytes matching the required SHA, then publish an audited superseding asset manifest for the two policy candidates before copying any asset."
+}

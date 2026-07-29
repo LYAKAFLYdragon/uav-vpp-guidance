@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from scripts.run_control_guidance_f01_f02_optin_paired_regression import (
+    jsonable,
     mode_config,
     stable_hash,
 )
@@ -17,6 +18,13 @@ def test_mode_config_is_explicit_and_records_override():
 
 def test_state_hash_is_order_independent_for_jsonable_mapping():
     assert stable_hash({"b": 2, "a": 1}) == stable_hash({"a": 1, "b": 2})
+
+
+def test_jsonable_preserves_boolean_contract_fields():
+    value = jsonable({"strict_backend": True, "backend_fallback_occurred": False})
+    assert value == {"strict_backend": True, "backend_fallback_occurred": False}
+    assert isinstance(value["strict_backend"], bool)
+    assert isinstance(value["backend_fallback_occurred"], bool)
 
 
 def test_verifier_rejects_non_paired_reset_and_wrong_mode():

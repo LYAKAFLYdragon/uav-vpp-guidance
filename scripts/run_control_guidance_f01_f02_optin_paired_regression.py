@@ -90,13 +90,13 @@ def jsonable(value: Any) -> Any:
         return [jsonable(item) for item in value]
     if isinstance(value, np.ndarray):
         return jsonable(value.tolist())
+    if isinstance(value, (np.bool_, bool)):
+        return bool(value)
     if isinstance(value, (np.floating, float)):
         value = float(value)
         return value if math.isfinite(value) else None
     if isinstance(value, (np.integer, int)):
         return int(value)
-    if isinstance(value, (np.bool_, bool)):
-        return bool(value)
     return value
 
 

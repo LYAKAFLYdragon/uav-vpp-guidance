@@ -37,7 +37,9 @@ WINDOW_STEPS = 48
 SIM_FREQ_HZ = 60
 ORIGIN = (120.0, 60.0, 0.0)
 DEFAULT_OUTPUT = "outputs/control_guidance_f01_f02_optin_paired_regression_v1"
-VARIANTS = ("f01_only", "f02_only", "f01_f02")
+# The runtime exposes one approved opt-in mode containing both remediations.
+# Do not label repeated executions as component ablations.
+VARIANTS = ("f01_f02",)
 
 SCENARIOS = (
     {

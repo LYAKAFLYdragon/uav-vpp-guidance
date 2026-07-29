@@ -107,8 +107,8 @@ def verify(output_root: Path) -> Dict[str, Any]:
         errors.append("manifest_backend_fallback")
     if manifest.get("baseline_mode") != "legacy" or manifest.get("candidate_mode") != "f01_f02_remediated":
         errors.append("manifest_mode_contract")
-    if not isinstance(records, list) or len(records) != 12:
-        errors.append("pair_count_not_12")
+    if not isinstance(records, list) or len(records) != 4:
+        errors.append("pair_count_not_4")
         records = records if isinstance(records, list) else []
     pair_results = [verify_pair(pair) for pair in records]
     errors.extend(error for result in pair_results for error in result["errors"])

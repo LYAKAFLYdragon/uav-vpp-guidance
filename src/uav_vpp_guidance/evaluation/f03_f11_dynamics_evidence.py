@@ -1,4 +1,7 @@
 """Pure offline F03/F11 filter, actuator, and bank-compensation evidence."""
+
+from __future__ import annotations
+
 from dataclasses import dataclass
 from math import pi, sin
 from typing import Iterable

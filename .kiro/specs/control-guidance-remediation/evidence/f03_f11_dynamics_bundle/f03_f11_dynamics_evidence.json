@@ -1,0 +1,494 @@
+{
+  "schema_version": "1.0.0",
+  "finding_ids": [
+    "F03",
+    "F11"
+  ],
+  "analysis_scope": "offline filter/mapping model only; protected runtime/configuration paths unchanged",
+  "results": {
+    "frozen_topology": {
+      "simple": [
+        {
+          "name": "environment_command_filter",
+          "alpha": 0.3,
+          "enabled": true
+        }
+      ],
+      "jsbsim_pn": [
+        {
+          "name": "pn_los_rate_filter",
+          "alpha": 0.3,
+          "enabled": true
+        },
+        {
+          "name": "environment_command_filter",
+          "alpha": 0.3,
+          "enabled": true
+        },
+        {
+          "name": "low_level_command_filter",
+          "alpha": 0.3,
+          "enabled": true
+        }
+      ],
+      "disabled": {
+        "los_internal_filter": true,
+        "command_post_processor": true,
+        "lift_compensation": true
+      }
+    },
+    "baseline": {
+      "stages": [
+        {
+          "name": "pn_los_rate_filter",
+          "alpha": 0.3,
+          "enabled": true
+        },
+        {
+          "name": "environment_command_filter",
+          "alpha": 0.3,
+          "enabled": true
+        },
+        {
+          "name": "low_level_command_filter",
+          "alpha": 0.3,
+          "enabled": true
+        }
+      ],
+      "step": {
+        "peak_command": 6.998449873911245,
+        "saturation_count": 0,
+        "max_slew_per_s": 2.9172149999999997,
+        "per_stage_final": {
+          "pn_los_rate_filter": 6.999977270878464,
+          "environment_command_filter": 6.999738615102334,
+          "low_level_command_filter": 6.998449873911245
+        }
+      },
+      "spectrum": [
+        {
+          "frequency_hz": 0.1,
+          "amplitude_ratio": 0.8406737933253898,
+          "phase_lag_rad": 0.8389092857227264,
+          "apparent_delay_s": 1.335165596284631,
+          "per_stage_final": {
+            "pn_los_rate_filter": -0.3721316962638297,
+            "environment_command_filter": -0.5635043289576048,
+            "low_level_command_filter": -0.6908705116940123
+          }
+        },
+        {
+          "frequency_hz": 0.25,
+          "amplitude_ratio": 0.42779338410874923,
+          "phase_lag_rad": 1.7230772601426527,
+          "apparent_delay_s": 1.0969450531237714,
+          "per_stage_final": {
+            "pn_los_rate_filter": -0.5848131801797287,
+            "environment_command_filter": -0.564445631108063,
+            "low_level_command_filter": -0.38209427924271544
+          }
+        },
+        {
+          "frequency_hz": 0.5,
+          "amplitude_ratio": 0.1263791150141457,
+          "phase_lag_rad": 2.277272576889416,
+          "apparent_delay_s": 0.7248783747591377,
+          "per_stage_final": {
+            "pn_los_rate_filter": -0.49341722196957916,
+            "environment_command_filter": -0.21124191621546173,
+            "low_level_command_filter": -0.02954957117850076
+          }
+        },
+        {
+          "frequency_hz": 1.0,
+          "amplitude_ratio": 0.024832443901815292,
+          "phase_lag_rad": 2.112603406402409,
+          "apparent_delay_s": 0.33623127492171967,
+          "per_stage_final": {
+            "pn_los_rate_filter": -0.2698348542019204,
+            "environment_command_filter": -0.03904450694598556,
+            "low_level_command_filter": 0.005604351094181021
+          }
+        },
+        {
+          "frequency_hz": 2.0,
+          "amplitude_ratio": 0.006357110625460533,
+          "phase_lag_rad": 0.7706496299600792,
+          "apparent_delay_s": 0.06132634900004331,
+          "per_stage_final": {
+            "pn_los_rate_filter": -0.06723632120522148,
+            "environment_command_filter": -0.003922467711654474,
+            "low_level_command_filter": 0.0009017626593395361
+          }
+        }
+      ],
+      "bank_compensation": false,
+      "slew_per_s": null
+    },
+    "candidates": {
+      "pn_filter_tuning_alpha_0_5": {
+        "stages": [
+          {
+            "name": "pn_los_rate_filter",
+            "alpha": 0.5,
+            "enabled": true
+          },
+          {
+            "name": "environment_command_filter",
+            "alpha": 0.3,
+            "enabled": true
+          },
+          {
+            "name": "low_level_command_filter",
+            "alpha": 0.3,
+            "enabled": true
+          }
+        ],
+        "step": {
+          "peak_command": 6.999572408302876,
+          "saturation_count": 0,
+          "max_slew_per_s": 3.4856999999999982,
+          "per_stage_final": {
+            "pn_los_rate_filter": 6.999999999825377,
+            "environment_command_filter": 6.9999602241682775,
+            "low_level_command_filter": 6.999572408302876
+          }
+        },
+        "spectrum": [
+          {
+            "frequency_hz": 0.1,
+            "amplitude_ratio": 0.8770177530235296,
+            "phase_lag_rad": 0.6829904354105252,
+            "apparent_delay_s": 1.0870130388007095,
+            "per_stage_final": {
+              "pn_los_rate_filter": -0.24300189697346927,
+              "environment_command_filter": -0.4689790457316002,
+              "low_level_command_filter": -0.6343982913771087
+            }
+          },
+          {
+            "frequency_hz": 0.25,
+            "amplitude_ratio": 0.5191961953350119,
+            "phase_lag_rad": 1.435211965889065,
+            "apparent_delay_s": 0.9136843150235255,
+            "per_stage_final": {
+              "pn_los_rate_filter": -0.5168485202374331,
+              "environment_command_filter": -0.6357866751364507,
+              "low_level_command_filter": -0.5109398480867726
+            }
+          },
+          {
+            "frequency_hz": 0.5,
+            "amplitude_ratio": 0.18961642359389771,
+            "phase_lag_rad": 1.9766395445852263,
+            "apparent_delay_s": 0.6291839084633032,
+            "per_stage_final": {
+              "pn_los_rate_filter": -0.6664488708123122,
+              "environment_command_filter": -0.36364348533752944,
+              "low_level_command_filter": -0.09694073937391097
+            }
+          },
+          {
+            "frequency_hz": 1.0,
+            "amplitude_ratio": 0.04387247040469014,
+            "phase_lag_rad": 1.9207371818426988,
+            "apparent_delay_s": 0.3056948168706622,
+            "per_stage_final": {
+              "pn_los_rate_filter": -0.5053526528161969,
+              "environment_command_filter": -0.09319650524121303,
+              "low_level_command_filter": 0.0015694917754350488
+            }
+          },
+          {
+            "frequency_hz": 2.0,
+            "amplitude_ratio": 0.011957669657867192,
+            "phase_lag_rad": 0.7200396540067263,
+            "apparent_delay_s": 0.05729893507867427,
+            "per_stage_final": {
+              "pn_los_rate_filter": -0.14273443441659073,
+              "environment_command_filter": -0.010612736296694548,
+              "low_level_command_filter": 0.001095233727125586
+            }
+          }
+        ],
+        "bank_compensation": false,
+        "slew_per_s": null
+      },
+      "filter_consolidation_remove_low_level_stage": {
+        "stages": [
+          {
+            "name": "pn_los_rate_filter",
+            "alpha": 0.3,
+            "enabled": true
+          },
+          {
+            "name": "environment_command_filter",
+            "alpha": 0.3,
+            "enabled": true
+          }
+        ],
+        "step": {
+          "peak_command": 6.999738615102334,
+          "saturation_count": 0,
+          "max_slew_per_s": 3.9690000000000003,
+          "per_stage_final": {
+            "pn_los_rate_filter": 6.999977270878464,
+            "environment_command_filter": 6.999738615102334
+          }
+        },
+        "spectrum": [
+          {
+            "frequency_hz": 0.1,
+            "amplitude_ratio": 0.8907414713901154,
+            "phase_lag_rad": 0.5592728571484862,
+            "apparent_delay_s": 0.8901103975230903,
+            "per_stage_final": {
+              "pn_los_rate_filter": -0.3721316962638297,
+              "environment_command_filter": -0.5635043289576048
+            }
+          },
+          {
+            "frequency_hz": 0.25,
+            "amplitude_ratio": 0.5677485615598321,
+            "phase_lag_rad": 1.1487181734284375,
+            "apparent_delay_s": 0.7312967020825157,
+            "per_stage_final": {
+              "pn_los_rate_filter": -0.5848131801797287,
+              "environment_command_filter": -0.564445631108063
+            }
+          },
+          {
+            "frequency_hz": 0.5,
+            "amplitude_ratio": 0.2518354552339447,
+            "phase_lag_rad": 1.5181817179262778,
+            "apparent_delay_s": 0.4832522498394253,
+            "per_stage_final": {
+              "pn_los_rate_filter": -0.49341722196957916,
+              "environment_command_filter": -0.21124191621546173
+            }
+          },
+          {
+            "frequency_hz": 1.0,
+            "amplitude_ratio": 0.08511634679284688,
+            "phase_lag_rad": 1.408402270934947,
+            "apparent_delay_s": 0.22415418328114767,
+            "per_stage_final": {
+              "pn_los_rate_filter": -0.2698348542019204,
+              "environment_command_filter": -0.03904450694598556
+            }
+          },
+          {
+            "frequency_hz": 2.0,
+            "amplitude_ratio": 0.0343167785902984,
+            "phase_lag_rad": 0.5137664199734028,
+            "apparent_delay_s": 0.040884232666696864,
+            "per_stage_final": {
+              "pn_los_rate_filter": -0.06723632120522148,
+              "environment_command_filter": -0.003922467711654474
+            }
+          }
+        ],
+        "bank_compensation": false,
+        "slew_per_s": null
+      },
+      "actuator_slew_limit_2_per_s": {
+        "stages": [
+          {
+            "name": "pn_los_rate_filter",
+            "alpha": 0.3,
+            "enabled": true
+          },
+          {
+            "name": "environment_command_filter",
+            "alpha": 0.3,
+            "enabled": true
+          },
+          {
+            "name": "low_level_command_filter",
+            "alpha": 0.3,
+            "enabled": true
+          }
+        ],
+        "step": {
+          "peak_command": 6.998449873911245,
+          "saturation_count": 0,
+          "max_slew_per_s": 2.0000000000000018,
+          "per_stage_final": {
+            "pn_los_rate_filter": 6.999977270878464,
+            "environment_command_filter": 6.999738615102334,
+            "low_level_command_filter": 6.998449873911245
+          }
+        },
+        "spectrum": [
+          {
+            "frequency_hz": 0.1,
+            "amplitude_ratio": 0.8406737933253898,
+            "phase_lag_rad": 0.8389092857227264,
+            "apparent_delay_s": 1.335165596284631,
+            "per_stage_final": {
+              "pn_los_rate_filter": -0.3721316962638297,
+              "environment_command_filter": -0.5635043289576048,
+              "low_level_command_filter": -0.6908705116940123
+            }
+          },
+          {
+            "frequency_hz": 0.25,
+            "amplitude_ratio": 0.42779338410874923,
+            "phase_lag_rad": 1.7230772601426527,
+            "apparent_delay_s": 1.0969450531237714,
+            "per_stage_final": {
+              "pn_los_rate_filter": -0.5848131801797287,
+              "environment_command_filter": -0.564445631108063,
+              "low_level_command_filter": -0.38209427924271544
+            }
+          },
+          {
+            "frequency_hz": 0.5,
+            "amplitude_ratio": 0.1263791150141457,
+            "phase_lag_rad": 2.277272576889416,
+            "apparent_delay_s": 0.7248783747591377,
+            "per_stage_final": {
+              "pn_los_rate_filter": -0.49341722196957916,
+              "environment_command_filter": -0.21124191621546173,
+              "low_level_command_filter": -0.02954957117850076
+            }
+          },
+          {
+            "frequency_hz": 1.0,
+            "amplitude_ratio": 0.024832443901815292,
+            "phase_lag_rad": 2.112603406402409,
+            "apparent_delay_s": 0.33623127492171967,
+            "per_stage_final": {
+              "pn_los_rate_filter": -0.2698348542019204,
+              "environment_command_filter": -0.03904450694598556,
+              "low_level_command_filter": 0.005604351094181021
+            }
+          },
+          {
+            "frequency_hz": 2.0,
+            "amplitude_ratio": 0.006357110625460533,
+            "phase_lag_rad": 0.7706496299600792,
+            "apparent_delay_s": 0.06132634900004331,
+            "per_stage_final": {
+              "pn_los_rate_filter": -0.06723632120522148,
+              "environment_command_filter": -0.003922467711654474,
+              "low_level_command_filter": 0.0009017626593395361
+            }
+          }
+        ],
+        "bank_compensation": false,
+        "slew_per_s": 2.0
+      },
+      "bank_compensation_at_45_deg": {
+        "stages": [
+          {
+            "name": "pn_los_rate_filter",
+            "alpha": 0.3,
+            "enabled": true
+          },
+          {
+            "name": "environment_command_filter",
+            "alpha": 0.3,
+            "enabled": true
+          },
+          {
+            "name": "low_level_command_filter",
+            "alpha": 0.3,
+            "enabled": true
+          }
+        ],
+        "step": {
+          "peak_command": 6.998556887786136,
+          "saturation_count": 0,
+          "max_slew_per_s": 2.7158233304402946,
+          "per_stage_final": {
+            "pn_los_rate_filter": 6.999978839996864,
+            "environment_command_filter": 6.999756659963937,
+            "low_level_command_filter": 6.998556887786136
+          }
+        },
+        "spectrum": [
+          {
+            "frequency_hz": 0.1,
+            "amplitude_ratio": 0.8406737933253898,
+            "phase_lag_rad": 0.8389092857227264,
+            "apparent_delay_s": 1.335165596284631,
+            "per_stage_final": {
+              "pn_los_rate_filter": -0.3721316962638297,
+              "environment_command_filter": -0.5635043289576048,
+              "low_level_command_filter": -0.6908705116940123
+            }
+          },
+          {
+            "frequency_hz": 0.25,
+            "amplitude_ratio": 0.42779338410874923,
+            "phase_lag_rad": 1.7230772601426527,
+            "apparent_delay_s": 1.0969450531237714,
+            "per_stage_final": {
+              "pn_los_rate_filter": -0.5848131801797287,
+              "environment_command_filter": -0.564445631108063,
+              "low_level_command_filter": -0.38209427924271544
+            }
+          },
+          {
+            "frequency_hz": 0.5,
+            "amplitude_ratio": 0.1263791150141457,
+            "phase_lag_rad": 2.277272576889416,
+            "apparent_delay_s": 0.7248783747591377,
+            "per_stage_final": {
+              "pn_los_rate_filter": -0.49341722196957916,
+              "environment_command_filter": -0.21124191621546173,
+              "low_level_command_filter": -0.02954957117850076
+            }
+          },
+          {
+            "frequency_hz": 1.0,
+            "amplitude_ratio": 0.024832443901815292,
+            "phase_lag_rad": 2.112603406402409,
+            "apparent_delay_s": 0.33623127492171967,
+            "per_stage_final": {
+              "pn_los_rate_filter": -0.2698348542019204,
+              "environment_command_filter": -0.03904450694598556,
+              "low_level_command_filter": 0.005604351094181021
+            }
+          },
+          {
+            "frequency_hz": 2.0,
+            "amplitude_ratio": 0.006357110625460533,
+            "phase_lag_rad": 0.7706496299600792,
+            "apparent_delay_s": 0.06132634900004331,
+            "per_stage_final": {
+              "pn_los_rate_filter": -0.06723632120522148,
+              "environment_command_filter": -0.003922467711654474,
+              "low_level_command_filter": 0.0009017626593395361
+            }
+          }
+        ],
+        "bank_compensation": true,
+        "slew_per_s": null
+      }
+    },
+    "f04_limits": {
+      "nz": [
+        -2.0,
+        7.0
+      ],
+      "roll_rate_radps": [
+        -1.5,
+        1.5
+      ],
+      "throttle": [
+        0.4,
+        0.9
+      ]
+    },
+    "scope": "offline command-chain model; no JSBSim plant, actuator dynamics, scenario matrix, or runtime defaults changed"
+  },
+  "backend_provenance": {
+    "requested": null,
+    "final": null,
+    "fallback_occurred": false,
+    "status": "not_applicable_offline_analytic_only"
+  },
+  "config_overrides": []
+}

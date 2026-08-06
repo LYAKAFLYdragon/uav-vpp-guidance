@@ -49,7 +49,8 @@ class TestVirtualPointPredictionIntegration:
     def test_anchor_mode_current_target(self):
         """anchor_mode=current_target 时与旧逻辑一致（当前位置作为锚点）。"""
         vp_config = {
-            "action_dim": 5,
+            "action_dim": 3,
+            "legacy_compatibility_mode": "vpp_5d_legacy",
             "d_long_range": [-1500.0, 1500.0],
             "d_lat_range": [-800.0, 800.0],
             "d_vert_range": [-500.0, 500.0],
@@ -77,7 +78,8 @@ class TestVirtualPointPredictionIntegration:
     def test_anchor_mode_constant_velocity(self):
         """anchor_mode=constant_velocity 时虚拟点锚点前移。"""
         vp_config = {
-            "action_dim": 5,
+            "action_dim": 3,
+            "legacy_compatibility_mode": "vpp_5d_legacy",
             "d_long_range": [-1500.0, 1500.0],
             "d_lat_range": [-800.0, 800.0],
             "d_vert_range": [-500.0, 500.0],
@@ -109,7 +111,8 @@ class TestVirtualPointPredictionIntegration:
     def test_anchor_mode_predicted_target_with_adapter(self):
         """anchor_mode=predicted_target 时通过 adapter 获取预测位置。"""
         vp_config = {
-            "action_dim": 5,
+            "action_dim": 3,
+            "legacy_compatibility_mode": "vpp_5d_legacy",
             "d_long_range": [-1500.0, 1500.0],
             "d_lat_range": [-800.0, 800.0],
             "d_vert_range": [-500.0, 500.0],
@@ -163,7 +166,8 @@ class TestVirtualPointPredictionIntegration:
     def test_return_info_false_backward_compatible(self):
         """默认 return_info=False 时保持向后兼容，只返回 virtual_point。"""
         vp_config = {
-            "action_dim": 5,
+            "action_dim": 3,
+            "legacy_compatibility_mode": "vpp_5d_legacy",
             "d_long_range": [-1500.0, 1500.0],
             "d_lat_range": [-800.0, 800.0],
             "d_vert_range": [-500.0, 500.0],

@@ -1,0 +1,18 @@
+source_id: THESIS-CONTROL-GUIDANCE-REMEDIATION-V1
+stage: P0_evidence_and_interface_freeze
+source_revision:
+  commit: 5a2aa5c716e068ba027cb3965dabf213c18a8c89
+  branch: codex/control-guidance-remediation-v1
+output_root: outputs/control_guidance_remediation_v1/
+scenario_matrix:
+  path: config/experiment/jsbsim_hrl_comparison.yaml
+  tasks: [head_on, crossing_feasible, break_turn, sustained_turn]
+  opponent_stages: [expert, end_to_end, curriculum]
+  smoke_seeds: [0]
+  max_high_level_steps: 20
+backend:
+  requested: jsbsim
+  strict_result_requirement:
+    backend: jsbsim
+    backend_fallback_occurred: false
+config_overrides: []

@@ -1,0 +1,33 @@
+{
+  "schema_version": "1.0.0",
+  "stage_name": "p0_evidence_and_interface_freeze",
+  "stage_version": "1.0.0",
+  "start_time": "2026-07-27T00:00:00+00:00",
+  "end_time": "2026-07-27T00:00:00+00:00",
+  "status": "completed",
+  "command_line": ["git status/rev-parse", "checkpoint SHA-256 search", "pytest phase0", "portable bundle verification"],
+  "working_directory": "E:\\uav-vpp-guidance-control-guidance-remediation-v1",
+  "output_dir": "outputs/control_guidance_remediation_v1/p0_evidence_freeze",
+  "config_path": null,
+  "config_hash": "07e88125a7c034776262c2d7aa3a2eb3c991177de6f49a58c51bc25f2f15051d",
+  "git_info": {"commit": "5a2aa5c716e068ba027cb3965dabf213c18a8c89", "short_commit": "5a2aa5c7", "branch": "codex/control-guidance-remediation-v1", "dirty": false},
+  "python_version": "3.9.13",
+  "platform": "Windows-10-10.0.22631-SP0",
+  "inputs": {
+    "baseline_freeze": {"path": ".kiro/specs/control-guidance-remediation/baseline_freeze.json", "size_bytes": 9242, "sha256": "b92cc21086c860f7efd2f615eb80ef1c74e502a03953abfb7ba15be92217461b"},
+    "ledger": {"path": ".kiro/specs/control-guidance-remediation/remediation_ledger.json", "size_bytes": 11785, "sha256": "00d7b47dc31939a8a7d4338d90008e6323af2470fae58df0bd583f985c9d3743"},
+    "preservation_manifest": {"path": ".kiro/specs/control-method-rationality-audit/preservation_baseline.sha256.json", "size_bytes": 36036, "sha256": "7deac2330bc400574ed52a0d1b6809b2900688a03c8b11ffc3bc97c8785032ac"},
+    "scenario_matrix": {"path": "config/experiment/jsbsim_hrl_comparison.yaml", "sha256": "204b51724f67c0400bbe1cecca188933176470ab0f9e13271b8340a7c260491b"}
+  },
+  "outputs": {
+    "resolved_config.yaml": {"path": "outputs/control_guidance_remediation_v1/p0_evidence_freeze/resolved_config.yaml", "size_bytes": 648, "sha256": "07e88125a7c034776262c2d7aa3a2eb3c991177de6f49a58c51bc25f2f15051d"},
+    "p0_evidence_freeze.json": {"path": "outputs/control_guidance_remediation_v1/p0_evidence_freeze/p0_evidence_freeze.json", "size_bytes": 2709, "sha256": "5ad7337d2cde2bfee98d426ed8fa31b9c5a2aa7aff6b5653eed4d2fc4f6d3584"},
+    "p0_summary": {"path": "reports/control_guidance_remediation_p0_summary_v1_zh.md", "size_bytes": 2255, "sha256": "14e996376f0729b1c034759b7122eb68b225a3da0e7bc2caf5c3a441aab208fd"}
+  },
+  "artifacts_present": {"resolved_config.yaml": true, "p0_evidence_freeze.json": true, "run_manifest.json": true, "artifact_contract.json": true},
+  "config_overrides": [],
+  "paper_safe": false,
+  "invalid_for_paper_reasons": ["P0 gate is physical_unavailable: required registered checkpoints and a third independent opponent are unavailable."],
+  "notes": ["No training, controller change, checkpoint copy, simple-backend run, or strict-JSBSim run was performed."],
+  "extra": {"gate_status": "physical_unavailable", "strict_jsbsim_evidence": "not_available", "portable_bundles_verified": 10}
+}

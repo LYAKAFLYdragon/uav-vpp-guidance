@@ -1,0 +1,17 @@
+{
+  "schema_version": "1.0.0",
+  "record_id": "control-guidance-remediation-preservation-forensics-20260727",
+  "purpose": "Raw-byte reconciliation only; it does not alter historical evidence or establish a physical result.",
+  "method": "Python subprocess captured git show stdout as bytes and hashlib.sha256 hashed those bytes without a text pipeline.",
+  "historical_freeze": {"path": ".kiro/specs/control-guidance-remediation/baseline_freeze.json", "freeze_id": "control-guidance-remediation-phase0-20260726", "declared_sha256": "4f427f8658325277685f20ad379728b361a33c345d9e37b6c9e65bb1582e9368", "source_revision": "a39044b7728a254cb46705f0b45b3d872d281869"},
+  "source_revision_raw_blob": {"git_commit": "a39044b7728a254cb46705f0b45b3d872d281869", "sha256": "25970c6082e44b0cf6f0d59adf264de8ae8119d24e4d9109d86c6e348d874d2c", "size_bytes": 38968},
+  "canonical_v1_raw_blob": {"git_commit": "5a2aa5c716e068ba027cb3965dabf213c18a8c89", "git_blob_oid": "1f442b33cd1ece6151e9d4669075d4073784a502", "sha256": "7deac2330bc400574ed52a0d1b6809b2900688a03c8b11ffc3bc97c8785032ac", "size_bytes": 36036, "utf8_bom": false, "crlf_pairs": 0, "lf_bytes": 226, "bare_cr": 0},
+  "v1_worktree_raw_file": {"sha256": "7deac2330bc400574ed52a0d1b6809b2900688a03c8b11ffc3bc97c8785032ac", "size_bytes": 36036, "matches_canonical_blob": true},
+  "integration_worktree_raw_file": {"path": "E:\\uav-vpp-guidance\\.kiro\\specs\\control-method-rationality-audit\\preservation_baseline.sha256.json", "sha256": "c3732b011cea59e53b8c66b8c01ecdcb264e8f7dcaf8d88a18576a36e63f5de3", "size_bytes": 63165, "utf8_bom": false, "crlf_pairs": 380, "lf_bytes": 380, "bare_cr": 0, "matches_canonical_blob": false},
+  "reachable_git_history": [
+    {"git_commit": "d67e4cf0ca4e7461786f99d9023c34ecc25580fb", "sha256": "25970c6082e44b0cf6f0d59adf264de8ae8119d24e4d9109d86c6e348d874d2c", "size_bytes": 38968},
+    {"git_commit": "65870b9e43386060727b17fd82dee2c2987250ee", "sha256": "31df4591b7f6974923e1600a6ebfcc1ec2d64aeeec41249ccc5b2581e2394aef", "size_bytes": 36708},
+    {"git_commit": "5a2aa5c716e068ba027cb3965dabf213c18a8c89", "sha256": "7deac2330bc400574ed52a0d1b6809b2900688a03c8b11ffc3bc97c8785032ac", "size_bytes": 36036}
+  ],
+  "conclusion": "The historical declared SHA does not match the source-revision blob, the canonical V1 blob, or any inspected reachable history version. The superseding freeze records the canonical V1 raw bytes; the historical freeze remains unchanged and traceable."
+}

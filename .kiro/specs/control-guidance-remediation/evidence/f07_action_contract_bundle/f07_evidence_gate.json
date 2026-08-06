@@ -1,0 +1,28 @@
+{
+  "schema_version": "1.0.0",
+  "finding_id": "F07",
+  "status": "approved",
+  "runtime_disposition": "implemented_canonical_3d_contract",
+  "decision": "runtime_authorized_and_implemented",
+  "timestamp_utc": "2026-07-26T00:00:00+00:00",
+  "protected_path_allowlist": [
+    "src/uav_vpp_guidance/virtual_point/generator.py",
+    "src/uav_vpp_guidance/envs/tracking_env.py",
+    "src/uav_vpp_guidance/agents/ppo_agent.py",
+    "src/uav_vpp_guidance/training/train_prediction_vpp_ppo.py",
+    "src/uav_vpp_guidance/hierarchy/specialist_policy.py"
+  ],
+  "evidence_hashes": {
+    "contract_specification_sha256": "f8d9af341df71a01f219e8a299e1b7820da98e4cfb7b902b5a75b37cb3911044",
+    "matrix_sha256": "e66e1469df10fd168282c7621ae54bc9b1273e61f372a372f6006026b0ffbb9d"
+  },
+  "results": {
+    "canonical_contract_specified": true,
+    "missing_mismatch_and_stale_cases_fail": true,
+    "runtime_boundaries_all_connected": true,
+    "generator_silent_fallback_removed": true,
+    "legacy_handling": "explicit_vpp_5d_compatibility_mode_only"
+  },
+  "blockers": [],
+  "baseline_retained": false
+}

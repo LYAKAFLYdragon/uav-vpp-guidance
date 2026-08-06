@@ -150,6 +150,10 @@ class SimplePointMassEnv:
             state["pitch_rad"] = 0.0
         if "roll_rad" not in state:
             state["roll_rad"] = 0.0
+        if "p_rps" not in state:
+            state["p_rps"] = 0.0
+        if "body_rates_rps" not in state:
+            state["body_rates_rps"] = np.array([state["p_rps"], 0.0, 0.0])
         if "yaw_rad" not in state:
             vel = state.get("velocity_vector_mps")
             if vel is not None:
@@ -193,6 +197,10 @@ class SimplePointMassEnv:
         roll = s.get("roll_rad", 0.0) + roll_rate_cmd * dt
         roll = np.clip(roll, -self.max_roll, self.max_roll)
         s["roll_rad"] = roll
+        s["p_rps"] = roll_rate_cmd
+        s["body_rates_rps"] = np.array(
+            [roll_rate_cmd, 0.0, 0.0], dtype=np.float64
+        )
 
         # 2. 更新俯仰（nz 近似引起俯仰变化）
         pitch = s.get("pitch_rad", 0.0) + self._pitch_rate_per_nz * (nz_cmd - self._nz_trim) * dt
@@ -271,6 +279,8 @@ class SimplePointMassEnv:
         pos += vel * dt
 
         state["roll_rad"] = roll
+        state["p_rps"] = roll_rate_cmd
+        state["body_rates_rps"] = np.array([roll_rate_cmd, 0.0, 0.0], dtype=np.float64)
         state["pitch_rad"] = pitch
         state["yaw_rad"] = yaw
         state["heading_rad"] = yaw

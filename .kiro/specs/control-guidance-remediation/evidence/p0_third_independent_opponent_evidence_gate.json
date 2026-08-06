@@ -1,0 +1,15 @@
+{
+  "schema_version": "1.0.0",
+  "finding_id": "P0",
+  "candidate": "scripted_evasive_vpp",
+  "status": "approved",
+  "decision": "approved_by_user_p0_matrix_completion_authorization",
+  "timestamp_utc": "2026-07-27T00:00:00+00:00",
+  "scope": "Add only a checkpoint-free, deterministic, current-state-only third opponent registry entry. It must emit canonical 3-D VPP actions and does not change guidance, flight control, reward, observation schema, safety limits, or the legacy default path.",
+  "protected_path_allowlist": ["config/experiment/jsbsim_hrl_comparison.yaml"],
+  "implementation": {"class": "uav_vpp_guidance.envs.scripted_evasive_vpp_opponent.ScriptedEvasiveVPPOpponent", "action_contract": "vpp_3d [dx, dy, dz] clipped per component to [-1, 1]", "information_policy": "current own/target physical state and derived current relative geometry only; no future state, oracle, or terminal label"},
+  "physical_claim": "none",
+  "strict_jsbsim_status": "not_run; blocked by missing registered assets",
+  "validation": {"status": "passed", "commands": ["PYTHONPATH=src python -m pytest tests/test_opponent_controller.py -v", "PYTHONPATH=src python -m pytest tests/test_jsbsim_hrl_comparison_runner.py::test_scripted_evasive_vpp_stage_is_resolved_and_recorded tests/test_control_guidance_remediation_phase0.py -v", "PYTHONPATH=src python -m pytest tests/test_pipeline_core.py::TestArtifactBundle -v"], "portable_bundle_verified": true},
+  "baseline_retained": true
+}

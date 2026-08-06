@@ -257,7 +257,7 @@ Tasks marked with an asterisk (`*`) are optional.
 
 ## Phase 5: Delivery
 
-- [-] 8. Checkpoint — ensure all tests pass and deliver
+- [x] 8. Checkpoint — ensure all tests pass and deliver
   - Run the CLI:
     `python scripts/audit_control_method_rationality.py --guidance-config config/guidance.yaml --out-md reports/control_method_rationality_audit_findings_20260725_zh.md --out-json reports/control_method_rationality_audit_findings_20260725.json`
   - Run the suite (NO `--run` flag): `python -m pytest tests/test_control_method_audit.py -v`

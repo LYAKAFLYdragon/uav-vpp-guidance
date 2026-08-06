@@ -1,0 +1,24 @@
+{
+  "schema_version": "1.0.0",
+  "stage_name": "p0_registered_asset_recovery_search",
+  "stage_version": "1.0.0",
+  "start_time": "2026-07-27T00:00:00+00:00",
+  "end_time": "2026-07-27T00:00:00+00:00",
+  "status": "completed",
+  "command_line": ["read-only loose checkpoint SHA-256 scan", "read-only ZIP/TAR member SHA-256 scan", "read-only local Git history and Git-LFS metadata scan"],
+  "working_directory": "E:\\uav-vpp-guidance-control-guidance-remediation-v1",
+  "output_dir": ".kiro/specs/control-guidance-remediation/evidence/p0_asset_recovery_search_bundle",
+  "config_path": null,
+  "config_hash": "ea54f63bbdab45e22106e2bf8b864b3dfc91af38694e16052cef3c8bf7c9c3f5",
+  "git_info": {"commit": "5cfd9eb", "branch": "codex/control-guidance-remediation-v1", "dirty": false},
+  "inputs": {"baseline_freeze": {"path": ".kiro/specs/control-guidance-remediation/baseline_freeze.json", "expected_predictor_sha256": "a7c00fd2e4fca3f77ce6d6a40223ed49b336af219d7f9bd2c85f938448d74491"}},
+  "outputs": {
+    "asset_recovery_search.json": {"path": "E:\\uav-vpp-guidance-control-guidance-remediation-v1\\.kiro\\specs\\control-guidance-remediation\\evidence\\p0_asset_recovery_search_bundle\\asset_recovery_search.json", "size_bytes": 3354, "sha256": "a374ddbe39ca17a2b02979f81770d3c00ae5346708685edb0c40a5c25f6566de"},
+    "stage_summary": {"path": "E:\\uav-vpp-guidance-control-guidance-remediation-v1\\reports\\control_guidance_remediation_p0_asset_recovery_search_v1_zh.md", "size_bytes": 1169, "sha256": "725a06be4d41fdaccd437923914adf20d2b9d0ffe908b2269f768286a5a64a5d"}
+  },
+  "artifacts_present": {"run_manifest.json": true, "artifact_contract.json": true, "resolved_config.yaml": true, "asset_recovery_search.json": true},
+  "config_overrides": [],
+  "paper_safe": false,
+  "invalid_for_paper_reasons": ["required registered assets are unavailable", "no strict-JSBSim episode was executed"],
+  "extra": {"gate_status": "physical_unavailable", "assets_copied": false, "superseding_asset_manifest_created": false, "strict_jsbsim_smoke_executed": false}
+}

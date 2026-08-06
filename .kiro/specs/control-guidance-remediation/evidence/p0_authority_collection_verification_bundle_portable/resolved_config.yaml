@@ -1,0 +1,5 @@
+stage: p0_authority_asset_collection_verification
+source_id: THESIS-CONTROL-GUIDANCE-REMEDIATION-V1
+mode: read_only_external_receipt_verification
+config_overrides: []
+physical_execution: false

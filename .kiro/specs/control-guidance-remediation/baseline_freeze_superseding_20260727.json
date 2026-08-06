@@ -1,0 +1,21 @@
+{
+  "schema_version": "1.1.0",
+  "freeze_id": "control-guidance-remediation-phase0-20260727-preservation-reconciled",
+  "frozen_at_utc": "2026-07-27T00:00:00+00:00",
+  "status": "evidence_integrity_reconciled_physical_gate_still_unavailable",
+  "supersedes": {"freeze_id": "control-guidance-remediation-phase0-20260726", "path": ".kiro/specs/control-guidance-remediation/baseline_freeze.json", "declared_preservation_manifest_sha256": "4f427f8658325277685f20ad379728b361a33c345d9e37b6c9e65bb1582e9368"},
+  "canonical_manifest_revision": {"git_commit": "5a2aa5c716e068ba027cb3965dabf213c18a8c89", "git_blob_oid": "1f442b33cd1ece6151e9d4669075d4073784a502", "working_tree_clean_at_p0_preflight": true},
+  "preservation_forensic_record": ".kiro/specs/control-guidance-remediation/preservation_manifest_forensic_record_20260727.json",
+  "protected_path_manifest": {"path": ".kiro/specs/control-method-rationality-audit/preservation_baseline.sha256.json", "sha256": "7deac2330bc400574ed52a0d1b6809b2900688a03c8b11ffc3bc97c8785032ac", "entry_count": 224, "config_entry_count": 194, "runtime_entry_count": 30, "matches_current_workspace": true, "approved_implementation_gates": []},
+  "config_hashes": {"config/guidance.yaml": "2f78d8c65f4379ace326b6f7792ba5d21575e27f38105b66030c5e8a3daa3306", "config/gain_space.yaml": "88a85fdca118966d204d3c551dd1189eb982f7e00e6521ceff85bd2ed1093c35", "config/checkpoint_registry.yaml": "df3d56bb51228eaf9c3f93bd8b8381f6d0f0c204f38d8483dbd15de6846a057c", "config/experiment/jsbsim_hrl_comparison.yaml": "204b51724f67c0400bbe1cecca188933176470ab0f9e13271b8340a7c260491b"},
+  "checkpoint_identifiers": [
+    {"id": "prediction_vpp", "path": "outputs/experiments/vpp_ppo_lstm_frozen/checkpoints/best.pt", "available": false, "sha256": null},
+    {"id": "no_prediction_vpp", "path": "outputs/experiments/no_prediction_vpp_ppo_jsbsim_compare/checkpoints/last.pt", "available": false, "sha256": null},
+    {"id": "end_to_end_rl", "path": "outputs/experiments/end_to_end_ppo/checkpoints/best.pt", "available": false, "sha256": null},
+    {"id": "trajectory_predictor", "path": "outputs/trajectory_prediction/best_model.pt", "available": true, "sha256": "a7c00fd2e4fca3f77ce6d6a40223ed49b336af219d7f9bd2c85f938448d74491"}
+  ],
+  "baseline_scenario_matrix": {"source": "config/experiment/jsbsim_hrl_comparison.yaml", "tasks": ["head_on", "crossing_feasible", "break_turn", "sustained_turn"], "main_methods": ["prediction_vpp", "no_prediction_vpp", "end_to_end_rl"], "smoke_seeds": [0], "formal_seeds": [0, 1, 2], "episodes_per_seed": 1, "status": "declared_not_executed_by_audit"},
+  "backend_provenance": {"audit_backend_requested": null, "audit_final_active_backend": null, "backend_fallback_occurred": false, "backend_fallback_reason": null, "status": "not_applicable_analytic_only", "declared_matrix_backend": "jsbsim", "declared_matrix_executed": false, "jsbsim_package_available": true, "jsbsim_version": "1.3.1", "strict_jsbsim_evidence_available": false},
+  "unavailable_evidence": ["Three main-method checkpoints remain absent in this workspace.", "No predictor matching the required frozen SHA-256 has been located.", "No strict-JSBSim transfer evidence was produced by this reconciliation."],
+  "requirements": ["2.13", "3.1", "3.2", "3.7", "3.8", "3.9"]
+}

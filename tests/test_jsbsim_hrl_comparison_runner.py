@@ -4215,3 +4215,32 @@ def test_run_episode_supports_command_override_bridge_agents():
     assert DummyRecorder.last_instance.step_infos[0]["legacy_strategy_index"] == 1
     assert DummyRecorder.last_instance.step_infos[0]["legacy_strategy_name"] == "lead"
     assert record["method_label"] == "Legacy bridge"
+
+
+def test_scripted_evasive_vpp_stage_is_resolved_and_recorded(tmp_path):
+    run_dir = _run_dry_run(
+        tmp_path,
+        "--methods", "no_prediction_vpp",
+        "--tasks", "head_on",
+        "--opponent-stage", "scripted_evasive_vpp",
+    )
+    manifest = json.loads((run_dir / "run_manifest.json").read_text(encoding="utf-8"))
+    snapshot_path = Path(manifest["extra"]["config_snapshots"]["no_prediction_vpp/head_on"]["path"])
+    cfg = yaml.safe_load(snapshot_path.read_text(encoding="utf-8"))
+
+    opponent = cfg["opponent"]
+    assert cfg["opponent_stage"] == "scripted_evasive_vpp"
+    assert opponent["type"] == "scripted"
+    assert opponent["class"] == (
+        "uav_vpp_guidance.envs.scripted_evasive_vpp_opponent."
+        "ScriptedEvasiveVPPOpponent"
+    )
+    assert opponent["config"]["lateral_gain"] == 0.85
+    policy = _RUNNER_MODULE._build_opponent_policy(cfg)
+    assert policy.__class__.__name__ == "ScriptedEvasiveVPPOpponent"
+    assert policy.action_mode == "vpp"
+    assert cfg["attack_zone"]["enabled"] is True
+    overrides = cfg["provenance"]["config_overrides"]
+    assert any(item["key"] == "opponent_stage" and item["new_value"] == "scripted_evasive_vpp" for item in overrides)
+    assert any(item["key"] == "opponent" and item["new_value"]["type"] == "scripted" for item in overrides)
+    assert any(item["key"] == "attack_zone.enabled" and item["new_value"] is True for item in overrides)

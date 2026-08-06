@@ -32,6 +32,14 @@ opponent_registry:
     invert_observation: true
     device: "cpu"
 
+  scripted_evasive_vpp:
+    type: "scripted"
+    class: "uav_vpp_guidance.envs.scripted_evasive_vpp_opponent.ScriptedEvasiveVPPOpponent"
+    config:
+      retreat_gain: 0.45
+      lateral_gain: 0.85
+      vertical_gain: 0.20
+
   curriculum:
     type: "curriculum"
     stages: ["expert", "end_to_end"]

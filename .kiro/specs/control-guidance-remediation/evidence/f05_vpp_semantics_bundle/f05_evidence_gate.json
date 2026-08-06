@@ -1,0 +1,25 @@
+{
+  "schema_version": "1.0.0",
+  "finding_id": "F05",
+  "status": "needs_more_evidence",
+  "runtime_disposition": "preserve_fixed_metre_cartesian_offset",
+  "decision": "no_runtime_authorization",
+  "timestamp_utc": "2026-07-26T00:00:00+00:00",
+  "protected_path_allowlist": [],
+  "evidence_hashes": {
+    "experiment_specification_sha256": "a37d0e1aef3c1c1e459bb45ed8ddf1ebeb6be2947d17935d46b2abaed38e84b3",
+    "offline_semantics_evidence_sha256": "3c67b4a21d866345e9c676cf8b45ba621d411da3f92e500102bc5f7f1d3ef271"
+  },
+  "results": {
+    "baseline_mapping_and_angular_variation_measured": true,
+    "candidate_mappings_bounded_monotone_symmetric_and_near_range_safe": true,
+    "frozen_matrix_evidence": "unavailable",
+    "checkpoint_action_migration": "not_approved"
+  },
+  "blockers": [
+    "No frozen scenario/seed evaluation is available.",
+    "Required policy checkpoints are absent.",
+    "Action semantic migration and legacy checkpoint compatibility are not approved."
+  ],
+  "baseline_retained": true
+}

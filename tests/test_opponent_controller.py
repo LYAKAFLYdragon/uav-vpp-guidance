@@ -4,6 +4,9 @@ import numpy as np
 
 from uav_vpp_guidance.envs.expert_opponent import ExpertOpponent
 from uav_vpp_guidance.envs.opponent_policy import OpponentPolicy
+from uav_vpp_guidance.envs.scripted_evasive_vpp_opponent import (
+    ScriptedEvasiveVPPOpponent,
+)
 from uav_vpp_guidance.envs.tracking_env import CloseRangeTrackingEnv
 
 
@@ -39,6 +42,7 @@ def _config():
         "virtual_point": {
             "enabled": True,
             "anchor_mode": "current_target",
+            "action_dim": 3,
             "d_long_range": [-1000.0, 1000.0],
             "d_lat_range": [-500.0, 500.0],
             "d_vert_range": [-300.0, 300.0],
@@ -171,4 +175,28 @@ def test_combat_mode_preserves_raw_termination_reason_after_overlay():
     assert info["termination_info"]["raw_termination_reason"] == "crash"
     assert info["termination_info"]["raw_is_crash"] is True
     assert info["termination_info"]["raw_is_out_of_bounds"] is False
+    env.close()
+
+
+def test_scripted_evasive_vpp_opponent_is_bounded_deterministic_and_current_state_only():
+    env = CloseRangeTrackingEnv(_config())
+    obs = env.reset(seed=0)
+    opponent_obs = env._get_opponent_obs(obs["own_state"], obs["target_state"])
+    opponent = ScriptedEvasiveVPPOpponent(
+        {"retreat_gain": 2.0, "lateral_gain": 2.0, "vertical_gain": 2.0}
+    )
+
+    action = opponent.act(opponent_obs)
+    future_and_terminal_mutation = copy.deepcopy(opponent_obs)
+    future_and_terminal_mutation["future_state"] = {"oracle": "ignore"}
+    future_and_terminal_mutation["termination_reason"] = "ignore"
+    assert action.shape == (3,)
+    assert np.all(np.isfinite(action))
+    assert np.all(action <= 1.0) and np.all(action >= -1.0)
+    assert np.array_equal(action, opponent.act(future_and_terminal_mutation))
+    assert opponent.get_diagnostics()["clipped"] is True
+
+    opponent.reset()
+    assert opponent.get_diagnostics()["step"] == 0
+    assert np.array_equal(action, opponent.act(opponent_obs))
     env.close()

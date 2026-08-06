@@ -1,0 +1,17 @@
+{
+  "schema_version": "1.0.0",
+  "stage_name": "p0_documentary_asset_boundary_verification",
+  "source_id": "THESIS-CONTROL-GUIDANCE-REMEDIATION-V1",
+  "status": "physical_unavailable",
+  "classification": "documentation records method intent, configuration references, or checkpoint identities; it does not supply model bytes, exact missing hashes, or independent training provenance",
+  "documents": [
+    {"path": "C:\\Users\\赖宇\\Desktop\\硕士培养流程\\学位论文\\第六章\\第6章_v4.9_语言规范化修订.md", "sha256": "b4f92c8ab006c16384c4b089e5522d9d02ca87b9a721d881b1cd7e80172fc353", "evidence_boundary": "records PPO/VPP/JSBSim terminology and a 19-D formal evaluation architecture; not a checkpoint receipt"},
+    {"path": "C:\\Users\\赖宇\\Desktop\\硕士培养流程\\学位论文\\预测-决策闭环验证实验计划_v1.md", "sha256": "f664761486238d4a5128094c0fe41d871648bf81d24e2c98a6bf0f5d381ecdaa", "evidence_boundary": "the A0 table row names the no-prediction path but marks its local asset missing; plan references do not supply bytes"},
+    {"path": "E:\\uav-vpp-guidance\\drones\\reproducibility_taxonomy60\\opponent_capability_cards_v3.md", "sha256": "8d85de19dce189189ab88d897e4b4f01fc4f2ac3ced379660f3f241223e2c30c", "evidence_boundary": "identifies end_to_end SHA d3882833…4c35b8bc but explicitly says the training recipe is not reconstructed"},
+    {"path": "E:\\uav-vpp-guidance\\reports\\paper_authoritative_artifact_index_20260712.md", "sha256": "3461c74765dd078da0395a745a9480c8cb91e31be99a44940001577e800f6df8", "evidence_boundary": "indexes different high-level, head-on, and crossing assets; it does not identify vpp_ppo_lstm_frozen/best.pt"}
+  ],
+  "asset_gate": {"trajectory_predictor": "rejected_hash_mismatch: required a7c00fd2e4fca3f77ce6d6a40223ed49b336af219d7f9bd2c85f938448d74491 remains absent", "prediction_vpp": "physical_unavailable: registered best.pt remains absent", "no_prediction_vpp": "unregistered_candidate_not_adopted", "end_to_end_rl": "unregistered_candidate_not_adopted"},
+  "disposition": {"assets_copied": false, "assets_registered": false, "superseding_asset_manifest_created": false, "strict_jsbsim_smoke_authorized": false, "strict_jsbsim_smoke_executed": false},
+  "permitted_routes": ["recover original-training-machine checkpoints and independent provenance", "if recovery is impossible, assign a new Source ID and train/register a new non-equivalent model family"],
+  "prohibited_interpretation": "No document above may be used to substitute a missing checkpoint, to assert a missing SHA, or to claim historical frozen-asset equivalence."
+}

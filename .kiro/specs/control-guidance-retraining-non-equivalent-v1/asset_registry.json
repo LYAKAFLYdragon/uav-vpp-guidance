@@ -1,0 +1,39 @@
+{
+  "schema_version": "1.0.0",
+  "registry_kind": "separate_new_source_asset_registry",
+  "source_id": "UAV-VPP-GUIDANCE-RETRAIN-NON-EQUIVALENT-20260727-R01",
+  "status": "planned_assets_only_no_checkpoint_registered",
+  "historical_asset_equivalence": false,
+  "historical_checkpoint_registry_modified": false,
+  "assets": [
+    {
+      "asset_id": "retrain_20260727_r01_trajectory_predictor_lstm_s0",
+      "role": "trajectory_predictor",
+      "status": "not_trained",
+      "expected_relative_path": "trajectory_predictor_lstm_s0/best_model.pt",
+      "required_contract": {"input_dim": 16, "hidden_dim": 128, "num_layers": 2, "dropout": 0.1, "predict_variance": false}
+    },
+    {
+      "asset_id": "retrain_20260727_r01_prediction_vpp_lstm_s0",
+      "role": "prediction_vpp",
+      "status": "not_trained",
+      "expected_relative_path": "prediction_vpp_lstm_s0/checkpoints/best.pt",
+      "required_contract": {"observation_dim": 16, "action_dim": 3, "vpp_action_order": ["dx", "dy", "dz"]}
+    },
+    {
+      "asset_id": "retrain_20260727_r01_no_prediction_vpp_s0",
+      "role": "no_prediction_vpp",
+      "status": "not_trained",
+      "expected_relative_path": "no_prediction_vpp_s0/checkpoints/best.pt",
+      "required_contract": {"observation_dim": 16, "action_dim": 3, "vpp_action_order": ["dx", "dy", "dz"]}
+    },
+    {
+      "asset_id": "retrain_20260727_r01_end_to_end_s0",
+      "role": "end_to_end_rl",
+      "status": "not_trained",
+      "expected_relative_path": "end_to_end_s0/checkpoints/best.pt",
+      "required_contract": {"observation_dim": 16, "action_dim": 3}
+    }
+  ],
+  "registration_rule": "Replace a not_trained status only after the listed new-source artifact contract, run manifest, raw file hash, dataset provenance, compatibility review, and reviewer approval exist. Never write an historical SHA-equivalence field."
+}

@@ -3646,7 +3646,7 @@ def _parse_args() -> argparse.Namespace:
         "--opponent-stage",
         type=str,
         default="none",
-        choices=["none", "expert", "end_to_end", "curriculum"],
+        choices=["none", "expert", "end_to_end", "scripted_evasive_vpp", "curriculum"],
     )
     parser.add_argument(
         "--jsbsim-root",

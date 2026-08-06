@@ -1,0 +1,18 @@
+{
+  "schema_version": "1.0.0",
+  "stage_name": "p0_authority_asset_collection_verification",
+  "source_id": "THESIS-CONTROL-GUIDANCE-REMEDIATION-V1",
+  "status": "physical_unavailable",
+  "classification": "the supplied collection verifies CAN-distributed candidates, not original-training-machine authority assets; no controller, safety, or physical result follows",
+  "collection": {"path": "E:\\uav-vpp-guidance-asset-collection-20260727", "contains_checkpoint_files": false, "source_root": "E:\\uav-vpp-guidance-ind-headon", "outputs_link_type": "Junction", "outputs_target": "E:\\uav-vpp-guidance-artifacts\\CAN-20260705\\assets\\outputs", "source_git_available": false, "checkpoint_mutation_performed": false},
+  "collection_document_raw_sha256": {"asset_receipt.json": "30d873e9b5fc5f1c8e128fe2cd74fa8d79c86e98f40a9af1beb11f4ab2591bcb", "model_payload_contract.json": "754cafca6bfbb04e281b038b768f65f247447b2bd3f19a0aa07e70a6822d5059", "run_file_inventory.json": "497bd6883e5005c9ff828a21e029c5d3b3f3fb79c1539848efeb42607a1a04c5", "source_layout.json": "d515d00a3d87638cd641559576ac953cb68941f98652002325515b1bf16fd4c2", "git_provenance.json": "abd19f70850d466bccef8fa5280dbab1096fd1566e2ff9f3009a1954f90bf4dd"},
+  "asset_decisions": [
+    {"role": "trajectory_predictor", "path": "outputs/trajectory_prediction/best_model.pt", "size_bytes": 865909, "observed_sha256": "96bc8e5e1aebd32ca6a528fb3149cfd58aeff276c18bca66388d650f00495931", "required_sha256": "a7c00fd2e4fca3f77ce6d6a40223ed49b336af219d7f9bd2c85f938448d74491", "strict_architecture_load": "passed: 16/128/2/0.1, predict_variance=false", "decision": "rejected_hash_mismatch"},
+    {"role": "prediction_vpp", "path": "outputs/experiments/vpp_ppo_lstm_frozen/checkpoints/best.pt", "decision": "physical_unavailable_missing"},
+    {"role": "no_prediction_vpp", "path": "outputs/experiments/no_prediction_vpp_ppo_jsbsim_compare/checkpoints/last.pt", "size_bytes": 250138, "sha256": "82cc54df1b9445f1c61739e87759d49edbb29250640d382968d33e69168ef2cb", "obs_dim": 16, "action_dim": 3, "total_timesteps": 200000, "decision": "candidate_only_incomplete_training_provenance"},
+    {"role": "end_to_end_rl", "path": "outputs/experiments/end_to_end_ppo/checkpoints/best.pt", "size_bytes": 246810, "sha256": "d38828338d5e7e22167129b2e9972d52ecf5fc3fda5d52caff95a8374c35b8bc", "obs_dim": 16, "action_dim": 3, "total_timesteps": 200000, "decision": "candidate_only_incomplete_training_provenance"}
+  ],
+  "provenance_gap": {"run_manifest_or_resolved_config_for_candidate_training": false, "available_related_files": "25 config_snapshot.yaml files only", "canonical_can_commit_is_not_checkpoint_training_provenance": true},
+  "disposition": {"assets_copied": false, "assets_registered": false, "superseding_asset_manifest_created": false, "strict_jsbsim_smoke_authorized": false, "strict_jsbsim_smoke_executed": false},
+  "next_gate": "Acquire the original training-machine bytes for prediction_vpp and a predictor whose raw SHA exactly matches the frozen value, plus independent training manifests and reviewer approval for both policy candidates."
+}

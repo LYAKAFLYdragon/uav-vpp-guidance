@@ -51,25 +51,37 @@ class ArtifactBundle:
                 shutil.copy2(src, dst)
                 bundle_files[filename] = file_info(dst)
 
-        # Copy declared outputs
+        # Copy declared outputs. Reuse an already-copied identical artifact so
+        # repeated bundle creation remains idempotent and core files are not duplicated.
         if self.manifest:
             for name, info in self.manifest.outputs.items():
                 src = Path(info["path"])
                 if src.exists():
                     dst = self.bundle_dir / src.name
-                    # Avoid name collisions by prefixing with output key
+                    if dst.is_file() and file_info(dst)["sha256"] == file_info(src)["sha256"]:
+                        bundle_files[name] = file_info(dst)
+                        continue
+                    # Avoid distinct non-identical name collisions by prefixing with output key.
                     if dst.exists():
                         dst = self.bundle_dir / f"{name}_{src.name}"
                     shutil.copy2(src, dst)
                     bundle_files[name] = file_info(dst)
 
-        # Copy extra requested files
+        # Copy extra requested files or directory trees declared by a contract.
         for rel in self.extra_files:
             src = self.source_dir / rel
-            if src.exists():
+            if src.is_file():
                 dst = self.bundle_dir / src.name
                 shutil.copy2(src, dst)
                 bundle_files[rel] = file_info(dst)
+            elif src.is_dir():
+                dst = self.bundle_dir / rel
+                shutil.copytree(src, dst, dirs_exist_ok=True)
+                for copied_file in sorted(path for path in dst.rglob("*") if path.is_file()):
+                    relative_path = copied_file.relative_to(self.bundle_dir).as_posix()
+                    info = file_info(copied_file)
+                    info["relative_path"] = relative_path
+                    bundle_files[relative_path] = info
 
         bundle_info = {
             "bundle_dir": str(self.bundle_dir),
@@ -96,7 +108,8 @@ class ArtifactBundle:
         mismatches = []
         missing = []
         for name, expected in bundle_info.get("files", {}).items():
-            path = self.bundle_dir / Path(expected["path"]).name
+            relative_path = expected.get("relative_path")
+            path = self.bundle_dir / relative_path if relative_path else self.bundle_dir / Path(expected["path"]).name
             if not path.exists():
                 missing.append(name)
                 continue

@@ -1,0 +1,32 @@
+{
+  "schema_version": "1.0.0",
+  "finding_id": "F14",
+  "status": "needs_more_evidence",
+  "runtime_disposition": "preserve_observation_schema_and_base_feature_order",
+  "decision": "no_runtime_authorization",
+  "timestamp_utc": "2026-07-26T00:00:00+00:00",
+  "protected_path_allowlist": [],
+  "evidence_hashes": {
+    "specification_sha256": "f2a5f2aad26f9fc8ed49cbe35f2c7faf45b22214605cdb60ade6c4f2e86572b3",
+    "offline_evidence_sha256": "bf8e994471c3c6c73211c2381340daf985f4be924bf1ffb71a5d6503dee8d281"
+  },
+  "results": {
+    "available_and_absent_signals_audited": true,
+    "units_updates_normalization_availability_and_leakage_defined": true,
+    "fixed_protocol_defined": true,
+    "feature_benefit_and_backend_parity": "not_available",
+    "schema_migration": "not_approved",
+    "protected_runtime_or_config_changed": false
+  },
+  "blockers": [
+    "No fixed training/evaluation comparison exists for minimal candidates or history.",
+    "Frozen checkpoints and strict-JSBSim matrix evaluations are unavailable.",
+    "No schema-version/checkpoint migration plan is approved."
+  ],
+  "required_next_evidence": [
+    "Compare baseline, one minimal signal addition, and causal history under fixed training/evaluation protocols.",
+    "Measure task/safety benefit, policy sensitivity, availability, and backend parity.",
+    "If approved, create a separate schema-version/checkpoint-migration task following AGENTS.md before touching observation.py or tracking_env.py."
+  ],
+  "baseline_retained": true
+}

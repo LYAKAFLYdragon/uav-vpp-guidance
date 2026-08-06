@@ -1,0 +1,124 @@
+{
+  "schema_version": "1.0.0",
+  "finding_ids": [
+    "F12",
+    "F13"
+  ],
+  "analysis_scope": "deterministic synthetic reward trace only; default reward and protected runtime unchanged",
+  "results": {
+    "samples": "deterministic synthetic trace; not policy or JSBSim evaluation",
+    "default": {
+      "per_step": [
+        {
+          "reward_range": -0.25161290322580643,
+          "reward_angle": -0.36000000000000004,
+          "reward_safety": 0.0,
+          "reward_saturation": -0.0,
+          "reward_smooth": 0.0,
+          "reward_closing": 0.09000000000000001,
+          "reward_alive": 0.02,
+          "terminal_reward": 0.0,
+          "reward_total": -0.5016129032258064
+        },
+        {
+          "reward_range": 0.3,
+          "reward_angle": -0.09000000000000001,
+          "reward_safety": -2.58,
+          "reward_saturation": -0.06904761904761908,
+          "reward_smooth": -1.2800000000000002,
+          "reward_closing": 0.11000000000000001,
+          "reward_alive": 0.02,
+          "terminal_reward": 0.0,
+          "reward_total": -3.5890476190476197
+        },
+        {
+          "reward_range": 0.3,
+          "reward_angle": -0.045000000000000005,
+          "reward_safety": -2.82,
+          "reward_saturation": -0.0,
+          "reward_smooth": -0.86,
+          "reward_closing": 0.06,
+          "reward_alive": 0.02,
+          "terminal_reward": 400.0,
+          "reward_total": 396.655
+        }
+      ],
+      "aggregate": {
+        "reward_range": 0.34838709677419355,
+        "reward_angle": -0.49500000000000005,
+        "reward_safety": -5.4,
+        "reward_saturation": -0.06904761904761908,
+        "reward_smooth": -2.14,
+        "reward_closing": 0.26,
+        "reward_alive": 0.06,
+        "terminal_reward": 400.0,
+        "reward_total": 392.56433947772655
+      },
+      "safety_trigger_occupancy": 0.6666666666666666,
+      "saturation_occupancy": 0.3333333333333333
+    },
+    "counterfactual_disable_alive_and_closing": {
+      "per_step": [
+        {
+          "reward_range": -0.25161290322580643,
+          "reward_angle": -0.36000000000000004,
+          "reward_safety": 0.0,
+          "reward_saturation": -0.0,
+          "reward_smooth": 0.0,
+          "reward_closing": 0.0,
+          "reward_alive": 0.0,
+          "terminal_reward": 0.0,
+          "reward_total": -0.6116129032258064
+        },
+        {
+          "reward_range": 0.3,
+          "reward_angle": -0.09000000000000001,
+          "reward_safety": -2.58,
+          "reward_saturation": -0.06904761904761908,
+          "reward_smooth": -1.2800000000000002,
+          "reward_closing": 0.0,
+          "reward_alive": 0.0,
+          "terminal_reward": 0.0,
+          "reward_total": -3.7190476190476196
+        },
+        {
+          "reward_range": 0.3,
+          "reward_angle": -0.045000000000000005,
+          "reward_safety": -2.82,
+          "reward_saturation": -0.0,
+          "reward_smooth": -0.86,
+          "reward_closing": 0.0,
+          "reward_alive": 0.0,
+          "terminal_reward": 400.0,
+          "reward_total": 396.575
+        }
+      ],
+      "aggregate": {
+        "reward_range": 0.34838709677419355,
+        "reward_angle": -0.49500000000000005,
+        "reward_safety": -5.4,
+        "reward_saturation": -0.06904761904761908,
+        "reward_smooth": -2.14,
+        "reward_closing": 0.0,
+        "reward_alive": 0.0,
+        "terminal_reward": 400.0,
+        "reward_total": 392.24433947772656
+      },
+      "safety_trigger_occupancy": 0.6666666666666666,
+      "saturation_occupancy": 0.3333333333333333
+    },
+    "anti_exploitation_checks": {
+      "terminal_reward_separate_from_step_terms": true,
+      "low_altitude_safety_occupancy_reported": true,
+      "command_saturation_occupancy_reported": true,
+      "no_default_reward_weight_changed": true
+    }
+  },
+  "backend_provenance": {
+    "requested": null,
+    "final": null,
+    "fallback_occurred": false,
+    "status": "not_applicable_offline_analytic_only"
+  },
+  "config_overrides": []
+}

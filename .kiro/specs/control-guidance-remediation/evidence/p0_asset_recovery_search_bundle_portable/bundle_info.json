@@ -1,0 +1,102 @@
+{
+  "bundle_dir": ".kiro\\specs\\control-guidance-remediation\\evidence\\p0_asset_recovery_search_bundle_portable",
+  "source_dir": ".kiro\\specs\\control-guidance-remediation\\evidence\\p0_asset_recovery_search_bundle",
+  "files": {
+    "run_manifest.json": {
+      "path": ".kiro\\specs\\control-guidance-remediation\\evidence\\p0_asset_recovery_search_bundle_portable\\run_manifest.json",
+      "exists": true,
+      "size_bytes": 2079,
+      "sha256": "822e9ed9e1d80151d56f505f30d61db1129fc396f5795381f5f2d55346bd5226",
+      "mtime": 1785137767.4704142
+    },
+    "artifact_contract.json": {
+      "path": ".kiro\\specs\\control-guidance-remediation\\evidence\\p0_asset_recovery_search_bundle_portable\\artifact_contract.json",
+      "exists": true,
+      "size_bytes": 215,
+      "sha256": "ac0aa9e83e912caf6ea338c0f4c73c503469056bd021cac7c63a5d213b28edc4",
+      "mtime": 1785137741.136044
+    },
+    "resolved_config.yaml": {
+      "path": ".kiro\\specs\\control-guidance-remediation\\evidence\\p0_asset_recovery_search_bundle_portable\\resolved_config.yaml",
+      "exists": true,
+      "size_bytes": 183,
+      "sha256": "ea54f63bbdab45e22106e2bf8b864b3dfc91af38694e16052cef3c8bf7c9c3f5",
+      "mtime": 1785137740.9514863
+    },
+    "asset_recovery_search.json": {
+      "path": ".kiro\\specs\\control-guidance-remediation\\evidence\\p0_asset_recovery_search_bundle_portable\\asset_recovery_search.json",
+      "exists": true,
+      "size_bytes": 3354,
+      "sha256": "a374ddbe39ca17a2b02979f81770d3c00ae5346708685edb0c40a5c25f6566de",
+      "mtime": 1785137740.319119
+    },
+    "stage_summary": {
+      "path": ".kiro\\specs\\control-guidance-remediation\\evidence\\p0_asset_recovery_search_bundle_portable\\control_guidance_remediation_p0_asset_recovery_search_v1_zh.md",
+      "exists": true,
+      "size_bytes": 1169,
+      "sha256": "725a06be4d41fdaccd437923914adf20d2b9d0ffe908b2269f768286a5a64a5d",
+      "mtime": 1785137743.5586553
+    }
+  },
+  "manifest": {
+    "schema_version": "1.0.0",
+    "stage_name": "p0_registered_asset_recovery_search",
+    "stage_version": "1.0.0",
+    "start_time": "2026-07-27T00:00:00+00:00",
+    "end_time": "2026-07-27T00:00:00+00:00",
+    "status": "completed",
+    "command_line": [
+      "read-only loose checkpoint SHA-256 scan",
+      "read-only ZIP/TAR member SHA-256 scan",
+      "read-only local Git history and Git-LFS metadata scan"
+    ],
+    "working_directory": "E:\\uav-vpp-guidance-control-guidance-remediation-v1",
+    "output_dir": ".kiro/specs/control-guidance-remediation/evidence/p0_asset_recovery_search_bundle",
+    "config_path": null,
+    "config_hash": "ea54f63bbdab45e22106e2bf8b864b3dfc91af38694e16052cef3c8bf7c9c3f5",
+    "git_info": {
+      "commit": "5cfd9eb",
+      "branch": "codex/control-guidance-remediation-v1",
+      "dirty": false
+    },
+    "python_version": "3.9.13 (main, Aug 25 2022, 23:51:50) [MSC v.1916 64 bit (AMD64)]",
+    "platform": "Windows-10-10.0.22631-SP0",
+    "inputs": {
+      "baseline_freeze": {
+        "path": ".kiro/specs/control-guidance-remediation/baseline_freeze.json",
+        "expected_predictor_sha256": "a7c00fd2e4fca3f77ce6d6a40223ed49b336af219d7f9bd2c85f938448d74491"
+      }
+    },
+    "outputs": {
+      "asset_recovery_search.json": {
+        "path": "E:\\uav-vpp-guidance-control-guidance-remediation-v1\\.kiro\\specs\\control-guidance-remediation\\evidence\\p0_asset_recovery_search_bundle\\asset_recovery_search.json",
+        "size_bytes": 3354,
+        "sha256": "a374ddbe39ca17a2b02979f81770d3c00ae5346708685edb0c40a5c25f6566de"
+      },
+      "stage_summary": {
+        "path": "E:\\uav-vpp-guidance-control-guidance-remediation-v1\\reports\\control_guidance_remediation_p0_asset_recovery_search_v1_zh.md",
+        "size_bytes": 1169,
+        "sha256": "725a06be4d41fdaccd437923914adf20d2b9d0ffe908b2269f768286a5a64a5d"
+      }
+    },
+    "artifacts_present": {
+      "run_manifest.json": true,
+      "artifact_contract.json": true,
+      "resolved_config.yaml": true,
+      "asset_recovery_search.json": true
+    },
+    "config_overrides": [],
+    "paper_safe": false,
+    "invalid_for_paper_reasons": [
+      "required registered assets are unavailable",
+      "no strict-JSBSim episode was executed"
+    ],
+    "notes": [],
+    "extra": {
+      "gate_status": "physical_unavailable",
+      "assets_copied": false,
+      "superseding_asset_manifest_created": false,
+      "strict_jsbsim_smoke_executed": false
+    }
+  }
+}

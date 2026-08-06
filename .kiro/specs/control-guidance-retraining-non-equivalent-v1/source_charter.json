@@ -1,0 +1,41 @@
+{
+  "schema_version": "1.0.0",
+  "source_id": "UAV-VPP-GUIDANCE-RETRAIN-NON-EQUIVALENT-20260727-R01",
+  "status": "preflight_blocked_missing_new_trajectory_corpus",
+  "created_at_utc": "2026-07-27T00:00:00+00:00",
+  "purpose": "Create a separately trained, newly registered model family after historical frozen assets could not be recovered.",
+  "historical_relation": {
+    "historical_source_id": "THESIS-CONTROL-GUIDANCE-REMEDIATION-V1",
+    "historical_assets_replaced": false,
+    "byte_equivalent_to_historical_assets": false,
+    "direct_substitution_for_historical_assets": false,
+    "paper_equivalence_claim_permitted": false
+  },
+  "isolation": {
+    "output_root": "outputs/control_guidance_retraining/UAV-VPP-GUIDANCE-RETRAIN-NON-EQUIVALENT-20260727-R01",
+    "historical_output_roots_forbidden": [
+      "outputs/trajectory_prediction",
+      "outputs/experiments/vpp_ppo_lstm_frozen",
+      "outputs/experiments/no_prediction_vpp_ppo_jsbsim_compare",
+      "outputs/experiments/end_to_end_ppo"
+    ],
+    "historical_checkpoint_registry_modified": false
+  },
+  "data_gate": {
+    "status": "blocked",
+    "required": "A new immutable trajectory CSV corpus with dataset manifest, raw SHA-256 inventory, collection command/config, seed provenance, and license/approval record.",
+    "observed_local_corpus": "absent: outputs/ contains no trajectory CSV corpus",
+    "effect": "Do not train the predictor or a partial four-model family until the corpus is recorded."
+  },
+  "training_lanes": [
+    {"id": "trajectory_predictor_lstm_s0", "base_config": "config/trajectory_prediction.yaml", "entry_point": "uav_vpp_guidance.trajectory_prediction.train_pipeline", "required_before_launch": ["data_gate_passed"]},
+    {"id": "prediction_vpp_lstm_s0", "base_config": "config/experiment/train_prediction_vpp_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00.yaml", "entry_point": "uav_vpp_guidance.training.train_prediction_vpp_ppo", "required_before_launch": ["data_gate_passed", "new_predictor_checkpoint"]},
+    {"id": "no_prediction_vpp_s0", "base_config": "config/experiment/train_no_prediction_vpp_ppo_jsbsim_compare.yaml", "entry_point": "uav_vpp_guidance.training.train_no_prediction_vpp_ppo", "required_before_launch": ["data_gate_passed"]},
+    {"id": "end_to_end_s0", "base_config": "config/experiment/train_end_to_end_ppo_jsbsim_compare_long_lh1p0_reset075_no_mode_switch_longscale00_combat.yaml", "entry_point": "uav_vpp_guidance.training.train_end_to_end_ppo", "required_before_launch": ["data_gate_passed"]}
+  ],
+  "acceptance": [
+    "Each new asset must have its own source path, raw SHA-256, byte size, resolved config, command, seed, Git provenance, training-data manifest, run manifest, artifact contract, and review decision.",
+    "A new-source evaluation must be reported as a separate experiment and cannot satisfy the historical strict-JSBSim asset gate.",
+    "No historical asset manifest or historical checkpoint registry key may be overwritten."
+  ]
+}

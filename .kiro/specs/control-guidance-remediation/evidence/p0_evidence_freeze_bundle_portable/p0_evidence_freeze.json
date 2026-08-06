@@ -1,0 +1,55 @@
+{
+  "schema_version": "1.0.0",
+  "stage_name": "p0_evidence_and_interface_freeze",
+  "source_id": "THESIS-CONTROL-GUIDANCE-REMEDIATION-V1",
+  "status": "physical_unavailable",
+  "classification": "required registered checkpoint assets unavailable; this is not a controller-performance or safety result",
+  "prechange_worktree": {
+    "path": "E:\\uav-vpp-guidance-control-guidance-remediation-v1",
+    "branch": "codex/control-guidance-remediation-v1",
+    "commit": "5a2aa5c716e068ba027cb3965dabf213c18a8c89",
+    "clean": true
+  },
+  "checklist_sync": {
+    "source": "E:\\uav-vpp-guidance\\reports\\control_guidance_remediation_execution_checklist_v1_zh.md",
+    "sha256": "0ed19aeb1e470e1750ebdaeac125e793f39244cf5bc8c8f5ef536dd4646b1af4",
+    "verbatim_copy": true
+  },
+  "checkpoint_gate": {
+    "registered_local_paths_missing": [
+      "outputs/experiments/vpp_ppo_lstm_frozen/checkpoints/best.pt",
+      "outputs/experiments/no_prediction_vpp_ppo_jsbsim_compare/checkpoints/last.pt",
+      "outputs/experiments/end_to_end_ppo/checkpoints/best.pt",
+      "outputs/trajectory_prediction/best_model.pt"
+    ],
+    "external_same_path_candidates": [
+      {
+        "path": "E:\\uav-vpp-guidance-explore-rl\\outputs\\experiments\\end_to_end_ppo\\checkpoints\\best.pt",
+        "sha256": "d38828338d5e7e22167129b2e9972d52ecf5fc3fda5d52caff95a8374c35b8bc",
+        "disposition": "unregistered_candidate_not_adopted"
+      },
+      {
+        "path": "E:\\uav-vpp-guidance-explore-rl\\outputs\\trajectory_prediction\\best_model.pt",
+        "sha256": "96bc8e5e1aebd32ca6a528fb3149cfd58aeff276c18bca66388d650f00495931",
+        "frozen_expected_sha256": "a7c00fd2e4fca3f77ce6d6a40223ed49b336af219d7f9bd2c85f938448d74491",
+        "disposition": "hash_mismatch_not_adopted"
+      }
+    ],
+    "smoke_execution": "not_run"
+  },
+  "matrix_gate": {
+    "config": "config/experiment/jsbsim_hrl_comparison.yaml",
+    "independent_opponents": ["expert", "end_to_end"],
+    "curriculum_resolution": "end_to_end",
+    "three_independent_opponent_requirement": "not_satisfied"
+  },
+  "freeze_integrity": {
+    "all_four_frozen_config_hashes_match": true,
+    "audit_report_hashes_match_frozen_baseline": false,
+    "preservation_manifest_self_hash_matches_frozen_baseline": false,
+    "phase0_preservation_test": "failed_on_frozen_baseline_hash_mismatch"
+  },
+  "portable_evidence_bundles_verified": 10,
+  "physical_claim": "none",
+  "next_gate": "Restore the four registered assets with provenance and matching SHA-256 (or issue an approved revised asset manifest); define a third independent opponent; then rerun P0 preflight before any strict-JSBSim smoke."
+}

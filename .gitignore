@@ -7,6 +7,10 @@ __pycache__/
 venv/
 .env
 
+# Workspace-local test dependencies (installed with pip --target).
+.kiro/python-deps/
+.hypothesis/
+
 outputs/
 experiments/*/checkpoints/
 experiments/*/acmi/

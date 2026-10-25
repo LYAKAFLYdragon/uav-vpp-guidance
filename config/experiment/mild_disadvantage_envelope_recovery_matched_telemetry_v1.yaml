@@ -1,0 +1,89 @@
+experiment:
+  name: mild_disadvantage_envelope_recovery_matched_telemetry_v1
+  source_id: THESIS-MILD-DISADVANTAGE-ENVELOPE-RECOVERY-MATCHED-TELEMETRY-COLLECTOR-V1-20260903
+  mode: evaluation
+  output_root: outputs/mild_disadvantage_envelope_recovery_v1/matched_telemetry_v1
+
+assets:
+  h0_checkpoint: outputs/prediction_highlevel_h0_asset_retraining_v1/h0_current_geometry/seed_9201/checkpoints/last.pt
+  crossing_checkpoint: E:/uav-vpp-guidance-artifacts/CAN-20260705/assets/outputs/experiments/prediction_vpp_ppo_crossing_v3/checkpoints/best.pt
+  crossing_config: E:/uav-vpp-guidance-artifacts/CAN-20260705/assets/outputs/experiments/prediction_vpp_ppo_crossing_v3/config_snapshot.yaml
+  crossing_predictor: E:/uav-vpp-guidance-artifacts/CAN-20260705/assets/outputs/trajectory_prediction/best_model.pt
+  end_to_end_checkpoint: outputs/prediction_highlevel_h0_asset_retraining_v1/end_to_end_opponent/seed_9204/checkpoints/last.pt
+
+base_config: E:/uav-vpp-guidance-artifacts/CAN-20260705/assets/outputs/experiments/prediction_vpp_ppo_crossing_v3/config_snapshot.yaml
+
+probe:
+  candidates:
+    x625_y200: {target_x_m: 625.0, target_y_m: 200.0}
+    x750_y250: {target_x_m: 750.0, target_y_m: 250.0}
+  fixed_target_conditions:
+    target_z_m: 5000.0
+    target_speed_mps: 200.0
+    target_heading_deg: 175.0
+  opponents: [expert, end_to_end]
+  repetitions_per_candidate_and_opponent: 3
+  evaluation_seed_base: 981300
+  max_high_level_steps: 512
+  calibration:
+    own_speed_mps: [150.0, 260.0]
+    target_speed_mps: [150.0, 260.0]
+    body_frame_from: own_velocity
+
+recovery:
+  nominal_mode: h0_current_geometry
+  recovery_mode: crossing
+  x_tolerance_m: 25.0
+  y_tolerance_m: 25.0
+  max_recovery_steps: 48
+  required_dwell_steps: 10
+  max_clipping_rate: 0.30
+  min_altitude_m: 500.0
+  max_range_m: 12000.0
+  stable_points_m:
+    - [625.0, 100.0]
+    - [625.0, 150.0]
+    - [675.0, 100.0]
+    - [675.0, 150.0]
+    - [675.0, 200.0]
+    - [725.0, 100.0]
+    - [725.0, 150.0]
+    - [725.0, 200.0]
+    - [750.0, 100.0]
+    - [750.0, 150.0]
+    - [750.0, 200.0]
+
+matched_contract:
+  task_name: crossing_feasible
+  action_semantics: tactical_basis_v1
+  anchor_mode: predicted_target
+  trajectory_prediction_enabled: true
+  predictor_strict_load: true
+  prediction_fallback_permitted: false
+  crossing_observation_contract: exact_18d
+  h0_observation_adapter: truncate_task_flag_suffix_only
+
+telemetry_contract:
+  state_hash_algorithm: sha256
+  state_hash_schema: canonical_json_v1
+  hash_before_action: true
+  required_groups:
+    - action
+    - vpp
+    - guidance
+    - actuator
+    - roll_response
+    - geometry
+    - provenance
+
+protocol:
+  training_started: false
+  training_permitted: false
+  reward_frozen: true
+  pid_frozen: true
+  filter_frozen: true
+  action_interface_frozen: true
+  backend_requested: jsbsim
+  strict_backend: true
+  no_mid_episode_reset: true
+  no_backend_fallback: true

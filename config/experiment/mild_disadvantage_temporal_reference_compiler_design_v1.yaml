@@ -1,0 +1,50 @@
+experiment:
+  name: mild_disadvantage_temporal_reference_compiler_design_v1
+  source_id: THESIS-MILD-DISADVANTAGE-TEMPORAL-REFERENCE-COMPILER-DESIGN-V1-20260903
+  mode: design_only
+  output_root: outputs/mild_disadvantage_temporal_reference_compiler_design_v1
+
+evidence:
+  capability_envelope_source_id: THESIS-MILD-DISADVANTAGE-CAPABILITY-ENVELOPE-V1-20260903
+  boundary_refinement_source_id: THESIS-MILD-DISADVANTAGE-CAPABILITY-BOUNDARY-REFINEMENT-V1-20260903
+  fixed_controller: h0_current_geometry
+  common_opponents: [expert, end_to_end]
+
+compiler:
+  mode: envelope_aware_temporal_reference
+  learning_enabled: false
+  runtime_integration_enabled: false
+  horizon_steps: 12
+  knot_steps: [0, 6, 12]
+  action_dim: 3
+  action_bounds: [[-1.0, 1.0], [-1.0, 1.0], [-1.0, 1.0]]
+  action_rate_limit_per_step: [0.08, 0.08, 0.08]
+  reference_channels: [range_m, range_rate_mps, ata_deg, aa_deg, energy_proxy, altitude_m]
+  target_stages:
+    - name: preserve
+      steps: [0, 1, 2, 3]
+      objective: preserve_energy_and_altitude
+    - name: opening
+      steps: [4, 5, 6, 7]
+      objective: reduce_attack_geometry_pressure_and_open_range
+    - name: reentry_prepare
+      steps: [8, 9, 10, 11, 12]
+      objective: approach_common_feasible_corridor_without_clipping
+  local_model:
+    source: paired_local_response_probe_only
+    required: true
+    ill_conditioned_action_axes: reject
+  fail_closed:
+    non_finite_reference: nominal_h0
+    infeasible_action_sequence: nominal_h0
+    residual_above_threshold: nominal_h0
+
+screen:
+  action_clipping_allowed: false
+  fallback_allowed: false
+  reset_allowed: false
+  compare_against: h0_current_geometry
+  required_opponents: [expert, end_to_end]
+  runtime_probe_after_design_only: true
+  no_training: true
+

@@ -99,6 +99,9 @@ def build_observation(
     saturation_features=None,
     opponent_stage=None,
     task_type=None,
+    predicted_geometry=None,
+    replace_geometry_with_prediction=False,
+    history_kinematic=None,
     return_feature_names=False,
 ):
     """
@@ -116,6 +119,7 @@ def build_observation(
       - gains (+2): k_los, k_pos
       - guidance_state (+3): VP tracking error [x, y, z]
       - prediction_features (+14): prediction-aware relative/displacement/velocity/variance/valid/fallback
+      - history_kinematic (+3): target history-motion features [heading_rate, speed_change, los_rate]
       - saturation_features (+3): per-channel command saturation flags [nz, roll_rate, throttle]
       - opponent_stage (+2): one-hot [is_expert, is_end_to_end] when provided
       - task_type (+1): binary [is_crossing] when provided
@@ -129,6 +133,13 @@ def build_observation(
         saturation_features (dict, optional): Per-channel command saturation indicators.
         opponent_stage (str, optional): Current opponent stage (e.g. "expert", "end_to_end").
         task_type (str, optional): Current task type (e.g. "head_on", "crossing_feasible").
+        predicted_geometry (dict, optional): Values normalized to the base
+            geometry scale for the opt-in predicted-geometry replacement.
+        replace_geometry_with_prediction (bool): Replace the six base geometry
+            entries without changing the 16-D observation dimension.
+        history_kinematic (dict, optional): Normalized history-motion features
+            of the target (e.g. heading rate, speed change, LOS rate). Used by
+            the thesis "history-feature control group" (Group H) ablation.
         return_feature_names (bool): If True, also return the ordered list of feature names.
 
     Returns:
@@ -168,6 +179,20 @@ def build_observation(
         "target_altitude": target_alt / ref_alt,
     }
 
+    # Keep the original 16-D contract while allowing an explicit predicted
+    # geometry ablation to replace only the six geometry entries it defines.
+    if replace_geometry_with_prediction and predicted_geometry is not None:
+        for key in (
+            "range_m",
+            "range_rate_mps",
+            "ata_sin",
+            "ata_cos",
+            "aa_sin",
+            "aa_cos",
+        ):
+            if key in predicted_geometry:
+                obs_dict[key] = float(predicted_geometry[key])
+
     # 可选：guidance gains
     if gains is not None:
         obs_dict["gain_k_los"] = float(getattr(gains, "k_los", 1.0))
@@ -198,6 +223,12 @@ def build_observation(
             "pred_fallback",
         ):
             obs_dict[key] = float(prediction_features.get(key, 0.0))
+
+    # 可选：目标历史运动特征（论文 H 组对照：历史运动信息增强策略观测）
+    # 追加在 prediction_features 之后、saturation 之前，键序即 schema 契约顺序。
+    if history_kinematic is not None:
+        for key in ("hist_heading_rate", "hist_speed_change", "hist_los_rate"):
+            obs_dict[key] = float(history_kinematic.get(key, 0.0))
 
     # 可选：指令饱和指示器
     if saturation_features is not None:

@@ -1,0 +1,50 @@
+experiment:
+  name: mild_disadvantage_capability_boundary_refinement_v1
+  source_id: THESIS-MILD-DISADVANTAGE-CAPABILITY-BOUNDARY-REFINEMENT-V1-20260903
+  mode: evaluation
+  output_root: outputs/mild_disadvantage_capability_boundary_refinement_v1/refinement_v1
+
+base_config: config/experiment/simplified_scenario_feasibility_pilot_v1.yaml
+
+scan:
+  purpose: Refine the four adjacent cells around the previously observed common H0 feasibility boundary.
+  evaluation_seed: 9708
+  training_seed: 9201
+  repetitions_per_cell: 3
+  axes:
+    boundary_probe:
+      description: Four newly inserted points adjacent to the prior stable-feasible and non-feasible cells.
+      levels: [625.0, 650.0, 675.0, 750.0]
+  fixed_target_conditions:
+    target_z_m: 5000.0
+    target_speed_mps: 200.0
+    target_heading_deg: 175.0
+  scenarios:
+    x625_y175:
+      target_x_m: 625.0
+      target_y_m: 175.0
+    x650_y200:
+      target_x_m: 650.0
+      target_y_m: 200.0
+    x675_y225:
+      target_x_m: 675.0
+      target_y_m: 225.0
+    x750_y225:
+      target_x_m: 750.0
+      target_y_m: 225.0
+
+protocol:
+  source_id: THESIS-MILD-DISADVANTAGE-CAPABILITY-BOUNDARY-REFINEMENT-V1-20260903
+  methods: [h0_current_geometry]
+  opponents: [expert, end_to_end]
+  training_started: false
+  training_permitted: false
+  backend: jsbsim
+  reward_frozen: true
+  action_interface_frozen: true
+  low_level_frozen: true
+  classification:
+    stable_feasible: Both opponents achieve success on all repetitions with no crash, out-of-bounds, or fallback.
+    transition: The cell is not stable_feasible and the two opponents are not both unsuccessful on all repetitions.
+    non_feasible: Both opponents are unsuccessful on all repetitions.
+

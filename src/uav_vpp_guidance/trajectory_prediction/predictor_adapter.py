@@ -219,6 +219,14 @@ class TrajectoryPredictorAdapter:
         self.output_mode = pred_cfg.get("output_mode", "relative_displacement")
         self.fallback_mode = pred_cfg.get("fallback_mode", "constant_velocity")
 
+        history_cfg = config.get("history", {})
+        # Neural predictors normally require a complete window.  A new source
+        # may explicitly opt into the configured padding policy so that the
+        # first episode steps are valid padded inputs, not predictor failures.
+        self.allow_neural_padding = bool(
+            history_cfg.get("allow_neural_padding", False)
+        )
+
         int_cfg = config.get("integration", {})
         self.anchor_mode = int_cfg.get("anchor_mode", "predicted_target")
 
@@ -277,6 +285,9 @@ class TrajectoryPredictorAdapter:
             "fallback_phase": None,
             "fallback_model": None,
             "prediction_valid": True,
+            "history_ready": self.state_buffer.is_ready(),
+            "history_observed_frames": len(self.state_buffer._buffer),
+            "history_padded": False,
         }
 
         # 尝试使用主预测器
@@ -284,11 +295,12 @@ class TrajectoryPredictorAdapter:
             # Neural predictors (LSTM/GRU) require a fully populated buffer.
             # Classical predictors (CV/CA) can tolerate padded short history.
             if isinstance(self.predictor, torch.nn.Module):
-                if not self.state_buffer.is_ready():
+                if not self.state_buffer.is_ready() and not self.allow_neural_padding:
                     raise ValueError(
                         f"Neural predictor requires {self.state_buffer.history_len} "
                         f"history frames, got {len(self.state_buffer._buffer)}"
                     )
+                info["history_padded"] = not self.state_buffer.is_ready()
 
             history_seq = self.state_buffer.get_sequence()
             # 增加 batch 维度 -> [1, history_len, feature_dim]

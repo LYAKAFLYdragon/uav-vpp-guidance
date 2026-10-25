@@ -1,0 +1,24 @@
+experiment:
+  name: mild_disadvantage_handoff_local_response_collector_v2
+  source_id: THESIS-MILD-DISADVANTAGE-HANDOFF-LOCAL-RESPONSE-COLLECTOR-V2-20260904
+  mode: evaluation
+  output_root: outputs/mild_disadvantage_handoff_local_response_v2
+source_traces_root: outputs/mild_disadvantage_envelope_recovery_v1/matched_telemetry_v1
+base_config: E:/uav-vpp-guidance-artifacts/CAN-20260705/assets/outputs/experiments/prediction_vpp_ppo_crossing_v3/config_snapshot.yaml
+assets:
+  h0_checkpoint: outputs/prediction_highlevel_h0_asset_retraining_v1/h0_current_geometry/seed_9201/checkpoints/last.pt
+  crossing_checkpoint: E:/uav-vpp-guidance-artifacts/CAN-20260705/assets/outputs/experiments/prediction_vpp_ppo_crossing_v3/checkpoints/best.pt
+  crossing_config: E:/uav-vpp-guidance-artifacts/CAN-20260705/assets/outputs/experiments/prediction_vpp_ppo_crossing_v3/config_snapshot.yaml
+  crossing_predictor: E:/uav-vpp-guidance-artifacts/CAN-20260705/assets/outputs/trajectory_prediction/best_model.pt
+  end_to_end_checkpoint: outputs/prediction_highlevel_h0_asset_retraining_v1/end_to_end_opponent/seed_9204/checkpoints/last.pt
+protocol:
+  opponents: [expert, end_to_end]
+  required_source_traces: 12
+  pulse_amplitude: 0.08
+  response_offsets: [4, 12, 48]
+  training_started: false
+  training_permitted: false
+  strict_backend: true
+  pre_handoff_prediction_warmup_allowed: true
+  response_window_prediction_fallback_forbidden: true
+  pulse_contract: signed_axis_delta

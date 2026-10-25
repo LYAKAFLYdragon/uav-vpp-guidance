@@ -1,0 +1,88 @@
+experiment:
+  name: mild_disadvantage_capability_envelope_v1
+  source_id: THESIS-MILD-DISADVANTAGE-CAPABILITY-ENVELOPE-V1-20260903
+  mode: evaluation
+  output_root: outputs/mild_disadvantage_capability_envelope_v1
+
+base_config: config/experiment/simplified_scenario_feasibility_pilot_v1.yaml
+
+scan:
+  purpose: Build a local two-dimensional empirical capability envelope around the mild-disadvantage success-to-failure boundary.
+  evaluation_seed: 9706
+  training_seed: 9201
+  repetitions_per_cell: 3
+  axes:
+    target_x_m:
+      description: Target longitudinal position in the local boundary region.
+      levels: [625.0, 675.0, 725.0, 750.0]
+    target_y_m:
+      description: Target lateral position around the known mild-neutral lateral offset.
+      levels: [100.0, 150.0, 200.0, 250.0]
+  fixed_target_conditions:
+    target_z_m: 5000.0
+    target_speed_mps: 200.0
+    target_heading_deg: 175.0
+  scenarios:
+    x625_y100:
+      target_x_m: 625.0
+      target_y_m: 100.0
+    x625_y150:
+      target_x_m: 625.0
+      target_y_m: 150.0
+    x625_y200:
+      target_x_m: 625.0
+      target_y_m: 200.0
+    x625_y250:
+      target_x_m: 625.0
+      target_y_m: 250.0
+    x675_y100:
+      target_x_m: 675.0
+      target_y_m: 100.0
+    x675_y150:
+      target_x_m: 675.0
+      target_y_m: 150.0
+    x675_y200:
+      target_x_m: 675.0
+      target_y_m: 200.0
+    x675_y250:
+      target_x_m: 675.0
+      target_y_m: 250.0
+    x725_y100:
+      target_x_m: 725.0
+      target_y_m: 100.0
+    x725_y150:
+      target_x_m: 725.0
+      target_y_m: 150.0
+    x725_y200:
+      target_x_m: 725.0
+      target_y_m: 200.0
+    x725_y250:
+      target_x_m: 725.0
+      target_y_m: 250.0
+    x750_y100:
+      target_x_m: 750.0
+      target_y_m: 100.0
+    x750_y150:
+      target_x_m: 750.0
+      target_y_m: 150.0
+    x750_y200:
+      target_x_m: 750.0
+      target_y_m: 200.0
+    x750_y250:
+      target_x_m: 750.0
+      target_y_m: 250.0
+
+protocol:
+  source_id: THESIS-MILD-DISADVANTAGE-CAPABILITY-ENVELOPE-V1-20260903
+  methods: [h0_current_geometry]
+  opponents: [expert, end_to_end]
+  training_started: false
+  training_permitted: false
+  backend: jsbsim
+  reward_frozen: true
+  action_interface_frozen: true
+  low_level_frozen: true
+  classification:
+    stable_feasible: Both opponents achieve success on all repetitions with no crash, out-of-bounds, or fallback.
+    transition: The cell is not stable_feasible and the two opponents are not both unsuccessful on all repetitions.
+    non_feasible: Both opponents are unsuccessful on all repetitions.

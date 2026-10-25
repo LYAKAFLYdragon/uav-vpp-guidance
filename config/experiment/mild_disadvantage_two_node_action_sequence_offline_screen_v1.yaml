@@ -1,0 +1,49 @@
+experiment:
+  name: mild_disadvantage_two_node_action_sequence_offline_screen_v1
+  source_id: THESIS-MILD-DISADVANTAGE-TWO-NODE-ACTION-SEQUENCE-OFFLINE-SCREEN-V1-20260904
+  mode: design_only
+  output_root: outputs/mild_disadvantage_two_node_action_sequence_offline_screen_v1
+
+evidence:
+  local_response_source_id: THESIS-MILD-DISADVANTAGE-HANDOFF-LOCAL-RESPONSE-COLLECTOR-V4-20260904
+  local_response_analysis_root: outputs/mild_disadvantage_handoff_local_response_v4/analysis_final
+  source_trace_source_id: THESIS-MILD-DISADVANTAGE-HANDOFF-SOURCE-TRACES-ISOLATED-V1-20260904
+
+sequence:
+  template: handoff_pulse_then_delayed_pulse_then_nominal_return
+  node_steps: [0, 8]
+  return_steps: [1, 9]
+  response_offsets: [4, 12]
+  action_levels: [-0.08, 0.0, 0.08]
+  action_dim: 3
+  action_bounds: [[-1.0, 1.0], [-1.0, 1.0], [-1.0, 1.0]]
+  action_rate_limit_per_step: [0.08, 0.08, 0.08]
+  model: first_node_h12_plus_second_node_h4_linear_superposition
+  second_node_required_nonzero: true
+
+screen:
+  required_opponents: [expert, end_to_end]
+  required_candidates: [x625_y200, x750_y250]
+  required_repetitions_per_cell: 3
+  require_all_source_states: true
+  require_both_horizons: true
+  require_range_increase: true
+  require_range_rate_increase: true
+  minimum_range_delta_m: 0.0
+  minimum_range_rate_delta_mps: 0.0
+  minimum_energy_delta_m2ps2: -5.0
+  maximum_absolute_altitude_delta_m: 1.0
+  safety_clean_required: true
+  runtime_validation_required: true
+  training_started: false
+  runtime_probe_started: false
+
+boundaries:
+  no_jsbsim: true
+  no_training: true
+  no_reward_change: true
+  no_pid_change: true
+  no_filter_change: true
+  cross_axis_interaction_unverified: true
+  delayed_pulse_h8_response_approximated_by_h4: true
+  not_paper_safe_until_runtime_probe: true

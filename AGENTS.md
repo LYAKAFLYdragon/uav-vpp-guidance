@@ -17,8 +17,10 @@ in a fixed order:
 | Guidance state | `vp_error_x/y/z` | +3 | `observation.include_guidance_state` |
 | Saturation | `nz_saturated`, `roll_rate_saturated`, `throttle_saturated` | +3 | `observation.include_saturation` |
 | Prediction | `pred_rel_x/y/z`, `pred_disp_x/y/z`, `pred_vel_x/y/z`, `pred_var_x/y/z`, `pred_valid`, `pred_fallback` | +14 | `trajectory_prediction` integration flags |
+| History kinematic | `hist_heading_rate`, `hist_speed_change`, `hist_los_rate` | +3 | `observation.include_history_kinematic` |
 | Opponent stage | `opponent_is_expert`, `opponent_is_end_to_end` | +2 | `observation.include_opponent_stage` |
 | Task type | `is_crossing` | +1 | `observation.include_task_type` |
+| Predicted geometry replacement | Replaces `range_m`, `range_rate_mps`, `ata_sin/cos`, `aa_sin/cos` without changing order or dimension | +0 | `trajectory_prediction.integration.replace_base_geometry` |
 
 `CloseRangeTrackingEnv._get_observation` returns an `observation_schema` dict
 with boolean flags, `dim`, and `feature_names`. The schema is also embedded in
@@ -26,6 +28,26 @@ with boolean flags, `dim`, and `feature_names`. The schema is also embedded in
 
 **Rule**: do not change the base-feature order without bumping a schema version
 and updating all downstream checkpoints / tests.
+
+The independent predicted-geometry protocol uses schema version
+`prediction_highlevel_observation_v1`. Its H1/H2 mode replaces only the six
+listed base geometry values, so the policy input remains 16-D. The replacement
+is opt-in and legacy configurations keep the original current-geometry values.
+
+History kinematic (`observation.include_history_kinematic`, thesis Group H
+control): +3 dims `hist_heading_rate`, `hist_speed_change`, `hist_los_rate`
+(target-centric: full-window heading-rate polyfit slope, last-first speed
+delta, recent-subwindow LOS-azimuth-rate slope). Window defaults to
+`trajectory_prediction.history.history_len` and advances in lock-step with the
+predictor history buffer under the same once-per-action guard
+(`_sync_prediction_buffer_for_current_state`), so Group H and the prediction
+groups see identical history lengths. The window is pushed even when the
+predictor adapter is unavailable (prediction disabled). The opponent
+observation (`_get_opponent_obs`) intentionally EXCLUDES these dims: opponent
+checkpoints have a fixed observation dimension, so this extension is
+ego-policy only. Slope is computed with a closed-form least-squares helper
+(`_window_slope`), because `np.polyfit`/`np.linalg.lstsq` hard-crashes in this
+repo's Windows numpy/OpenBLAS build.
 
 ## 2. Backend contract
 

@@ -1,0 +1,65 @@
+experiment:
+  name: mild_disadvantage_two_node_action_sequence_runtime_probe_v1
+  source_id: THESIS-MILD-DISADVANTAGE-TWO-NODE-ACTION-SEQUENCE-RUNTIME-PROBE-V1-20260904
+  mode: evaluation
+  output_root: outputs/mild_disadvantage_two_node_action_sequence_runtime_probe_v1
+
+source_traces_root: outputs/mild_disadvantage_handoff_source_traces_isolated_v1_retry3
+base_config: E:/uav-vpp-guidance-artifacts/CAN-20260705/assets/outputs/experiments/prediction_vpp_ppo_crossing_v3/config_snapshot.yaml
+
+assets:
+  h0_checkpoint: outputs/prediction_highlevel_h0_asset_retraining_v1/h0_current_geometry/seed_9201/checkpoints/last.pt
+  crossing_checkpoint: E:/uav-vpp-guidance-artifacts/CAN-20260705/assets/outputs/experiments/prediction_vpp_ppo_crossing_v3/checkpoints/best.pt
+  crossing_config: E:/uav-vpp-guidance-artifacts/CAN-20260705/assets/outputs/experiments/prediction_vpp_ppo_crossing_v3/config_snapshot.yaml
+  crossing_predictor: E:/uav-vpp-guidance-artifacts/CAN-20260705/assets/outputs/trajectory_prediction/best_model.pt
+  end_to_end_checkpoint: outputs/prediction_highlevel_h0_asset_retraining_v1/end_to_end_opponent/seed_9204/checkpoints/last.pt
+
+protocol:
+  opponents: [expert, end_to_end]
+  required_source_traces: 12
+  conditions: [baseline, candidate]
+  response_offsets: [4, 12, 48]
+  node_steps_after_handoff: [0, 8]
+  node0_delta: [0.0, 0.08, 0.0]
+  node1_delta: [-0.08, 0.0, 0.0]
+  action_dim: 3
+  action_bounds: [[-1.0, 1.0], [-1.0, 1.0], [-1.0, 1.0]]
+  action_rate_limit_per_step: [0.08, 0.08, 0.08]
+  same_seed_and_scenario: true
+  replay_from_legal_reset: true
+  handoff_hash_required: true
+  one_initial_reset_only: true
+  strict_jsbsim_required: true
+  backend_fallback_forbidden: true
+  predictor_fallback_forbidden_in_response_window: true
+  padding_forbidden: true
+  training_started: false
+  training_permitted: false
+  reward_frozen: true
+  pid_frozen: true
+  filter_frozen: true
+  guidance_frozen: true
+  jsbsim_parameters_frozen: true
+
+preregistered_gate:
+  primary_horizon: 12
+  minimum_mean_range_delta_m: 0.001
+  minimum_mean_range_rate_delta_mps: 0.002
+  require_both_primary_geometry_metrics: true
+  require_all_pairs_valid: true
+  require_no_new_candidate_crash_or_oob: true
+  require_no_backend_fallback: true
+  require_no_predictor_fallback_in_response_window: true
+  require_no_action_clipping: true
+  require_no_reset_or_padding: true
+  h4_is_early_direction_only: true
+  h48_is_persistence_only: true
+
+interpretation:
+  candidate_name: simplest_offline_two_node_sequence
+  node0_semantics: add [0,+0.08,0] to the active frozen H0 action at handoff
+  node1_semantics: add [-0.08,0,0] to the active frozen H0 action eight high-level steps after handoff
+  nominal_semantics: use the unmodified frozen policy action
+  offline_basis: V4 paired local response and two-node offline screen
+  not_a_skill_training_result: true
+  not_a_win_rate_claim: true

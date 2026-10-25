@@ -99,6 +99,8 @@ def evaluate_single_episode(env, agent, config, scenario=None, seed=0, save_traj
     trajectory = []
     health_acc = PredictorHealthAccumulator()
     prediction_enabled_steps = 0
+    predicted_geometry_valid_steps = 0
+    predicted_geometry_fallback_steps = 0
     virtual_point_shifts = []
     anchor_shifts = []
     time_to_first_advantage = None
@@ -143,6 +145,10 @@ def evaluate_single_episode(env, agent, config, scenario=None, seed=0, save_traj
         ep_length += 1
         if info.get("prediction_enabled", False):
             prediction_enabled_steps += 1
+        if obs.get("predicted_geometry_prediction_valid", False):
+            predicted_geometry_valid_steps += 1
+        if obs.get("predicted_geometry_prediction_fallback", False):
+            predicted_geometry_fallback_steps += 1
         health_acc.step(info)
 
         # Per-step telemetry extraction
@@ -255,6 +261,13 @@ def evaluate_single_episode(env, agent, config, scenario=None, seed=0, save_traj
                 "prediction_fallback_reason": info.get("prediction_fallback_reason", ""),
                 "prediction_fallback_phase": info.get("prediction_fallback_phase", ""),
                 "prediction_horizon_s": lookahead_time_s,
+                "predicted_geometry": obs.get("predicted_geometry"),
+                "predicted_geometry_prediction_valid": int(
+                    obs.get("predicted_geometry_prediction_valid", False)
+                ),
+                "predicted_geometry_prediction_fallback": int(
+                    obs.get("predicted_geometry_prediction_fallback", False)
+                ),
                 "target_x": float(target_pos_arr[0]) if len(target_pos_arr) > 0 else np.nan,
                 "target_y": float(target_pos_arr[1]) if len(target_pos_arr) > 1 else np.nan,
                 "target_z": float(target_pos_arr[2]) if len(target_pos_arr) > 2 else np.nan,
@@ -383,6 +396,8 @@ def evaluate_single_episode(env, agent, config, scenario=None, seed=0, save_traj
         "effective_guidance_mode": last_info.get("effective_guidance_mode", "unknown"),
         # Telemetry
         "prediction_enabled_rate": prediction_enabled_steps / max(1, ep_length),
+        "predicted_geometry_valid_rate": predicted_geometry_valid_steps / max(1, ep_length),
+        "predicted_geometry_fallback_rate": predicted_geometry_fallback_steps / max(1, ep_length),
         "prediction_valid_rate": rates["prediction_valid_rate"],
         "prediction_fallback_rate": rates["fallback_rate"],
         "warmup_fallback_rate": rates["warmup_fallback_rate"],
@@ -462,6 +477,12 @@ def aggregate_metrics(episodes):
         "mean_min_range_m": safe_mean(min_ranges),
         "mean_min_ata_deg": safe_mean(min_atas),
         "mean_prediction_enabled_rate": safe_mean([e["prediction_enabled_rate"] for e in episodes]),
+        "mean_predicted_geometry_valid_rate": safe_mean(
+            [e.get("predicted_geometry_valid_rate", np.nan) for e in episodes]
+        ),
+        "mean_predicted_geometry_fallback_rate": safe_mean(
+            [e.get("predicted_geometry_fallback_rate", np.nan) for e in episodes]
+        ),
         "mean_prediction_valid_rate": safe_mean([e["prediction_valid_rate"] for e in episodes]),
         "mean_prediction_fallback_rate": safe_mean([e["prediction_fallback_rate"] for e in episodes]),
         "mean_warmup_fallback_rate": safe_mean([e["warmup_fallback_rate"] for e in episodes]),

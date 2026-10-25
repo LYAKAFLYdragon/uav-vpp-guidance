@@ -15,6 +15,9 @@ P4 scope: JSBSim high-fidelity bridge with unified backend interface.
 
 import inspect
 import logging
+import math
+from collections import deque
+
 import numpy as np
 from typing import Dict, Optional, Set, Tuple
 
@@ -28,7 +31,7 @@ def _wrap_angle(angle: float) -> float:
 from .jsbsim_env import JSBSimEnv, neu2lla
 from .simple_point_mass_env import SimplePointMassEnv
 from .attack_zone import CombatHPManager, evaluate_attack_zone
-from .observation import compute_relative_geometry, build_observation
+from .observation import compute_relative_geometry, build_observation, _get_velocity
 from .opponent_policy import OpponentPolicy
 from .reward import RewardCalculator
 from .termination import TerminationChecker
@@ -66,6 +69,10 @@ from ..trajectory_prediction import (
     create_state_buffer_from_config,
 )
 from ..trajectory_prediction.prediction_error_tracker import PredictionErrorTracker
+from ..trajectory_prediction.predicted_geometry import (
+    compute_predicted_geometry,
+    normalize_for_base_observation,
+)
 
 
 VALID_ANCHOR_MODES = {
@@ -318,6 +325,37 @@ class CloseRangeTrackingEnv:
         )
         self._include_task_type_in_observation = bool(
             self.obs_config.get("include_task_type", False)
+        )
+        # 可选：目标历史运动特征（论文 H 组对照，历史运动信息增强策略观测）。
+        # 窗口默认与预测器 history_len 对齐，保证 H 组与 B 组在"等长历史信息"下可比。
+        self._include_history_kinematic_in_observation = bool(
+            self.obs_config.get("include_history_kinematic", False)
+        )
+        hist_cfg = self.obs_config.get("history_kinematic", {}) or {}
+        default_hist_window = int(
+            config.get("trajectory_prediction", {}).get("history", {}).get(
+                "history_len", 10
+            )
+        )
+        self._history_kinematic_window_len = int(
+            hist_cfg.get("window_len", default_hist_window)
+        )
+        self._history_kinematic_recent_len = int(
+            hist_cfg.get("recent_len", max(2, self._history_kinematic_window_len // 4))
+        )
+        self._history_kinematic_scales = {
+            "heading_rate": float(hist_cfg.get("heading_rate_scale", math.pi)),
+            "speed_change": float(hist_cfg.get("speed_change_scale", 100.0)),
+            "los_rate": float(hist_cfg.get("los_rate_scale", math.pi)),
+        }
+        self._history_kinematic_buffer = deque(
+            maxlen=max(2, self._history_kinematic_window_len)
+        )
+        prediction_integration = config.get("trajectory_prediction", {}).get(
+            "integration", {}
+        )
+        self._replace_geometry_with_prediction = bool(
+            prediction_integration.get("replace_base_geometry", False)
         )
         # Last virtual point for guidance-state features (e.g. VP tracking error)
         self._last_virtual_point: Optional[dict] = None
@@ -2488,6 +2526,7 @@ class CloseRangeTrackingEnv:
         if self.trajectory_predictor_adapter is not None:
             self.trajectory_predictor_adapter.reset()
         self._prediction_buffer_synced_for_action = False
+        self._history_kinematic_buffer.clear()
         self._prediction_error_tracker.reset()
 
         if self._backend == "jsbsim":
@@ -2708,6 +2747,10 @@ class CloseRangeTrackingEnv:
             if self._include_saturation_in_observation
             else None
         )
+        # NOTE: history_kinematic features are intentionally NOT added to the
+        # opponent observation. Opponent checkpoints were trained with a fixed
+        # observation dimension; appending dims here would break their
+        # restore/evaluate path. The H-group extension is ego-policy only.
         ego_vec, feature_names = build_observation(
             own_state,
             target_state,
@@ -5847,10 +5890,16 @@ class CloseRangeTrackingEnv:
         The step path then reuses that same history instead of pushing a
         duplicate frame.
         """
-        if self.trajectory_predictor_adapter is None:
-            return False
         if self._prediction_buffer_synced_for_action:
             return True
+        # 历史运动特征缓冲与预测器历史窗口同刻推进：同一调用点、同一
+        # once-per-action 守卫，保证 H 组窗口与预测器窗口严格对齐。
+        # push 故意放在 adapter None 检查之前：H 组关闭预测器后 adapter 为
+        # None，历史窗口仍须独立推进；守卫检查在前，保证每个 action 至多一帧。
+        if self._include_history_kinematic_in_observation:
+            self._push_history_kinematic_snapshot(own_state, target_state, rel_state)
+        if self.trajectory_predictor_adapter is None:
+            return False
         try:
             self.trajectory_predictor_adapter.update(
                 own_state, target_state, rel_state
@@ -5878,6 +5927,134 @@ class CloseRangeTrackingEnv:
                 "State missing position field (position_neu, position_m, or position)"
             )
         return np.asarray(pos, dtype=np.float64)
+
+    @staticmethod
+    def _extract_heading_rad(state: dict) -> Optional[float]:
+        """Extract aircraft heading (rad) from attitude yaw, with velocity fallback.
+
+        Mirrors the attitude extraction priority used by the predictor feature
+        builder; when no attitude is available (e.g. minimal simple-backend
+        states) the velocity direction is used instead.
+        """
+        att = state.get("attitude_rpy")
+        if att is not None:
+            arr = np.asarray(att, dtype=np.float64).reshape(-1)
+            if arr.size >= 3 and np.isfinite(arr[2]):
+                return float(arr[2])
+        try:
+            vel = state.get("velocity_vector_mps")
+            if vel is None:
+                vel_ned = state.get("velocity_ned")
+                if vel_ned is not None:
+                    v = np.asarray(vel_ned, dtype=np.float64).reshape(-1)
+                    vel = np.array([v[0], v[1], -v[2]])
+            if vel is None:
+                vel = state.get("velocity")
+            if vel is None:
+                return None
+            vel = np.asarray(vel, dtype=np.float64).reshape(-1)
+            if vel.size < 2 or not np.isfinite(vel[:2]).all():
+                return None
+            if float(np.hypot(vel[0], vel[1])) < 1e-6:
+                return None
+            return float(math.atan2(vel[1], vel[0]))
+        except Exception:
+            return None
+
+    def _push_history_kinematic_snapshot(
+        self, own_state: dict, target_state: dict, rel_state: dict
+    ) -> None:
+        """Append one target-centric kinematic frame to the H-group window.
+
+        One frame per high-level action (guarded by the caller via
+        ``_prediction_buffer_synced_for_action``). Target-centric by design:
+        the ownship's past actions are already known to the policy, whereas
+        target maneuver history is the actual decision-relevant signal.
+        """
+        los_az = rel_state.get("los_azimuth_rad") if rel_state else None
+        if los_az is None:
+            los_az = 0.0
+        try:
+            target_speed = float(np.linalg.norm(_get_velocity(target_state)))
+        except Exception:
+            target_speed = 0.0
+        self._history_kinematic_buffer.append(
+            {
+                "target_heading_rad": self._extract_heading_rad(target_state),
+                "target_speed": target_speed,
+                "los_azimuth_rad": float(los_az),
+            }
+        )
+
+    @staticmethod
+    def _window_slope(t: np.ndarray, y: np.ndarray) -> float:
+        """Least-squares slope of y over t (identical to polyfit(deg=1)[0]).
+
+        Implemented in closed form: np.polyfit routes to np.linalg.lstsq,
+        which hard-crashes (process abort) in this repo's Windows numpy/OpenBLAS
+        build, so we must not call it from the env hot path.
+        """
+        t_mean = float(np.mean(t))
+        y_mean = float(np.mean(y))
+        denom = float(np.sum((t - t_mean) ** 2))
+        if denom <= 0.0:
+            return 0.0
+        return float(np.sum((t - t_mean) * (y - y_mean)) / denom)
+
+    def _build_history_kinematic_features(self) -> Optional[dict]:
+        """Compute normalized history-motion features from the current window.
+
+        Returns None when the extension is disabled; a zero vector when fewer
+        than two frames are buffered (early episode warm-up).
+        """
+        if not self._include_history_kinematic_in_observation:
+            return None
+        features = {
+            "hist_heading_rate": 0.0,
+            "hist_speed_change": 0.0,
+            "hist_los_rate": 0.0,
+        }
+        frames = list(self._history_kinematic_buffer)
+        if len(frames) < 2:
+            return features
+        dt = float(self.env_config.get("high_level_dt", 0.2))
+        try:
+            # 全窗口：目标航向变化率（polyfit 斜率，unwrap 防跳变）
+            headings = np.array(
+                [f["target_heading_rad"] for f in frames], dtype=np.float64
+            )
+            if not np.isfinite(headings).all():
+                return features
+            t_full = np.arange(len(frames), dtype=np.float64) * dt
+            heading_rate = self._window_slope(t_full, np.unwrap(headings))
+            features["hist_heading_rate"] = (
+                heading_rate / self._history_kinematic_scales["heading_rate"]
+            )
+            # 全窗口：目标速度末-首差
+            features["hist_speed_change"] = (
+                float(frames[-1]["target_speed"] - frames[0]["target_speed"])
+                / self._history_kinematic_scales["speed_change"]
+            )
+            # 近期子窗口：视线方位角变化率
+            recent = frames[-self._history_kinematic_recent_len :]
+            if len(recent) >= 2:
+                los = np.array(
+                    [f["los_azimuth_rad"] for f in recent], dtype=np.float64
+                )
+                if np.isfinite(los).all():
+                    t_recent = np.arange(len(recent), dtype=np.float64) * dt
+                    los_rate = self._window_slope(t_recent, np.unwrap(los))
+                    features["hist_los_rate"] = (
+                        los_rate / self._history_kinematic_scales["los_rate"]
+                    )
+        except Exception as exc:
+            logger.warning("History kinematic feature build failed: %s", exc)
+            return {
+                "hist_heading_rate": 0.0,
+                "hist_speed_change": 0.0,
+                "hist_los_rate": 0.0,
+            }
+        return features
 
     def _prediction_observation_enabled(self) -> bool:
         tp_cfg = self.config.get("trajectory_prediction", {})
@@ -5974,6 +6151,56 @@ class CloseRangeTrackingEnv:
         features["pred_valid"] = 0.0 if fallback else 1.0
         features["pred_fallback"] = 1.0 if fallback else 0.0
         return features
+
+    def _build_predicted_geometry_observation(
+        self, own_state: dict, target_state: dict, rel_state: dict
+    ) -> Optional[dict]:
+        """Build the opt-in predicted replacement for base geometry fields."""
+        if not self._replace_geometry_with_prediction:
+            return None
+        result = {
+            "normalized": None,
+            "raw": None,
+            "prediction_valid": False,
+            "prediction_fallback": True,
+            "prediction_fallback_reason": "predictor_unavailable",
+        }
+        if (
+            not self.config.get("trajectory_prediction", {}).get("enabled", False)
+            or self.trajectory_predictor_adapter is None
+        ):
+            return result
+
+        self._sync_prediction_buffer_for_current_state(
+            own_state, target_state, rel_state
+        )
+        try:
+            pred_pos, _pred_var, pred_info = self.trajectory_predictor_adapter.predict(
+                target_state
+            )
+            raw = compute_predicted_geometry(
+                own_state,
+                target_state,
+                pred_pos,
+                self.config.get("trajectory_prediction", {})
+                .get("prediction", {})
+                .get("lookahead_time_s", 1.0),
+            )
+            result.update(
+                {
+                    "normalized": normalize_for_base_observation(raw),
+                    "raw": raw,
+                    "prediction_valid": not bool(pred_info.get("fallback", False)),
+                    "prediction_fallback": bool(pred_info.get("fallback", False)),
+                    "prediction_fallback_reason": pred_info.get(
+                        "fallback_reason"
+                    ),
+                    "prediction_info": pred_info,
+                }
+            )
+        except Exception as exc:
+            result["prediction_fallback_reason"] = str(exc)
+        return result
 
     def _get_current_states(self, noisy: bool = False):
         """获取当前本机和目标状态（统一格式）。
@@ -6203,6 +6430,14 @@ class CloseRangeTrackingEnv:
         prediction_features = self._build_prediction_observation_features(
             own_state, target_state, rel_state
         )
+        predicted_geometry_result = self._build_predicted_geometry_observation(
+            own_state, target_state, rel_state
+        )
+        predicted_geometry = (
+            predicted_geometry_result.get("normalized")
+            if predicted_geometry_result is not None
+            else None
+        )
 
         # Optionally expose gains / guidance internal state to the policy.
         # Default is off for backward compatibility with existing checkpoints.
@@ -6228,6 +6463,17 @@ class CloseRangeTrackingEnv:
             else None
         )
 
+        # 历史运动特征（H 组对照）。预测观测关闭时（H 组配置），
+        # `_build_prediction_observation_features` 不会触发缓冲同步，
+        # 这里显式补一次，保证窗口仍按 once-per-action 推进。
+        history_kinematic = None
+        if self._include_history_kinematic_in_observation:
+            if prediction_features is None:
+                self._sync_prediction_buffer_for_current_state(
+                    own_state, target_state, rel_state
+                )
+            history_kinematic = self._build_history_kinematic_features()
+
         # 同时返回展平向量（供策略网络使用）
         obs_vec, feature_names = build_observation(
             own_state,
@@ -6238,9 +6484,32 @@ class CloseRangeTrackingEnv:
             saturation_features=saturation_features,
             opponent_stage=opponent_stage,
             task_type=task_type,
+            predicted_geometry=predicted_geometry,
+            replace_geometry_with_prediction=self._replace_geometry_with_prediction,
+            history_kinematic=history_kinematic,
             return_feature_names=True,
         )
         obs_dict["observation_vector"] = obs_vec
+        obs_dict["predicted_geometry"] = (
+            predicted_geometry_result.get("raw")
+            if predicted_geometry_result is not None
+            else None
+        )
+        obs_dict["predicted_geometry_prediction_valid"] = bool(
+            predicted_geometry_result.get("prediction_valid", False)
+            if predicted_geometry_result is not None
+            else False
+        )
+        obs_dict["predicted_geometry_prediction_fallback"] = bool(
+            predicted_geometry_result.get("prediction_fallback", False)
+            if predicted_geometry_result is not None
+            else False
+        )
+        obs_dict["predicted_geometry_fallback_reason"] = (
+            predicted_geometry_result.get("prediction_fallback_reason")
+            if predicted_geometry_result is not None
+            else None
+        )
         observation_schema = {
             "include_gains": self._include_gains_in_observation,
             "include_guidance_state": self._include_guidance_state_in_observation,
@@ -6248,6 +6517,13 @@ class CloseRangeTrackingEnv:
             "include_saturation": self._include_saturation_in_observation,
             "include_opponent_stage": self._include_opponent_stage_in_observation,
             "include_task_type": self._include_task_type_in_observation,
+            "include_history_kinematic": self._include_history_kinematic_in_observation,
+            "replace_geometry_with_prediction": self._replace_geometry_with_prediction,
+            "contract_version": (
+                "prediction_highlevel_observation_v1"
+                if self._replace_geometry_with_prediction
+                else "legacy"
+            ),
             "dim": int(obs_vec.shape[0]),
             "feature_names": feature_names,
         }

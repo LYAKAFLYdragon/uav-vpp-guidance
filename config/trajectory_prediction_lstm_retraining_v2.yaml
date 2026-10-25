@@ -1,0 +1,41 @@
+# Independent predictor retraining configuration.
+# This file is intentionally separate from historical trajectory_prediction.yaml.
+
+model:
+  type: lstm
+  input_dim: 16
+  hidden_dim: 128
+  num_layers: 2
+  dropout: 0.1
+  predict_variance: false
+
+history:
+  history_len: 10
+  sample_rate_hz: 5
+  padding_mode: repeat_first
+  allow_neural_padding: true
+
+prediction:
+  lookahead_time_s: 1.0
+  output_mode: relative_displacement
+  fallback_mode: none
+
+normalization:
+  position_scale_m: 1000.0
+  velocity_scale_mps: 300.0
+  acceleration_scale_mps2: 50.0
+  angle_mode: sin_cos
+  overload_scale: 9.0
+
+env:
+  high_level_dt: 0.2
+
+training:
+  batch_size: 64
+  learning_rate: 1.0e-3
+  weight_decay: 1.0e-5
+  epochs: 100
+  patience: 15
+  grad_clip: 1.0
+  loss: mse
+  device: cpu

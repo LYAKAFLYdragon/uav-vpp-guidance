@@ -50,3 +50,29 @@ This command compiles the v5 manuscript, title page, Supplementary Table/Figure 
 - **Historical:** DQN, SAC, early PPO, old Route B and old manuscript variants are retained for traceability only.
 
 See `docs/worktree_lane_policy.md` for retention and ownership rules.
+
+## Independent Predicted-Geometry Protocol
+
+The H0/H1/H2 design is isolated under
+`outputs/prediction_highlevel_observation_v1/` and configured by
+`config/experiment/prediction_highlevel_observation_v1.yaml`. H0 uses current
+geometry, H1 uses the frozen PPO checkpoint with predicted geometry replacing
+six base geometry fields, and H2 retrains only the PPO policy under the same
+16-dimensional observation contract. The predictor, low-level policy, VPP,
+guidance, PID and simulator are not changed. The runner is locked unless
+`--execute` is supplied, so preparing this protocol does not start an
+experiment.
+
+## History-Kinematic Observation Extension (Thesis Group H)
+
+`observation.include_history_kinematic` appends three target-centric
+history-motion dims to the policy observation: `hist_heading_rate`,
+`hist_speed_change`, `hist_los_rate` (base 16 -> 19). It is the clean control
+group for the thesis claim that future prediction features help beyond history
+motion: the H window defaults to the predictor `history_len` and advances in
+lock-step with the predictor history buffer. The opponent observation
+deliberately excludes these dims (opponent checkpoints keep a fixed
+observation dimension). Multi-seed training entry point:
+`scripts/run_thesis_h_group_multiseed.py` (all config mutations are recorded
+in `provenance["config_overrides"]`). Contract details and tests:
+`AGENTS.md` section 1, `tests/test_history_kinematic_observation.py`.

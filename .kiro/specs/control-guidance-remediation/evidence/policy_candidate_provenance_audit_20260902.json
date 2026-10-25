@@ -1,0 +1,130 @@
+{
+  "schema_version": "1.0.0",
+  "stage_name": "policy_candidate_provenance_reconciliation",
+  "audit_id": "POLICY-CANDIDATE-PROVENANCE-20260902",
+  "audited_at_utc": "2026-09-02",
+  "status": "partial_provenance_reconciled",
+  "formal_asset_adoption": false,
+  "historical_freeze_preserved": true,
+  "scope": "Read-only reconciliation of two policy candidates already present in the CAN-20260705 bundle. No checkpoint was copied, moved, renamed, loaded, or replaced.",
+  "authoritative_evidence": [
+    {
+      "path": "E:/uav-vpp-guidance-artifacts/CAN-20260705/bundle_manifest.json",
+      "size_bytes": 453045,
+      "sha256": "b417195b84879b05940ec203694b7e80f108a571eefc337dcdcfc38f663cef41",
+      "bundle_id": "CAN-20260705",
+      "canonical_commit": "9a9f9bf6d68560afa81560f5260b78f318dcd9b1"
+    },
+    {
+      "path": "E:/uav-vpp-guidance-artifacts/CAN-20260705/bundle_verification.json",
+      "size_bytes": 70,
+      "sha256": "17ae10fd7f591466b99f97b69fc644afa9ab2f266e854916b4528931cc5043e1",
+      "verification_valid": true
+    },
+    {
+      "path": "E:/uav-vpp-guidance-asset-collection-20260727/asset_receipt.json",
+      "size_bytes": 2084,
+      "sha256": "30d873e9b5fc5f1c8e128fe2cd74fa8d79c86e98f40a9af1beb11f4ab2591bcb"
+    },
+    {
+      "path": "E:/uav-vpp-guidance-asset-collection-20260727/model_payload_contract.json",
+      "size_bytes": 4325,
+      "sha256": "754cafca6bfbb04e281b038b768f65f247447b2bd3f19a0aa07e70a6822d5059"
+    },
+    {
+      "path": "E:/uav-vpp-guidance-asset-collection-20260727/run_file_inventory.json",
+      "size_bytes": 13703,
+      "sha256": "497bd6883e5005c9ff828a21e029c5d3b3f3fb79c1539848efeb42607a1a04c5"
+    },
+    {
+      "path": "E:/uav-vpp-guidance-asset-collection-20260727/git_provenance.json",
+      "size_bytes": 370,
+      "sha256": "abd19f70850d466bccef8fa5280dbab1096fd1566e2ff9f3009a1954f90bf4dd"
+    }
+  ],
+  "distribution_provenance": {
+    "source_root_recorded_by_receipt": "E:/uav-vpp-guidance-ind-headon",
+    "source_git_available": false,
+    "outputs_link_type": "Junction",
+    "outputs_target": "E:/uav-vpp-guidance-artifacts/CAN-20260705/assets/outputs",
+    "interpretation": "The discovered worktree paths are aliases of the CAN-distributed files, not independent training sources.",
+    "canonical_can_commit_is_training_provenance": false
+  },
+  "assets": [
+    {
+      "role": "no_prediction_vpp_policy",
+      "registered_relative_path": "outputs/experiments/no_prediction_vpp_ppo_jsbsim_compare/checkpoints/last.pt",
+      "located_path": "E:/uav-vpp-guidance-artifacts/CAN-20260705/assets/outputs/experiments/no_prediction_vpp_ppo_jsbsim_compare/checkpoints/last.pt",
+      "size_bytes": 250138,
+      "sha256": "82cc54df1b9445f1c61739e87759d49edbb29250640d382968d33e69168ef2cb",
+      "payload_contract": {
+        "obs_dim": 16,
+        "action_dim": 3,
+        "total_timesteps": 200000,
+        "total_updates": 98,
+        "seed": 0,
+        "backend_configured": "jsbsim",
+        "trajectory_prediction_enabled": false
+      },
+      "config_snapshot": {
+        "path": "E:/uav-vpp-guidance-artifacts/CAN-20260705/assets/outputs/experiments/no_prediction_vpp_ppo_jsbsim_compare/config_snapshot.yaml",
+        "size_bytes": 7189,
+        "sha256": "27f8228b0d9b33d2df49568c055682232bf50b92a37e381bc5c4217bf00ca2b4"
+      },
+      "available_training_fields": ["experiment_name", "seed", "total_timesteps", "obs_dim", "action_dim", "configured_backend", "prediction_flag"],
+      "missing_training_fields": ["original_training_run_manifest", "resolved_training_config", "training_command", "training_git_commit", "training_git_branch", "training_dirty_state", "review_approval"],
+      "missing_runtime_fields": ["candidate-specific episode manifest", "strict-JSBSim final backend record", "backend_fallback_occurred record", "reset/fallback audit", "handoff continuity record"],
+      "disposition": "candidate_only_incomplete_training_provenance",
+      "strict_jsbsim_smoke_authorized": false
+    },
+    {
+      "role": "end_to_end_policy",
+      "registered_relative_path": "outputs/experiments/end_to_end_ppo/checkpoints/best.pt",
+      "located_path": "E:/uav-vpp-guidance-artifacts/CAN-20260705/assets/outputs/experiments/end_to_end_ppo/checkpoints/best.pt",
+      "size_bytes": 246810,
+      "sha256": "d38828338d5e7e22167129b2e9972d52ecf5fc3fda5d52caff95a8374c35b8bc",
+      "payload_contract": {
+        "obs_dim": 16,
+        "action_dim": 3,
+        "total_timesteps": 200000,
+        "total_updates": 98,
+        "seed": 0,
+        "backend_configured": "simple",
+        "trajectory_prediction_enabled": false
+      },
+      "config_snapshot": {
+        "path": "E:/uav-vpp-guidance-artifacts/CAN-20260705/assets/outputs/experiments/end_to_end_ppo/config_snapshot.yaml",
+        "size_bytes": 4535,
+        "sha256": "93b8763a082691002b25cebdad7153d68024929d2e1341402b92a9e5b28fc553"
+      },
+      "available_training_fields": ["experiment_name", "seed", "total_timesteps", "obs_dim", "action_dim", "configured_backend", "prediction_flag"],
+      "missing_training_fields": ["original_training_run_manifest", "resolved_training_config", "training_command", "training_git_commit", "training_git_branch", "training_dirty_state", "review_approval"],
+      "missing_runtime_fields": ["candidate-specific episode manifest", "strict-JSBSim final backend record", "backend_fallback_occurred record", "reset/fallback audit", "handoff continuity record"],
+      "strict_jsbsim_eligible": false,
+      "strict_jsbsim_ineligibility_reason": "The recorded candidate configuration uses the simple backend.",
+      "disposition": "candidate_only_incomplete_training_provenance",
+      "strict_jsbsim_smoke_authorized": false
+    }
+  ],
+  "unresolved_assets": [
+    {
+      "role": "trajectory_predictor",
+      "required_sha256": "a7c00fd2e4fca3f77ce6d6a40223ed49b336af219d7f9bd2c85f938448d74491",
+      "observed_same_named_sha256": "96bc8e5e1aebd32ca6a528fb3149cfd58aeff276c18bca66388d650f00495931",
+      "decision": "rejected_hash_mismatch"
+    },
+    {
+      "role": "prediction_vpp_policy",
+      "required_relative_path": "outputs/experiments/vpp_ppo_lstm_frozen/checkpoints/best.pt",
+      "decision": "physical_unavailable_missing"
+    }
+  ],
+  "decision": {
+    "provenance_completion_level": "distribution_and_payload_fields_only",
+    "historical_asset_match": false,
+    "superseding_asset_manifest_created": false,
+    "assets_copied": false,
+    "strict_jsbsim_smoke_authorized": false,
+    "next_required_evidence": ["original training-machine run manifest", "resolved training configuration", "training Git provenance", "independent reviewer approval", "candidate-specific strict-JSBSim runtime manifest"]
+  }
+}

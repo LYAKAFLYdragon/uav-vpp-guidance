@@ -1,0 +1,155 @@
+{
+  "audit_id": "CROSSING-RUNTIME-CONSISTENCY-AUDIT-V1-20260903",
+  "checkpoint_config": "E:\\uav-vpp-guidance-artifacts\\CAN-20260705\\assets\\outputs\\experiments\\prediction_vpp_ppo_crossing_v3\\config_snapshot.yaml",
+  "checkpoint": "E:\\uav-vpp-guidance-artifacts\\CAN-20260705\\assets\\outputs\\experiments\\prediction_vpp_ppo_crossing_v3\\checkpoints\\best.pt",
+  "runtime_config": "E:\\uav-vpp-guidance\\outputs\\mild_disadvantage_envelope_recovery_v1\\physical_probe_v1\\expert\\resolved_config.yaml",
+  "checkpoint_payload": {
+    "obs_dim": 18,
+    "action_dim": 3,
+    "total_timesteps": 65536
+  },
+  "checks": [
+    {
+      "name": "checkpoint_obs_dim",
+      "training": 18,
+      "runtime": true,
+      "status": "pass",
+      "note": "runtime observation is 16 base features plus 2 opponent-stage flags"
+    },
+    {
+      "name": "checkpoint_action_dim",
+      "training": 3,
+      "runtime": 3,
+      "status": "pass",
+      "note": "three-dimensional normalized VPP action shape is aligned"
+    },
+    {
+      "name": "action_semantics",
+      "training": "tactical_basis_v1",
+      "runtime": null,
+      "status": "mismatch",
+      "note": "the learned action coordinates depend on this contract"
+    },
+    {
+      "name": "anchor_mode",
+      "training": "predicted_target",
+      "runtime": "current_target",
+      "status": "mismatch",
+      "note": "training used predicted target; probe used current target"
+    },
+    {
+      "name": "trajectory_prediction_enabled",
+      "training": true,
+      "runtime": false,
+      "status": "mismatch",
+      "note": "the probe disabled the predictor used by the crossing training lane"
+    },
+    {
+      "name": "prediction_anchor_mode",
+      "training": "predicted_target",
+      "runtime": "current_target",
+      "status": "mismatch",
+      "note": "prediction anchor affects the VPP reference even when the policy input stays 18-D"
+    },
+    {
+      "name": "task_context",
+      "training": null,
+      "runtime": null,
+      "status": "mismatch",
+      "note": "runtime has no explicit task context for task-conditioned tactical-basis rules"
+    },
+    {
+      "name": "offset_frame",
+      "training": "world_neu",
+      "runtime": null,
+      "status": "mismatch",
+      "note": "crossing training used an explicit world/encounter frame mapping"
+    },
+    {
+      "name": "tactical_basis_parameters",
+      "training": {
+        "dynamics_aware": true,
+        "longitudinal_frame": "target_velocity",
+        "lateral_frame": "encounter_stable",
+        "vertical_frame": "world_neu"
+      },
+      "runtime": {
+        "dynamics_aware": null,
+        "longitudinal_frame": null,
+        "lateral_frame": null,
+        "vertical_frame": null
+      },
+      "status": "mismatch",
+      "note": "runtime omitted the trained tactical-basis compiler settings"
+    },
+    {
+      "name": "smoothing_alpha",
+      "training": 0.3,
+      "runtime": 0.3,
+      "status": "pass",
+      "note": "this shared filter value is aligned"
+    },
+    {
+      "name": "simulation_timing",
+      "training": {
+        "sim_freq": 60,
+        "decision_freq": 5,
+        "high_level_dt": 0.2,
+        "action_repeat": 12
+      },
+      "runtime": {
+        "sim_freq": 60,
+        "decision_freq": 5,
+        "high_level_dt": 0.2,
+        "action_repeat": 12
+      },
+      "status": "pass",
+      "note": "integration timing is aligned"
+    },
+    {
+      "name": "action_ranges",
+      "training": {
+        "d_long_range": [
+          -1500.0,
+          1500.0
+        ],
+        "d_lat_range": [
+          -800.0,
+          800.0
+        ],
+        "d_vert_range": [
+          -500.0,
+          500.0
+        ]
+      },
+      "runtime": {
+        "d_long_range": [
+          -1500.0,
+          1500.0
+        ],
+        "d_lat_range": [
+          -800.0,
+          800.0
+        ],
+        "d_vert_range": [
+          -500.0,
+          500.0
+        ]
+      },
+      "status": "pass",
+      "note": "physical VPP ranges are aligned"
+    }
+  ],
+  "mismatch_count": 7,
+  "mismatches": [
+    "action_semantics",
+    "anchor_mode",
+    "trajectory_prediction_enabled",
+    "prediction_anchor_mode",
+    "task_context",
+    "offset_frame",
+    "tactical_basis_parameters"
+  ],
+  "decision": "not_comparable_as_trained_crossing_semantics",
+  "implication": "The 12-episode recovery result is valid for the implemented runtime tactic, but it cannot reject crossing specialist capability under its trained tactical_basis_v1/predicted_target contract."
+}
